@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+ * $BUILD.Store — global styles
+ *
+ * Dark-only. Light mode was retired 2026-04-27 — Future Modern
+ * trends black and the toggle wasn't earning its weight. The
+ * semantic tokens below are the dark palette; mirrored in
+ * tailwind.config.ts under `surface.*` and `ink.*`.
+ * ------------------------------------------------------------------ */
+
+:root {
+  --surface: #000000;
+  --surface-elevated: #1A1A1A;
+  --surface-inset: #0A0A0A;
+  --surface-border: #2A2A2A;
+  --ink: #FFFFFF;
+  --ink-muted: #A3A3A3;
+  --ink-faint: #666666;
+}
+
+html,
+body {
+  background-color: var(--surface);
+  color: var(--ink);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Marquee-style scroll for the header banner */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}

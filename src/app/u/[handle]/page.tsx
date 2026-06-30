@@ -21,6 +21,7 @@ import {
   activeRecognitionsForUser,
   recognitionsForUser,
 } from "@/lib/mock-data/future-modernist-recognitions";
+import { canonizationsForUser } from "@/lib/mock-data/canonizations";
 import { profileShouldIndex } from "@/lib/profile-visibility";
 import {
   INDUSTRY_LABELS,
@@ -271,6 +272,73 @@ export default async function PublicProfilePage({
                 {past.length > 6 && ` · +${past.length - 6} more`}
               </div>
             )}
+          </section>
+        );
+      })()}
+
+      {(() => {
+        // Cooperative canon — annual canonization cards across years.
+        // Each card is the Member's standing at year-end, frozen and
+        // (in production) minted as an ERC-721 with an ERC-6551 token-
+        // bound account. The card's tier (gray / green / blue / magenta /
+        // gold) reflects their year-end rarity band — climbing the
+        // ladder year-over-year becomes a visible cooperative arc.
+        const canon = canonizationsForUser(user.id);
+        if (canon.length === 0) return null;
+        return (
+          <section className="mt-12">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="font-display text-2xl font-semibold">
+                Cooperative canon
+              </h2>
+              <span className="text-xs text-ink-faint">
+                Annual standing · ERC-6551 token-bound (production swap)
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-ink-muted">
+              Year-end cards minted as permanent on-chain artifacts.
+              Each card is also a wallet — holds {publicName(user)}&apos;s
+              $BUILD allocation, recognitions, and cooperative artifacts
+              from that year.
+            </p>
+            <div className="mt-5 grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {canon.map((c) => (
+                <div key={c.id}>
+                  <TradingCard
+                    user={user}
+                    tier={c.tier}
+                    className="w-full"
+                    aspectRatio="3/4"
+                  >
+                    <div className="flex h-full flex-col justify-between">
+                      <div className="flex items-start justify-between text-white">
+                        <span
+                          className="rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                          aria-label={`Year ${c.year}`}
+                        >
+                          {c.year}
+                        </span>
+                        {c.ovr !== null && (
+                          <span className="rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-mono">
+                            OVR {c.ovr}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </TradingCard>
+                  {c.caption && (
+                    <p className="mt-2 text-[11px] text-ink-muted">
+                      {c.caption}
+                    </p>
+                  )}
+                  {!c.tokenId && (
+                    <p className="mt-1 text-[10px] text-ink-faint">
+                      Sandbox snapshot · mint cycle pending
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           </section>
         );
       })()}

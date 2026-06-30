@@ -2527,6 +2527,49 @@ export const MVP_STANDING_LABELS: Record<MvpStandingBand, string> = {
  *   Phase 2 (later): same shortlist, Member vote replaces admin pick.
  *                    Member-count gated (~15-25 voting Members threshold).
  */
+/**
+ * Annual canonization — year-end snapshot of a Member's standing
+ * minted as a permanent on-chain artifact. Each row represents one
+ * Member's card for one year. Production: ERC-721 NFT with an ERC-6551
+ * token-bound account so the card itself acts as the Member's wallet
+ * for that year — holds their $BUILD allocation, recognition NFTs,
+ * cooperative artifacts. Phygital variants (physical card paired with
+ * NFC/QR-linked NFT) become a marketplace product class once the on-
+ * chain layer ships.
+ *
+ * Sandbox stores the snapshot; production-swap mints the NFT.
+ */
+export interface MemberCanonization {
+  id: string;
+  userId: string;
+  year: number;
+  /** Frozen rarity tier at year-end. Locked into the card permanently. */
+  tier:
+    | "standard"
+    | "probation"
+    | "good_standing"
+    | "promotion_eligible"
+    | "future_modernist"
+    | "champion";
+  /** OVR at the moment of canonization. May be null for unscored Partners. */
+  ovr: number | null;
+  /** Recognition IDs the Member held during this year. Wrapped into the
+   *  card metadata so the canonization carries the whole year's record. */
+  recognitionIds: string[];
+  /** Optional admin-authored caption stamped on the card. Stays brief —
+   *  the card art does most of the talking; the caption surfaces the
+   *  one-line story. */
+  caption: string | null;
+  /** Cooperative-side timestamp of the canonization run. */
+  frozenAt: string;
+  /** ERC-721 token ID once minted. Null in sandbox; production stores
+   *  the on-chain reference after the mint cycle. */
+  tokenId: string | null;
+  /** ERC-6551 token-bound account address derived from `tokenId`. Null
+   *  until mint. */
+  tbaAddress: string | null;
+}
+
 export type FutureModernistPeriodKind = "month" | "year";
 
 export interface FutureModernistRecognition {

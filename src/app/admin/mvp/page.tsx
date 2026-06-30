@@ -77,6 +77,12 @@ export default async function AdminMvpPage() {
           >
             Future Modernist selection →
           </Link>
+          <Link
+            href="/admin/mvp/canonization"
+            className="ml-3 mt-2 inline-block text-[11px] text-[#D4AF37] hover:underline"
+          >
+            Annual canonization →
+          </Link>
         </div>
       </div>
 

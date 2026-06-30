@@ -210,6 +210,10 @@ export interface TalentMatchResult {
 export function mvpFactorForUser(userId: string): { factor: number; ovr: number | null } {
   const snapshot = mvpScoreForUser(userId);
   if (!snapshot) return { factor: 1.0, ovr: null };
+  // Provisional members get neutral 1.0 — they're in good standing,
+  // building track record, but their OVR isn't yet a reliable signal
+  // to amplify or damp opportunity flow.
+  if (snapshot.isProvisional) return { factor: 1.0, ovr: null };
   const factor = 0.5 + (snapshot.ovr / 99) * 0.8;
   return { factor, ovr: snapshot.ovr };
 }

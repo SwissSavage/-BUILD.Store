@@ -2447,11 +2447,23 @@ export interface MvpCompliancePenalty {
  * MVP Score snapshot for a user, published weekly. Computed daily under
  * the hood from sub-rating inputs; the publish step freezes the score
  * for the week so cards don't jitter hourly.
+ *
+ * Provisional state: new Members start in "good standing — building
+ * track record" mode rather than at a default OVR (default-99 inflates
+ * unearned standing; default-0 punishes the act of being new). While
+ * provisional, the threshold ladder doesn't apply (no Champion's Court
+ * eligibility, no probation/removal review), compliance penalties don't
+ * fire, and the talent-match scorer treats them at neutral 1.0
+ * multiplier. Sub-ratings can still accumulate underneath; admin
+ * promotes the member off provisional once they have enough signal
+ * (~3 completed engagements + 2 peer reviews received in production;
+ * admin button in sandbox).
  */
 export interface MvpScore {
   userId: string;
   /** Composite 0-99. Computed from `subRatings` via `MVP_WEIGHTS`, then
-   *  reduced by active compliance penalties. */
+   *  reduced by active compliance penalties. Not surfaced while
+   *  `isProvisional === true`. */
   ovr: number;
   subRatings: Record<MvpSubRating, number>;
   /** Active penalties currently dragging OVR down. Empty array = clean. */
@@ -2461,6 +2473,9 @@ export interface MvpScore {
   periodEnd: string;
   /** When this snapshot was published. Frozen for the week. */
   publishedAt: string;
+  /** Provisional flag. True = new Member, "good standing" surface only,
+   *  no band / OVR / Court eligibility. False = scored standing applies. */
+  isProvisional: boolean;
 }
 
 /**
@@ -2484,3 +2499,32 @@ export const MVP_STANDING_LABELS: Record<MvpStandingBand, string> = {
   probation_review: "Probation / removal review",
   removal_accelerated: "Removal accelerated",
 };
+
+/**
+ * Future Modernist recognition — periodic spotlight selected from the
+ * MVP shortlist. Monthly winners + annual Constellation cohort, per
+ * locked recognition rails in `future-modern.md`.
+ *
+ * Selection mechanism per locked phasing:
+ *   Phase 1 (now)  : metric-driven shortlist (top 5 OVR in period) +
+ *                    admin pick with editorial narrative.
+ *   Phase 2 (later): same shortlist, Member vote replaces admin pick.
+ *                    Member-count gated (~15-25 voting Members threshold).
+ */
+export type FutureModernistPeriodKind = "month" | "year";
+
+export interface FutureModernistRecognition {
+  id: string;
+  userId: string;
+  periodKind: FutureModernistPeriodKind;
+  /** Display label for the period, e.g. "June 2026" or "2026". */
+  periodLabel: string;
+  /** Canonical period key for uniqueness — e.g. "2026-06" or "2026". */
+  periodKey: string;
+  /** Admin-authored narrative shown alongside the recognition. */
+  narrative: string;
+  /** Admin who selected — supports the upcoming vote-replaces-admin
+   *  phasing without schema change. */
+  selectedByUserId: string;
+  selectedAt: string;
+}

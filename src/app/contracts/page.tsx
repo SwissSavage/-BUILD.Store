@@ -155,6 +155,53 @@ function Grid({ items }: { items: typeof MOCK_PROJECTS }) {
             </div>
           </div>
 
+          {/* Your comp structure — visible when the contract has
+              base+bonus structure set. Per locked policy this is talent-
+              facing only; clients NEVER see the bonus gate. RFPs without
+              structure (most) render nothing here. */}
+          {p.talentBonusAmount && (
+            <div className="mt-4 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-3 text-xs">
+              <div className="text-[10px] uppercase tracking-wider text-brand-magenta">
+                Your comp structure
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-3">
+                <div>
+                  <div className="text-[10px] text-ink-faint">Base (guaranteed)</div>
+                  <div className="font-mono">
+                    ${Number(p.talentBaseAmount ?? 0).toLocaleString()}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-ink-faint">
+                    Ceiling (earnable at close)
+                  </div>
+                  <div className="font-mono">
+                    ${Number(p.talentBonusAmount).toLocaleString()}
+                  </div>
+                </div>
+                {p.bonusDecision === "released" && (
+                  <div>
+                    <div className="text-[10px] text-ink-faint">Ceiling</div>
+                    <div className="text-[#007048]">★ Released</div>
+                  </div>
+                )}
+                {p.bonusDecision === "reclaimed" && (
+                  <div>
+                    <div className="text-[10px] text-ink-faint">Ceiling</div>
+                    <div className="text-brand-magenta">Did not clear</div>
+                  </div>
+                )}
+              </div>
+              {p.bonusDecision === "pending" && (
+                <p className="mt-1.5 text-[10px] text-ink-faint">
+                  Ceiling releases at engagement close on a quality gate
+                  (client rating, peer review, PM rating). See your wallet
+                  history when settlement runs.
+                </p>
+              )}
+            </div>
+          )}
+
           {p.isRfp && p.status === "open" && (
             <div className="mt-4 border-t border-[var(--surface-border)] pt-4">
               <Link

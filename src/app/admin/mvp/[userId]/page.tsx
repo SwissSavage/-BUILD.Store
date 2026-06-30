@@ -21,7 +21,10 @@ import {
 import { championsCourtMembers } from "@/lib/mvp-score";
 import {
   applyCompliancePenalty,
+  demoteToProvisional,
+  promoteFromProvisional,
   rescindCompliancePenalty,
+  setSubRating,
 } from "@/lib/mvp-score-actions";
 import {
   MVP_SUB_RATING_LABELS,
@@ -77,6 +80,46 @@ export default async function AdminMvpUserPage({
             ).has(user.id)}
           />
         </div>
+      )}
+
+      {snapshot && (
+        <Card className="mt-6">
+          <CardEyebrow>Provisional standing</CardEyebrow>
+          <CardTitle className="mt-1 text-xl">
+            {snapshot.isProvisional
+              ? "Currently provisional"
+              : "Currently scored"}
+          </CardTitle>
+          <p className="mt-2 text-sm text-ink-muted">
+            {snapshot.isProvisional
+              ? "Member is in good standing while their track record builds at this tier. OVR / band / Court eligibility / compliance penalties don't apply. Sub-ratings still accumulate underneath. Promote off provisional once enough signal has landed (~3 completed engagements + 2 peer reviews received)."
+              : "Snapshot is fully scored — band ladder applies, penalty mechanic active, Champion's Court eligibility evaluated. Demote back to provisional only if the input pipeline is unreliable or the member transitioned tiers and needs a fresh window."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {snapshot.isProvisional ? (
+              <form action={promoteFromProvisional}>
+                <input type="hidden" name="userId" value={user.id} />
+                <button
+                  type="submit"
+                  className="rounded-full px-5 py-2 text-sm font-medium text-white"
+                  style={{ backgroundColor: "#007048" }}
+                >
+                  Promote to scored standing
+                </button>
+              </form>
+            ) : (
+              <form action={demoteToProvisional}>
+                <input type="hidden" name="userId" value={user.id} />
+                <button
+                  type="submit"
+                  className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+                >
+                  Demote to provisional (override)
+                </button>
+              </form>
+            )}
+          </div>
+        </Card>
       )}
 
       {!snapshot && (
@@ -188,21 +231,23 @@ export default async function AdminMvpUserPage({
       </Card>
 
       {snapshot && (
-        <Card className="mt-6">
-          <CardEyebrow>Sub-ratings</CardEyebrow>
+        <Card className="mt-6 border-[#5070F0]/40">
+          <CardEyebrow>Sub-ratings · admin override</CardEyebrow>
           <CardTitle className="mt-1 text-xl">Input layer</CardTitle>
           <p className="mt-2 text-sm text-ink-muted">
             Sub-rating values are computed daily from real attribution /
             peer review / client rating / milestone-hit data in
-            production. Sandbox seeds these directly so the OVR pipeline
-            has something to roll up. Editing these is a future-session
-            scope item; for now the read-only view is the right view.
+            production. Admin overrides should be rare and intentional —
+            each change here re-publishes the snapshot, and the OVR /
+            standing band may shift immediately. Range 0-99 per
+            sub-rating.
           </p>
           <table className="mt-4 w-full text-sm">
             <thead className="border-b border-[var(--surface-border)] text-xs uppercase tracking-wider text-ink-faint">
               <tr>
                 <th className="py-2 pr-3 text-left">Sub-rating</th>
-                <th className="py-2 pr-3 text-right">Value</th>
+                <th className="py-2 pr-3 text-right">Current</th>
+                <th className="py-2 pr-3 text-right">Override</th>
               </tr>
             </thead>
             <tbody>
@@ -215,6 +260,29 @@ export default async function AdminMvpUserPage({
                     <td className="py-2 pr-3">{MVP_SUB_RATING_LABELS[k]}</td>
                     <td className="py-2 pr-3 text-right font-mono">
                       {snapshot.subRatings[k] ?? 0}
+                    </td>
+                    <td className="py-2 pr-3 text-right">
+                      <form
+                        action={setSubRating}
+                        className="flex items-center justify-end gap-2"
+                      >
+                        <input type="hidden" name="userId" value={user.id} />
+                        <input type="hidden" name="subRating" value={k} />
+                        <input
+                          type="number"
+                          name="value"
+                          min={0}
+                          max={99}
+                          defaultValue={snapshot.subRatings[k] ?? 0}
+                          className="w-16 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-right text-sm font-mono"
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+                        >
+                          Set
+                        </button>
+                      </form>
                     </td>
                   </tr>
                 ),

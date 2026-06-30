@@ -62,6 +62,15 @@ export function MvpCard({
   isInCourt = false,
   className,
 }: MvpCardProps) {
+  // Provisional members get the good-standing surface only. No band, no
+  // OVR, no Court eligibility, no penalty stack rendered. Renders for
+  // self / peer / admin alike — sub-ratings stay hidden across all modes
+  // until promotion off provisional.
+  if (snapshot.isProvisional) {
+    return (
+      <ProvisionalCard user={user} className={className} mode={mode} />
+    );
+  }
   const band = standingBand(snapshot.ovr);
   // Champion's Circle visually overrides the band accent — Court members
   // get the gold-flecked green treatment regardless of which band they
@@ -298,6 +307,88 @@ interface BandAccent {
  * mid bands stay neutral; review bands flag magenta to signal attention
  * without going scarlet-letter.
  */
+/**
+ * Provisional card — new Members start here, surface shows "good standing
+ * — building track record" with no OVR / band / Court signal. Sub-ratings
+ * accumulate underneath in the data layer but stay hidden until admin
+ * promotes off provisional.
+ */
+function ProvisionalCard({
+  user,
+  className,
+  mode,
+}: {
+  user: MvpCardProps["user"];
+  className?: string;
+  mode: MvpCardProps["mode"];
+}) {
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-2xl border bg-[var(--surface-elevated)] p-5",
+        className,
+      )}
+      style={{ borderColor: "rgba(80, 112, 240, 0.35)" }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-1.5"
+        style={{ backgroundColor: "#5070F0" }}
+        aria-hidden
+      />
+
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar user={user} size="lg" />
+          <div className="min-w-0">
+            <div className="text-[10px] uppercase tracking-wider text-ink-faint">
+              MVP Score
+            </div>
+            <div className="font-display text-lg font-semibold leading-tight">
+              {user.firstName ?? user.handle}
+            </div>
+            {user.discipline && (
+              <div className="mt-0.5 text-xs text-ink-muted">
+                {user.discipline}
+              </div>
+            )}
+            <span
+              className="mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
+              style={{ backgroundColor: "rgba(80, 112, 240, 0.12)", color: "#5070F0" }}
+            >
+              Provisional · Good standing
+            </span>
+          </div>
+        </div>
+
+        <div className="text-right">
+          <div className="text-[10px] uppercase tracking-wider text-ink-faint">
+            OVR
+          </div>
+          <div
+            className="font-display text-5xl font-bold leading-none"
+            style={{ color: "#5070F0" }}
+            aria-label="OVR not yet scored"
+          >
+            —
+          </div>
+        </div>
+      </div>
+
+      <p className="mt-5 text-sm text-ink-muted">
+        {mode === "self"
+          ? "You're in good standing while you build a track record at this tier. Sub-ratings accumulate as you complete engagements; admin promotes you to scored standing once enough signal has landed (typically ~3 completed engagements + a couple of peer reviews)."
+          : "This member is in good standing while their track record at this tier builds. Sub-rating breakdown and scored OVR appear once admin promotes them off provisional."}
+      </p>
+
+      <div className="mt-4 text-[10px] text-ink-faint">
+        While provisional: threshold ladder doesn&apos;t apply (no
+        Champion&apos;s Court, no probation/removal review). Talent-match
+        scorer treats this member at neutral weighting.
+      </div>
+    </div>
+  );
+}
+
 /**
  * Champion's Circle accent — distinct from the OVR-only band palette
  * since the Court status is cohort-relative (top 10%) not OVR-absolute.

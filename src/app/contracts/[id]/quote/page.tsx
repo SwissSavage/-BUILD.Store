@@ -175,13 +175,33 @@ export default async function QuoteSubmitPage({
         </section>
       )}
 
-      <Card className="mt-10">
+      <Card className="mt-6 border-[#5070F0]/40">
+        <CardEyebrow>How comp works on this engagement</CardEyebrow>
+        <p className="mt-2 text-sm text-ink-muted">
+          Future Modern engagements pay in two parts: a guaranteed{" "}
+          <strong>base</strong> (low end of your asking) and an earnable{" "}
+          <strong>ceiling</strong> (delta to the upper end) released at
+          engagement close on a quality gate (client rating, peer
+          review, PM rating). Median outcome on quality engagements is
+          above asking; minimum outcome is the low end. Encourage
+          range-shaped quotes — &quot;$8,000 to $10,000&quot; is more
+          useful to admin than a single number.
+        </p>
+        <p className="mt-2 text-[11px] text-ink-faint">
+          Client never sees the gate — it&apos;s cooperative-internal.
+          The structure is for you to know what&apos;s guaranteed vs
+          earned before you accept the contract.
+        </p>
+      </Card>
+
+      <Card className="mt-6">
         <CardEyebrow>Submit a quote</CardEyebrow>
         <p className="mt-1 text-xs text-ink-faint">
-          Keep it simple: price, timeline, and work samples. Positioning
-          narrative (strengths / weaknesses) gets written by admins during
-          review so we pitch you consistently. Any direct-contact info you
-          include gets stripped — never a reason for rejection.
+          Keep it simple: price (range welcome), timeline, and work
+          samples. Positioning narrative (strengths / weaknesses) gets
+          written by admins during review so we pitch you consistently.
+          Any direct-contact info you include gets stripped — never a
+          reason for rejection.
         </p>
 
         <form action={submitQuote} className="mt-5 space-y-5">

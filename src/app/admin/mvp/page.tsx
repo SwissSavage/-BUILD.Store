@@ -71,6 +71,12 @@ export default async function AdminMvpPage() {
           <div className="text-xs text-ink-faint">
             top 10% of Members AND OVR ≥ 90
           </div>
+          <Link
+            href="/admin/mvp/recognition"
+            className="mt-2 inline-block text-[11px] text-brand-magenta hover:underline"
+          >
+            Future Modernist selection →
+          </Link>
         </div>
       </div>
 
@@ -133,13 +139,31 @@ export default async function AdminMvpPage() {
                       </span>
                     </td>
                     <td className="py-2 pr-3 text-right font-mono font-medium">
-                      {s.ovr}
+                      {s.isProvisional ? (
+                        <span className="text-ink-faint">—</span>
+                      ) : (
+                        s.ovr
+                      )}
                     </td>
                     <td className="py-2 pr-3">
-                      <BandPill band={band} inCourt={inCourt} />
+                      {s.isProvisional ? (
+                        <span
+                          className="inline-block rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider"
+                          style={{
+                            backgroundColor: "rgba(80, 112, 240, 0.12)",
+                            color: "#5070F0",
+                          }}
+                        >
+                          Provisional · Good standing
+                        </span>
+                      ) : (
+                        <BandPill band={band} inCourt={inCourt} />
+                      )}
                     </td>
                     <td className="py-2 pr-3 text-right">
-                      {s.activePenalties.length > 0 ? (
+                      {s.isProvisional ? (
+                        <span className="text-ink-faint">N/A</span>
+                      ) : s.activePenalties.length > 0 ? (
                         <span className="text-brand-magenta">
                           {s.activePenalties.length} active
                         </span>

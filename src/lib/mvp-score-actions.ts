@@ -103,6 +103,100 @@ export async function applyCompliancePenalty(formData: FormData) {
 }
 
 /**
+ * Admin updates a single sub-rating on a member's snapshot. Snapshot
+ * recomputes immediately so the OVR + standing band shift live.
+ *
+ * Production semantics: sub-ratings are computed from inputs (attribution,
+ * peer review, client feedback, milestone-hit, etc.) on the daily refresh
+ * job. Admin overrides should be rare and recorded; sandbox simplifies
+ * to direct edit on the snapshot inputs.
+ */
+export async function setSubRating(formData: FormData) {
+  await requireAdmin();
+  const userId = String(formData.get("userId") ?? "").trim();
+  const subRating = String(formData.get("subRating") ?? "").trim();
+  const raw = Number(formData.get("value") ?? "0");
+  if (!userId) throw new Error("userId is required");
+  if (!Number.isFinite(raw) || raw < 0 || raw > 99) {
+    throw new Error("Sub-rating value must be between 0 and 99.");
+  }
+
+  const validSubs = new Set([
+    "quality",
+    "outcomes",
+    "reliability",
+    "hustle",
+    "collaboration",
+    "attendance",
+    "referrals_bd",
+  ]);
+  if (!validSubs.has(subRating)) {
+    throw new Error(`Unknown sub-rating: ${subRating}`);
+  }
+
+  const snapshot = MOCK_MVP_SCORES.find((s) => s.userId === userId);
+  if (!snapshot) throw new Error("Snapshot not found for user");
+
+  snapshot.subRatings[subRating as keyof typeof snapshot.subRatings] = Math.round(raw);
+  recomputeSnapshot(userId);
+
+  const target = MOCK_USERS.find((u) => u.id === userId);
+  revalidatePath("/admin/mvp");
+  revalidatePath(`/admin/mvp/${userId}`);
+  if (target) revalidatePath(`/u/${target.handle}`);
+  revalidatePath("/profile");
+  revalidatePath("/admin");
+}
+
+/**
+ * Promote a member off provisional standing. Their snapshot starts
+ * being scored normally (band / Court eligibility / penalties apply).
+ * Production criterion: ~3 completed engagements + 2 peer reviews
+ * received. Sandbox: single-click admin promotion with no gate.
+ */
+export async function promoteFromProvisional(formData: FormData) {
+  await requireAdmin();
+  const userId = String(formData.get("userId") ?? "").trim();
+  if (!userId) throw new Error("userId is required");
+  const snapshot = MOCK_MVP_SCORES.find((s) => s.userId === userId);
+  if (!snapshot) throw new Error("Snapshot not found");
+  if (!snapshot.isProvisional) {
+    throw new Error("Already off provisional standing.");
+  }
+  snapshot.isProvisional = false;
+  recomputeSnapshot(userId);
+
+  const target = MOCK_USERS.find((u) => u.id === userId);
+  revalidatePath("/admin/mvp");
+  revalidatePath(`/admin/mvp/${userId}`);
+  if (target) revalidatePath(`/u/${target.handle}`);
+  revalidatePath("/profile");
+  revalidatePath("/admin");
+}
+
+/**
+ * Demote a member back to provisional (admin override — e.g. for testing
+ * the UI, or for production cases where a member's input pipeline broke
+ * and the OVR isn't trustworthy yet).
+ */
+export async function demoteToProvisional(formData: FormData) {
+  await requireAdmin();
+  const userId = String(formData.get("userId") ?? "").trim();
+  if (!userId) throw new Error("userId is required");
+  const snapshot = MOCK_MVP_SCORES.find((s) => s.userId === userId);
+  if (!snapshot) throw new Error("Snapshot not found");
+  snapshot.isProvisional = true;
+  recomputeSnapshot(userId);
+
+  const target = MOCK_USERS.find((u) => u.id === userId);
+  revalidatePath("/admin/mvp");
+  revalidatePath(`/admin/mvp/${userId}`);
+  if (target) revalidatePath(`/u/${target.handle}`);
+  revalidatePath("/profile");
+  revalidatePath("/admin");
+}
+
+/**
  * Admin rescinds a previously-applied penalty (mistaken trigger, found-
  * not-violated on review, etc.). Removes the penalty row entirely.
  *

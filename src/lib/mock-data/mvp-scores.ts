@@ -75,6 +75,7 @@ const SNAPSHOT_INPUTS: Array<{
   userId: string;
   subRatings: Record<MvpSubRating, number>;
   penalties?: MvpCompliancePenalty[];
+  isProvisional?: boolean;
 }> = [
   {
     userId: "u_jamar",
@@ -149,7 +150,13 @@ const SNAPSHOT_INPUTS: Array<{
     }),
   },
   {
+    // Newly promoted from Partner → Member tier 2026-06-29. Provisional
+    // until track record at Member tier accumulates. Sub-ratings still
+    // recompute in the background; the surface just renders "good
+    // standing — building track record" instead of OVR/band until admin
+    // promotes him off provisional.
     userId: "u_keyboard_kid",
+    isProvisional: true,
     subRatings: subs({
       quality: 88,
       outcomes: 82,
@@ -192,7 +199,11 @@ const SNAPSHOT_INPUTS: Array<{
 ];
 
 export const MOCK_MVP_SCORES: MvpScore[] = SNAPSHOT_INPUTS.map((row) =>
-  buildSnapshot({ ...row, publishedAt: PUBLISHED_AT }),
+  buildSnapshot({
+    ...row,
+    publishedAt: PUBLISHED_AT,
+    isProvisional: row.isProvisional ?? false,
+  }),
 );
 
 /** Find the published snapshot for a user, or null if not in the cohort. */

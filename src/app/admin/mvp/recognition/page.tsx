@@ -1,0 +1,244 @@
+/**
+ * Admin: Future Modernist recognition rail.
+ *
+ * Selects monthly + annual recognition winners from the MVP shortlist
+ * (top 5 OVR snapshots in the period, non-provisional). Admin writes an
+ * editorial narrative published alongside the recognition.
+ *
+ * Selection mechanism: Phase 1 admin pick (current); Phase 2 Member vote
+ * (Member-count gated, ~15-25 voting Members threshold). Vote phase
+ * doesn't change the route — the form swaps to a tally surface.
+ */
+import Link from "next/link";
+import { requireAdmin } from "@/lib/auth-stub";
+import { MOCK_USERS } from "@/lib/mock-data/users";
+import { MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
+import {
+  MOCK_FUTURE_MODERNIST_RECOGNITIONS,
+  periodKeyFor,
+  recentRecognitions,
+  recognitionForPeriod,
+} from "@/lib/mock-data/future-modernist-recognitions";
+import {
+  selectFutureModernist,
+  rescindFutureModernist,
+} from "@/lib/future-modernist-actions";
+import { publicName } from "@/lib/types";
+import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+const SHORTLIST_SIZE = 5;
+
+export default async function AdminFutureModernistPage() {
+  await requireAdmin();
+
+  // Top 5 by OVR, non-provisional. Cap top-N from the published snapshots.
+  const shortlist = MOCK_MVP_SCORES.filter((s) => !s.isProvisional)
+    .sort((a, b) => b.ovr - a.ovr)
+    .slice(0, SHORTLIST_SIZE);
+
+  const now = new Date();
+  const monthKey = periodKeyFor(now, "month");
+  const yearKey = periodKeyFor(now, "year");
+  const currentMonthWinner = recognitionForPeriod(monthKey.key, "month");
+  const currentYearWinner = recognitionForPeriod(yearKey.key, "year");
+
+  const recent = recentRecognitions(12);
+  void MOCK_FUTURE_MODERNIST_RECOGNITIONS;
+
+  return (
+    <div className="mx-auto max-w-app px-6 py-12">
+      <Link href="/admin/mvp" className="text-sm text-ink-muted hover:text-ink">
+        ← MVP scoreboard
+      </Link>
+      <h1 className="mt-3 font-display text-4xl font-semibold">
+        Future Modernist recognition
+      </h1>
+      <p className="mt-2 max-w-2xl text-ink-muted">
+        Monthly spotlight + annual Constellation cohort. Selection
+        mechanism is metric-driven shortlist (top 5 OVR, non-provisional)
+        + admin pick with editorial narrative. Member-vote phase opens
+        when the voting cohort reaches ~15-25 Members.
+      </p>
+
+      <Card className="mt-8 border-[#D828A0]/40">
+        <CardEyebrow>Shortlist</CardEyebrow>
+        <CardTitle className="mt-1 text-xl">
+          Top {SHORTLIST_SIZE} by OVR ({monthKey.label})
+        </CardTitle>
+        <ul className="mt-4 space-y-2 text-sm">
+          {shortlist.map((s, i) => {
+            const user = MOCK_USERS.find((u) => u.id === s.userId);
+            if (!user) return null;
+            return (
+              <li
+                key={s.userId}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--surface-border)] p-3"
+              >
+                <div>
+                  <span className="text-ink-faint">{i + 1}. </span>
+                  <Link
+                    href={`/u/${user.handle}`}
+                    className="font-medium hover:underline"
+                  >
+                    {publicName(user)}
+                  </Link>
+                  {user.discipline && (
+                    <span className="ml-2 text-[11px] text-ink-muted">
+                      {user.discipline}
+                    </span>
+                  )}
+                </div>
+                <span className="font-mono text-sm">OVR {s.ovr}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
+
+      <Card className="mt-6 border-[#5070F0]/40">
+        <CardEyebrow>Select monthly winner · {monthKey.label}</CardEyebrow>
+        {currentMonthWinner ? (
+          <>
+            <CardTitle className="mt-1 text-xl">
+              Already selected — see below
+            </CardTitle>
+            <p className="mt-2 text-sm text-ink-muted">
+              {monthKey.label} winner is on file. Rescind first if you
+              want to swap.
+            </p>
+          </>
+        ) : (
+          <SelectForm shortlist={shortlist} periodKind="month" />
+        )}
+      </Card>
+
+      <Card className="mt-6 border-[#007048]/40">
+        <CardEyebrow>Select annual Constellation · {yearKey.label}</CardEyebrow>
+        {currentYearWinner ? (
+          <>
+            <CardTitle className="mt-1 text-xl">
+              {yearKey.label} Constellation already named
+            </CardTitle>
+            <p className="mt-2 text-sm text-ink-muted">
+              See recent recognitions below.
+            </p>
+          </>
+        ) : (
+          <SelectForm shortlist={shortlist} periodKind="year" />
+        )}
+      </Card>
+
+      <section className="mt-10">
+        <h2 className="font-display text-2xl font-semibold">
+          Recent recognitions
+        </h2>
+        {recent.length === 0 ? (
+          <Card className="mt-4">
+            <p className="text-sm text-ink-muted">
+              No recognitions on file yet. Select the first one above.
+            </p>
+          </Card>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {recent.map((r) => {
+              const user = MOCK_USERS.find((u) => u.id === r.userId);
+              if (!user) return null;
+              return (
+                <Card key={r.id}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <div>
+                      <CardEyebrow>
+                        {r.periodKind === "month"
+                          ? `Future Modernist of ${r.periodLabel}`
+                          : `Constellation · ${r.periodLabel}`}
+                      </CardEyebrow>
+                      <CardTitle className="mt-1 text-lg">
+                        <Link
+                          href={`/u/${user.handle}`}
+                          className="hover:underline"
+                        >
+                          {publicName(user)}
+                        </Link>
+                      </CardTitle>
+                    </div>
+                    <span className="text-[11px] text-ink-faint">
+                      Selected {new Date(r.selectedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm text-ink">{r.narrative}</p>
+                  <form action={rescindFutureModernist} className="mt-3">
+                    <input type="hidden" name="recognitionId" value={r.id} />
+                    <button
+                      type="submit"
+                      className="text-[11px] text-brand-magenta underline hover:opacity-80"
+                    >
+                      Rescind
+                    </button>
+                  </form>
+                </Card>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function SelectForm({
+  shortlist,
+  periodKind,
+}: {
+  shortlist: typeof MOCK_MVP_SCORES;
+  periodKind: "month" | "year";
+}) {
+  return (
+    <form action={selectFutureModernist} className="mt-3 space-y-3">
+      <input type="hidden" name="periodKind" value={periodKind} />
+      <label className="block">
+        <span className="text-[11px] uppercase tracking-wider text-ink-muted">
+          Winner
+        </span>
+        <select
+          name="userId"
+          required
+          defaultValue=""
+          className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+        >
+          <option value="" disabled>
+            Pick from the shortlist
+          </option>
+          {shortlist.map((s) => {
+            const u = MOCK_USERS.find((x) => x.id === s.userId);
+            if (!u) return null;
+            return (
+              <option key={s.userId} value={s.userId}>
+                {publicName(u)} — OVR {s.ovr}
+              </option>
+            );
+          })}
+        </select>
+      </label>
+      <label className="block">
+        <span className="text-[11px] uppercase tracking-wider text-ink-muted">
+          Editorial narrative (≥ 50 chars)
+        </span>
+        <textarea
+          name="narrative"
+          rows={4}
+          required
+          minLength={50}
+          placeholder="Why this person, this period. The narrative ships alongside the recognition — write the version you'd want surfaced publicly."
+          className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+        />
+      </label>
+      <button
+        type="submit"
+        className="rounded-full px-5 py-2 text-sm font-medium text-white"
+        style={{ backgroundColor: periodKind === "year" ? "#007048" : "#D828A0" }}
+      >
+        Publish recognition
+      </button>
+    </form>
+  );
+}

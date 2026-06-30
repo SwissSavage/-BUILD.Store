@@ -18,6 +18,10 @@ import { epkForUser } from "@/lib/mock-data/artist-epk";
 import { mvpScoreForUser, MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import {
+  activeRecognitionsForUser,
+  recognitionsForUser,
+} from "@/lib/mock-data/future-modernist-recognitions";
+import {
   INDUSTRY_LABELS,
   canSendDirectMessage,
   publicName,
@@ -161,6 +165,67 @@ export default async function PublicProfilePage({
           )}
         </div>
       </header>
+
+      {(() => {
+        // Future Modernist recognitions are public-surface — they show
+        // on /u/[handle] for anonymous + signed-in viewers alike (the
+        // recognition is meant to be celebrated externally). Unlike MVP
+        // Score, which is cooperative-internal, recognitions are the
+        // public flag that something noteworthy landed.
+        const active = activeRecognitionsForUser(user.id);
+        const past = recognitionsForUser(user.id).filter(
+          (r) => r.id !== active.month?.id && r.id !== active.year?.id,
+        );
+        if (!active.month && !active.year && past.length === 0) return null;
+        return (
+          <section className="mt-10">
+            {active.year && (
+              <div
+                className="rounded-2xl border p-5"
+                style={{
+                  borderColor: "rgba(0, 112, 72, 0.5)",
+                  background:
+                    "linear-gradient(135deg, rgba(0,112,72,0.10), rgba(80,112,240,0.04))",
+                }}
+              >
+                <div className="text-[10px] uppercase tracking-wider" style={{ color: "#007048" }}>
+                  ★ Constellation of {active.year.periodLabel}
+                </div>
+                <p className="mt-2 text-sm text-ink">{active.year.narrative}</p>
+              </div>
+            )}
+            {active.month && (
+              <div
+                className={`rounded-2xl border p-5 ${active.year ? "mt-3" : ""}`}
+                style={{
+                  borderColor: "rgba(216, 40, 160, 0.5)",
+                  background:
+                    "linear-gradient(135deg, rgba(216,40,160,0.08), rgba(80,112,240,0.04))",
+                }}
+              >
+                <div className="text-[10px] uppercase tracking-wider text-brand-magenta">
+                  ★ Future Modernist of {active.month.periodLabel}
+                </div>
+                <p className="mt-2 text-sm text-ink">{active.month.narrative}</p>
+              </div>
+            )}
+            {past.length > 0 && (
+              <div className="mt-3 text-[11px] text-ink-faint">
+                Also recognized:{" "}
+                {past
+                  .slice(0, 6)
+                  .map((r) =>
+                    r.periodKind === "year"
+                      ? `Constellation ${r.periodLabel}`
+                      : r.periodLabel,
+                  )
+                  .join(" · ")}
+                {past.length > 6 && ` · +${past.length - 6} more`}
+              </div>
+            )}
+          </section>
+        );
+      })()}
 
       {showEpk && epk && <EpkShell epk={epk} userName={publicName(user)} />}
 

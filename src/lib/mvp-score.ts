@@ -131,12 +131,18 @@ export function computeOvr(
 /**
  * Build a fresh score snapshot for a user. Sandbox helper; production
  * pipeline builds the same shape from real inputs.
+ *
+ * Provisional snapshots still carry computed OVR + sub-ratings under the
+ * hood so the data accumulates during the provisional window. The
+ * `isProvisional` flag gates how the surface RENDERS the snapshot
+ * (good-standing only, no OVR/band/Court eligibility surfaced).
  */
 export function buildSnapshot(input: {
   userId: string;
   subRatings: Record<MvpSubRating, number>;
   penalties?: MvpCompliancePenalty[];
   publishedAt?: string;
+  isProvisional?: boolean;
 }): MvpScore {
   const now = input.publishedAt ?? new Date().toISOString();
   const periodEnd = new Date(now);
@@ -152,6 +158,7 @@ export function buildSnapshot(input: {
     periodStart: periodStart.toISOString(),
     periodEnd: periodEnd.toISOString(),
     publishedAt: now,
+    isProvisional: input.isProvisional ?? false,
   };
 }
 
@@ -193,7 +200,10 @@ export function peerView(snapshot: MvpScore): MvpPeerView {
  * Champion's Court gate — top 10% of Members by OVR AND OVR ≥ 90.
  *
  * Pass in the published snapshots for ALL active Members; this function
- * applies both gates and returns the user IDs that qualify.
+ * applies both gates and returns the user IDs that qualify. Provisional
+ * snapshots are excluded — provisional members are in "building track
+ * record" state and not eligible for any recognition tier until they
+ * exit provisional.
  */
 export function championsCourtMembers(
   memberSnapshots: MvpScore[],
@@ -205,7 +215,10 @@ export function championsCourtMembers(
       .map((u) => u.id),
   );
   const memberRanked = memberSnapshots
-    .filter((s) => memberIds.has(s.userId) && s.ovr >= 90)
+    .filter(
+      (s) =>
+        memberIds.has(s.userId) && !s.isProvisional && s.ovr >= 90,
+    )
     .sort((a, b) => b.ovr - a.ovr);
   if (memberRanked.length === 0) return [];
   const cap = Math.max(1, Math.ceil(memberIds.size * 0.1));

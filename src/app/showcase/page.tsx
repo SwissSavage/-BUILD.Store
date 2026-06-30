@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
 import { MOCK_USERS } from "@/lib/mock-data/users";
+import { publicProfileEligible } from "@/lib/profile-visibility";
 import {
   INDUSTRY_LABELS,
   type Industry,
@@ -35,9 +36,17 @@ export default async function ShowcasePage({
   const { pillar: raw } = await searchParams;
   const activePillar = parsePillar(raw);
 
-  const published = MOCK_PORTFOLIO.map(publicPortfolioView).filter(
-    (x): x is NonNullable<ReturnType<typeof publicPortfolioView>> => x !== null,
+  // Visibility-gate the portfolio entries: only items owned by public-
+  // discovery-eligible users (Members + currently-recognized Partners)
+  // surface here. Partner items without active recognition stay link-
+  // only via their direct `/u/[handle]` URL. See `profile-visibility.ts`.
+  const eligibleUserIds = new Set(
+    MOCK_USERS.filter((u) => publicProfileEligible(u)).map((u) => u.id),
   );
+  const published = MOCK_PORTFOLIO
+    .filter((p) => eligibleUserIds.has(p.userId))
+    .map(publicPortfolioView)
+    .filter((x): x is NonNullable<ReturnType<typeof publicPortfolioView>> => x !== null);
   const inScope = activePillar
     ? published.filter((p) => p.industry === activePillar)
     : published;

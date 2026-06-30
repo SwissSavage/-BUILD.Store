@@ -11,20 +11,14 @@
  */
 import type { FutureModernistRecognition } from "@/lib/types";
 
-export const MOCK_FUTURE_MODERNIST_RECOGNITIONS: FutureModernistRecognition[] = [
-  // Seeded: BBG, May 2026 — illustrative historical winner.
-  {
-    id: "fmr_001",
-    userId: "u_bbg",
-    periodKind: "month",
-    periodLabel: "May 2026",
-    periodKey: "2026-05",
-    narrative:
-      "BBG shipped the EPK system reframe in one cycle — clean ownership of the artist-tier distinction, no scope drift, and the Onesheet metrics build was on his initiative. The cooperative-equity logic he carries into Creative Strategy showed up in the architecture decisions, not just the messaging. Newsletter 2's 'Owners ship better work than renters' wasn't just rhetoric this month.",
-    selectedByUserId: "u_jamar",
-    selectedAt: "2026-06-01T10:00:00Z",
-  },
-];
+/**
+ * Recognitions start empty in the sandbox. Admin selects from the
+ * metric shortlist via `/admin/mvp/recognition` when ready. Seeding a
+ * specific winner without grounding in actual contribution data risks
+ * misattribution — the recognition rail is meant to be driven by
+ * Jamar's editorial judgment, not the seed.
+ */
+export const MOCK_FUTURE_MODERNIST_RECOGNITIONS: FutureModernistRecognition[] = [];
 
 export function recognitionForPeriod(
   periodKey: string,

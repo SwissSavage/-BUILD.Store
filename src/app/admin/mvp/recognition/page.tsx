@@ -31,10 +31,23 @@ const SHORTLIST_SIZE = 5;
 export default async function AdminFutureModernistPage() {
   await requireAdmin();
 
-  // Top 5 by OVR, non-provisional. Cap top-N from the published snapshots.
+  // Metric-driven suggestion: top 5 by OVR, non-provisional. Surfaces
+  // as an informational shortlist on the form — admin can pick from here
+  // if they want to lean on the data. Partner-tier candidates aren't on
+  // the MVP shortlist (Partners don't get OVR scores per the locked tier
+  // matrix), but the selection form's universe is open to ALL active
+  // users so admin can recognize Partners by editorial judgment.
   const shortlist = MOCK_MVP_SCORES.filter((s) => !s.isProvisional)
     .sort((a, b) => b.ovr - a.ovr)
     .slice(0, SHORTLIST_SIZE);
+
+  // Recognition-eligible universe: all active users (Members + Partners).
+  // Excludes prospects/viewers and self-managed admins who are operations
+  // accounts rather than recognized contributors.
+  const eligibleUsers = MOCK_USERS.filter(
+    (u) =>
+      u.membershipTier === "member" || u.membershipTier === "partner",
+  );
 
   const now = new Date();
   const monthKey = periodKeyFor(now, "month");
@@ -61,10 +74,19 @@ export default async function AdminFutureModernistPage() {
       </p>
 
       <Card className="mt-8 border-[#D828A0]/40">
-        <CardEyebrow>Shortlist</CardEyebrow>
+        <CardEyebrow>Metric suggestion</CardEyebrow>
         <CardTitle className="mt-1 text-xl">
-          Top {SHORTLIST_SIZE} by OVR ({monthKey.label})
+          Top {SHORTLIST_SIZE} OVR · informational ({monthKey.label})
         </CardTitle>
+        <p className="mt-2 text-sm text-ink-muted">
+          The MVP shortlist surfaces here as a data-driven suggestion.
+          Selection is open to any active Member or Partner — admin
+          editorial judgment overrides the metric when warranted.
+          Recognizing a Partner is the platform&apos;s upgrade-path
+          mechanic: their profile gets public-discovery visibility for
+          the recognition window, which lets them use the cooperative
+          as marketing infrastructure they can&apos;t access otherwise.
+        </p>
         <ul className="mt-4 space-y-2 text-sm">
           {shortlist.map((s, i) => {
             const user = MOCK_USERS.find((u) => u.id === s.userId);
@@ -108,7 +130,7 @@ export default async function AdminFutureModernistPage() {
             </p>
           </>
         ) : (
-          <SelectForm shortlist={shortlist} periodKind="month" />
+          <SelectForm eligibleUsers={eligibleUsers} periodKind="month" />
         )}
       </Card>
 
@@ -124,7 +146,7 @@ export default async function AdminFutureModernistPage() {
             </p>
           </>
         ) : (
-          <SelectForm shortlist={shortlist} periodKind="year" />
+          <SelectForm eligibleUsers={eligibleUsers} periodKind="year" />
         )}
       </Card>
 
@@ -186,12 +208,23 @@ export default async function AdminFutureModernistPage() {
 }
 
 function SelectForm({
-  shortlist,
+  eligibleUsers,
   periodKind,
 }: {
-  shortlist: typeof MOCK_MVP_SCORES;
+  eligibleUsers: typeof MOCK_USERS;
   periodKind: "month" | "year";
 }) {
+  const members = eligibleUsers
+    .filter((u) => u.membershipTier === "member")
+    .sort((a, b) =>
+      publicName(a).localeCompare(publicName(b)),
+    );
+  const partners = eligibleUsers
+    .filter((u) => u.membershipTier === "partner")
+    .sort((a, b) =>
+      publicName(a).localeCompare(publicName(b)),
+    );
+
   return (
     <form action={selectFutureModernist} className="mt-3 space-y-3">
       <input type="hidden" name="periodKind" value={periodKind} />
@@ -206,19 +239,45 @@ function SelectForm({
           className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
         >
           <option value="" disabled>
-            Pick from the shortlist
+            Pick a Member or Partner
           </option>
-          {shortlist.map((s) => {
-            const u = MOCK_USERS.find((x) => x.id === s.userId);
-            if (!u) return null;
-            return (
-              <option key={s.userId} value={s.userId}>
-                {publicName(u)} — OVR {s.ovr}
+          <optgroup label="Members (equity, full co-brand allowed)">
+            {members.map((u) => (
+              <option key={u.id} value={u.id}>
+                {publicName(u)}
+                {u.discipline ? ` — ${u.discipline}` : ""}
               </option>
-            );
-          })}
+            ))}
+          </optgroup>
+          <optgroup label="Partners (recognition unlocks discovery window; no external co-brand)">
+            {partners.map((u) => (
+              <option key={u.id} value={u.id}>
+                {publicName(u)}
+                {u.discipline ? ` — ${u.discipline}` : ""}
+              </option>
+            ))}
+          </optgroup>
         </select>
       </label>
+
+      <div
+        className="rounded-lg p-3 text-xs"
+        style={{ backgroundColor: "rgba(80, 112, 240, 0.08)" }}
+      >
+        <span className="text-[11px] uppercase tracking-wider" style={{ color: "#5070F0" }}>
+          Co-brand policy reminder
+        </span>
+        <p className="mt-1 text-ink">
+          When recognizing a Partner, the narrative emphasizes their
+          work and discipline within the cooperative. Do NOT promote
+          their independent company name or external brand — co-brand
+          is reserved for Members. Recognition is FM&apos;s seal on
+          their work; the Partner&apos;s own profile becomes
+          publicly-discoverable for the recognition window, and that&apos;s
+          the value-add. They can route clients to the URL themselves.
+        </p>
+      </div>
+
       <label className="block">
         <span className="text-[11px] uppercase tracking-wider text-ink-muted">
           Editorial narrative (≥ 50 chars)
@@ -228,10 +287,11 @@ function SelectForm({
           rows={4}
           required
           minLength={50}
-          placeholder="Why this person, this period. The narrative ships alongside the recognition — write the version you'd want surfaced publicly."
+          placeholder="Why this person, this period. Ships with the recognition — write the version you'd want surfaced publicly. For Partners: stay focused on the work; no external-company promotion."
           className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
         />
       </label>
+
       <button
         type="submit"
         className="rounded-full px-5 py-2 text-sm font-medium text-white"

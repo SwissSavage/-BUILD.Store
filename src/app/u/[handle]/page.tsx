@@ -21,6 +21,7 @@ import {
   activeRecognitionsForUser,
   recognitionsForUser,
 } from "@/lib/mock-data/future-modernist-recognitions";
+import { profileShouldIndex } from "@/lib/profile-visibility";
 import {
   INDUSTRY_LABELS,
   canSendDirectMessage,
@@ -31,11 +32,39 @@ import {
   type FeaturedWorkEntry,
   type PressClip,
 } from "@/lib/types";
+import type { Metadata } from "next";
 import { sendDirectMessage } from "@/lib/dm-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
 import { TierBadge } from "@/components/TierBadge";
 import { MvpCard } from "@/components/MvpCard";
+
+/**
+ * Direct-link to `/u/[handle]` always renders, but search engines only
+ * index profiles eligible for public discovery (Members + currently-
+ * recognized Partners). Partner-tier profiles without active recognition
+ * stay reachable by direct link (Partners distribute the URL themselves
+ * for client demos) but stay out of search results. See
+ * `lib/profile-visibility.ts` for the matrix.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ handle: string }>;
+}): Promise<Metadata> {
+  const { handle } = await params;
+  const user = MOCK_USERS.find(
+    (u) => u.handle.toLowerCase() === handle.toLowerCase(),
+  );
+  if (!user) return { robots: { index: false, follow: false } };
+  if (!profileShouldIndex(user)) {
+    return {
+      title: `${publicName(user)} — Future Modern`,
+      robots: { index: false, follow: false },
+    };
+  }
+  return { title: `${publicName(user)} — Future Modern` };
+}
 
 export default async function PublicProfilePage({
   params,

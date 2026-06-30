@@ -37,19 +37,22 @@ function subs(input: Partial<Record<MvpSubRating, number>>): Record<MvpSubRating
  * `appliedAt`. The `expiresAt` is `appliedAt + 90 days`. Stacks.
  */
 export const MOCK_MVP_PENALTIES: MvpCompliancePenalty[] = [
-  // Illustrative — Rob's DataXplorer-shape pattern (separate MSA on FM's
-  // client without disclosure, attribution-ledger gap on the six figures
-  // that landed with the side agency). Single penalty, ~45 days into
-  // its 90-day window. The peer-visible signal is one active penalty +
-  // the OVR drop; the reason text is admin-only.
+  // Illustrative historical record — the 2024 DataXplorer incident
+  // (separate MSA on FM client, attribution gap on the six figures that
+  // landed with the side agency). Applied 2024-05-15, expired 2024-08-13
+  // — well outside the 12-month MVP rolling window. Surfaces in Rob's
+  // penalty HISTORY for arbitration / pattern-recognition purposes but
+  // does NOT drag his current OVR. Demonstrates the rolloff behavior of
+  // the DnD-Exhaustion mechanic: each penalty is time-bounded; the
+  // mechanic does not preserve grudges past the 90-day window.
   {
     id: "mvp_pen_001",
     userId: "u_rob",
-    appliedAt: "2026-05-15T00:00:00Z",
-    expiresAt: "2026-08-13T00:00:00Z",
+    appliedAt: "2024-05-15T00:00:00Z",
+    expiresAt: "2024-08-13T00:00:00Z",
     ovrImpact: -9,
     reason:
-      "Cooperative-covenant violation: separate MSA executed on FM client without disclosure; attribution-ledger gap on ~$120k that landed with side agency. See DataXplorer pattern in projects-portfolio.md.",
+      "2024 cooperative-covenant pattern: separate MSA executed on FM client without disclosure; attribution-ledger gap on ~$120k that landed with side agency. Resolved (penalty expired 2024-08); kept on record for arbitration history but not currently active. See DataXplorer historical entry in projects-portfolio.md.",
   },
 ];
 
@@ -159,14 +162,18 @@ const SNAPSHOT_INPUTS: Array<{
   },
   {
     userId: "u_rob",
+    // Sub-ratings reflect natural good-standing: solid service provider
+    // (per key-people.md), ~$80k in delivered work, strong RevOps lens.
+    // The 2024 DataXplorer penalty rolled off in 2024-08 and does not
+    // drag his current OVR. History stays on record per memory.
     subRatings: subs({
-      quality: 82,
-      outcomes: 78,
-      reliability: 76,
-      hustle: 84,
-      collaboration: 78,
-      attendance: 80,
-      referrals_bd: 86,
+      quality: 84,
+      outcomes: 82,
+      reliability: 80,
+      hustle: 86,
+      collaboration: 82,
+      attendance: 84,
+      referrals_bd: 88,
     }),
     penalties: MOCK_MVP_PENALTIES.filter((p) => p.userId === "u_rob"),
   },

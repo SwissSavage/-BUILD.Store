@@ -61,7 +61,7 @@ export function Footer() {
           <ul className="mt-3 space-y-1.5 text-sm">
             <li>
               <a
-                href="https://calendly.com/a-future-modern"
+                href="https://calendly.com/properpreparationism"
                 className="hover:text-brand-magenta"
                 target="_blank"
                 rel="noreferrer"

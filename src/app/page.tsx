@@ -55,7 +55,7 @@ function Hero() {
             Get started
           </Link>
           <a
-            href="https://calendly.com/a-future-modern"
+            href="https://calendly.com/properpreparationism"
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center justify-center rounded-full border border-brand-blue/60 px-8 py-3 font-medium text-brand-blue transition-colors hover:bg-brand-blue/10"

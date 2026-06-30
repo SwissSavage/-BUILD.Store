@@ -155,19 +155,21 @@ export const MOCK_PROJECT_MILESTONES: ProjectMilestone[] = [
     updatedAt: dayOffset(-14),
   },
 
-  // ── p_103 (internal governance tooling — Chibu + Trevor). One blocked
+  // ── p_103 (internal governance tooling — Tolgay + Trevor). One blocked
   // milestone exercises the blocker rail and the admin "resolve" pathway.
+  // (Previously owned by Chibu; reassigned to Tolgay 2026-06-29 when
+  // prior owner went out per bylaws.)
   {
     id: "ms_103_01",
     projectId: "p_103",
     sequence: 10,
     title: "Multisig contract review",
     description: "Audit and integration plan for treasury multisig.",
-    ownerUserId: "u_chibu",
+    ownerUserId: "u_tolgay",
     dueAt: dayOffset(-2),
     status: "blocked",
     blockerNote:
-      "Waiting on contract owner to confirm signing threshold. Owner unresponsive for 8 days.",
+      "Waiting on contract owner to confirm signing threshold. Reassigned from prior owner (out per bylaws); Tolgay picking up the audit.",
     completedAt: null,
     lastDueSoonNoticeAt: null,
     lastOverdueNoticeAt: null,

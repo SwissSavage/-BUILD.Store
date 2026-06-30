@@ -17,6 +17,8 @@ export const MOCK_TRANSACTIONS: TokenTransaction[] = [
     projectId: "p_004",
     description: "Artist profile series — delivered Feb 2026.",
     transactionHash: null, // not yet on chain in sandbox
+    compStage: null,
+    withholdReason: null,
     createdAt: "2026-02-16T00:00:00Z",
   },
   {
@@ -27,6 +29,8 @@ export const MOCK_TRANSACTIONS: TokenTransaction[] = [
     projectId: "p_003",
     description: "DCG GTM milestone 1.",
     transactionHash: null,
+    compStage: null,
+    withholdReason: null,
     createdAt: "2026-03-25T00:00:00Z",
   },
   {
@@ -37,6 +41,8 @@ export const MOCK_TRANSACTIONS: TokenTransaction[] = [
     projectId: "p_003",
     description: "Paired GTM delivery with u_michael.",
     transactionHash: null,
+    compStage: null,
+    withholdReason: null,
     createdAt: "2026-03-25T00:00:00Z",
   },
   {
@@ -47,6 +53,8 @@ export const MOCK_TRANSACTIONS: TokenTransaction[] = [
     projectId: null,
     description: "Q1 2026 governance allocation.",
     transactionHash: null,
+    compStage: null,
+    withholdReason: null,
     createdAt: "2026-04-01T00:00:00Z",
   },
   {
@@ -57,6 +65,37 @@ export const MOCK_TRANSACTIONS: TokenTransaction[] = [
     projectId: null,
     description: "Referred u_trevor as prospect.",
     transactionHash: null,
+    compStage: null,
+    withholdReason: null,
     createdAt: "2026-02-18T00:00:00Z",
+  },
+
+  // ── p_004 (URL Media editorial — Aliza solo, $12k collected, base $8k + bonus $2k)
+  // Comp structure released; talent sees both legs as distinct rows so
+  // the conditioning is visible.
+  {
+    id: "tx_p004_base",
+    userId: "u_aliza",
+    amount: "12000.00000000",
+    type: "project_completion",
+    projectId: "p_004",
+    description: "Base — URL Media editorial series (low end of asking).",
+    transactionHash: null,
+    compStage: "base",
+    withholdReason: null,
+    createdAt: "2026-02-20T15:00:00Z",
+  },
+  {
+    id: "tx_p004_bonus",
+    userId: "u_aliza",
+    amount: "3000.00000000",
+    type: "project_completion",
+    projectId: "p_004",
+    description:
+      "Bonus released — URL Media editorial series. Client rated 5★ (gate cleared).",
+    transactionHash: null,
+    compStage: "bonus_released",
+    withholdReason: null,
+    createdAt: "2026-02-28T16:00:00Z",
   },
 ];

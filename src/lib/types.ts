@@ -730,6 +730,31 @@ export interface MembershipApplication {
   createdAt: string;
 }
 
+/**
+ * Compensation-stage classification for a token transaction. Surfaces
+ * the conditioning of the comp structure on the talent's own wallet:
+ *
+ *   base            : Released as base portion (guaranteed floor).
+ *   bonus_released  : Released as performance bonus (gate cleared).
+ *   bonus_withheld  : Bonus was reclaimed when gate failed; entry shows
+ *                    notional amount and the reason so conditioning is
+ *                    visible to talent (transparency over silent
+ *                    withholding).
+ *   null            : Pre-comp-structure transaction OR transaction kind
+ *                    where base/bonus doesn't apply (referrals,
+ *                    governance, admin grants).
+ */
+export type TokenTransactionCompStage =
+  | "base"
+  | "bonus_released"
+  | "bonus_withheld";
+
+export const COMP_STAGE_LABELS: Record<TokenTransactionCompStage, string> = {
+  base: "Base",
+  bonus_released: "Bonus released",
+  bonus_withheld: "Bonus withheld",
+};
+
 export interface TokenTransaction {
   id: string;
   userId: string;
@@ -743,6 +768,14 @@ export interface TokenTransaction {
   projectId: string | null;
   description: string | null;
   transactionHash: string | null;
+  /**
+   * Conditioning visibility — when set, the wallet UI surfaces the
+   * comp-stage so talent sees base vs bonus distinctly. Null for
+   * legacy / non-engagement transactions.
+   */
+  compStage: TokenTransactionCompStage | null;
+  /** Admin-supplied reason when compStage === "bonus_withheld". */
+  withholdReason: string | null;
   createdAt: string;
 }
 

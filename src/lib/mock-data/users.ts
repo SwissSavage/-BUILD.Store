@@ -52,14 +52,19 @@ export const MOCK_USERS: User[] = [
     firstName: "Chibu",
     lastName: "—",
     profileImageUrl: null,
-    membershipTier: "member",
+    // Demoted from "member" to "viewer" 2026-06-29 per bylaw expulsion on
+    // arbitration nonparticipation. Historical references to him (orders,
+    // attribution, tokens, portfolio) stay as record-of-fact; he no
+    // longer carries Member-tier access / privileges. See legal.md +
+    // key-people.md for the full status.
+    membershipTier: "viewer",
     primaryIndustry: "stem",
     secondaryIndustries: [],
     dataParticipation: false,
     skills: ["full-stack", "smart contracts", "infra"],
-    discipline: "Full-stack Engineer",
+    discipline: "Former core contributor (out per bylaws 2026-06-29)",
     profileMode: "contributor",
-    bio: "Core contributor.",
+    bio: "Former core contributor. Status: out per bylaws (2026-06-29).",
     portfolioUrl: null,
     buildTokenBalance: "8200.50000000",
     isAdmin: false,
@@ -72,7 +77,7 @@ export const MOCK_USERS: User[] = [
     stripeAccountId: "acct_1Q9chibu0002",
     stripePayoutsEnabled: true,
     createdAt: "2025-02-01T00:00:00Z",
-    updatedAt: "2026-04-10T00:00:00Z",
+    updatedAt: "2026-06-29T00:00:00Z",
   },
   {
     id: "u_aliza",

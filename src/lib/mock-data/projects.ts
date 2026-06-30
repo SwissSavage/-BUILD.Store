@@ -64,9 +64,10 @@ export const MOCK_PROJECTS: Project[] = [
     hubspotDealId: "hub_deal_8852",
     collectedRevenue: null,
     collectedAt: null,
-    // Jamar owns DCG; bringing in Chibu since she's running the smart-contract
-    // negotiation. Even split at settle unless overridden.
-    adminUserIds: ["u_jamar", "u_chibu"],
+    // Jamar owns DCG. (Prior version listed Chibu as second admin for
+    // smart-contract negotiation; removed 2026-06-29 when he went out
+    // per bylaws. Tolgay covers any smart-contract review now.)
+    adminUserIds: ["u_jamar"],
     talentBaseAmount: null,
     talentBonusAmount: null,
     bonusGate: null,

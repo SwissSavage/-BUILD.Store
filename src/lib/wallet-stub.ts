@@ -60,6 +60,8 @@ export function distributeBuild(params: DistributeBuildParams): TokenTransaction
     projectId: params.projectId ?? null,
     description: params.description ?? null,
     transactionHash: null, // sandbox has no chain
+    compStage: null,
+    withholdReason: null,
     createdAt: new Date().toISOString(),
   };
 

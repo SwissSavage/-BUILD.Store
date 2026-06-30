@@ -70,8 +70,8 @@ export const MOCK_INBOUND_SUBMISSIONS: InboundSubmission[] = [
     body:
       "Senior brand designer, 6-week engagement, rebranding a Series A legaltech company. Budget $40-60k. Start in 3 weeks.",
     attachments: [],
-    assignedAdminId: "u_chibu",
-    triageNote: "Pinged Chibu, asking BBG to scope.",
+    assignedAdminId: "u_jamar",
+    triageNote: "Reassigned to Jamar 2026-06-29 (prior assignee out per bylaws). Asking BBG to scope.",
     deepLinkHref: null,
     derived: false,
     createdAt: "2026-05-15T09:45:00Z",

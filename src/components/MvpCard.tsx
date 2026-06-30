@@ -390,59 +390,75 @@ function ProvisionalCard({
 }
 
 /**
- * Champion's Circle accent — distinct from the OVR-only band palette
- * since the Court status is cohort-relative (top 10%) not OVR-absolute.
- * Slightly richer green + gold tint to mark the elite tier.
+ * Champion's Court accent — distinct from band palette because Court
+ * status is cohort-relative (top 10%) not OVR-absolute. Gold dominant
+ * — the legendary-tier color reserved for Court members only.
  */
 const CHAMPIONS_CIRCLE_ACCENT: BandAccent = {
-  border: "rgba(0, 112, 72, 0.65)",
-  bar: "#007048",
-  ovr: "#007048",
-  bg: "rgba(0, 112, 72, 0.14)",
-  fg: "#007048",
+  border: "rgba(212, 175, 55, 0.75)", // gold
+  bar: "#D4AF37",
+  ovr: "#D4AF37",
+  bg: "rgba(212, 175, 55, 0.16)",
+  fg: "#D4AF37",
 };
 
+/**
+ * RPG rarity ladder color mapping (locked 2026-06-30).
+ *
+ *   Probation / removal (<70)       : gray   — common
+ *   Good standing (70-74)           : green  — uncommon
+ *   Promotion eligible (75-79)      : blue   — rare
+ *   Future Modernist pool (80-89)   : magenta — epic
+ *   Champion's Court (90+ + top 10%): gold   — legendary (see above)
+ *
+ * Matches the TradingCard tier visuals so MvpCard + TradingCard read
+ * as one visual family. See `app/globals.css` for the TradingCard
+ * backdrop classes and `future-modern.md` MVP Score section for the
+ * principle.
+ */
 const BAND_ACCENT: Record<MvpStandingBand, BandAccent> = {
   champions_court_eligible: {
-    border: "rgba(0, 112, 72, 0.5)",
-    bar: "#007048",
-    ovr: "#007048",
-    bg: "rgba(0, 112, 72, 0.12)",
-    fg: "#007048",
+    // 90+ NOT in top 10% Court — magenta (epic). Court override applies
+    // separately when isInCourt is true (caller-determined).
+    border: "rgba(216, 40, 160, 0.65)",
+    bar: "#D828A0",
+    ovr: "#D828A0",
+    bg: "rgba(216, 40, 160, 0.14)",
+    fg: "#D828A0",
   },
   future_modernist_pool: {
-    border: "rgba(80, 112, 240, 0.5)",
-    bar: "#5070F0",
-    ovr: "#5070F0",
-    bg: "rgba(80, 112, 240, 0.12)",
-    fg: "#5070F0",
-  },
-  promotion_eligible: {
-    border: "rgba(80, 112, 240, 0.35)",
-    bar: "#5070F0",
-    ovr: "#5070F0",
-    bg: "rgba(80, 112, 240, 0.10)",
-    fg: "#5070F0",
-  },
-  good_standing: {
-    border: "var(--surface-border)",
-    bar: "#666666",
-    ovr: "var(--ink)",
-    bg: "rgba(102, 102, 102, 0.12)",
-    fg: "#666666",
-  },
-  probation_review: {
-    border: "rgba(216, 40, 160, 0.5)",
+    border: "rgba(216, 40, 160, 0.55)",
     bar: "#D828A0",
     ovr: "#D828A0",
     bg: "rgba(216, 40, 160, 0.12)",
     fg: "#D828A0",
   },
+  promotion_eligible: {
+    border: "rgba(80, 112, 240, 0.6)",
+    bar: "#5070F0",
+    ovr: "#5070F0",
+    bg: "rgba(80, 112, 240, 0.14)",
+    fg: "#5070F0",
+  },
+  good_standing: {
+    border: "rgba(0, 112, 72, 0.55)",
+    bar: "#007048",
+    ovr: "#007048",
+    bg: "rgba(0, 112, 72, 0.12)",
+    fg: "#007048",
+  },
+  probation_review: {
+    border: "rgba(102, 102, 102, 0.55)",
+    bar: "#666666",
+    ovr: "#666666",
+    bg: "rgba(102, 102, 102, 0.18)",
+    fg: "#666666",
+  },
   removal_accelerated: {
-    border: "rgba(216, 40, 160, 0.6)",
-    bar: "#D828A0",
-    ovr: "#D828A0",
-    bg: "rgba(216, 40, 160, 0.18)",
-    fg: "#D828A0",
+    border: "rgba(102, 102, 102, 0.7)",
+    bar: "#666666",
+    ovr: "#666666",
+    bg: "rgba(102, 102, 102, 0.22)",
+    fg: "#666666",
   },
 };

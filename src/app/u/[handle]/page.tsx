@@ -38,7 +38,7 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
 import { TierBadge } from "@/components/TierBadge";
 import { MvpCard } from "@/components/MvpCard";
-import { TradingCard, type TradingCardTier } from "@/components/TradingCard";
+import { TradingCard, deriveTradingCardTier } from "@/components/TradingCard";
 
 /**
  * Direct-link to `/u/[handle]` always renders, but search engines only
@@ -105,23 +105,19 @@ export default async function PublicProfilePage({
   const showEpk =
     user.profileMode === "epk" && epk !== null && epk.status === "published";
 
-  // Trading-card tier — derived from MVP standing + Court eligibility.
-  // Partners (no snapshot) and provisional Members fall to "standard"
-  // — still a beautiful card, just no animated treatment. Future
-  // Modernist pool / promotion-eligible Members get "elevated". Champion's
-  // Court members get "holographic" with the animated sheen.
+  // Trading-card tier — RPG rarity ladder derived from MVP standing.
+  // Gray (probation) / green (good standing) / blue (promotion eligible) /
+  // magenta (Future Modernist pool) / holographic gold (Champion's Court).
+  // Partners without an MVP snapshot fall to "standard" — calm brand
+  // gradient, falls outside the rarity ladder. Provisional members also
+  // get "standard" so unproven track records aren't visually rewarded.
   const mvpSnapshot = mvpScoreForUser(user.id);
   const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
-  let cardTier: TradingCardTier = "standard";
-  if (courtIds.has(user.id)) {
-    cardTier = "holographic";
-  } else if (
-    mvpSnapshot &&
-    !mvpSnapshot.isProvisional &&
-    mvpSnapshot.ovr >= 75
-  ) {
-    cardTier = "elevated";
-  }
+  const cardTier = deriveTradingCardTier({
+    ovr: mvpSnapshot ? mvpSnapshot.ovr : null,
+    isProvisional: mvpSnapshot?.isProvisional ?? false,
+    isInChampionsCourt: courtIds.has(user.id),
+  });
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">

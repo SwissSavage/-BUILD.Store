@@ -29,7 +29,29 @@ import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/Avatar";
 import type { User } from "@/lib/types";
 
-export type TradingCardTier = "standard" | "elevated" | "holographic";
+/**
+ * RPG rarity ladder. Each tier maps to an OVR band (or to "no scoring"
+ * for unscored Partners).
+ *
+ *   standard            — Partners without MVP snapshot. Calm brand
+ *                          gradient over dark base. Falls outside the
+ *                          rarity ladder. Still beautiful.
+ *   probation           — OVR <70 (probation + removal accelerated).
+ *                          Gray dominant. Common rarity.
+ *   good_standing       — OVR 70-74. Green dominant. Uncommon.
+ *   promotion_eligible  — OVR 75-79. Blue dominant. Rare. The 6th-man /
+ *                          role-player band.
+ *   future_modernist    — OVR 80-89. Magenta dominant. Epic.
+ *   champion            — OVR 90+ AND in Champion's Court (top 10%).
+ *                          Holographic + gold animated. Legendary.
+ */
+export type TradingCardTier =
+  | "standard"
+  | "probation"
+  | "good_standing"
+  | "promotion_eligible"
+  | "future_modernist"
+  | "champion";
 
 interface TradingCardProps {
   user: Pick<
@@ -50,6 +72,24 @@ interface TradingCardProps {
   aspectRatio?: "3/4" | "4/5" | "square";
 }
 
+const TIER_BG_CLASS: Record<TradingCardTier, string> = {
+  standard: "fm-card-bg-standard",
+  probation: "fm-card-bg-probation",
+  good_standing: "fm-card-bg-good-standing",
+  promotion_eligible: "fm-card-bg-promotion",
+  future_modernist: "fm-card-bg-future-modernist",
+  champion: "fm-card-bg-champion",
+};
+
+const TIER_BORDER: Record<TradingCardTier, string> = {
+  standard: "var(--surface-border)",
+  probation: "rgba(102, 102, 102, 0.5)",
+  good_standing: "rgba(0, 112, 72, 0.6)",
+  promotion_eligible: "rgba(80, 112, 240, 0.6)",
+  future_modernist: "rgba(216, 40, 160, 0.65)",
+  champion: "rgba(212, 175, 55, 0.75)", // gold
+};
+
 export function TradingCard({
   user,
   tier = "standard",
@@ -64,13 +104,6 @@ export function TradingCard({
         ? "aspect-[4/5]"
         : "aspect-[3/4]";
 
-  const bgClass =
-    tier === "holographic"
-      ? "fm-holo-bg"
-      : tier === "elevated"
-        ? "fm-card-bg-elevated"
-        : "fm-card-bg-standard";
-
   return (
     <div
       className={cn(
@@ -78,24 +111,17 @@ export function TradingCard({
         aspectClass,
         className,
       )}
-      style={{
-        borderColor:
-          tier === "holographic"
-            ? "rgba(0, 112, 72, 0.7)"
-            : tier === "elevated"
-              ? "rgba(80, 112, 240, 0.5)"
-              : "var(--surface-border)",
-      }}
+      style={{ borderColor: TIER_BORDER[tier] }}
     >
       {/* Backdrop layer */}
       <div
-        className={cn("absolute inset-0", bgClass)}
+        className={cn("absolute inset-0", TIER_BG_CLASS[tier])}
         aria-hidden
       />
 
       {/* FM logo watermark — top-right corner, faint */}
       <div
-        className="pointer-events-none absolute right-4 top-4 select-none text-[10px] font-bold uppercase tracking-[0.2em] text-white/30"
+        className="pointer-events-none absolute right-4 top-4 select-none text-[10px] font-bold uppercase tracking-[0.2em] text-white/40"
         aria-hidden
       >
         Future Modern
@@ -119,8 +145,8 @@ export function TradingCard({
         )}
       </div>
 
-      {/* Holographic sheen overlay — only on Court tier */}
-      {tier === "holographic" && (
+      {/* Holographic sheen overlay — only on Champion (legendary) tier */}
+      {tier === "champion" && (
         <div
           className="pointer-events-none absolute inset-0 fm-holo-sheen mix-blend-screen"
           aria-hidden
@@ -135,4 +161,25 @@ export function TradingCard({
       )}
     </div>
   );
+}
+
+/**
+ * Helper for callers: derive the trading-card tier from MVP state.
+ * Returns "standard" for users without a published snapshot (Partners
+ * before scoring) and for provisional members (good standing without
+ * surfacing scores). Court eligibility (top 10% gate) collapses to
+ * "champion" regardless of which band the OVR alone would suggest.
+ */
+export function deriveTradingCardTier(input: {
+  ovr: number | null;
+  isProvisional: boolean;
+  isInChampionsCourt: boolean;
+}): TradingCardTier {
+  if (input.ovr === null) return "standard";
+  if (input.isProvisional) return "standard";
+  if (input.isInChampionsCourt) return "champion";
+  if (input.ovr >= 80) return "future_modernist";
+  if (input.ovr >= 75) return "promotion_eligible";
+  if (input.ovr >= 70) return "good_standing";
+  return "probation";
 }

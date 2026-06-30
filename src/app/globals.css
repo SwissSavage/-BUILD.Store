@@ -42,13 +42,17 @@ body {
 }
 
 /* ============================================================ */
-/* Trading card visuals                                          */
+/* Trading card visuals — RPG rarity ladder                      */
 /*                                                               */
-/* Three tiers: standard, elevated, holographic. Holographic is  */
-/* reserved for Champion's Court members (top 10% Members AND    */
-/* OVR >= 90). The animated conic-gradient + diagonal sheen      */
-/* signals elite tier without being garish. See MvpCard +        */
-/* TradingCard components.                                        */
+/* Maps OVR bands to RPG-style rarity colors: gray (common) /    */
+/* green (uncommon) / blue (rare) / magenta (epic) / gold-       */
+/* holographic (legendary). All cards share a dark `#1A1A1A`     */
+/* base; the dominant tier color overlays as a gradient + radial */
+/* bloom, with subtle traces of the other brand colors woven in  */
+/* so the ladder reads as one visual family.                      */
+/*                                                               */
+/* Champion's Court (legendary tier) adds gold accent + animated  */
+/* holographic conic-gradient + diagonal sheen sweep.             */
 /* ============================================================ */
 
 @keyframes fm-holo-shift {
@@ -64,23 +68,8 @@ body {
   100% { transform: translateX(220%) skewX(-12deg); opacity: 0.0; }
 }
 
-/* Animated holographic backdrop — applied to the card's background
-   layer. Rich magenta / blue / green gradient that shifts over time.
-   Champion's Court only. */
-.fm-holo-bg {
-  background-image: linear-gradient(
-    135deg,
-    rgba(216, 40, 160, 0.85) 0%,
-    rgba(80, 112, 240, 0.85) 35%,
-    rgba(0, 112, 72, 0.85) 70%,
-    rgba(216, 40, 160, 0.85) 100%
-  );
-  background-size: 200% 200%;
-  animation: fm-holo-shift 8s ease-in-out infinite;
-}
-
-/* Diagonal sheen overlay — sweeps across the card. Positioned by the
-   component as an absolutely-placed pseudo-layer. */
+/* Diagonal sheen overlay — sweeps across legendary cards. Positioned
+   by the component as an absolutely-placed pseudo-layer. */
 .fm-holo-sheen {
   background-image: linear-gradient(
     100deg,
@@ -92,23 +81,65 @@ body {
   animation-delay: 1s;
 }
 
-/* Standard backdrop — calm brand gradient for non-Court tiers. */
+/* Standard — Partners without MVP snapshot. Calm brand gradient over
+   dark base. No dominant color; falls outside the rarity ladder. */
 .fm-card-bg-standard {
-  background-image: linear-gradient(
-    160deg,
-    rgba(80, 112, 240, 0.12) 0%,
-    rgba(216, 40, 160, 0.10) 60%,
-    rgba(0, 112, 72, 0.12) 100%
-  );
+  background-color: #1A1A1A;
+  background-image:
+    radial-gradient(circle at 30% 20%, rgba(216, 40, 160, 0.12) 0%, transparent 55%),
+    radial-gradient(circle at 70% 80%, rgba(80, 112, 240, 0.12) 0%, transparent 55%),
+    radial-gradient(circle at 30% 80%, rgba(0, 112, 72, 0.10) 0%, transparent 55%);
 }
 
-/* Elevated backdrop — slightly richer for Future Modernist pool /
-   promotion-eligible standing. */
-.fm-card-bg-elevated {
+/* Probation / removal — gray dominant, dark base, very subdued.
+   No other brand-color bloom — these cards are intentionally muted. */
+.fm-card-bg-probation {
+  background-color: #1A1A1A;
+  background-image:
+    linear-gradient(160deg, rgba(102, 102, 102, 0.35) 0%, rgba(26, 26, 26, 0.0) 70%),
+    radial-gradient(circle at 70% 70%, rgba(102, 102, 102, 0.15) 0%, transparent 50%);
+}
+
+/* Good standing (70-74) — green dominant. Uncommon-tier color. */
+.fm-card-bg-good-standing {
+  background-color: #1A1A1A;
+  background-image:
+    linear-gradient(160deg, rgba(0, 112, 72, 0.50) 0%, rgba(26, 26, 26, 0.0) 70%),
+    radial-gradient(circle at 75% 25%, rgba(80, 112, 240, 0.10) 0%, transparent 55%),
+    radial-gradient(circle at 25% 75%, rgba(216, 40, 160, 0.08) 0%, transparent 55%);
+}
+
+/* Promotion eligible (75-79) — blue dominant. Rare-tier color. */
+.fm-card-bg-promotion {
+  background-color: #1A1A1A;
+  background-image:
+    linear-gradient(160deg, rgba(80, 112, 240, 0.55) 0%, rgba(26, 26, 26, 0.0) 70%),
+    radial-gradient(circle at 75% 25%, rgba(0, 112, 72, 0.10) 0%, transparent 55%),
+    radial-gradient(circle at 25% 75%, rgba(216, 40, 160, 0.10) 0%, transparent 55%);
+}
+
+/* Future Modernist pool (80-89) — magenta dominant. Epic-tier color. */
+.fm-card-bg-future-modernist {
+  background-color: #1A1A1A;
+  background-image:
+    linear-gradient(160deg, rgba(216, 40, 160, 0.55) 0%, rgba(26, 26, 26, 0.0) 70%),
+    radial-gradient(circle at 25% 25%, rgba(80, 112, 240, 0.12) 0%, transparent 55%),
+    radial-gradient(circle at 75% 75%, rgba(0, 112, 72, 0.12) 0%, transparent 55%);
+}
+
+/* Champion's Court (90+ AND top 10% Members) — animated holographic
+   with gold accent. Legendary-tier color. Gold appears here and ONLY
+   here — same scarcity principle as the tier. */
+.fm-card-bg-champion {
+  background-color: #1A1A1A;
   background-image: linear-gradient(
-    160deg,
-    rgba(80, 112, 240, 0.22) 0%,
-    rgba(216, 40, 160, 0.18) 60%,
-    rgba(0, 112, 72, 0.22) 100%
+    135deg,
+    rgba(212, 175, 55, 0.75) 0%,    /* gold */
+    rgba(216, 40, 160, 0.70) 28%,   /* magenta */
+    rgba(80, 112, 240, 0.70) 56%,   /* blue */
+    rgba(0, 112, 72, 0.70) 84%,     /* green */
+    rgba(212, 175, 55, 0.75) 100%   /* gold loop */
   );
+  background-size: 220% 220%;
+  animation: fm-holo-shift 8s ease-in-out infinite;
 }

@@ -50,6 +50,9 @@ async function createInitiative(formData: FormData) {
     talentBaseAmount: null,
     talentBonusAmount: null,
     bonusGate: null,
+    pmEngagementRating: null,
+    bonusDecision: null,
+    bonusDecidedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });

@@ -152,10 +152,10 @@ export default async function AdminMvpPage() {
                     </td>
                     <td className="py-2 pr-3 text-right">
                       <Link
-                        href={`/u/${user.handle}`}
+                        href={`/admin/mvp/${user.id}`}
                         className="text-[11px] text-brand-magenta hover:underline"
                       >
-                        View ↗
+                        Manage ↗
                       </Link>
                     </td>
                   </tr>

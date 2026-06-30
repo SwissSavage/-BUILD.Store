@@ -43,10 +43,19 @@ import {
   adminName,
   rolePool,
   type PayoutStatus,
+  type Project,
   type RevenueSplit,
   type SplitPool,
 } from "@/lib/types";
 import { dispatchTransfer } from "@/lib/payouts-stub";
+import { feedbackForContext } from "@/lib/mock-data/customer-feedback";
+import { MOCK_PEER_REVIEWS } from "@/lib/mock-data/peer-reviews";
+import { poolForProject } from "@/lib/mock-data/engagement-recovery-pools";
+import { evaluateBonusGate } from "@/lib/bonus-gate";
+import {
+  executeBonusDecision,
+  setPmEngagementRating,
+} from "@/lib/bonus-release-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { AdminAllocator } from "@/components/AdminAllocator";
 
@@ -330,6 +339,8 @@ export default async function SettlePage({
           color="#5070F0"
         />
       </div>
+
+      <BonusReleasePanel project={project} />
 
       {contributorRows.length === 0 && (
         <Card className="mt-6">
@@ -668,6 +679,207 @@ function Pool({ title, rows }: { title: string; rows: RevenueSplit[] }) {
         </tbody>
       </table>
     </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Bonus-release panel                                                */
+/*                                                                     */
+/*  Renders only when the contract has comp structure set              */
+/*  (talentBonusAmount). For legacy contracts (null), nothing shows —  */
+/*  the standard split engine still runs above.                        */
+/*                                                                     */
+/*  Three states:                                                      */
+/*    - bonusDecision === "pending"     → admin can act (capture PM    */
+/*                                          rating, execute gate)      */
+/*    - bonusDecision === "released"    → recorded decision, shown     */
+/*                                          read-only                  */
+/*    - bonusDecision === "reclaimed"   → recorded decision, shown     */
+/*                                          read-only with pool credit */
+/* ------------------------------------------------------------------ */
+
+function BonusReleasePanel({ project }: { project: Project }) {
+  if (!project.talentBonusAmount) return null;
+  const baseAmount = Number(project.talentBaseAmount ?? 0);
+  const bonusAmount = Number(project.talentBonusAmount);
+  const feedback = feedbackForContext(project.id)[0] ?? null;
+  const peerReviews = MOCK_PEER_REVIEWS.filter(
+    (r) => r.contextId === project.id,
+  );
+  const decision = evaluateBonusGate({
+    feedback,
+    peerReviews,
+    pmRating: project.pmEngagementRating,
+    gate: project.bonusGate,
+  });
+  const pool = poolForProject(project.id);
+
+  const wouldRelease =
+    decision.outcome === "release" ||
+    decision.outcome === "release_no_signal_default";
+
+  return (
+    <Card className="mt-6 border-[#5070F0]/40">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <CardEyebrow>Bonus-release decision</CardEyebrow>
+          <CardTitle className="mt-1 text-2xl">
+            ${baseAmount.toLocaleString()} base + ${bonusAmount.toLocaleString()} ceiling
+          </CardTitle>
+        </div>
+        <span
+          className="rounded-full px-3 py-1 text-[10px] uppercase tracking-wider"
+          style={{
+            backgroundColor:
+              project.bonusDecision === "released"
+                ? "rgba(0, 112, 72, 0.12)"
+                : project.bonusDecision === "reclaimed"
+                  ? "rgba(216, 40, 160, 0.12)"
+                  : "rgba(80, 112, 240, 0.12)",
+            color:
+              project.bonusDecision === "released"
+                ? "#007048"
+                : project.bonusDecision === "reclaimed"
+                  ? "#D828A0"
+                  : "#5070F0",
+          }}
+        >
+          {project.bonusDecision === "released"
+            ? "Released to talent"
+            : project.bonusDecision === "reclaimed"
+              ? "Reclaimed to recovery pool"
+              : "Pending decision"}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-3 text-xs">
+        <GateInputStat
+          label="Client rating"
+          value={
+            decision.inputs.clientRating !== null
+              ? `${decision.inputs.clientRating}★`
+              : "—"
+          }
+        />
+        <GateInputStat
+          label="PM rating"
+          value={
+            decision.inputs.pmRating !== null
+              ? `${decision.inputs.pmRating}★`
+              : "Not captured"
+          }
+        />
+        <GateInputStat
+          label="Peer avg"
+          value={
+            decision.inputs.peerAverage !== null
+              ? `${decision.inputs.peerAverage.toFixed(2)}★`
+              : "—"
+          }
+        />
+      </div>
+
+      <div
+        className="mt-4 rounded-lg p-3 text-sm"
+        style={{
+          backgroundColor: wouldRelease
+            ? "rgba(0, 112, 72, 0.06)"
+            : "rgba(216, 40, 160, 0.06)",
+        }}
+      >
+        <span
+          className="text-[11px] uppercase tracking-wider"
+          style={{ color: wouldRelease ? "#007048" : "#D828A0" }}
+        >
+          Gate evaluation · driver: {decision.driver.replace(/_/g, " ")}
+        </span>
+        <p className="mt-1 text-ink">{decision.explanation}</p>
+      </div>
+
+      {project.bonusDecision === "pending" && (
+        <>
+          {/* PM rating capture — feeds composite when client rating absent
+              or as a calibration record alongside it. */}
+          <form action={setPmEngagementRating} className="mt-5 flex flex-wrap items-end gap-2 text-xs">
+            <input type="hidden" name="projectId" value={project.id} />
+            <label className="flex flex-col">
+              <span className="text-[11px] uppercase tracking-wider text-ink-muted">
+                PM engagement rating (1-5)
+              </span>
+              <select
+                name="rating"
+                defaultValue={project.pmEngagementRating ?? ""}
+                required
+                className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1"
+              >
+                <option value="" disabled>
+                  Select…
+                </option>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <option key={n} value={n}>
+                    {n}★
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="submit"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+            >
+              Capture PM rating
+            </button>
+          </form>
+
+          <form action={executeBonusDecision} className="mt-3">
+            <input type="hidden" name="projectId" value={project.id} />
+            <button
+              type="submit"
+              className="rounded-full px-5 py-2 text-sm font-medium text-white"
+              style={{ backgroundColor: wouldRelease ? "#007048" : "#D828A0" }}
+            >
+              {wouldRelease
+                ? `Execute decision: release $${bonusAmount.toLocaleString()} to talent`
+                : `Execute decision: reclaim $${bonusAmount.toLocaleString()} to recovery pool`}
+            </button>
+            <p className="mt-2 text-[11px] text-ink-faint">
+              Decision is recorded against this contract. Client never sees
+              the bonus gate; talent sees the conditioning + outcome on
+              their wallet history once executed.
+            </p>
+          </form>
+        </>
+      )}
+
+      {project.bonusDecision === "reclaimed" && pool && (
+        <div className="mt-4 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-3 text-sm">
+          <div className="text-[11px] uppercase tracking-wider text-ink-faint">
+            Engagement Recovery Pool
+          </div>
+          <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
+            <span className="font-display text-xl font-semibold">
+              ${Number(pool.balanceUsd).toLocaleString()}
+            </span>
+            <span className="text-[11px] text-ink-faint">
+              Drawable to fund corrective hires for this client. Residue
+              at engagement close folds back to treasury.
+            </span>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function GateInputStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-3">
+      <div className="text-[10px] uppercase tracking-wider text-ink-faint">
+        {label}
+      </div>
+      <div className="mt-1 font-display text-lg font-semibold text-ink">
+        {value}
+      </div>
+    </div>
   );
 }
 

@@ -311,9 +311,27 @@ export interface Project {
   talentBaseAmount: string | null;
   talentBonusAmount: string | null;
   bonusGate: BonusReleaseGate | null;
+  /**
+   * PM engagement rating captured by the account-owning admin at
+   * settlement time. 1-5 scale, admin-only visibility. Feeds the
+   * composite fallback when client rating is absent. Null until
+   * captured.
+   */
+  pmEngagementRating: number | null;
+  /**
+   * Bonus-release decision status. Null = contract has no comp structure
+   * (legacy / internal). "pending" = structure set, decision pending at
+   * settlement. "released" = bonus paid to talent. "reclaimed" = bonus
+   * moved to engagement recovery pool.
+   */
+  bonusDecision: BonusDecisionStatus | null;
+  /** ISO timestamp the bonus decision was recorded. */
+  bonusDecidedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export type BonusDecisionStatus = "pending" | "released" | "reclaimed";
 
 /**
  * Bonus-release gate config for a Project. Per locked memory in

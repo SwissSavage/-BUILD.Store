@@ -151,6 +151,18 @@ export interface User {
    * but their profile info doesn't circulate).
    */
   profilePublic: boolean;
+  /**
+   * Account suspension state. When suspendedAt is non-null the account
+   * is locked — session invalidation happens on next auth check,
+   * mutations bounce, public profile hides. Reactivation clears the
+   * field with a `user.reactivated` audit entry. Suspension mechanism
+   * is scope-independent (auth stub blocks sign-in on suspendedAt !==
+   * null so production and sandbox behave identically). Retention:
+   * suspension state and reason retained per business-records policy
+   * even after account erasure.
+   */
+  suspendedAt: string | null;
+  suspensionReason: string | null;
   walletAddress: string | null; // ERC-6551 token-bound account address
   /**
    * User's externally-controlled EOA (MetaMask / Coinbase Wallet /
@@ -2825,6 +2837,45 @@ export interface FutureModernistRecognition {
 }
 
 // ──────────────────────────────────────────────────────────────────────
+//  Invite links (admin-issued signup links for beta / handoff cohorts)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Admin-issued invite link. Sandbox: the code is displayed in-admin
+ * for manual send. Production: dispatched to `targetEmail` via the
+ * chosen email provider (see production-swap-checklist §7c).
+ *
+ * Consumption flips `consumedAt` + `consumedByUserId` and writes a
+ * `user.invite_consumed` audit entry. Revocation flips `revokedAt`
+ * before consumption; expired invites cannot be consumed.
+ */
+export interface InviteLink {
+  id: string;
+  /** URL-safe opaque token embedded in the signup link. */
+  code: string;
+  /** Where the invite is intended to be sent. */
+  targetEmail: string;
+  /** Tier to grant on consumption. */
+  targetTier: MembershipTier;
+  /** Optional preset name for onboarding UX. */
+  targetName: string | null;
+  /** Optional free-form note (why this person, which lens they cover). */
+  note: string | null;
+  /** Who issued the invite. */
+  createdByUserId: string;
+  createdAt: string;
+  /** ISO expiry; production enforces on the redemption route. */
+  expiresAt: string;
+  /** ISO consumption time, or null if unused. */
+  consumedAt: string | null;
+  /** UserId created (or matched) by consumption. Null until consumed. */
+  consumedByUserId: string | null;
+  /** ISO revocation time, or null if not revoked. */
+  revokedAt: string | null;
+  revokedReason: string | null;
+}
+
+// ──────────────────────────────────────────────────────────────────────
 //  Audit log (SOC 2 CC7.2 / ISO 27001 A.12.4 — Logging and Monitoring)
 // ──────────────────────────────────────────────────────────────────────
 
@@ -2848,6 +2899,11 @@ export type AuditLogAction =
   | "user.membership_tier_changed"
   | "user.profile_public_toggled"
   | "user.admin_flag_changed"
+  | "user.suspended"
+  | "user.reactivated"
+  | "user.invited"
+  | "user.invite_revoked"
+  | "user.invite_consumed"
   // MVP / scoring / compliance
   | "mvp.sub_rating_set"
   | "mvp.compliance_penalty_applied"
@@ -2889,6 +2945,11 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "user.membership_tier_changed": "Membership tier changed",
   "user.profile_public_toggled": "Profile visibility toggled",
   "user.admin_flag_changed": "Admin flag changed",
+  "user.suspended": "Account suspended",
+  "user.reactivated": "Account reactivated",
+  "user.invited": "Invite issued",
+  "user.invite_revoked": "Invite revoked",
+  "user.invite_consumed": "Invite consumed",
   "mvp.sub_rating_set": "MVP sub-rating set",
   "mvp.compliance_penalty_applied": "Compliance penalty applied",
   "mvp.compliance_penalty_rescinded": "Compliance penalty rescinded",

@@ -12,7 +12,6 @@
  * Sandbox mutates MOCK_USERS in-memory; REPLACE WITH Drizzle UPDATE.
  */
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_SELLER_APPLICATIONS } from "@/lib/mock-data/seller-applications";
@@ -28,27 +27,10 @@ import {
 import { TierBadge } from "@/components/TierBadge";
 import { Avatar } from "@/components/Avatar";
 import { sendDirectMessage } from "@/lib/dm-actions";
-
-async function toggleAdmin(formData: FormData) {
-  "use server";
-  const uid = String(formData.get("uid"));
-  const u = MOCK_USERS.find((x) => x.id === uid);
-  if (u) u.isAdmin = !u.isAdmin;
-  revalidatePath("/admin/members");
-}
-
-async function setTier(formData: FormData) {
-  "use server";
-  const uid = String(formData.get("uid"));
-  const tier = String(formData.get("tier")) as MembershipTier;
-  const u = MOCK_USERS.find((x) => x.id === uid);
-  if (u) {
-    u.membershipTier = tier;
-    u.updatedAt = new Date().toISOString();
-  }
-  revalidatePath("/admin/members");
-  revalidatePath("/admin");
-}
+import {
+  setMembershipTier,
+  toggleAdminFlag,
+} from "@/lib/member-management-actions";
 
 const TIERS: MembershipTier[] = ["viewer", "prospect", "partner", "member"];
 
@@ -111,6 +93,26 @@ export default async function AdminMembersPage({
             {rows.length} {rows.length === 1 ? "member" : "members"} in this
             view
           </p>
+          <div className="mt-2 flex flex-wrap gap-3 text-xs">
+            <Link
+              href="/admin/members/invite"
+              className="rounded-full bg-brand-magenta px-3 py-1 text-white hover:opacity-90"
+            >
+              + Invite new member
+            </Link>
+            <Link
+              href="/admin/access-review"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+            >
+              Access review →
+            </Link>
+            <Link
+              href="/admin/audit-log?resource=user"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+            >
+              User audit log →
+            </Link>
+          </div>
         </div>
         <form method="get" className="flex items-center gap-2">
           <label
@@ -270,7 +272,7 @@ function FlatTable({
                 </td>
                 {showAdminFlag && (
                   <td className="p-4">
-                    <form action={toggleAdmin}>
+                    <form action={toggleAdminFlag}>
                       <input type="hidden" name="uid" value={u.id} />
                       <button
                         type="submit"
@@ -282,7 +284,10 @@ function FlatTable({
                   </td>
                 )}
                 <td className="p-4">
-                  <form action={setTier} className="flex items-center gap-2">
+                  <form
+                    action={setMembershipTier}
+                    className="flex items-center gap-2"
+                  >
                     <input type="hidden" name="uid" value={u.id} />
                     <select
                       name="tier"
@@ -302,6 +307,24 @@ function FlatTable({
                       Set
                     </button>
                   </form>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                    <Link
+                      href={`/admin/members/${u.id}`}
+                      className="text-brand-magenta hover:underline"
+                    >
+                      Manage →
+                    </Link>
+                    {u.suspendedAt && (
+                      <span className="rounded-full border border-brand-magenta/40 px-2 py-0.5 text-brand-magenta">
+                        Suspended
+                      </span>
+                    )}
+                    {!u.profilePublic && (
+                      <span className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-ink-muted">
+                        Not discoverable
+                      </span>
+                    )}
+                  </div>
                   <DmCompose user={u} />
                 </td>
               </tr>

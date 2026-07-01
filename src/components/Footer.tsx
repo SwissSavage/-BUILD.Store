@@ -24,6 +24,7 @@ export function Footer() {
             <li><Link href="/jobs" className="hover:text-brand-magenta">Jobs</Link></li>
             <li><Link href="/contracts" className="hover:text-brand-magenta">Open RFPs</Link></li>
             <li><Link href="/trust" className="hover:text-brand-magenta">Trust &amp; security</Link></li>
+            <li><Link href="/governance" className="hover:text-brand-magenta">Governance framework</Link></li>
           </ul>
         </div>
 

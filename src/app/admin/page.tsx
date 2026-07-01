@@ -168,6 +168,12 @@ export default async function AdminHome() {
       count: MOCK_USERS.filter((u) => u.isAdmin).length,
       sub: "Admins carrying the flag · quarterly walk-through cadence",
     },
+    {
+      href: "/admin/walkthrough",
+      title: "Walkthrough / stress test",
+      count: 12,
+      sub: "Tier-by-tier audit + 12 stress tests · Bayu copy audit",
+    },
   ];
 
   return (

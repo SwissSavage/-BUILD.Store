@@ -16,6 +16,7 @@
  */
 import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
 
 export const metadata = {
   title: "About · $BUILD.Store",
@@ -30,6 +31,7 @@ export default function AboutPage() {
       <PurposeVision />
       <PeoplePowered />
       <VentureLabor />
+      <ConstellationSection />
       <CoreCompetencies />
       <Provenance />
       <Credentials />
@@ -851,6 +853,50 @@ function RoadmapRow({
       </div>
       <p className="mt-3 text-sm text-ink-muted">{body}</p>
     </div>
+  );
+}
+
+function ConstellationSection() {
+  return (
+    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
+      <div className="mx-auto max-w-app px-6 py-20">
+        <div className="mb-8">
+          <div className="text-xs uppercase tracking-wider text-brand-magenta">
+            Venture Labor OS
+          </div>
+          <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
+            Eight interlocking systems.
+          </h2>
+          <p className="mt-3 max-w-2xl text-lg text-ink-muted">
+            Not a marketplace. An operating system for cooperative
+            professional work. Every rail below is specified,
+            implemented, and audit-logged. Hover any node to see how it
+            connects.
+          </p>
+        </div>
+        <VentureLaborConstellation />
+        <div className="mt-6 flex flex-wrap gap-3 text-sm">
+          <Link
+            href="/governance"
+            className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-4 py-2 text-brand-magenta hover:bg-brand-magenta/20"
+          >
+            Governance framework →
+          </Link>
+          <Link
+            href="/policies/covenant"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+          >
+            Cooperative Covenant →
+          </Link>
+          <Link
+            href="/trust"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+          >
+            Trust &amp; security →
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 

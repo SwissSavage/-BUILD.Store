@@ -40,6 +40,7 @@ import {
 import { previewDonationSplit } from "@/lib/whitelist-splits";
 import { grossUpForCard } from "@/lib/payments-fees";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
 
 const SCOPE_ORDER: Industry[] = ["stem", "creative-media", "professional-services"];
 
@@ -154,6 +155,37 @@ export default function WhitelistPage() {
           value — for cooperators and for the clients who hire them.
         </p>
       </header>
+
+      {/* ───── Venture Labor OS constellation ───── */}
+      <section className="mt-16">
+        <CardEyebrow>What you&apos;re joining</CardEyebrow>
+        <h2 className="mt-2 font-display text-3xl font-semibold">
+          The operating system, made legible.
+        </h2>
+        <p className="mt-3 max-w-2xl text-ink-muted">
+          Eight interlocking systems for cooperative professional work.
+          Standing, recognition, compensation, canonization, tier
+          ladder, compliance, revenue split, covenant — all specified,
+          all connected. Hover a node to see how it fits.
+        </p>
+        <div className="mt-6">
+          <VentureLaborConstellation />
+        </div>
+        <div className="mt-4 flex flex-wrap gap-3 text-sm">
+          <Link
+            href="/governance"
+            className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-4 py-2 text-brand-magenta hover:bg-brand-magenta/20"
+          >
+            Read the governance framework →
+          </Link>
+          <Link
+            href="/policies/covenant"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+          >
+            Cooperative Covenant →
+          </Link>
+        </div>
+      </section>
 
       {/* ───── How access is earned ───── */}
       <section className="mt-12">

@@ -98,4 +98,24 @@ export const MOCK_TRANSACTIONS: TokenTransaction[] = [
     withholdReason: null,
     createdAt: "2026-02-28T16:00:00Z",
   },
+
+  // Illustrative withheld-bonus row (Rob, hypothetical prior engagement).
+  // Demonstrates the third compStage state: bonus reclaimed to the
+  // engagement recovery pool when the gate didn't clear. Talent sees
+  // the notional amount + admin reason on their wallet history so
+  // conditioning is visible without silent withholding.
+  {
+    id: "tx_p_hyp_rob_withheld",
+    userId: "u_rob",
+    amount: "1500.00000000",
+    type: "project_completion",
+    projectId: null,
+    description:
+      "Bonus withheld — prior RevOps engagement. Client rating below gate; ceiling reclaimed to engagement recovery pool.",
+    transactionHash: null,
+    compStage: "bonus_withheld",
+    withholdReason:
+      "Client rating 3★ (below 4★ threshold). Timeline slipped on final deliverable. Base pay released in full per contract; ceiling reclaimed per canonical bonus gate.",
+    createdAt: "2025-12-10T14:30:00Z",
+  },
 ];

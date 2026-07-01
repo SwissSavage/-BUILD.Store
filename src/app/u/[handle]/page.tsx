@@ -41,6 +41,7 @@ import { Avatar } from "@/components/Avatar";
 import { TierBadge } from "@/components/TierBadge";
 import { MvpCard } from "@/components/MvpCard";
 import { TradingCard, deriveTradingCardTier } from "@/components/TradingCard";
+import { ProfileShareButton } from "@/components/ProfileShareButton";
 
 /**
  * Direct-link to `/u/[handle]` always renders, but search engines only
@@ -174,6 +175,9 @@ export default async function PublicProfilePage({
               ))}
             </div>
           )}
+          <div className="mt-5">
+            <ProfileShareButton handle={user.handle} />
+          </div>
           {canDm && (
             <details className="mt-5 max-w-md">
               <summary className="inline-block cursor-pointer rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs font-medium hover:border-brand-magenta hover:text-brand-magenta">

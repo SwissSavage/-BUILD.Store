@@ -39,9 +39,10 @@ const CONTROLS: ComplianceControl[] = [
       "The entity demonstrates a commitment to integrity and ethical values through a documented code of conduct.",
     status: "satisfied",
     sandboxEvidence:
-      "Cooperative Covenant (memory/legal.md + bylaws in Chibu FL LLC filing). MVP compliance penalty mechanic enforces covenant with real-time impact.",
+      "Cooperative Covenant published at /policies/covenant. Sourced from memory/legal.md + bylaws in Chibu FL LLC filing. MVP compliance penalty mechanic enforces covenant with real-time impact.",
     productionRemediation:
-      "Publish covenant to /policies/covenant; require signed acknowledgement at Member conversion; annual re-acknowledgement.",
+      "Counsel review of covenant draft; require signed acknowledgement at Member conversion; annual re-acknowledgement recorded via user.covenant_acknowledged audit verb.",
+    href: "/policies/covenant",
   },
   {
     framework: "SOC 2",
@@ -177,10 +178,12 @@ const CONTROLS: ComplianceControl[] = [
     title: "Privacy — data subject notice",
     requirement:
       "The entity provides notice to data subjects about privacy practices.",
-    status: "planned",
-    sandboxEvidence: "Privacy policy pending.",
+    status: "partial",
+    sandboxEvidence:
+      "Privacy policy draft published at /policies/privacy covering purposes, categories, retention, third parties, and user rights. Cross-links to /profile/data-rights for the self-service surface.",
     productionRemediation:
-      "Publish privacy policy at /policies/privacy covering purposes, categories, retention, third parties (Stripe, HubSpot, hosting), and rights.",
+      "Counsel review of privacy policy draft; sign effective-date footer; localization for EU/CA jurisdictions.",
+    href: "/policies/privacy",
   },
   {
     framework: "SOC 2",
@@ -188,11 +191,12 @@ const CONTROLS: ComplianceControl[] = [
     title: "Privacy — access, correction, and erasure",
     requirement:
       "The entity provides data subjects with mechanisms to access, correct, or delete their personal data.",
-    status: "planned",
+    status: "partial",
     sandboxEvidence:
-      "profilePublic toggle demonstrates user-controlled visibility. No formal export/erasure endpoint yet.",
+      "/profile/data-rights Member surface with export + erasure request forms. profilePublic toggle for user-controlled visibility. data-rights-actions writes data.subject_export_requested / data.subject_erasure_requested audit verbs and notifies admin pool.",
     productionRemediation:
-      "Add /profile/data-rights with export (JSON download) + erasure (30-day soft-delete + hard-delete) requests. Audit verb `data.subject_export_requested` / `data.subject_erasure_requested` already reserved.",
+      "Automate the export dispatch (24-hour signed JSON URL by email) and the 30-day soft-delete + hard-delete cycle. Retain financial subset per legal-hold; audit-stamp each retained record at day-31.",
+    href: "/profile/data-rights",
   },
 
   // ── ISO 27001 Annex A ─────────────────────────────────────────
@@ -297,9 +301,10 @@ const CONTROLS: ComplianceControl[] = [
       "Information security requirements for mitigating risks associated with supplier access to the entity's assets shall be agreed with the supplier.",
     status: "partial",
     sandboxEvidence:
-      "Stripe, HubSpot, Otter, Zoom, print-partner (phygital) named as subprocessors in memory + production-swap-checklist.",
+      "Subprocessor registry published at /policies/subprocessors covering Vercel, managed Postgres, Stripe, HubSpot, auth provider, email delivery, transcript providers, print partner. 30-day advance notice pattern documented.",
     productionRemediation:
-      "Signed DPAs with every subprocessor. Subprocessor registry published at /policies/subprocessors with 30-day advance notice on additions.",
+      "Sign DPAs with every listed subprocessor at production onboarding. Wire notification firehose so a registry addition auto-fires the 30-day member notice.",
+    href: "/policies/subprocessors",
   },
   {
     framework: "ISO 27001",

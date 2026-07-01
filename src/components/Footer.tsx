@@ -83,6 +83,12 @@ export function Footer() {
             <Link href="/data-use-policy" className="hover:text-brand-magenta">
               Data Use Policy
             </Link>
+            <Link href="/policies" className="hover:text-brand-magenta">
+              Policies
+            </Link>
+            <Link href="/policies/privacy" className="hover:text-brand-magenta">
+              Privacy
+            </Link>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

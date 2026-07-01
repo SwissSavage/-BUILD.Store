@@ -30,6 +30,10 @@ import {
   pushInboundSubmission,
 } from "@/lib/mock-data/inbound-submissions";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import {
+  logAuditEvent,
+  snapshotActorRole,
+} from "@/lib/mock-data/audit-log";
 import type { CalendarMeeting, Notification, NotificationKind } from "@/lib/types";
 
 function newId(prefix: string): string {
@@ -161,6 +165,27 @@ export async function createEpkBookingRequest(formData: FormData) {
     );
   }
 
+  // Audit — booking requests come from unauthenticated visitors, so
+  // actor is null/system. External requester identity is captured in
+  // the meeting row + notification body (not in audit `after` to avoid
+  // duplicating PII into the audit store; audit tracks the platform
+  // event, not the requester profile).
+  logAuditEvent({
+    actorUserId: null,
+    actorRoleSnapshot: "system",
+    action: "booking.request_created",
+    resourceKind: "booking",
+    resourceId: meeting.id,
+    before: null,
+    after: {
+      artistId,
+      agentId,
+      startsAt,
+      endsAt,
+      briefLength: brief.length,
+    },
+  });
+
   revalidatePath(`/u/${artist.handle}`);
   revalidatePath("/admin/inbound");
   revalidatePath("/profile/calendar");
@@ -216,6 +241,20 @@ export async function approveBookingRequest(formData: FormData) {
     );
   }
 
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "booking.request_approved",
+    resourceKind: "booking",
+    resourceId: meeting.id,
+    before: { status: "pending" },
+    after: {
+      status: meeting.status,
+      confirmedByPm: true,
+      awaitingAttendeeConfirmation: true,
+    },
+  });
+
   revalidatePath("/admin/inbound");
   revalidatePath("/profile/calendar");
   revalidatePath("/calendar");
@@ -264,6 +303,17 @@ export async function declineBookingRequest(formData: FormData) {
     );
   }
 
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "booking.request_declined",
+    resourceKind: "booking",
+    resourceId: submission.linkedResourceId ?? submission.id,
+    before: { status: "pending" },
+    after: { status: "cancelled" },
+    reason: reason || null,
+  });
+
   revalidatePath("/admin/inbound");
   revalidatePath("/profile/calendar");
   revalidatePath("/calendar");
@@ -309,6 +359,20 @@ export async function confirmBookingMeeting(formData: FormData) {
       );
     }
   }
+
+  logAuditEvent({
+    actorUserId: me.id,
+    actorRoleSnapshot: snapshotActorRole(me),
+    action: allConfirmed ? "booking.confirmed" : "booking.request_approved",
+    resourceKind: "booking",
+    resourceId: meeting.id,
+    before: null,
+    after: {
+      status: meeting.status,
+      confirmedAttendeeCount: meeting.confirmedByAttendeeIds.length,
+      totalAttendees: meeting.attendeeIds.length,
+    },
+  });
 
   revalidatePath("/profile/calendar");
   revalidatePath("/calendar");

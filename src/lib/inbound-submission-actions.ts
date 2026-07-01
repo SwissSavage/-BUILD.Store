@@ -20,6 +20,10 @@ import {
   MOCK_INBOUND_SUBMISSIONS,
   findInboundSubmission,
 } from "@/lib/mock-data/inbound-submissions";
+import {
+  logAuditEvent,
+  snapshotActorRole,
+} from "@/lib/mock-data/audit-log";
 import type { InboundSubmissionStatus } from "@/lib/types";
 
 const ALLOWED_STATUSES = new Set<InboundSubmissionStatus>([
@@ -37,14 +41,46 @@ function coerceStatus(raw: FormDataEntryValue | null): InboundSubmissionStatus |
 
 export async function setInboundStatus(formData: FormData) {
   const admin = await requireAdmin();
-  void admin;
   const id = String(formData.get("id") ?? "");
   const status = coerceStatus(formData.get("status"));
   if (!status) throw new Error("Invalid status");
   const row = findInboundSubmission(id);
   if (!row) throw new Error("Submission not found");
+  const previous = row.status;
   row.status = status;
   row.updatedAt = new Date().toISOString();
+
+  // Audit — for the RFP intake kind, "converted" ≈ approved and
+  // "closed_no_action" ≈ rejected. Emit the specific rfp verb so
+  // compliance surfaces can distinguish. Other kinds fall back to a
+  // config verb since inbound triage isn't itself security-material.
+  if (row.kind === "rfp_intake") {
+    if (status === "converted" && previous !== "converted") {
+      logAuditEvent({
+        actorUserId: admin.id,
+        actorRoleSnapshot: snapshotActorRole(admin),
+        action: "rfp.approved",
+        resourceKind: "project",
+        resourceId: row.linkedResourceId ?? row.id,
+        before: { status: previous },
+        after: { status },
+      });
+    } else if (
+      status === "closed_no_action" &&
+      previous !== "closed_no_action"
+    ) {
+      logAuditEvent({
+        actorUserId: admin.id,
+        actorRoleSnapshot: snapshotActorRole(admin),
+        action: "rfp.rejected",
+        resourceKind: "project",
+        resourceId: row.linkedResourceId ?? row.id,
+        before: { status: previous },
+        after: { status },
+      });
+    }
+  }
+
   revalidatePath("/admin/inbound");
 }
 

@@ -673,6 +673,26 @@ export default async function ProfilePage() {
           {user.walletAddress ?? "Not yet provisioned"}
         </p>
       </Card>
+
+      <Card className="mt-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardEyebrow>Data rights</CardEyebrow>
+            <p className="mt-2 text-sm text-ink-muted">
+              Request a copy of your data or erasure of your account.
+              SOC 2 P5.1 / ISO 27001 A.18.1 / GDPR + CCPA compliant.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col gap-2">
+            <Link
+              href="/profile/data-rights"
+              className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+            >
+              Manage →
+            </Link>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

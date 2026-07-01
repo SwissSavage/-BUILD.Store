@@ -4,8 +4,17 @@
  * whole app lives on one visual system.
  */
 import Link from "next/link";
-import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
+import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
 import { SERVICE_PARTNERS } from "@/lib/mock-data/partners";
+import { MOCK_USERS } from "@/lib/mock-data/users";
+import { MOCK_MVP_SCORES, mvpScoreForUser } from "@/lib/mock-data/mvp-scores";
+import { championsCourtMembers } from "@/lib/mvp-score";
+import { publicProfileEligible } from "@/lib/profile-visibility";
+import {
+  TradingCard,
+  deriveTradingCardTier,
+  type TradingCardTier,
+} from "@/components/TradingCard";
 
 export default function Home() {
   return (
@@ -13,9 +22,103 @@ export default function Home() {
       <Hero />
       <Process />
       <Pillars />
+      <Roster />
       <Partners />
       <SandboxBanner />
     </>
+  );
+}
+
+/**
+ * Cooperative roster preview — top four discovery-eligible Members
+ * shown as TradingCards on the public landing page. Sorted by rarity
+ * tier so Champion's Court cards land first. Full roster (signed-in
+ * Members only) lives at /team.
+ *
+ * Fits the platform-as-marketing-infrastructure principle: the
+ * homepage is what a Partner would send a client, and the cooperative's
+ * people belong on it — not as generic avatars but as the branded
+ * player cards that signal how the cooperative organizes.
+ */
+function Roster() {
+  const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
+  const tierRank: Record<TradingCardTier, number> = {
+    champion: 5,
+    future_modernist: 4,
+    promotion_eligible: 3,
+    good_standing: 2,
+    probation: 1,
+    standard: 0,
+  };
+  const preview = MOCK_USERS.filter((u) => publicProfileEligible(u))
+    .map((u) => {
+      const snapshot = mvpScoreForUser(u.id);
+      const tier = deriveTradingCardTier({
+        ovr: snapshot?.ovr ?? null,
+        isProvisional: snapshot?.isProvisional ?? false,
+        isInChampionsCourt: courtIds.has(u.id),
+      });
+      return { user: u, tier };
+    })
+    .sort((a, b) => tierRank[b.tier] - tierRank[a.tier])
+    .slice(0, 4);
+
+  if (preview.length === 0) return null;
+
+  return (
+    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
+      <div className="mx-auto max-w-app px-6 py-20">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-brand-magenta">
+              The cooperative
+            </div>
+            <h2 className="mt-2 font-display text-4xl font-semibold md:text-5xl">
+              Members shipping the work
+            </h2>
+            <p className="mt-3 max-w-2xl text-ink-muted">
+              Every Member holds equity. Standing shows on the card —
+              Champion&apos;s Court holographic-gold at the top, Future
+              Modernist pool magenta, promotion-eligible blue, good
+              standing green. The cards are the cooperative made visible.
+            </p>
+          </div>
+          <Link
+            href="/team"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+          >
+            View full roster →
+          </Link>
+        </div>
+
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 md:grid-cols-4">
+          {preview.map(({ user, tier }) => (
+            <Link
+              key={user.id}
+              href={`/u/${user.handle}`}
+              className="group block"
+            >
+              <TradingCard
+                user={user}
+                tier={tier}
+                aspectRatio="3/4"
+                className="transition-transform group-hover:-translate-y-1"
+              />
+              <div className="mt-3">
+                <div className="font-display text-lg font-semibold">
+                  {publicName(user)}
+                </div>
+                {user.discipline && (
+                  <div className="mt-0.5 text-xs text-ink-muted">
+                    {user.discipline}
+                  </div>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 

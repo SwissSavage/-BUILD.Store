@@ -55,6 +55,12 @@ export default async function ContractsPage() {
           <p className="mt-1 text-ink-muted">
             One-off client work. Bid on open RFPs, track active engagements.
           </p>
+          <p className="mt-2 text-xs text-ink-faint">
+            Client-side procurement:{" "}
+            <Link href="/trust" className="text-brand-magenta hover:underline">
+              see our security &amp; privacy posture →
+            </Link>
+          </p>
         </div>
         <Link
           href="/contracts/new"

@@ -23,6 +23,7 @@ export function Footer() {
             <li><Link href="/store" className="hover:text-brand-magenta">Store</Link></li>
             <li><Link href="/jobs" className="hover:text-brand-magenta">Jobs</Link></li>
             <li><Link href="/contracts" className="hover:text-brand-magenta">Open RFPs</Link></li>
+            <li><Link href="/trust" className="hover:text-brand-magenta">Trust &amp; security</Link></li>
           </ul>
         </div>
 
@@ -88,6 +89,9 @@ export function Footer() {
             </Link>
             <Link href="/policies/privacy" className="hover:text-brand-magenta">
               Privacy
+            </Link>
+            <Link href="/trust" className="hover:text-brand-magenta">
+              Trust
             </Link>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}

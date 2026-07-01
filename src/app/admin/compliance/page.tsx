@@ -88,9 +88,10 @@ const CONTROLS: ComplianceControl[] = [
       "The entity assigns access rights and permissions consistent with the principle of least privilege.",
     status: "partial",
     sandboxEvidence:
-      "Admin flag is boolean. adminUserIds pool per-contract for commission access.",
+      "Admin flag scoped per action via requireAdmin(). adminUserIds pool per-contract for commission access. Quarterly access review surface at /admin/access-review writes config.access_reviewed audit entries; last-review date drives cadence status. Individual revocations write user.admin_flag_changed entries with reason.",
     productionRemediation:
-      "Split admin into scoped roles (finance_admin, membership_admin, moderation_admin) so operators see only what their function requires. Quarterly access review.",
+      "Split admin into scoped roles (finance_admin, membership_admin, moderation_admin) so operators see only what their function requires. Quarterly cadence enforced via calendar reminder + overdue-status flag on this dashboard.",
+    href: "/admin/access-review",
   },
   {
     framework: "SOC 2",
@@ -231,9 +232,10 @@ const CONTROLS: ComplianceControl[] = [
       "A formal user registration and de-registration process shall be implemented.",
     status: "partial",
     sandboxEvidence:
-      "Membership tier transitions logged via user.membership_tier_changed audit verb.",
+      "Membership tier transitions logged via user.membership_tier_changed audit verb. Quarterly access review at /admin/access-review with revoke-with-reason flow and audit-logged review completion.",
     productionRemediation:
-      "Auto-suspend accounts after 180 days of inactivity. Quarterly reconciliation of admin flags against operational need.",
+      "Auto-suspend accounts after 180 days of inactivity. Wire the review cadence into a scheduled task that pages the compliance-admin scope when overdue.",
+    href: "/admin/access-review",
   },
   {
     framework: "ISO 27001",

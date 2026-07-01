@@ -2878,7 +2878,8 @@ export type AuditLogAction =
   | "data.subject_erasure_requested"
   | "data.record_hard_deleted"
   // Admin config
-  | "config.setting_changed";
+  | "config.setting_changed"
+  | "config.access_reviewed";
 
 export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "user.signed_in": "User signed in",
@@ -2913,6 +2914,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "data.subject_erasure_requested": "Data subject erasure requested",
   "data.record_hard_deleted": "Record hard-deleted",
   "config.setting_changed": "Config setting changed",
+  "config.access_reviewed": "Access review completed",
 };
 
 /** Coarse resource kinds referenced from audit entries. Keep aligned

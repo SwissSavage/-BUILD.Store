@@ -162,6 +162,12 @@ export default async function AdminHome() {
       count: MOCK_AUDIT_LOG.length,
       sub: "Append-only. Every security-relevant action, reverse-chron.",
     },
+    {
+      href: "/admin/access-review",
+      title: "Access review",
+      count: MOCK_USERS.filter((u) => u.isAdmin).length,
+      sub: "Admins carrying the flag · quarterly walk-through cadence",
+    },
   ];
 
   return (

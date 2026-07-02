@@ -12,13 +12,28 @@
 import type { FutureModernistRecognition } from "@/lib/types";
 
 /**
- * Recognitions start empty in the sandbox. Admin selects from the
- * metric shortlist via `/admin/mvp/recognition` when ready. Seeding a
- * specific winner without grounding in actual contribution data risks
- * misattribution — the recognition rail is meant to be driven by
- * Jamar's editorial judgment, not the seed.
+ * SANDBOX ILLUSTRATION ONLY — DO NOT MIGRATE TO PRODUCTION.
+ *
+ * Recognitions start empty at beta launch (cooperative canon starts at
+ * zero). This one seeded entry unlocks Sunny's Partner-tier discovery
+ * window so the homepage roster preview has tier variety across
+ * TradingCard rarities. Admin selects real recognitions via
+ * `/admin/mvp/recognition` in production; this row gets wiped pre-deploy
+ * per production-swap-checklist §7m.
  */
-export const MOCK_FUTURE_MODERNIST_RECOGNITIONS: FutureModernistRecognition[] = [];
+export const MOCK_FUTURE_MODERNIST_RECOGNITIONS: FutureModernistRecognition[] = [
+  {
+    id: "fmr_sunny_2026_07",
+    userId: "u_sunny",
+    periodKind: "month",
+    periodKey: "2026-07",
+    periodLabel: "July 2026",
+    narrative:
+      "Sunny shipped the design pass that made the platform feel like a Future Modern thing rather than a generic SaaS. Brand-side coherence across the public surfaces landed on his read of what the cooperative signals.",
+    selectedByUserId: "u_jamar",
+    selectedAt: "2026-07-01T09:00:00Z",
+  },
+];
 
 export function recognitionForPeriod(
   periodKey: string,

@@ -348,9 +348,10 @@ export const MOCK_USERS: User[] = [
     updatedAt: "2026-05-04T00:00:00Z",
   },
 
-  // Sunny Su — Member-tier (promoted from Partner). Confirmed beta tester.
-  // Brand + UI/UX + Product Design at paradigmid.com. He/him — flagged
-  // by Jamar so future sessions don't drift.
+  // Sunny Su — Partner-tier (2026-07-01 recalibration per Jamar; discovery
+  // unlocked by an active Future Modernist recognition). Confirmed beta
+  // tester. Brand + UI/UX + Product Design at paradigmid.com. **He/him**
+  // — flagged three times by Jamar so future sessions don't drift.
   {
     id: "u_sunny",
     email: "sunny@paradigmid.com",
@@ -358,7 +359,7 @@ export const MOCK_USERS: User[] = [
     firstName: "Sunny",
     lastName: "Su",
     profileImageUrl: null,
-    membershipTier: "member",
+    membershipTier: "partner",
     primaryIndustry: "creative-media",
     secondaryIndustries: ["professional-services"],
     dataParticipation: false,
@@ -381,6 +382,44 @@ export const MOCK_USERS: User[] = [
     stripeAccountId: null,
     stripePayoutsEnabled: false,
     createdAt: "2025-11-01T00:00:00Z",
-    updatedAt: "2026-06-30T00:00:00Z",
+    updatedAt: "2026-07-01T00:00:00Z",
+  },
+
+  // Bayu — Member-tier. STEM pillar per beta cohort categorization.
+  // Active frontend design collaborator with Jamar as of 2026-07-01;
+  // lens expanded from beta-tester to design partner. Good standing MVP
+  // band (green card) — contributor in ramp-up. Signing status still to
+  // confirm; treated as Member for design/planning purposes.
+  {
+    id: "u_bayu",
+    email: "bayu@guramo.com",
+    handle: "bayu",
+    firstName: "Bayu",
+    lastName: null,
+    profileImageUrl: null,
+    membershipTier: "member",
+    primaryIndustry: "stem",
+    secondaryIndustries: ["creative-media"],
+    dataParticipation: false,
+    skills: ["frontend", "product design", "ui engineering"],
+    discipline: "Frontend + Product Design",
+    profileMode: "contributor",
+    bio: "guramo.com. Frontend + product design. Design collaborator on $BUILD.Store pre-launch.",
+    portfolioUrl: "https://guramo.com",
+    buildTokenBalance: "600.00000000",
+    isAdmin: false,
+    talentTags: [],
+    avatarPortraitUrl: null,
+    profilePublic: true,
+    suspendedAt: null,
+    suspensionReason: null,
+    walletAddress: "0x6551000000000000000000000000000000000015",
+    connectedWalletAddress: null,
+    connectedWalletProvider: null,
+    walletConnectedAt: null,
+    stripeAccountId: null,
+    stripePayoutsEnabled: false,
+    createdAt: "2026-06-28T00:00:00Z",
+    updatedAt: "2026-07-01T00:00:00Z",
   },
 ];

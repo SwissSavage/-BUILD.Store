@@ -197,9 +197,9 @@ const SNAPSHOT_INPUTS: Array<{
     }),
   },
   {
-    // Sunny — Design / Brand UX Member. Beta tester pre-launch (real
-    // labor on an unfinished platform). Sub-ratings land in the
-    // promotion-eligible / future-modernist boundary.
+    // Sunny — Partner-tier (recategorized 2026-07-01). Design / Brand UX
+    // beta tester. Sub-ratings land in the promotion-eligible band
+    // (blue TradingCard). Discovery unlocked by an active recognition.
     userId: "u_sunny",
     subRatings: subs({
       quality: 87,
@@ -209,6 +209,22 @@ const SNAPSHOT_INPUTS: Array<{
       collaboration: 88,
       attendance: 82,
       referrals_bd: 70,
+    }),
+  },
+  {
+    // Bayu — Member-tier. Frontend + product design collaborator.
+    // Sub-ratings land in the good-standing band (green TradingCard).
+    // Contributor still ramping — outcomes weighted lighter until real
+    // engagements settle.
+    userId: "u_bayu",
+    subRatings: subs({
+      quality: 72,
+      outcomes: 65,
+      reliability: 74,
+      hustle: 78,
+      collaboration: 76,
+      attendance: 72,
+      referrals_bd: 60,
     }),
   },
 ];

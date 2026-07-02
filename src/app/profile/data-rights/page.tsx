@@ -37,27 +37,23 @@ export default async function DataRightsPage() {
         Data rights
       </h1>
       <p className="mt-2 text-sm text-ink-muted">
-        You can ask for a copy of everything the cooperative holds about
-        you, or ask us to erase it. Both requests get logged to the
-        immutable audit trail so you have a record of the ask and the
-        response. Production honors export within 30 days (GDPR window)
-        and erasure over a 30-day soft-delete + hard-delete cycle,
-        preserving the financial subset per standard legal-hold policy.
+        Your data, your terms. Export it or erase it. Both requests
+        audit-logged. Export within 30 days (GDPR). Erasure runs 30-day
+        soft-delete then hard-delete; financial records retained per
+        legal-hold.
       </p>
 
       <section className="mt-8">
         <Card>
           <CardEyebrow>Export</CardEyebrow>
           <CardTitle className="mt-2 text-xl">
-            Download a copy of my data
+            Download your data
           </CardTitle>
           <p className="mt-2 text-sm text-ink-muted">
-            You&apos;ll receive a JSON archive of your profile,
-            contributions, contract history, wallet ledger, recognitions,
-            canonizations, meeting minutes, and audit-log entries you
-            were the actor on. Sandbox: submitting the request logs it;
-            production dispatches the archive by signed URL to your
-            email within 24 hours.
+            JSON archive: profile, contributions, contract history,
+            wallet ledger, recognitions, canonizations, meeting minutes,
+            audit-log entries you were the actor on. Production
+            dispatches by signed URL within 24 hours.
           </p>
           <form action={requestDataExport} className="mt-4 space-y-3">
             <label className="block text-xs text-ink-muted">
@@ -84,18 +80,14 @@ export default async function DataRightsPage() {
         <Card>
           <CardEyebrow>Erasure</CardEyebrow>
           <CardTitle className="mt-2 text-xl">
-            Erase my account
+            Erase your account
           </CardTitle>
           <p className="mt-2 text-sm text-ink-muted">
-            Erasure begins a 30-day soft-delete window (your account is
-            de-provisioned; profile hidden from all surfaces). On day
-            31, personal data is hard-deleted. Financial records
-            (contracts, comp structure decisions, wallet ledger) are
-            retained per legal-hold policy — the cooperative is bound
-            to preserve those under applicable business-records law.
-            The retention subset stays visible only to compliance
-            admins, and each retained record gets an audit entry at
-            hard-delete.
+            30-day soft-delete: account de-provisioned, profile hidden.
+            Day 31: hard-delete. Financial records (contracts, comp
+            decisions, wallet ledger) retained per business-records
+            law — compliance-admin visible only, each with an audit
+            entry at hard-delete.
           </p>
           <form action={requestDataErasure} className="mt-4 space-y-3">
             <label className="block text-xs text-ink-muted">

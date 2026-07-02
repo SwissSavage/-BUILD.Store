@@ -868,9 +868,8 @@ function ConstellationSection() {
             Eight interlocking systems.
           </h2>
           <p className="mt-3 max-w-2xl text-lg text-ink-muted">
-            An operating system for cooperative professional work.
-            Every rail specified, implemented, audit-logged. Hover any
-            node.
+            Owners ship better work than renters. Provenance,
+            Discernment, Equity — as code.
           </p>
         </div>
         <VentureLaborConstellation />

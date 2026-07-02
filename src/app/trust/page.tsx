@@ -21,79 +21,75 @@ export default function TrustPage() {
         Security &amp; privacy
       </h1>
       <p className="mt-3 max-w-2xl text-ink-muted">
-        We handle engagement briefs, contribution records, and financial
-        data. Here&apos;s how we protect it, who has access, and what
-        we log.
+        Provenance is a system. Every action attributed. Every payout
+        receipted. Members hold their own data.
       </p>
 
       <Card className="mt-8">
-        <CardEyebrow>Attestation posture</CardEyebrow>
+        <CardEyebrow>Attestation</CardEyebrow>
         <p className="mt-3 text-sm text-ink-muted">
-          Designed against{" "}
-          <strong className="text-ink">SOC 2 Trust Services Criteria</strong>{" "}
-          and{" "}
-          <strong className="text-ink">ISO/IEC 27001:2022 Annex A</strong>.
-          Type I attestation lands three months after production launch;
-          Type II at twelve. Controls are already in code.
+          <strong className="text-ink">SOC 2</strong> and{" "}
+          <strong className="text-ink">ISO/IEC 27001:2022</strong>. Type
+          I lands three months after production launch. Type II at
+          twelve.
         </p>
         <p className="mt-3 text-sm text-ink-muted">
-          Need us to complete a VSA / CAIQ / SIG Lite? Send it. The
-          architecture answers most questions substantively.
+          Send us your VSA, CAIQ, or SIG Lite. We&apos;ll fill it.
         </p>
       </Card>
 
       <section className="mt-10">
         <h2 className="font-display text-2xl font-semibold">
-          What we do
+          What the platform does
         </h2>
 
         <div className="mt-4 space-y-3">
           <Pillar
-            title="Every consequential change is logged, immutably"
+            title="Every change, on the record"
             body={
-              "Sign-ins, permission changes, compensation decisions, recognitions, canonizations — all written to an append-only audit trail with actor, action, and before/after state. Production revokes UPDATE and DELETE grants at the database role and ships a replica to WORM archive within one business day. Twelve months hot; seven years cold for financial records."
+              "Sign-ins, permission changes, compensation decisions, recognitions, canonizations. Append-only trail: actor, action, before/after state. Production revokes UPDATE and DELETE on the app database role; replica shipped to WORM within one business day. Twelve months hot. Seven years cold on financial records."
             }
             evidence="SOC 2 CC7.2 · ISO 27001 A.12.4"
           />
 
           <Pillar
-            title="Role-based access, least privilege by default"
+            title="Authority follows the work"
             body={
-              "Every admin action carries a server-side permission check. Discovery is gated separately from tier, so a Member's public visibility can be controlled independently. Production splits admin into finance, membership, and moderation scopes with quarterly review."
+              "Every admin action, server-checked. Discovery gated separately from tier. Production splits admin into finance, membership, moderation. Quarterly review."
             }
             evidence="SOC 2 CC5.2 + CC5.3 · ISO 27001 A.9.2"
           />
 
           <Pillar
-            title="Confidentiality by design"
+            title="First names, in public"
             body={
-              "Full names, emails, and legal identity live on admin surfaces only. Public routes show first-name only. Members control their own discoverability. Direct messages stay cooperative-internal; external clients never see talent contact details directly."
+              "Full names, emails, legal identity: admin only. Public routes: first name. Members control their discoverability. DMs stay cooperative-internal. External clients never see talent contact details."
             }
             evidence="SOC 2 C1.1"
           />
 
           <Pillar
-            title="Compensation with a receipts trail"
+            title="Compensation with receipts"
             body={
-              "Every base pay release, bonus decision, and revenue split is a distinct audit entry carrying the gate rationale — client rating, PM rating, peer composite, whichever applied. Talent sees the full record on their wallet; admins see the same across the cooperative."
+              "Every base release, bonus decision, revenue split — a distinct audit entry with the gate rationale. Client rating, PM rating, peer composite, whichever applied. Talent sees the full record on wallet."
             }
             evidence="SOC 2 CC7.2 · Processing Integrity"
           />
 
           <Pillar
-            title="You control your data"
+            title="Your data, your terms"
             body={
-              "Members can request a JSON export of their data or erase their account. Erasure runs a 30-day soft-delete then hard-delete, with financial records retained per business-records law. Both requests hit the audit log."
+              "Export the JSON. Erase the account. Erasure runs a 30-day soft-delete then hard-delete; financial records retained per business-records law. Both requests audit-logged."
             }
             evidence="SOC 2 P5.1 · GDPR Art. 15 + 17 · CCPA §1798.100 + 105"
             href="/profile/data-rights"
-            hrefLabel="Self-service surface (Members) →"
+            hrefLabel="Self-service (Members) →"
           />
 
           <Pillar
-            title="Subprocessors are named, and additions require notice"
+            title="Subprocessors, named"
             body={
-              "The list of third parties the cooperative shares data with is published. Adding a new subprocessor requires 30 days of advance notice to Members, during which they can object or exercise their data rights. Every subprocessor on the production roster carries a signed Data Processing Addendum."
+              "Every third party we share data with is on the registry. New ones get 30 days advance notice to Members. Every production subprocessor carries a signed DPA."
             }
             evidence="ISO 27001 A.15.1 · GDPR Art. 28"
             href="/policies/subprocessors"
@@ -104,36 +100,36 @@ export default function TrustPage() {
 
       <section className="mt-12">
         <h2 className="font-display text-2xl font-semibold">
-          Landing with production
+          Landing at production
         </h2>
         <p className="mt-3 text-sm text-ink-muted">
-          Infrastructure hardening below lands at production deployment:
+          Infrastructure hardening ships with the deploy:
         </p>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <Row
-            title="Encryption at rest + in transit"
-            body="TLS 1.3 minimum at the edge with HSTS + preload. Managed Postgres with encryption on. S3 Server-Side Encryption. KMS-managed keys with annual rotation."
+            title="Encryption"
+            body="TLS 1.3 at the edge. HSTS with preload. Managed Postgres encrypted at rest. S3 SSE. KMS keys, annual rotation."
           />
           <Row
-            title="Backup + disaster recovery"
-            body="Point-in-time recovery ≥ 14 days. Daily off-region snapshot with 90-day retention. Quarterly restore drills documented."
+            title="Backup + DR"
+            body="PITR ≥ 14 days. Daily off-region snapshot, 90-day retention. Restore drills quarterly."
           />
           <Row
             title="Vulnerability management"
-            body="Dependabot on the repo. Weekly npm audit in CI. Software composition analysis on the main branch. Critical CVEs patched within 7 days."
+            body="Dependabot. Weekly npm audit in CI. SCA on main. Critical CVEs patched within 7 days."
           />
           <Row
             title="Incident response"
-            body="Documented severity ladder + communication tree. Public status page for SEV1/SEV2. Post-incident retros filed publicly-with-redactions."
+            body="Severity ladder + communication tree. Public status page for SEV1/SEV2. Post-incident retros filed publicly, with redactions."
           />
           <Row
             title="Change management"
-            body="Branch protection on main. Required review from at least one non-author on any audit-log-writing code path. CI gates on typecheck + test + lint."
+            body="Branch protection on main. Review required from a non-author on any audit-log-writing path. CI: typecheck, test, lint."
           />
           <Row
             title="Anomaly detection"
-            body="Alerts on failed-sign-in bursts, unusual admin action rates, any hard-delete verb. Reviewed weekly by the compliance-admin scope."
+            body="Alerts on failed-sign-in bursts, unusual admin action rates, any hard-delete verb. Reviewed weekly."
           />
         </div>
       </section>
@@ -141,7 +137,7 @@ export default function TrustPage() {
       <section className="mt-12">
         <h2 className="font-display text-2xl font-semibold">Policies</h2>
         <p className="mt-3 text-sm text-ink-muted">
-          How the cooperative operates, in the words we bind ourselves to:
+          The words we bind ourselves to:
         </p>
         <ul className="mt-4 space-y-2 text-sm">
           <li>
@@ -191,14 +187,13 @@ export default function TrustPage() {
       <section className="mt-12">
         <h2 className="font-display text-2xl font-semibold">Questions</h2>
         <p className="mt-3 text-sm text-ink-muted">
-          Engagement-specific questions route through the account admin
-          on your deal. Policy questions go to{" "}
+          Engagement questions: your account admin. Policy questions:{" "}
           <code className="text-brand-magenta">security@buildstore</code>{" "}
-          (production) or{" "}
+          in production,{" "}
           <Link href="/contact" className="text-brand-magenta hover:underline">
             /contact
           </Link>{" "}
-          (sandbox).
+          in sandbox.
         </p>
       </section>
 

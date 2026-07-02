@@ -321,9 +321,7 @@ export function VentureLaborConstellation() {
                 Venture Labor OS
               </p>
               <p className="mt-1 text-sm text-ink-muted">
-                Eight interlocking systems. An operating system for
-                cooperative professional work, not a marketplace. Hover
-                or tap any point.
+                Eight interlocking systems. Hover or tap any point.
               </p>
             </div>
           )}

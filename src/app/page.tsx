@@ -7,14 +7,7 @@ import Link from "next/link";
 import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
 import { SERVICE_PARTNERS } from "@/lib/mock-data/partners";
 import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_MVP_SCORES, mvpScoreForUser } from "@/lib/mock-data/mvp-scores";
-import { championsCourtMembers } from "@/lib/mvp-score";
-import { publicProfileEligible } from "@/lib/profile-visibility";
-import {
-  TradingCard,
-  deriveTradingCardTier,
-  type TradingCardTier,
-} from "@/components/TradingCard";
+import { TradingCard, type TradingCardTier } from "@/components/TradingCard";
 
 export default function Home() {
   return (
@@ -41,27 +34,23 @@ export default function Home() {
  * player cards that signal how the cooperative organizes.
  */
 function Roster() {
-  const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
-  const tierRank: Record<TradingCardTier, number> = {
-    champion: 5,
-    future_modernist: 4,
-    promotion_eligible: 3,
-    good_standing: 2,
-    probation: 1,
-    standard: 0,
-  };
-  const preview = MOCK_USERS.filter((u) => publicProfileEligible(u))
-    .map((u) => {
-      const snapshot = mvpScoreForUser(u.id);
-      const tier = deriveTradingCardTier({
-        ovr: snapshot?.ovr ?? null,
-        isProvisional: snapshot?.isProvisional ?? false,
-        isInChampionsCourt: courtIds.has(u.id),
-      });
-      return { user: u, tier };
-    })
-    .sort((a, b) => tierRank[b.tier] - tierRank[a.tier])
-    .slice(0, 4);
+  // Fixed 5-card lineup showing the RPG rarity ladder end-to-end for
+  // homepage launch-design demonstration. Locked 2026-07-01 per Jamar:
+  // Jamar gold · BBG magenta · Sunny blue · Bayu green · Sahtyre grey.
+  // Sandbox illustration — production replaces with dynamic top-N
+  // discovery-eligible Members computed from MVP snapshot bands.
+  const ROSTER: { userId: string; tier: TradingCardTier }[] = [
+    { userId: "u_jamar", tier: "champion" },
+    { userId: "u_bbg", tier: "future_modernist" },
+    { userId: "u_sunny", tier: "promotion_eligible" },
+    { userId: "u_bayu", tier: "good_standing" },
+    { userId: "u_sahtyre", tier: "probation" },
+  ];
+
+  const preview = ROSTER.map(({ userId, tier }) => {
+    const user = MOCK_USERS.find((u) => u.id === userId);
+    return user ? { user, tier } : null;
+  }).filter((row): row is { user: (typeof MOCK_USERS)[number]; tier: TradingCardTier } => row !== null);
 
   if (preview.length === 0) return null;
 
@@ -77,10 +66,9 @@ function Roster() {
               Members shipping the work
             </h2>
             <p className="mt-3 max-w-2xl text-ink-muted">
-              Every Member holds equity. Standing shows on the card —
-              Champion&apos;s Court holographic-gold at the top, Future
-              Modernist pool magenta, promotion-eligible blue, good
-              standing green. The cards are the cooperative made visible.
+              Standing on the card. Champion&apos;s Court gold at the top,
+              Future Modernist magenta, promotion-eligible blue, good
+              standing green, probation grey.
             </p>
           </div>
           <Link
@@ -91,7 +79,7 @@ function Roster() {
           </Link>
         </div>
 
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 md:grid-cols-4">
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {preview.map(({ user, tier }) => (
             <Link
               key={user.id}

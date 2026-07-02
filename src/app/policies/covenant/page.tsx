@@ -150,15 +150,11 @@ export default function CovenantPolicy() {
             Penalties are admin-recorded with an arbitration record —
             the reason text is preserved in the immutable audit log.
             Rescission by admin is possible and itself audit-logged. A
-            Member facing a penalty they believe is mistaken has access
-            to the cooperative arbitration process (see{" "}
-            <Link
-              href="/policies/arbitration"
-              className="text-brand-magenta hover:underline"
-            >
-              Arbitration Procedure
-            </Link>
-            , planned).
+            Member facing a penalty they believe is mistaken can invoke
+            the cooperative arbitration process; the formal Arbitration
+            Procedure document lands with the production LLC operating-
+            agreement rewrite (see{" "}
+            <code>production-swap-checklist.md</code> §9).
           </p>
         </div>
 

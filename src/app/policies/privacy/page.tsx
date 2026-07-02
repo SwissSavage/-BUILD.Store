@@ -195,15 +195,15 @@ export default function PrivacyPolicy() {
         <p className="mt-2 text-sm">
           Encryption in transit (TLS 1.3 minimum), encryption at rest,
           role-based access with quarterly review, and an append-only
-          audit log recording every consequential mutation. See{" "}
+          audit log recording every consequential mutation. Customer-
+          facing summary at{" "}
           <Link
-            href="/policies/security-responsibilities"
+            href="/trust"
             className="text-brand-magenta hover:underline"
           >
-            Security Responsibilities
-          </Link>{" "}
-          (planned) for the internal-facing detail. The long-form
-          technical audit is at{" "}
+            /trust
+          </Link>
+          ; the long-form technical audit lives at{" "}
           <code>deliverables/compliance/soc2-iso27001-readiness.md</code>.
         </p>
 

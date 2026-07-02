@@ -59,7 +59,7 @@ const NODES: ConstellationNode[] = [
     y: 360,
     summary:
       "Viewer → Prospect → Partner → Member. Real progression tied to contribution, not payment. Access is not for sale.",
-    href: "/policies/covenant#tier",
+    href: "/governance#tier",
     color: "#5070F0",
   },
   {
@@ -69,7 +69,7 @@ const NODES: ConstellationNode[] = [
     y: 220,
     summary:
       "0-99 OVR composite of seven sub-ratings. 12-month rolling. Real-time compliance + recognition instrument, not a review at year-end.",
-    href: "/policies/covenant#mvp",
+    href: "/governance#mvp",
     color: "#D828A0",
   },
   {
@@ -79,7 +79,7 @@ const NODES: ConstellationNode[] = [
     y: 220,
     summary:
       "Future Modernist of the Month + Constellation of the Year + Champion's Court. Metric shortlist plus editorial narrative — not a popularity contest.",
-    href: "/policies/covenant#recognition",
+    href: "/governance#recognition",
     color: "#D828A0",
   },
   {
@@ -119,7 +119,7 @@ const NODES: ConstellationNode[] = [
     y: 460,
     summary:
       "-9 OVR per violation, 90-day duration, stacking. Real-time impact prevents slow decay. Every action audit-logged.",
-    href: "/policies/covenant#compliance",
+    href: "/governance#compliance",
     color: "#D828A0",
   },
 ];

@@ -2933,6 +2933,11 @@ export type AuditLogAction =
   | "data.subject_export_requested"
   | "data.subject_erasure_requested"
   | "data.record_hard_deleted"
+  // EPK + testimonial (public co-brand actions)
+  | "epk.approved"
+  | "epk.revision_requested"
+  | "testimonial.published"
+  | "testimonial.unpublished"
   // Admin config
   | "config.setting_changed"
   | "config.access_reviewed";
@@ -2974,6 +2979,10 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "data.subject_export_requested": "Data subject export requested",
   "data.subject_erasure_requested": "Data subject erasure requested",
   "data.record_hard_deleted": "Record hard-deleted",
+  "epk.approved": "EPK approved (published)",
+  "epk.revision_requested": "EPK revision requested",
+  "testimonial.published": "Testimonial published",
+  "testimonial.unpublished": "Testimonial unpublished",
   "config.setting_changed": "Config setting changed",
   "config.access_reviewed": "Access review completed",
 };

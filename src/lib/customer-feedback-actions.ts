@@ -27,6 +27,10 @@ import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_ORDERS } from "@/lib/mock-data/orders";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
+  logAuditEvent,
+  snapshotActorRole,
+} from "@/lib/mock-data/audit-log";
+import {
   MOCK_CUSTOMER_FEEDBACK,
   hasFeedbackForContext,
 } from "@/lib/mock-data/customer-feedback";
@@ -324,7 +328,7 @@ export async function submitBuyerFeedback(formData: FormData) {
  * `internal_only` cannot be published. Default-deny.
  */
 export async function publishTestimonial(formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const feedbackId = String(formData.get("feedbackId") ?? "");
   const publishedQuote = String(formData.get("publishedQuote") ?? "").trim();
   const publishedForUserId = String(
@@ -350,9 +354,25 @@ export async function publishTestimonial(formData: FormData) {
   const target = MOCK_USERS.find((u) => u.id === publishedForUserId);
   if (!target) throw new Error("Target contributor not found");
 
-  row.publishedAt = new Date().toISOString();
+  const now = new Date().toISOString();
+  const beforePublishedAt = row.publishedAt;
+  row.publishedAt = now;
   row.publishedQuote = publishedQuote;
   row.publishedForUserId = publishedForUserId;
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "testimonial.published",
+    resourceKind: "user",
+    resourceId: target.id,
+    before: { publishedAt: beforePublishedAt },
+    after: {
+      publishedAt: now,
+      feedbackId,
+      quoteLength: publishedQuote.length,
+    },
+  });
 
   pushNotification({
     userId: publishedForUserId,

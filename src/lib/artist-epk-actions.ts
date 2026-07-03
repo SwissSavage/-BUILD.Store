@@ -28,6 +28,10 @@ import {
 } from "@/lib/mock-data/artist-epk";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import {
+  logAuditEvent,
+  snapshotActorRole,
+} from "@/lib/mock-data/audit-log";
 import type {
   ArtistEpk,
   ArtistMetricSnapshot,
@@ -400,7 +404,7 @@ export async function submitEpkForReview() {
  * the artist.
  */
 export async function approveEpk(formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const userId = String(formData.get("userId") ?? "");
   const epk = epkForUser(userId);
   if (!epk) throw new Error("EPK not found");
@@ -411,14 +415,25 @@ export async function approveEpk(formData: FormData) {
   const target = MOCK_USERS.find((u) => u.id === userId);
   if (!target) throw new Error("Target user not found");
 
+  const now = new Date().toISOString();
   epk.status = "published";
-  epk.publishedAt = new Date().toISOString();
+  epk.publishedAt = now;
   epk.adminRevisionNote = null;
   bumpUpdated(epk);
 
   if (target.profileMode !== "epk") {
     target.profileMode = "epk";
   }
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "epk.approved",
+    resourceKind: "user",
+    resourceId: target.id,
+    before: { status: "submitted" },
+    after: { status: "published", publishedAt: now },
+  });
 
   pushNotification({
     userId: target.id,
@@ -440,7 +455,7 @@ export async function approveEpk(formData: FormData) {
  * re-approves.
  */
 export async function requestEpkRevision(formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const userId = String(formData.get("userId") ?? "");
   const note = String(formData.get("adminRevisionNote") ?? "").trim();
   if (note.length < 10) {
@@ -462,6 +477,17 @@ export async function requestEpkRevision(formData: FormData) {
   epk.status = "needs_revision";
   epk.adminRevisionNote = note;
   bumpUpdated(epk);
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "epk.revision_requested",
+    resourceKind: "user",
+    resourceId: target.id,
+    before: { status: "submitted" },
+    after: { status: "needs_revision" },
+    reason: note,
+  });
 
   pushNotification({
     userId: target.id,

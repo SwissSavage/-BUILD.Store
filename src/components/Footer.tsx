@@ -74,6 +74,9 @@ export function Footer() {
             <li>
               <Link href="/signup" className="hover:text-brand-magenta">Get started</Link>
             </li>
+            <li>
+              <Link href="/contact" className="hover:text-brand-magenta">Contact</Link>
+            </li>
           </ul>
         </div>
       </div>

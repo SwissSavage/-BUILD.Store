@@ -18,7 +18,7 @@ import type { User } from "@/lib/types";
 export const MOCK_USERS: User[] = [
   {
     id: "u_jamar",
-    email: "properpreparationism@gmail.com",
+    email: "jamar@example.com",
     handle: "jamar",
     firstName: "Jamar",
     lastName: "McCarthy",
@@ -55,10 +55,10 @@ export const MOCK_USERS: User[] = [
     firstName: "Chibu",
     lastName: "—",
     profileImageUrl: null,
-    // Member tier preserved on paper while arbitration is unresolved.
-    // Defensive posture: don't tear up structural standing in a way
-    // that could be used against the cooperative; instead gate
-    // discovery via the `profilePublic` flag below. See key-people.md.
+    // Illustrative fixture for the defensive-posture pattern: keep
+    // membership tier intact while gating discovery via the
+    // `profilePublic` flag below. Structural standing preserved,
+    // profile-info circulation limited.
     membershipTier: "member",
     primaryIndustry: "stem",
     secondaryIndustries: [],
@@ -73,9 +73,9 @@ export const MOCK_USERS: User[] = [
     talentTags: [],
     avatarPortraitUrl: null,
     // Profile excluded from public discovery surfaces (showcase, member
-    // directories, homepage rails, search index) pending arbitration
-    // resolution. Direct-link URL still resolves but stays out of
-    // crawler indexes via the existing visibility predicate.
+    // directories, homepage rails, search index). Direct-link URL still
+    // resolves but stays out of crawler indexes via the existing
+    // visibility predicate — demonstrates the discovery-toggle pattern.
     profilePublic: false,
     suspendedAt: null,
     suspensionReason: null,
@@ -285,7 +285,7 @@ export const MOCK_USERS: User[] = [
   },
   {
     id: "u_jrusalam",
-    email: "jrusalam@gmail.com",
+    email: "jrusalam@example.com",
     handle: "jrusalam",
     firstName: "Jrusalam",
     lastName: null,
@@ -354,7 +354,7 @@ export const MOCK_USERS: User[] = [
   // — flagged three times by Jamar so future sessions don't drift.
   {
     id: "u_sunny",
-    email: "sunny@paradigmid.com",
+    email: "sunny@example.com",
     handle: "sunny",
     firstName: "Sunny",
     lastName: "Su",
@@ -385,19 +385,19 @@ export const MOCK_USERS: User[] = [
     updatedAt: "2026-07-01T00:00:00Z",
   },
 
-  // Bayu — Member-tier. STEM pillar per beta cohort categorization.
-  // Active frontend design collaborator with Jamar as of 2026-07-01;
-  // lens expanded from beta-tester to design partner. Good standing MVP
-  // band (green card) — contributor in ramp-up. Signing status still to
-  // confirm; treated as Member for design/planning purposes.
+  // Bayu — Partner-tier (locked 2026-07-01 per Jamar). STEM pillar per
+  // beta cohort categorization. Active frontend design collaborator with
+  // Jamar as of 2026-07-01; lens expanded from beta-tester to design
+  // partner. Good standing MVP band (green card) — contributor in
+  // ramp-up. Signing status still to confirm.
   {
     id: "u_bayu",
-    email: "bayu@guramo.com",
+    email: "bayu@example.com",
     handle: "bayu",
     firstName: "Bayu",
     lastName: null,
     profileImageUrl: null,
-    membershipTier: "member",
+    membershipTier: "partner",
     primaryIndustry: "stem",
     secondaryIndustries: ["creative-media"],
     dataParticipation: false,

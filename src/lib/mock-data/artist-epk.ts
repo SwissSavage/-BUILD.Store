@@ -211,7 +211,7 @@ export const MOCK_ARTIST_EPKS: ArtistEpk[] = [
     web3Profiles: [],
     metrics: [],
     bookingNote:
-      "Direct booking line on his existing EPK is jrusalam@gmail.com. Admin to confirm during curation whether to keep direct or route through Future Modern.",
+      "Direct booking line on his existing EPK is jrusalam@example.com. Admin to confirm during curation whether to keep direct or route through Future Modern.",
     submittedAt: "2026-05-04T12:00:00Z",
     publishedAt: null,
     adminRevisionNote: null,

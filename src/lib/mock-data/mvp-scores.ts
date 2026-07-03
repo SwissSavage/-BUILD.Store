@@ -37,12 +37,11 @@ function subs(input: Partial<Record<MvpSubRating, number>>): Record<MvpSubRating
  * `appliedAt`. The `expiresAt` is `appliedAt + 90 days`. Stacks.
  */
 export const MOCK_MVP_PENALTIES: MvpCompliancePenalty[] = [
-  // Illustrative historical record — the 2024 DataXplorer incident
-  // (separate MSA on FM client, attribution gap on the six figures that
-  // landed with the side agency). Applied 2024-05-15, expired 2024-08-13
-  // — well outside the 12-month MVP rolling window. Surfaces in Rob's
-  // penalty HISTORY for arbitration / pattern-recognition purposes but
-  // does NOT drag his current OVR. Demonstrates the rolloff behavior of
+  // Illustrative historical record — a 2024 penalty (fictional details,
+  // representative of the covenant-violation category). Applied
+  // 2024-05-15, expired 2024-08-13 — well outside the 12-month MVP
+  // rolling window. Surfaces in the penalty HISTORY (auditor-visible)
+  // but does NOT drag current OVR. Demonstrates the rolloff behavior of
   // the DnD-Exhaustion mechanic: each penalty is time-bounded; the
   // mechanic does not preserve grudges past the 90-day window.
   {
@@ -52,7 +51,7 @@ export const MOCK_MVP_PENALTIES: MvpCompliancePenalty[] = [
     expiresAt: "2024-08-13T00:00:00Z",
     ovrImpact: -9,
     reason:
-      "2024 cooperative-covenant pattern: separate MSA executed on FM client without disclosure; attribution-ledger gap on ~$120k that landed with side agency. Resolved (penalty expired 2024-08); kept on record for arbitration history but not currently active. See DataXplorer historical entry in projects-portfolio.md.",
+      "Illustrative covenant-violation record from 2024. Resolved (penalty expired 2024-08); retained as history to exercise the audit rollup surface.",
   },
 ];
 
@@ -69,7 +68,7 @@ export const MOCK_MVP_PENALTIES: MvpCompliancePenalty[] = [
  *   Michael     → Good standing
  *   Keyboard Kid → Future Modernist pool (newly Member-tier)
  *   Rob         → Probation/removal review band thanks to the -9 active penalty
- *   Chibu       → Removal accelerated (sub-65; reflects out-per-bylaws status)
+ *   Chibu       → Sub-65 band (illustrative of the probation/removal end of the ladder)
  */
 const SNAPSHOT_INPUTS: Array<{
   userId: string;

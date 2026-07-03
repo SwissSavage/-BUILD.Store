@@ -1,6 +1,16 @@
-# $BUILD.Store — unified sandbox
+# $BUILD.Store
 
-This is a clickable prototype of the unified $BUILD.Store platform. It is **not production**. Everything that talks to a database, an auth provider, or a blockchain is **stubbed**. The point of this build is to give Jamar (and the rest of Future Modern) a hands-on, dark-themed, branded version of the app to click through, critique, and hand to a developer once one is in the room.
+The operating system Future Modern Builderberg LLC uses to run our cooperative. Not a marketplace. Owned and operated by the Members who ship the work.
+
+**Licensed under Apache 2.0.** Read the [LICENSE](./LICENSE), the [NOTICE](./NOTICE) for trademark scope, [CONTRIBUTING.md](./CONTRIBUTING.md) for how contributions work, and [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) for the covenant that governs this space.
+
+For the strategic context behind why this exists and how the cooperative operates, see [`deliverables/handoff/handoff-brief.md`](../deliverables/handoff/handoff-brief.md).
+
+---
+
+## What this repo is
+
+This is a clickable sandbox of the unified $BUILD.Store platform. Feature-complete for the beta cohort. Not production wired yet — auth, database, wallet, CRM, and email are all stubbed, and the sandbox runs in-memory. The sandbox is the design and behavior target; production activation is a mechanical swap of stubs for real services (see [`deliverables/launch-prep/production-swap-checklist.md`](../deliverables/launch-prep/production-swap-checklist.md)).
 
 ## What it is
 
@@ -92,13 +102,9 @@ A future developer should make the following swaps. Each lives behind a clear st
 
 ### 1. Auth (currently `lib/auth-stub.ts` + `lib/auth-actions.ts`)
 
-Pick one:
+**Locked: Auth.js (formerly NextAuth).** Chosen for cooperative-ownership fit — the user table lives in our Postgres, not in a vendor. Production shell at [`src/lib/auth.ts`](./src/lib/auth.ts) with SWAP-marked blocks. Drizzle table stubs at [`src/db/schema-auth.ts`](./src/db/schema-auth.ts).
 
-- **Clerk** — most batteries-included; drop-in components; least code.
-- **Auth.js (NextAuth)** — open-source; lives in the repo; most vendor-agnostic.
-- **WorkOS** — enterprise SSO/SCIM; only if Fortune-500 client SSO is on the v1 critical path.
-
-Replace `getCurrentUser()` and `requireAdmin()` with the chosen provider's session reader. The rest of the app calls these two functions and nothing else, so the swap is local.
+Activation order in [`production-swap-checklist.md`](../deliverables/launch-prep/production-swap-checklist.md) §2.
 
 ### 2. Database (currently `lib/mock-data/*.ts`)
 
@@ -165,3 +171,11 @@ This sandbox replaces two earlier codebases that are now **raw material, not pro
 - `Future Modern/buildstore-backend-Replit-replit-agent/` — the stalled Replit member app, **originally written by Jamar McCarthy** (schema + API reference for this sandbox).
 
 Going forward, all $BUILD.Store work happens here under cooperative ownership (Future Modern Builderberg LLC, operating as a cooperative). See `CONTRIBUTORS.md` for the full provenance record.
+
+## License and cooperative posture
+
+Apache License 2.0. Read the [LICENSE](./LICENSE) and the [NOTICE](./NOTICE) file. The code is open. The trademarks (Future Modern, $BUILD.Store, Rare∞, Venture Labor OS, Champion's Court, Future Modernist of the Month, Constellation of the Year, the turtle logo and wordmark) are not — they belong to Future Modern Builderberg LLC. Use of the code doesn't grant use of the brand.
+
+Contributions welcome under the terms in [CONTRIBUTING.md](./CONTRIBUTING.md). Conduct is governed by [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md), adapted from the Cooperative Covenant.
+
+Why open source? A cooperative that says "we own our infrastructure and data" ships open code as an act of coherence. The moat isn't the software — it's the covenant, the values screen, the shipped work, and the trust the cooperative has earned. The moat isn't clonable. The code is.

@@ -3,6 +3,13 @@
   "version": "0.1.0-sandbox",
   "private": true,
   "description": "$BUILD.Store unified sandbox — clickable prototype. Not production. See README.md.",
+  "license": "Apache-2.0",
+  "author": "Future Modern Builderberg LLC",
+  "homepage": "https://buildstore.example",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SwissSavage/-BUILD.Store.git"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -200,8 +200,9 @@ export async function distributeOrderSplit(formData: FormData) {
     before: { splitDistributedAt: null },
     after: {
       splitDistributedAt: now,
-      productId: order.productId,
-      buyerAmount: order.total,
+      sellerId: order.sellerId,
+      subtotal: order.subtotal,
+      houseFee: order.houseFee,
     },
   });
 

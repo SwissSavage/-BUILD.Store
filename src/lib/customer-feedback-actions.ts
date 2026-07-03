@@ -391,16 +391,31 @@ export async function publishTestimonial(formData: FormData) {
  * deleting the underlying feedback row.
  */
 export async function unpublishTestimonial(formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const feedbackId = String(formData.get("feedbackId") ?? "");
   const row = MOCK_CUSTOMER_FEEDBACK.find((f) => f.id === feedbackId);
   if (!row) throw new Error("Feedback row not found");
-  const formerHandle = row.publishedForUserId
-    ? MOCK_USERS.find((u) => u.id === row.publishedForUserId)?.handle
+  const formerUserId = row.publishedForUserId;
+  const formerHandle = formerUserId
+    ? MOCK_USERS.find((u) => u.id === formerUserId)?.handle
     : null;
+  const beforePublishedAt = row.publishedAt;
   row.publishedAt = null;
   row.publishedQuote = null;
   row.publishedForUserId = null;
+
+  if (formerUserId) {
+    logAuditEvent({
+      actorUserId: admin.id,
+      actorRoleSnapshot: snapshotActorRole(admin),
+      action: "testimonial.unpublished",
+      resourceKind: "user",
+      resourceId: formerUserId,
+      before: { publishedAt: beforePublishedAt, feedbackId },
+      after: { publishedAt: null },
+    });
+  }
+
   revalidatePath(`/admin/feedback`);
   if (formerHandle) revalidatePath(`/u/${formerHandle}`);
 }

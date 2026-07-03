@@ -16,7 +16,6 @@
  */
 import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
-import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
 
 export const metadata = {
   title: "About · $BUILD.Store",
@@ -787,13 +786,13 @@ function PillarCard({
 function RoadmapPeek() {
   return (
     <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      {/* Subtle radial wash — same brand pattern as Hero */}
+      {/* Subtle radial wash — brand palette rhythm */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 opacity-[0.08]"
         style={{
           background:
-            "radial-gradient(50% 60% at 15% 20%, #D4AF37 0%, transparent 60%), radial-gradient(50% 60% at 85% 90%, #5070F0 0%, transparent 60%)",
+            "radial-gradient(50% 60% at 15% 20%, #007048 0%, transparent 60%), radial-gradient(50% 60% at 85% 90%, #5070F0 0%, transparent 60%)",
         }}
       />
       <div className="relative mx-auto max-w-app px-6 py-24">
@@ -823,7 +822,7 @@ function RoadmapPeek() {
               className="absolute left-[27px] top-6 bottom-6 w-px"
               style={{
                 background:
-                  "linear-gradient(to bottom, #D4AF37 0%, #D828A0 50%, #5070F0 100%)",
+                  "linear-gradient(to bottom, #007048 0%, #D828A0 50%, #5070F0 100%)",
                 opacity: 0.35,
               }}
             />
@@ -832,7 +831,7 @@ function RoadmapPeek() {
                 number="01"
                 phase="Landing + whitelist"
                 status="Open now"
-                accent="#D4AF37"
+                accent="#007048"
                 body="Landing page live. Whitelist open to founding candidates who want a seat before the doors widen. First look at the cooperative model, first access to the invite pool."
               />
               <RoadmapRow
@@ -918,25 +917,24 @@ function ConstellationSection() {
   return (
     <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
       <div className="mx-auto max-w-app px-6 py-20">
-        <div className="mb-8">
+        <div className="max-w-2xl">
           <div className="text-xs uppercase tracking-wider text-brand-magenta">
             Venture Labor OS
           </div>
           <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
             Owners ship better work than renters.
           </h2>
-          <p className="mt-3 max-w-2xl text-lg text-ink-muted">
+          <p className="mt-3 text-lg text-ink-muted">
             The upside on the work belongs to the people who shipped it.
             Provenance, Discernment, Equity.
           </p>
         </div>
-        <VentureLaborConstellation />
-        <div className="mt-6 flex flex-wrap gap-3 text-sm">
+        <div className="mt-8 flex flex-wrap gap-3 text-sm">
           <Link
             href="/governance"
             className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-4 py-2 text-brand-magenta hover:bg-brand-magenta/20"
           >
-            Governance framework →
+            See how the network works →
           </Link>
           <Link
             href="/policies/covenant"

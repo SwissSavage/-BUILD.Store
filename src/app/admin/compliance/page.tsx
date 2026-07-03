@@ -351,7 +351,7 @@ const STATUS_LABEL: Record<ControlStatus, string> = {
 };
 const STATUS_COLOR: Record<ControlStatus, string> = {
   satisfied: "#007048",
-  partial: "#D4AF37",
+  partial: "#A3A3A3",
   gap: "#D828A0",
   planned: "#5070F0",
 };

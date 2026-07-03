@@ -27,13 +27,13 @@ export default function PrivacyPolicy() {
       <div
         className="mt-6 rounded-2xl border px-5 py-4"
         style={{
-          borderColor: "rgba(212, 175, 55, 0.35)",
-          backgroundColor: "rgba(212, 175, 55, 0.06)",
+          borderColor: "rgba(80, 112, 240, 0.35)",
+          backgroundColor: "rgba(80, 112, 240, 0.06)",
         }}
       >
         <p
           className="text-[11px] uppercase tracking-wider"
-          style={{ color: "#D4AF37" }}
+          style={{ color: "#5070F0" }}
         >
           Sandbox draft
         </p>

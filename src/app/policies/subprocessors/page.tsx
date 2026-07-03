@@ -119,7 +119,7 @@ const DPA_LABEL: Record<Subprocessor["dpaStatus"], string> = {
 const DPA_COLOR: Record<Subprocessor["dpaStatus"], string> = {
   signed: "#007048",
   pending: "#5070F0",
-  planned: "#D4AF37",
+  planned: "#A3A3A3",
 };
 
 export default function SubprocessorRegistry() {
@@ -136,13 +136,13 @@ export default function SubprocessorRegistry() {
       <div
         className="mt-6 rounded-2xl border px-5 py-4"
         style={{
-          borderColor: "rgba(212, 175, 55, 0.35)",
-          backgroundColor: "rgba(212, 175, 55, 0.06)",
+          borderColor: "rgba(80, 112, 240, 0.35)",
+          backgroundColor: "rgba(80, 112, 240, 0.06)",
         }}
       >
         <p
           className="text-[11px] uppercase tracking-wider"
-          style={{ color: "#D4AF37" }}
+          style={{ color: "#5070F0" }}
         >
           Sandbox draft
         </p>

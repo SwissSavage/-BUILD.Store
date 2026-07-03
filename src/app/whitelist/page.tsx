@@ -40,7 +40,6 @@ import {
 import { previewDonationSplit } from "@/lib/whitelist-splits";
 import { grossUpForCard } from "@/lib/payments-fees";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
-import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
 
 const SCOPE_ORDER: Industry[] = ["stem", "creative-media", "professional-services"];
 
@@ -156,7 +155,7 @@ export default function WhitelistPage() {
         </p>
       </header>
 
-      {/* ───── Venture Labor OS constellation ───── */}
+      {/* ───── Venture Labor OS callout ───── */}
       <section className="mt-16">
         <CardEyebrow>The Venture Labor OS</CardEyebrow>
         <h2 className="mt-2 font-display text-3xl font-semibold">
@@ -167,15 +166,12 @@ export default function WhitelistPage() {
           circles back to the people who created it. Provenance,
           Discernment, Equity.
         </p>
-        <div className="mt-6">
-          <VentureLaborConstellation />
-        </div>
-        <div className="mt-4 flex flex-wrap gap-3 text-sm">
+        <div className="mt-6 flex flex-wrap gap-3 text-sm">
           <Link
             href="/governance"
             className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-4 py-2 text-brand-magenta hover:bg-brand-magenta/20"
           >
-            Read the governance framework →
+            See how the network works →
           </Link>
           <Link
             href="/policies/covenant"

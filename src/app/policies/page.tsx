@@ -62,7 +62,7 @@ const STATUS_LABEL: Record<PolicyEntry["status"], string> = {
   effective: "Effective",
 };
 const STATUS_COLOR: Record<PolicyEntry["status"], string> = {
-  draft: "#D4AF37",
+  draft: "#A3A3A3",
   review: "#5070F0",
   effective: "#007048",
 };

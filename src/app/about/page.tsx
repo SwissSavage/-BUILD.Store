@@ -865,11 +865,11 @@ function ConstellationSection() {
             Venture Labor OS
           </div>
           <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
-            Eight interlocking systems.
+            Owners ship better work than renters.
           </h2>
           <p className="mt-3 max-w-2xl text-lg text-ink-muted">
-            Owners ship better work than renters. Provenance,
-            Discernment, Equity — as code.
+            The upside on the work belongs to the people who shipped it.
+            Provenance, Discernment, Equity.
           </p>
         </div>
         <VentureLaborConstellation />

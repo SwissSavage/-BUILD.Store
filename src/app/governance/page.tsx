@@ -23,8 +23,8 @@ export default function GovernancePage() {
         The Venture Labor OS
       </h1>
       <p className="mt-3 max-w-2xl text-ink-muted">
-        Eight interlocking systems. Owners ship better work than
-        renters. Provenance, Discernment, Equity — as code.
+        Owners ship better work than renters. The upside belongs to the
+        people who shipped it. Provenance, Discernment, Equity.
       </p>
 
       <div className="mt-8">

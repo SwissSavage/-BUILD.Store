@@ -160,12 +160,12 @@ export default function WhitelistPage() {
       <section className="mt-16">
         <CardEyebrow>The Venture Labor OS</CardEyebrow>
         <h2 className="mt-2 font-display text-3xl font-semibold">
-          Eight interlocking systems.
+          The upside belongs to the people who shipped it.
         </h2>
         <p className="mt-3 max-w-2xl text-ink-muted">
-          Standing, recognition, compensation, canonization, tier
-          ladder, compliance, revenue split, covenant. Provenance,
-          Discernment, Equity — as code.
+          Contributors ship the work. Clients pay for it. The value
+          circles back to the people who created it. Provenance,
+          Discernment, Equity.
         </p>
         <div className="mt-6">
           <VentureLaborConstellation />

@@ -556,7 +556,7 @@ export function VentureLaborConstellation() {
             x="480"
             y="372"
             textAnchor="middle"
-            fontFamily="'Playfair Display', Georgia, serif"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="12"
             fontWeight="700"
             fill="#F5F5F5"
@@ -567,7 +567,7 @@ export function VentureLaborConstellation() {
             x="480"
             y="388"
             textAnchor="middle"
-            fontFamily="'Playfair Display', Georgia, serif"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="12"
             fontWeight="700"
             fill="#D828A0"
@@ -578,7 +578,7 @@ export function VentureLaborConstellation() {
             x="480"
             y="402"
             textAnchor="middle"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="7.5"
             fill="#444"
           >
@@ -644,7 +644,7 @@ export function VentureLaborConstellation() {
                   x={node.cardX + node.cardW / 2}
                   y={node.cardY + 20}
                   textAnchor="middle"
-                  fontFamily="'Playfair Display', Georgia, serif"
+                  fontFamily="var(--font-abel), system-ui, sans-serif"
                   fontSize="10"
                   fontWeight="700"
                   fill="#F5F5F5"
@@ -655,7 +655,7 @@ export function VentureLaborConstellation() {
                   x={node.cardX + node.cardW / 2}
                   y={node.cardY + 34}
                   textAnchor="middle"
-                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                  fontFamily="var(--font-abel), system-ui, sans-serif"
                   fontSize="8"
                   fill={
                     node.color === "#D828A0"
@@ -673,7 +673,7 @@ export function VentureLaborConstellation() {
                   x={node.cardX + node.cardW / 2}
                   y={node.cardY + 47}
                   textAnchor="middle"
-                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                  fontFamily="var(--font-abel), system-ui, sans-serif"
                   fontSize="8"
                   fill={
                     node.color === "#D828A0"
@@ -713,7 +713,7 @@ export function VentureLaborConstellation() {
           <text
             x="310"
             y="719"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="8"
             fill="#D828A0"
           >
@@ -730,7 +730,7 @@ export function VentureLaborConstellation() {
           <text
             x="416"
             y="719"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="8"
             fill="#5070F0"
           >
@@ -747,7 +747,7 @@ export function VentureLaborConstellation() {
           <text
             x="496"
             y="719"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="8"
             fill="#007048"
           >
@@ -764,7 +764,7 @@ export function VentureLaborConstellation() {
           <text
             x="634"
             y="719"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="8"
             fill="#889"
           >
@@ -782,7 +782,7 @@ export function VentureLaborConstellation() {
           <text
             x="310"
             y="739"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="8"
             fill="#D828A0"
           >
@@ -800,7 +800,7 @@ export function VentureLaborConstellation() {
           <text
             x="442"
             y="739"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="8"
             fill="#5070F0"
           >

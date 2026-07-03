@@ -143,7 +143,19 @@ function PurposeVision() {
               Tagline
             </div>
             <div className="mt-2 font-display text-5xl font-bold tracking-tight">
-              Rare<span style={{ color: "#D828A0" }}>∞</span>
+              Rare
+              <span
+                style={{
+                  color: "#D828A0",
+                  fontSize: "0.55em",
+                  verticalAlign: "super",
+                  marginLeft: "0.05em",
+                  lineHeight: 1,
+                }}
+                aria-label="to the infinity"
+              >
+                ∞
+              </span>
             </div>
           </div>
           <p className="max-w-md text-sm text-ink-muted">
@@ -774,49 +786,70 @@ function PillarCard({
 
 function RoadmapPeek() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      <div className="mx-auto max-w-app px-6 py-20">
-        <div className="grid gap-10 md:grid-cols-[1fr,1.5fr]">
+    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+      {/* Subtle radial wash — same brand pattern as Hero */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.08]"
+        style={{
+          background:
+            "radial-gradient(50% 60% at 15% 20%, #D4AF37 0%, transparent 60%), radial-gradient(50% 60% at 85% 90%, #5070F0 0%, transparent 60%)",
+        }}
+      />
+      <div className="relative mx-auto max-w-app px-6 py-24">
+        <div className="grid gap-14 md:grid-cols-[1fr,1.7fr]">
           <div>
-            <h2 className="font-display text-3xl font-semibold md:text-4xl">
+            <div className="text-xs uppercase tracking-wider text-brand-magenta">
+              Access, in phases
+            </div>
+            <h2 className="mt-2 font-display text-3xl font-semibold md:text-5xl">
               Where we&apos;re going
             </h2>
-            <p className="mt-4 text-ink-muted">
-              $BUILD.Store today is the working core of a larger Future Modern
-              ecosystem. The roadmap is layered — sandbox first, then a real
-              backend, then new product surfaces, then the parent domain.
+            <p className="mt-6 text-ink-muted">
+              Access opens in three phases. The cooperative is
+              intentional about who joins when — earlier phases are
+              denser signal, later phases scale wider.
             </p>
             <p className="mt-4 text-ink-muted">
-              We aren&apos;t shy about what&apos;s built versus what&apos;s
-              coming. The honest version lives in the project log.
+              Right now the whitelist is open. If you want a seat before
+              the doors widen, that&apos;s the door.
             </p>
           </div>
 
-          <div className="space-y-4">
-            <RoadmapRow
-              phase="Phase 0"
-              status="In progress"
-              statusColor="#5070F0"
-              body="Sandbox polish. Member, admin, and public surfaces wired up over mock data so the experience is testable end-to-end before backend choices lock in."
+          <div className="relative">
+            {/* Vertical spine connecting the phase discs */}
+            <div
+              aria-hidden="true"
+              className="absolute left-[27px] top-6 bottom-6 w-px"
+              style={{
+                background:
+                  "linear-gradient(to bottom, #D4AF37 0%, #D828A0 50%, #5070F0 100%)",
+                opacity: 0.35,
+              }}
             />
-            <RoadmapRow
-              phase="Phase 1"
-              status="Next"
-              statusColor="#D828A0"
-              body="Real backend. Auth.js + Neon + Drizzle for persistence. RFP intake routes to email, HubSpot deal sync, Stripe Connect Express for payouts, attribution ledger, the 85/15 revenue split engine."
-            />
-            <RoadmapRow
-              phase="Phase 2"
-              status="After that"
-              statusColor="#007048"
-              body="New surfaces. The /store marketplace. Mux-hosted content locker for artists. Pre-launch whitelist of 1,000 invited members with structured feedback capture."
-            />
-            <RoadmapRow
-              phase="Phase 3"
-              status="On the horizon"
-              statusColor="#5070F0"
-              body="Future Modern parent domain at afuturemodern.com — marketing site, case studies, signals feed, ecosystem story. $BUILD.Store stays a first-class app inside the family."
-            />
+            <div className="space-y-6">
+              <RoadmapRow
+                number="01"
+                phase="Landing + whitelist"
+                status="Open now"
+                accent="#D4AF37"
+                body="Landing page live. Whitelist open to founding candidates who want a seat before the doors widen. First look at the cooperative model, first access to the invite pool."
+              />
+              <RoadmapRow
+                number="02"
+                phase="Open Beta"
+                status="Next"
+                accent="#D828A0"
+                body="Selected cohort operates the platform end-to-end. Real contracts, real payouts, real recognition rails firing. Feedback from this window shapes the ship for public rollout."
+              />
+              <RoadmapRow
+                number="03"
+                phase="$BUILD.Store rollout"
+                status="On the horizon"
+                accent="#5070F0"
+                body="The full platform open to everyone who came in through the ladder — invited, applied, or contributed. The cooperative running at scale."
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -825,33 +858,58 @@ function RoadmapPeek() {
 }
 
 function RoadmapRow({
+  number,
   phase,
   status,
-  statusColor,
+  accent,
   body,
 }: {
+  number: string;
   phase: string;
   status: string;
-  statusColor: string;
+  accent: string;
   body: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="font-display text-sm font-semibold uppercase tracking-wider text-ink">
-          {phase}
-        </div>
-        <span
-          className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-          style={{
-            backgroundColor: `${statusColor}26`,
-            color: statusColor,
-          }}
-        >
-          {status}
-        </span>
+    <div className="relative pl-16">
+      {/* Numbered disc on the spine */}
+      <div
+        className="absolute left-0 top-0 flex h-14 w-14 items-center justify-center rounded-full border-2 font-display text-lg font-bold"
+        style={{
+          borderColor: accent,
+          color: accent,
+          backgroundColor: "var(--surface)",
+          boxShadow: `0 0 24px ${accent}33`,
+        }}
+      >
+        {number}
       </div>
-      <p className="mt-3 text-sm text-ink-muted">{body}</p>
+      {/* Card */}
+      <div
+        className="rounded-2xl border bg-[var(--surface)] px-6 py-5"
+        style={{
+          borderColor: `${accent}55`,
+        }}
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <div
+            className="font-display text-lg font-semibold tracking-tight"
+            style={{ color: accent }}
+          >
+            {phase}
+          </div>
+          <span
+            className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wider"
+            style={{
+              borderColor: accent,
+              color: accent,
+            }}
+          >
+            {status}
+          </span>
+        </div>
+        <p className="mt-3 text-sm text-ink-muted">{body}</p>
+      </div>
     </div>
   );
 }

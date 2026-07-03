@@ -158,10 +158,11 @@ export default function GovernancePage() {
                 <strong className="text-ink">
                   Future Modernist of the Month
                 </strong>{" "}
-                — metric shortlist + admin editorial pick (Phase 1) or
-                Member vote (Phase 2, gated on membership count). Open
-                to Members and Partners. Unlocks a public-discovery
-                window for Partners.
+                — metric shortlist + admin editorial pick while the
+                cooperative is small. Member vote once the voting
+                Membership is large enough to make the outcome
+                meaningful. Open to Members and Partners. Unlocks a
+                public-discovery window for Partners.
               </li>
               <li>
                 <strong className="text-ink">Constellation of the Year</strong>{" "}

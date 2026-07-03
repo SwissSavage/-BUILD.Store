@@ -1,9 +1,24 @@
 import type { Metadata } from "next";
+import { Abel } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { ViewingAsBanner } from "@/components/ViewingAsBanner";
 import { ChatWidgetMount } from "@/components/ChatWidgetMount";
+
+/**
+ * FM's platform typeface — Abel via next/font (self-hosted, no CLS).
+ * Applies to everything except brand logos (which stay as image
+ * assets). CSS variable `--font-abel` is available across the tree;
+ * Tailwind's `font-sans` and `font-display` tokens both resolve to it
+ * per `tailwind.config.ts`.
+ */
+const abel = Abel({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-abel",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "$BUILD.Store — cooperative talent platform",
@@ -27,7 +42,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={abel.variable}
+      suppressHydrationWarning
+    >
       <body
         className="min-h-screen bg-[var(--surface)] text-[var(--ink)] antialiased"
         suppressHydrationWarning

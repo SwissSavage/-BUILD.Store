@@ -164,8 +164,9 @@ export default function CovenantPolicy() {
           <ul className="mt-2 space-y-2 pl-6">
             <li>
               <strong className="text-ink">Future Modernist of the
-              Month</strong> — admin selects (Phase 1) or Member vote
-              (Phase 2, gated on membership count). Open to Members and
+              Month</strong> — admin editorial pick while the cooperative
+              is small, Member vote once voting Membership is large
+              enough to make the outcome meaningful. Open to Members and
               Partners; recognition unlocks a public-discovery window for
               Partners.
             </li>

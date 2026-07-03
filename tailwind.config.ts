@@ -44,8 +44,14 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        display: ["'Playfair Display'", "Georgia", "serif"],
+        // Abel — FM's platform typeface (locked 2026-07-03). Applies to
+        // everything except brand logos. Wired via next/font in
+        // src/app/layout.tsx → CSS variable `--font-abel`. Both `sans`
+        // and `display` resolve to it so any existing `font-display` or
+        // `font-sans` usage in components picks up the new type
+        // automatically.
+        sans: ["var(--font-abel)", "system-ui", "sans-serif"],
+        display: ["var(--font-abel)", "system-ui", "sans-serif"],
       },
       maxWidth: {
         app: "1280px",

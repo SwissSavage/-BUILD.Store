@@ -143,3 +143,32 @@ body {
   background-size: 220% 220%;
   animation: fm-holo-shift 8s ease-in-out infinite;
 }
+
+/* ============================================================ */
+/* Perf posture — paint-budget hygiene                           */
+/*                                                               */
+/* `.fm-below-fold` gives sections outside the initial viewport   */
+/* content-visibility: auto so the browser skips layout + paint  */
+/* until they scroll into range. `contain-intrinsic-size` is the */
+/* placeholder height so the scrollbar behaves.                  */
+/*                                                               */
+/* `prefers-reduced-motion` shuts down the holographic sheen and */
+/* champion background-position animation for users who ask the  */
+/* browser to reduce motion — accessibility win + paint savings  */
+/* on constrained devices.                                       */
+/* ============================================================ */
+
+.fm-below-fold {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 800px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-holo-sheen,
+  .fm-card-bg-champion {
+    animation: none;
+  }
+  .marquee {
+    animation: none;
+  }
+}

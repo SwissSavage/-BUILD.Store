@@ -55,7 +55,7 @@ function Roster() {
   if (preview.length === 0) return null;
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
+    <section className="fm-below-fold border-b border-[var(--surface-border)] bg-[var(--surface)]">
       <div className="mx-auto max-w-app px-6 py-20">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -243,7 +243,7 @@ function Pillars() {
 
 function Partners() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+    <section className="fm-below-fold border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
       <div className="mx-auto max-w-app px-6 py-20">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -292,7 +292,7 @@ function Partners() {
 
 function SandboxBanner() {
   return (
-    <section className="bg-brand-magenta/10">
+    <section className="fm-below-fold bg-brand-magenta/10">
       <div className="mx-auto max-w-app px-6 py-8 text-center text-sm">
         <strong className="text-brand-magenta">Sandbox build.</strong>{" "}
         <span className="text-ink-muted">

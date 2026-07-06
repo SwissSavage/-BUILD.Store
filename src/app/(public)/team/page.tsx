@@ -32,6 +32,7 @@ import {
   deriveTradingCardTier,
   type TradingCardTier,
 } from "@/components/TradingCard";
+import { OnChainBadge } from "@/components/OnChainBadge";
 
 const PILLAR_ORDER: Industry[] = [
   "stem",
@@ -178,9 +179,12 @@ export default async function TeamPage({
                 </div>
               </TradingCard>
               <div className="mt-3">
-                <CardTitle className="text-base">
-                  {publicName(user)}
-                </CardTitle>
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <CardTitle className="text-base">
+                    {publicName(user)}
+                  </CardTitle>
+                  <OnChainBadge userId={user.id} size="sm" />
+                </div>
                 {user.discipline && (
                   <p className="mt-0.5 text-[11px] text-ink-muted">
                     {user.discipline}

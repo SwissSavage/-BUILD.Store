@@ -2837,6 +2837,116 @@ export interface FutureModernistRecognition {
 }
 
 // ──────────────────────────────────────────────────────────────────────
+//  Cohort onboarding spotlights (monthly editorial rail)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Monthly onboarding spotlight — highlights cooperators joining the
+ * cooperative in real time as the roster grows.
+ *
+ * Distinct from `FutureModernistRecognition` (which honors *shipped*
+ * work by existing Members) and `MemberCanonization` (which mints
+ * year-end standing on-chain). Cohort spotlights are the forward-
+ * looking rail: "who just joined." Different rhythm, different data
+ * source, different editorial voice.
+ *
+ * Rhythm:
+ *   - One entry per month (usually).
+ *   - Can spotlight 1-3 cooperators per month.
+ *   - Editorial headline + narrative authored by admin.
+ *   - Optional Paragraph article link when a piece has been written
+ *     about the new cooperator's arrival.
+ *
+ * Surfaces:
+ *   - /cohort — index of all spotlights, freshest first.
+ *   - /cohort/[periodKey] — single-month view with the full narrative.
+ *   - Landing page rail — preview of the current month's spotlight.
+ */
+export interface CohortSpotlight {
+  id: string;
+  /** Canonical period key — e.g. "2026-07". Unique per spotlight. */
+  periodKey: string;
+  /** Display label — e.g. "July 2026". */
+  periodLabel: string;
+  /** Cooperators being spotlighted this period. 1-3 typical. */
+  userIds: string[];
+  /** Editorial headline for the spotlight — punchy, first-person plural. */
+  headline: string;
+  /** Admin-authored narrative — why the cooperative is glad to have them,
+   *  what they're bringing. Kept concise; first-name basis only. */
+  narrative: string;
+  /** Optional Paragraph article slug for a longer piece. */
+  paragraphSlug?: string;
+  /** ISO timestamp of the spotlight's publish. */
+  publishedAt: string;
+  /** Admin who authored the spotlight. */
+  selectedByUserId: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+//  Cooperative Receipt — post-project client-facing artifact
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Post-project receipt shown to clients after a contract settles.
+ *
+ * The gated proof-of-improvement layer: instead of the cooperative
+ * shouting economic advantages on marketing surfaces, they show up
+ * here as a receipt clients see AFTER the engagement. Turns the
+ * model's integrity into a retention + CX artifact rather than a
+ * marketing brag.
+ *
+ * Access is tokenized (`clientToken`) — the client receives a
+ * magic-link at project settlement. No account needed; the token is
+ * the credential. Mirrors the pattern used for /invoices/[token] and
+ * /proposals/[token].
+ *
+ * Contents map directly to the cooperative's differentiated
+ * commitments: cash flow to the people who did the work, delivery
+ * integrity, honest peer review, continuity beyond the transaction.
+ *
+ * Production posture: generated automatically when a project's
+ * `settlementStatus` flips to `distributed`, with a signed magic-link
+ * dispatched to the client contact. Sandbox seeds a couple examples.
+ */
+export interface CooperativeReceipt {
+  id: string;
+  /** Tokenized client access — the URL slug. */
+  clientToken: string;
+  /** The engagement this receipt describes. */
+  projectId: string;
+  /** Cooperators' share of contract value, expressed as a percentage
+   *  0-100. Baseline cooperative rule is 85%; individual receipts
+   *  reflect the actual distribution once settled. */
+  cashFlowPct: number;
+  /** Hours elapsed from client RFP submission to first matched crew
+   *  presented — a delivery-speed signal that costs nothing to
+   *  measure honestly. */
+  timeToMatchHours: number;
+  /** Delivery-integrity signal — milestones the crew hit on schedule
+   *  divided by milestones scoped. */
+  milestonesHit: number;
+  milestonesTotal: number;
+  /** Aggregate peer-review OVR delta earned by the crew during this
+   *  engagement. Reads as "how the crew held up under peer scrutiny
+   *  on this project." */
+  crewPeerReviewOvrDelta: number;
+  /**
+   * "What the crew shipped after you" — subsequent project IDs the
+   * same cooperators worked on. Turns a transactional receipt into
+   * an ongoing story: the client's engagement helped fund the next
+   * thing these cooperators built.
+   */
+  subsequentProjectIds: string[];
+  /** ISO date the receipt was generated. */
+  generatedAt: string;
+  /** Optional Collaborator Card token ID — phase 3 mint flex. Null
+   *  when the client hasn't claimed one (or when we haven't enabled
+   *  the mint yet). */
+  collaboratorCardTokenId: string | null;
+}
+
+// ──────────────────────────────────────────────────────────────────────
 //  Invite links (admin-issued signup links for beta / handoff cohorts)
 // ──────────────────────────────────────────────────────────────────────
 

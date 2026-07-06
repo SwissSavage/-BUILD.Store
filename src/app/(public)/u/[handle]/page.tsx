@@ -39,6 +39,7 @@ import { sendDirectMessage } from "@/lib/dm-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
 import { TierBadge } from "@/components/TierBadge";
+import { OnChainBadge } from "@/components/OnChainBadge";
 import { MvpCard } from "@/components/MvpCard";
 import { TradingCard, deriveTradingCardTier } from "@/components/TradingCard";
 import { ProfileShareButton } from "@/components/ProfileShareButton";
@@ -136,6 +137,7 @@ export default async function PublicProfilePage({
           </h1>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <TierBadge tier={user.membershipTier} />
+            <OnChainBadge userId={user.id} size="sm" />
             {user.discipline && (
               <span
                 className="rounded-full px-2.5 py-0.5 text-xs"

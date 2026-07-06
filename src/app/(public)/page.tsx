@@ -7,8 +7,10 @@ import Link from "next/link";
 import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
 import { SERVICE_PARTNERS } from "@/lib/mock-data/partners";
 import { MOCK_USERS } from "@/lib/mock-data/users";
+import { latestCohortSpotlight } from "@/lib/mock-data/cohort-spotlights";
 import { TradingCard, type TradingCardTier } from "@/components/TradingCard";
 import { Faq, type FaqItem } from "@/components/Faq";
+import { Avatar } from "@/components/Avatar";
 
 /**
  * Static-rendered. Roster reads MOCK_USERS at build time; no request-time
@@ -20,10 +22,11 @@ export default function Home() {
   return (
     <>
       <Hero />
-      <ShippedFor />
+      <ContributorAffiliations />
       <Process />
       <Pillars />
       <Roster />
+      <CohortRail />
       <Partners />
       <FaqSection />
       <SandboxBanner />
@@ -32,36 +35,42 @@ export default function Home() {
 }
 
 /**
- * "Shipped for" trust-strip — sits below the hero on the landing page.
+ * Contributor-affiliations trust-strip — sits below the hero on the
+ * landing page.
  *
- * Instead of the Upwork "trusted by 800k businesses" scale flex, this
- * is a small strip of real clients the cooperative has shipped for.
- * Named, specific, truthful. When Bayu delivers logo assets they
- * replace the wordmarks 1:1; the layout stays.
+ * Mirrors the framing Bayu shipped on afuturemodern.com: instead of
+ * "trusted by 800k businesses" scale flex or "we shipped for X client"
+ * (which mixes client history with cooperator provenance), this is
+ * personnel provenance — where cooperators have done credited work.
+ * Bigger brand torque, cleaner legal posture, more honest to FM's
+ * real leverage.
  *
- * Sourced from memory/projects-portfolio.md: URL Media, SPF,
- * Immigrantly, DataXplorer, Block Party Dossiers, Catalog Works
- * (retrospective — Catalog shut down), 2050 Vision.
+ * Disclaimer stays visible so nobody reads the strip as endorsement
+ * from the named institutions.
+ *
+ * When Bayu delivers logo assets they replace the wordmarks 1:1; the
+ * layout and copy stay.
  */
-function ShippedFor() {
-  const CLIENTS = [
-    "URL Media",
-    "SPF",
-    "Immigrantly",
-    "DataXplorer",
-    "Block Party Dossiers",
-    "Catalog Works",
-    "2050 Vision",
+function ContributorAffiliations() {
+  const AFFILIATIONS = [
+    "Microsoft",
+    "Amazon",
+    "Caltech",
+    "Cal Berkeley",
+    "Smithsonian",
+    "Columbia Records",
+    "WebMD",
+    "Complex",
   ] as const;
 
   return (
     <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
       <div className="mx-auto max-w-app px-6 py-10">
         <p className="text-center text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-          We&apos;ve shipped for
+          Contributors have shipped work at
         </p>
         <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-medium text-ink-muted">
-          {CLIENTS.map((name) => (
+          {AFFILIATIONS.map((name) => (
             <li
               key={name}
               className="whitespace-nowrap transition-colors hover:text-ink"
@@ -70,6 +79,11 @@ function ShippedFor() {
             </li>
           ))}
         </ul>
+        <p className="mt-5 text-center text-[10px] text-ink-faint">
+          Contributor affiliations are listed for context only and do
+          not imply endorsement of Future Modern Builderberg LLC or
+          $BUILD.Store.
+        </p>
       </div>
     </section>
   );
@@ -207,6 +221,49 @@ function Hero() {
             Schedule a call
           </a>
         </div>
+
+        {/* Positional strip — Web3-native without being crypto-bro.
+            Three small signals a considered reader clocks in half a
+            second. Each one links to the surface where the receipt
+            lives, so the strip reads as a promise you can verify. */}
+        <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.15em] text-ink-faint">
+          <li className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className="inline-block h-1.5 w-1.5 rounded-full bg-brand-magenta"
+            />
+            <Link
+              href="/governance#canonization"
+              className="transition-colors hover:text-ink"
+            >
+              Built Web3-native
+            </Link>
+          </li>
+          <li className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className="inline-block h-1.5 w-1.5 rounded-full bg-brand-blue"
+            />
+            <Link
+              href="/governance#tier"
+              className="transition-colors hover:text-ink"
+            >
+              Owner-operated
+            </Link>
+          </li>
+          <li className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className="inline-block h-1.5 w-1.5 rounded-full bg-brand-green"
+            />
+            <Link
+              href="/policies/covenant"
+              className="transition-colors hover:text-ink"
+            >
+              Cooperative-vetted
+            </Link>
+          </li>
+        </ul>
       </div>
     </section>
   );
@@ -388,6 +445,80 @@ function FaqSection() {
       heading="How the cooperative works"
       items={items}
     />
+  );
+}
+
+/**
+ * Cohort rail — landing preview of the most recent cohort spotlight.
+ *
+ * Rolling monthly content engine: whoever most recently joined the
+ * cooperative gets a small hero card here on the homepage, cycling
+ * as the roster grows. Click through to /cohort/[period] for the
+ * full narrative + cross-linked cooperator profiles.
+ */
+function CohortRail() {
+  const spotlight = latestCohortSpotlight();
+  if (!spotlight) return null;
+
+  const users = spotlight.userIds
+    .map((id) => MOCK_USERS.find((u) => u.id === id))
+    .filter((u): u is (typeof MOCK_USERS)[number] => !!u);
+
+  return (
+    <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+      <div className="mx-auto max-w-app px-6 py-16">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-brand-blue">
+              This month&apos;s cohort · {spotlight.periodLabel}
+            </div>
+            <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
+              {spotlight.headline}
+            </h2>
+          </div>
+          <Link
+            href="/cohort"
+            className="text-sm text-brand-magenta hover:underline"
+          >
+            All spotlights →
+          </Link>
+        </div>
+
+        <div className="mt-8 grid gap-6 md:grid-cols-[2fr_1fr]">
+          <div>
+            <p className="text-ink-muted">{spotlight.narrative}</p>
+            <Link
+              href={`/cohort/${spotlight.periodKey}`}
+              className="mt-4 inline-block text-sm text-brand-magenta hover:underline"
+            >
+              Read the full spotlight →
+            </Link>
+          </div>
+          {users.length > 0 && (
+            <ul className="space-y-3">
+              {users.map((user) => (
+                <li
+                  key={user.id}
+                  className="flex items-center gap-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-4 py-3"
+                >
+                  <Avatar user={user} size="md" />
+                  <div className="min-w-0">
+                    <p className="truncate font-display text-base font-semibold">
+                      {publicName(user)}
+                    </p>
+                    {user.discipline && (
+                      <p className="truncate text-xs text-ink-muted">
+                        {user.discipline}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 

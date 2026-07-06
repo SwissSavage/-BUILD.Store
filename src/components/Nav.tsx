@@ -255,6 +255,12 @@ function AdminDropdown({ self }: { self: User }) {
           Cohort spotlights
         </Link>
         <Link
+          href="/admin/receipts"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Cooperative receipts
+        </Link>
+        <Link
           href="/admin/feedback"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >

@@ -3029,6 +3029,9 @@ export type AuditLogAction =
   // Cohort onboarding spotlights (forward-looking editorial rail)
   | "cohort.spotlight_created"
   | "cohort.spotlight_removed"
+  // Cooperative Receipts (post-project client-gated artifact)
+  | "receipt.generated"
+  | "receipt.removed"
   // Contracts + compensation
   | "rfp.approved"
   | "rfp.rejected"
@@ -3080,6 +3083,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "canonization.phygital_requested": "Phygital canon card requested",
   "cohort.spotlight_created": "Cohort spotlight created",
   "cohort.spotlight_removed": "Cohort spotlight removed",
+  "receipt.generated": "Cooperative Receipt generated",
+  "receipt.removed": "Cooperative Receipt removed",
   "rfp.approved": "RFP approved",
   "rfp.rejected": "RFP rejected",
   "contract.base_released": "Base pay released",
@@ -3111,6 +3116,7 @@ export type AuditLogResourceKind =
   | "recognition"
   | "canonization"
   | "cohort_spotlight"
+  | "cooperative_receipt"
   | "project"
   | "milestone"
   | "booking"

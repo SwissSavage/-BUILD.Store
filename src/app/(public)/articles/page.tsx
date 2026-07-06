@@ -29,6 +29,14 @@ import {
 } from "@/lib/mock-data/articles";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
+/**
+ * Canonical site URL — mirrors the root layout constant so JSON-LD
+ * references stay coherent across the graph. Falls back to the same
+ * placeholder domain used elsewhere.
+ */
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";
+
 /** Static-rendered. Pipe reads a build-time array. */
 export const dynamic = "force-static";
 
@@ -54,8 +62,39 @@ export default function ArticlesPage() {
     b.publishedAt.localeCompare(a.publishedAt),
   );
 
+  /**
+   * ItemList JSON-LD — makes each Paragraph piece discoverable via
+   * FM's domain even though the canonical URL stays on Paragraph.
+   * Each item is a CreativeWork with url + name + datePublished so
+   * Google can render carousel-style results when appropriate. Author
+   * chain points back to the FM Organization node emitted at the
+   * root layout, keeping the graph coherent.
+   */
+  const itemListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: articles.map((article, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      item: {
+        "@type": "CreativeWork",
+        name: article.title,
+        url: paragraphUrl(article),
+        description: article.excerpt,
+        datePublished: article.publishedAt,
+        keywords: article.tags.join(", "),
+        author: { "@id": `${SITE_URL}#organization` },
+        publisher: { "@id": `${SITE_URL}#organization` },
+      },
+    })),
+  };
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
       <CardEyebrow>Articles</CardEyebrow>
       <h1 className="mt-2 font-display text-5xl font-semibold leading-tight">
         The Future Modern archive

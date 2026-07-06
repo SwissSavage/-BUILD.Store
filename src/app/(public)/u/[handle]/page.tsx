@@ -44,6 +44,10 @@ import { MvpCard } from "@/components/MvpCard";
 import { TradingCard, deriveTradingCardTier } from "@/components/TradingCard";
 import { ProfileShareButton } from "@/components/ProfileShareButton";
 
+/** Canonical site URL for JSON-LD graph references. */
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";
+
 /**
  * Direct-link to `/u/[handle]` always renders, but search engines only
  * index profiles eligible for public discovery (Members + currently-
@@ -123,8 +127,37 @@ export default async function PublicProfilePage({
     isInChampionsCourt: courtIds.has(user.id),
   });
 
+  /**
+   * Person JSON-LD — structured data for search engines. Renders SERP
+   * knowledge-panel entries + rich results over time as the profile
+   * accrues external mentions. First-name-only public posture is
+   * preserved: `name` uses publicName() which respects the visibility
+   * matrix, and no email or handle-adjacent private data goes into
+   * the schema. Publisher / affiliation ties back to the FM
+   * Organization node emitted at the root layout.
+   */
+  const personJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: publicName(user),
+    url: `${SITE_URL}/u/${user.handle}`,
+    ...(user.bio ? { description: user.bio } : {}),
+    ...(user.discipline ? { jobTitle: user.discipline } : {}),
+    ...(pillars.length > 0
+      ? { knowsAbout: pillars.map((p) => INDUSTRY_LABELS[p]) }
+      : {}),
+    memberOf: {
+      "@id": `${SITE_URL}#organization`,
+    },
+    ...(user.profileImageUrl ? { image: user.profileImageUrl } : {}),
+  };
+
   return (
     <div className="mx-auto max-w-app px-6 py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
+      />
       <header className="flex flex-col items-start gap-6 md:flex-row md:items-start">
         <TradingCard
           user={user}

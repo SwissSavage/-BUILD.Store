@@ -13,6 +13,9 @@
 import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
+/** Static-rendered. Trust posture page — pure content. */
+export const dynamic = "force-static";
+
 export default function TrustPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">

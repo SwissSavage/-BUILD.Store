@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import { Abel } from "next/font/google";
 import "./globals.css";
-import { Nav } from "@/components/Nav";
-import { Footer } from "@/components/Footer";
-import { ViewingAsBanner } from "@/components/ViewingAsBanner";
-import { ChatWidgetMount } from "@/components/ChatWidgetMount";
 
 /**
  * FM's platform typeface — Abel via next/font (self-hosted, no CLS).
@@ -27,9 +23,17 @@ export const metadata: Metadata = {
 };
 
 /**
- * Root layout. The site is dark-only — light mode was retired
- * 2026-04-27. Semantic tokens (--surface, --ink, etc.) live in
- * globals.css under `:root` and don't flip.
+ * Root layout — intentionally bare.
+ *
+ * Site chrome (Nav, Footer, ViewingAsBanner, ChatWidget) lives in the
+ * route-group layouts:
+ *   - src/app/(public)/layout.tsx — static marketing chrome.
+ *   - src/app/(app)/layout.tsx    — auth-aware member/admin chrome.
+ *
+ * Root stays as the html/body shell + font variable + metadata so it
+ * carries no dynamic dependencies. That's what lets the (public) group
+ * render statically at the edge — any auth read in a parent layout
+ * would poison every descendant page's ability to be `force-static`.
  *
  * `suppressHydrationWarning` on <html> stays — it's the Next.js
  * posture for any time something outside React may mutate the root
@@ -42,20 +46,12 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={abel.variable}
-      suppressHydrationWarning
-    >
+    <html lang="en" className={abel.variable} suppressHydrationWarning>
       <body
         className="min-h-screen bg-[var(--surface)] text-[var(--ink)] antialiased"
         suppressHydrationWarning
       >
-        <ViewingAsBanner />
-        <Nav />
-        <main>{children}</main>
-        <Footer />
-        <ChatWidgetMount />
+        {children}
       </body>
     </html>
   );

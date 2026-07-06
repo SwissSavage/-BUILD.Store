@@ -9,6 +9,12 @@ import { SERVICE_PARTNERS } from "@/lib/mock-data/partners";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { TradingCard, type TradingCardTier } from "@/components/TradingCard";
 
+/**
+ * Static-rendered. Roster reads MOCK_USERS at build time; no request-time
+ * dependencies. Home serves as cached HTML from the edge.
+ */
+export const dynamic = "force-static";
+
 export default function Home() {
   return (
     <>

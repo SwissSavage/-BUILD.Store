@@ -15,6 +15,12 @@ import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
 
+/**
+ * Static-rendered. Constellation is a client component that hydrates
+ * after paint; the surrounding page is pure content.
+ */
+export const dynamic = "force-static";
+
 export default function GovernancePage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">

@@ -17,6 +17,12 @@
 import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
+/**
+ * Static-rendered. No cookies, no headers, no dynamic search params —
+ * this page can serve from the edge as cached HTML.
+ */
+export const dynamic = "force-static";
+
 export const metadata = {
   title: "About · $BUILD.Store",
   description:

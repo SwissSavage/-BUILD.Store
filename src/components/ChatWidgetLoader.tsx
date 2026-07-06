@@ -13,8 +13,14 @@
  *     actually wants chat. Since >99% of visitors never open it, this
  *     is a straight bundle-size win on first paint.
  *
- * The button styling matches the collapsed state of the full widget so
- * there's no visual pop when the real component hydrates in.
+ * Route-group posture:
+ *   - Rendered by (public)/layout.tsx only. Marketing surfaces are the
+ *     only place a floating visitor chat makes sense — inside (app),
+ *     Members already have DM, notifications, and admin channels.
+ *   - A logged-in Member wandering into /about will see the button.
+ *     Acceptable: those pages exist for external audiences, and the
+ *     Member can ignore it. Route-group split intentionally trades a
+ *     rare edge case for edge-static rendering.
  */
 import { useState } from "react";
 import dynamic from "next/dynamic";

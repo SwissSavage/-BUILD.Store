@@ -12,6 +12,9 @@
  */
 import { Card, CardEyebrow } from "@/components/Card";
 
+/** Static-rendered. Subprocessor Registry is a published document. */
+export const dynamic = "force-static";
+
 interface Subprocessor {
   name: string;
   purpose: string;

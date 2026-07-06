@@ -13,6 +13,9 @@
 import Link from "next/link";
 import { CardEyebrow } from "@/components/Card";
 
+/** Static-rendered. Cooperative Covenant is a published document. */
+export const dynamic = "force-static";
+
 export default function CovenantPolicy() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">

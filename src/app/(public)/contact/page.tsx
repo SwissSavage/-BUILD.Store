@@ -9,6 +9,9 @@
 import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
+/** Static-rendered. Sandbox contact stub — no dynamic reads. */
+export const dynamic = "force-static";
+
 export default function ContactPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">

@@ -16,6 +16,9 @@
 import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
+/** Static-rendered. Data Use Policy is a published document. */
+export const dynamic = "force-static";
+
 export const metadata = {
   title: "Data Use Policy — $BUILD.Store",
   description:

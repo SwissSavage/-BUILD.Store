@@ -54,6 +54,9 @@ export function PublicNav() {
           <Link href="/showcase" className={navLink}>
             Showcase
           </Link>
+          <Link href="/articles" className={navLink}>
+            Articles
+          </Link>
           <Link href="/partners" className={navLink}>
             Partners
           </Link>

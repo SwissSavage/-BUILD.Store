@@ -8,6 +8,7 @@ import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
 import { SERVICE_PARTNERS } from "@/lib/mock-data/partners";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { TradingCard, type TradingCardTier } from "@/components/TradingCard";
+import { Faq, type FaqItem } from "@/components/Faq";
 
 /**
  * Static-rendered. Roster reads MOCK_USERS at build time; no request-time
@@ -19,12 +20,58 @@ export default function Home() {
   return (
     <>
       <Hero />
+      <ShippedFor />
       <Process />
       <Pillars />
       <Roster />
       <Partners />
+      <FaqSection />
       <SandboxBanner />
     </>
+  );
+}
+
+/**
+ * "Shipped for" trust-strip — sits below the hero on the landing page.
+ *
+ * Instead of the Upwork "trusted by 800k businesses" scale flex, this
+ * is a small strip of real clients the cooperative has shipped for.
+ * Named, specific, truthful. When Bayu delivers logo assets they
+ * replace the wordmarks 1:1; the layout stays.
+ *
+ * Sourced from memory/projects-portfolio.md: URL Media, SPF,
+ * Immigrantly, DataXplorer, Block Party Dossiers, Catalog Works
+ * (retrospective — Catalog shut down), 2050 Vision.
+ */
+function ShippedFor() {
+  const CLIENTS = [
+    "URL Media",
+    "SPF",
+    "Immigrantly",
+    "DataXplorer",
+    "Block Party Dossiers",
+    "Catalog Works",
+    "2050 Vision",
+  ] as const;
+
+  return (
+    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
+      <div className="mx-auto max-w-app px-6 py-10">
+        <p className="text-center text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+          We&apos;ve shipped for
+        </p>
+        <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-medium text-ink-muted">
+          {CLIENTS.map((name) => (
+            <li
+              key={name}
+              className="whitespace-nowrap transition-colors hover:text-ink"
+            >
+              {name}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }
 
@@ -293,6 +340,54 @@ function Partners() {
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * Landing FAQ — objection-handling in FM voice + FAQPage JSON-LD so
+ * Google renders these as expandable Q&A in the SERP itself. Real
+ * SERP real-estate for zero cost.
+ */
+function FaqSection() {
+  const items: FaqItem[] = [
+    {
+      question: "What is $BUILD.Store?",
+      answer:
+        "$BUILD.Store is the cooperative talent platform of Future Modern Builderberg LLC — a member-owned network of STEM, Creative Media, and Professional Services professionals who ship serious work for serious clients.\n\nInstead of a marketplace that skims from every transaction, cash flows to the Members who did the work. Ownership stays with the people who built the platform.",
+    },
+    {
+      question: "How is this different from Upwork or Toptal?",
+      answer:
+        "Upwork and Toptal are marketplaces owned by shareholders. When you hire through them, most of the money reaches the freelancer; the platform keeps the rest and the freelancer keeps none of the platform.\n\n$BUILD.Store is owned by its Members. The people you hire hold governance in the platform they work through. That changes the incentives all the way down — quality, retention, follow-through — because the cooperators aren't renting the platform, they own it.",
+    },
+    {
+      question: "Who's in the cooperative?",
+      answer:
+        "Fortune 500-level professionals across three pillars: STEM (engineering, data, AI/ML, blockchain, cybersecurity, research), Creative Media (music, film, editorial, design, direction, post-production), and Professional Services (strategy, legal, finance, operations, management consulting).\n\nEvery Member is vouched in. There's a whitelist and a covenant. Standing is earned through shipped work and honest peer review — not gamed through ratings inflation.",
+    },
+    {
+      question: "How does hiring work?",
+      answer:
+        "You post your project. Our matcher narrows the field to three to five qualified Member teams inside the zone of possible agreement. You pick your lead. The team runs delivery with cooperative-native autonomy. You track milestones in real time; cash and $BUILD tokens settle automatically when the work lands.\n\nNo bidding wars. No thousand-résumé pileups. No AI-generated proposals from strangers.",
+    },
+    {
+      question: "What does \"Web3-native\" actually mean here?",
+      answer:
+        "Every Member holds their contribution record on-chain through an ERC-721 canonization card with an ERC-6551 token-bound account. That's how the cooperative encodes standing — not as a rating in someone else's database, but as portable proof the Member owns.\n\nClients don't need a wallet to hire us. But if you care about how the cooperative treats provenance, the receipts are on-chain.",
+    },
+    {
+      question: "How do I join?",
+      answer:
+        "The whitelist at /whitelist is the front door. It's currently a curated intake — the cooperative is small enough that every Member is a considered addition. As we scale, more of that intake automates.\n\nProspects can start by contributing on projects; Partners can co-deliver with Members. The full membership tier structure is documented in the Cooperative Covenant.",
+    },
+  ];
+
+  return (
+    <Faq
+      eyebrow="Common questions"
+      heading="How the cooperative works"
+      items={items}
+    />
   );
 }
 

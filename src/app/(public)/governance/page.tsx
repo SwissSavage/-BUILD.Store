@@ -14,6 +14,7 @@
 import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
+import { Faq, type FaqItem } from "@/components/Faq";
 
 /**
  * Static-rendered. Constellation is a client component that hydrates
@@ -342,7 +343,55 @@ export default function GovernancePage() {
           signature at production.
         </p>
       </div>
+
+      <div className="mt-16 -mx-6">
+        <FaqSection />
+      </div>
     </div>
+  );
+}
+
+/**
+ * Governance FAQ — the mechanics questions a serious reader lands with
+ * after the framework diagram + tier ladder. Different angle from the
+ * about-page FAQ (which is model-level) and the landing FAQ (which is
+ * objection-handling).
+ */
+function FaqSection() {
+  const items: FaqItem[] = [
+    {
+      question: "How does the MVP score actually work?",
+      answer:
+        "Every active Member carries an OVR (0-99) computed from seven sub-ratings: quality, outcomes, reliability, hustle, collaboration, attendance, referrals + BD. Twelve-month rolling window, weighted to recent work. Provisional new Members don't carry a public OVR until they cross the promotion threshold — roughly three completed engagements plus two peer reviews received.\n\nBands: 90+ Champion's Court eligible. 75-89 promotion eligible. 65-74 good standing. Below 65 probation. Standing refreshes with each daily compute.",
+    },
+    {
+      question: "What triggers a compliance penalty?",
+      answer:
+        "Covenant violations — missed milestones without communication, silence when the cooperative needs a signal, direct-hire circumvention around the platform, dishonest peer review, breach of client-privileged confidentiality. Each penalty is -9 OVR for 90 days, stacking.\n\nThe math is deliberate: three penalties inside 90 days moves a middle-band Member into probation; four moves them toward removal. Real-time impact — no slow decline that only surfaces after a year of accumulated damage.",
+    },
+    {
+      question: "How does Champion's Court work?",
+      answer:
+        "Top 10% of active Members AND OVR ≥ 90. Both gates apply. Refreshes with each daily compute — you can enter and leave depending on how the cooperative is performing that week. Champion's Court is the only tier that carries the gold holographic canonization card.\n\nAt year-end, every Member who held Champion's Court standing during the year enters the Constellation of that year — the annual canonization cohort minted permanently on-chain.",
+    },
+    {
+      question: "What is annual canonization?",
+      answer:
+        "At the end of each calendar year, every active Member (and any Partner who held a recognition during the year) mints an ERC-721 canonization card with an ERC-6551 token-bound account. Tier locks to their year-end rarity band.\n\nThe first canonization runs at the end of the cooperative's first full calendar year of operation. No retroactive canon — Members don't receive credit for pre-launch work through the cooperative record. Retroactive minting would invent standing nobody earned through the system. That's the integrity floor.",
+    },
+    {
+      question: "Can the Covenant change?",
+      answer:
+        "Yes, by Member vote. Proposed changes are posted at least 30 days before the vote so Members have time to read, discuss, and weigh in. Governance weight is the token-weighted balance held in each Member's annual canonization TBA.\n\nSandbox has admin-only proposal for testing. Production runs on the real vote.",
+    },
+  ];
+
+  return (
+    <Faq
+      eyebrow="Common questions"
+      heading="Governance mechanics"
+      items={items}
+    />
   );
 }
 

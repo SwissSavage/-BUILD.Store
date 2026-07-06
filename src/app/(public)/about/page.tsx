@@ -16,6 +16,7 @@
  */
 import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { Faq, type FaqItem } from "@/components/Faq";
 
 /**
  * Static-rendered. No cookies, no headers, no dynamic search params —
@@ -43,8 +44,52 @@ export default function AboutPage() {
       <WhatChanged />
       <Pillars />
       <RoadmapPeek />
+      <FaqSection />
       <CTA />
     </>
+  );
+}
+
+/**
+ * About-page FAQ — deeper cooperative questions. Different set than
+ * the landing-page FAQ (which is objection-handling for browsers);
+ * this one is for readers already curious about the model.
+ */
+function FaqSection() {
+  const items: FaqItem[] = [
+    {
+      question: "What does \"cooperative\" mean for Future Modern in practice?",
+      answer:
+        "Every Member has one voice in governance. Cash flow follows the work — the people doing the shipping keep the largest share of every engagement. Standing is earned through peer-reviewed contribution, not bought, gamed, or inherited.\n\nThe LLC (Future Modern Builderberg) is the legal wrapper. The cooperative is the operating agreement inside it. Both are documented — the Cooperative Covenant is the plain-English version, the operating agreement is the legal one.",
+    },
+    {
+      question: "Who owns the platform?",
+      answer:
+        "Members do. Governance weight tracks the annual canonization each Member mints — an ERC-721 with an ERC-6551 token-bound account that carries their standing for that year. Members vote on covenant changes, subprocessor decisions, and major direction shifts.\n\nFuture Modern Builderberg LLC is the operator. The cooperators are the owners.",
+    },
+    {
+      question: "How does someone become a Member?",
+      answer:
+        "The default path is contribution first, membership later. Prospects show up on a project, ship the work, get peer-reviewed, and — if the standing is real — get invited into full Membership. Partners can join as co-delivery collaborators without full Membership if the fit is scoped that way.\n\nAll of it runs through the whitelist. Every addition is a considered choice, not an application-form gauntlet.",
+    },
+    {
+      question: "What's the relationship to Web3?",
+      answer:
+        "Web3-native by architecture, not by aesthetic. The canonization system runs on ERC-721 + ERC-6551 so Members hold portable, on-chain proof of standing. The publishing rail is Paragraph (Web3-native writing infrastructure) rather than a self-hosted blog. Contribution history is designed to be verifiable end-to-end.\n\nNone of this is required for clients. You can hire the cooperative without touching a wallet. But if you care how provenance works under the surface, the receipts are on-chain.",
+    },
+    {
+      question: "Where can I read more?",
+      answer:
+        "The Cooperative Covenant at /policies/covenant is the operating charter. The Venture Labor OS constellation at /governance is the system diagram. Long-form pieces live at /articles (piped from paragraph.com/@future-modern). The Trust & Security page at /trust is the procurement-facing summary.",
+    },
+  ];
+
+  return (
+    <Faq
+      eyebrow="Common questions"
+      heading="Questions the cooperative gets asked"
+      items={items}
+    />
   );
 }
 

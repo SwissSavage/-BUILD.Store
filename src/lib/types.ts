@@ -3026,6 +3026,9 @@ export type AuditLogAction =
   | "canonization.frozen"
   | "canonization.caption_updated"
   | "canonization.phygital_requested"
+  // Cohort onboarding spotlights (forward-looking editorial rail)
+  | "cohort.spotlight_created"
+  | "cohort.spotlight_removed"
   // Contracts + compensation
   | "rfp.approved"
   | "rfp.rejected"
@@ -3075,6 +3078,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "canonization.frozen": "Canonization frozen",
   "canonization.caption_updated": "Canonization caption updated",
   "canonization.phygital_requested": "Phygital canon card requested",
+  "cohort.spotlight_created": "Cohort spotlight created",
+  "cohort.spotlight_removed": "Cohort spotlight removed",
   "rfp.approved": "RFP approved",
   "rfp.rejected": "RFP rejected",
   "contract.base_released": "Base pay released",
@@ -3105,6 +3110,7 @@ export type AuditLogResourceKind =
   | "mvp_penalty"
   | "recognition"
   | "canonization"
+  | "cohort_spotlight"
   | "project"
   | "milestone"
   | "booking"

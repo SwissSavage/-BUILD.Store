@@ -249,6 +249,12 @@ function AdminDropdown({ self }: { self: User }) {
           Live chat
         </Link>
         <Link
+          href="/admin/cohort"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Cohort spotlights
+        </Link>
+        <Link
           href="/admin/feedback"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >

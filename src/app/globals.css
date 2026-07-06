@@ -172,3 +172,99 @@ body {
     animation: none;
   }
 }
+
+/* ============================================================ */
+/* Trading card 3D — Marvel Snap-style parallax                  */
+/*                                                               */
+/* Perspective-based tilt driven by mouse position (JS-set       */
+/* transforms on `.fm-card-3d-face`). Layers sit at different    */
+/* translateZ values so they parallax naturally when the card    */
+/* rotates. Portrait breaks the card plane; that's the effect.   */
+/*                                                               */
+/* Mouse-following holo sheen positions a radial gradient at     */
+/* --sheen-x / --sheen-y (updated inline by the component).      */
+/*                                                               */
+/* Fallbacks:                                                    */
+/*   - prefers-reduced-motion: reduce → transitions cut so       */
+/*     resting return isn't animated. Interactive tilt stays.    */
+/*   - @media (hover: none) → touch devices get the flat card.   */
+/* ============================================================ */
+
+.fm-card-3d-wrapper {
+  position: relative;
+  perspective: 1200px;
+  perspective-origin: center;
+}
+
+.fm-card-3d-face {
+  transform-style: preserve-3d;
+  transform: rotateX(0deg) rotateY(0deg);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* Layer depth stack. translateZ values chosen so the parallax
+   feels tangible without the portrait clipping through the card
+   frame at max tilt. */
+.fm-card-3d-layer-back {
+  transform: translateZ(-30px);
+}
+
+.fm-card-3d-layer-mid {
+  transform: translateZ(0);
+}
+
+.fm-card-3d-layer-front {
+  transform: translateZ(40px);
+  transform-style: preserve-3d;
+}
+
+/* Sheen: radial gradient tracks the cursor via the custom
+   properties updated by the component's mousemove handler. */
+.fm-card-3d-sheen {
+  transform: translateZ(60px);
+  background: radial-gradient(
+    circle at var(--sheen-x, 50%) var(--sheen-y, 50%),
+    rgba(255, 255, 255, 0.28) 0%,
+    rgba(255, 255, 255, 0.08) 25%,
+    transparent 55%
+  );
+  mix-blend-mode: overlay;
+  transition: background-position 0.05s linear;
+}
+
+/* Content composed by the card caller (name, badges, etc.) sits
+   above the parallax layers. */
+.fm-card-3d-content {
+  transform: translateZ(50px);
+}
+
+/* Reduced motion: cut the resting-return animation. Interactive
+   tilt still available but the card doesn't animate on its own. */
+@media (prefers-reduced-motion: reduce) {
+  .fm-card-3d-face {
+    transition: none;
+  }
+}
+
+/* Touch devices: no mouse means no parallax. Cut the perspective
+   so the card renders flat, matching the base TradingCard visual. */
+@media (hover: none) {
+  .fm-card-3d-wrapper {
+    perspective: none;
+  }
+  .fm-card-3d-face {
+    transform: none !important;
+    transition: none;
+  }
+  .fm-card-3d-layer-back,
+  .fm-card-3d-layer-mid,
+  .fm-card-3d-layer-front,
+  .fm-card-3d-sheen,
+  .fm-card-3d-content {
+    transform: none;
+  }
+  .fm-card-3d-sheen {
+    display: none;
+  }
+}

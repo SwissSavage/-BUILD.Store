@@ -42,6 +42,7 @@ import { TierBadge } from "@/components/TierBadge";
 import { OnChainBadge } from "@/components/OnChainBadge";
 import { MvpCard } from "@/components/MvpCard";
 import { TradingCard, deriveTradingCardTier } from "@/components/TradingCard";
+import { TradingCard3D } from "@/components/TradingCard3D";
 import { ProfileShareButton } from "@/components/ProfileShareButton";
 
 /** Canonical site URL for JSON-LD graph references. */
@@ -159,7 +160,7 @@ export default async function PublicProfilePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
       />
       <header className="flex flex-col items-start gap-6 md:flex-row md:items-start">
-        <TradingCard
+        <TradingCard3D
           user={user}
           tier={cardTier}
           className="w-full max-w-[280px] shrink-0"

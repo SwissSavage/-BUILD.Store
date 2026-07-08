@@ -192,11 +192,10 @@ function PurposeVision() {
             <div className="text-xs uppercase tracking-wider text-ink-muted">
               Tagline
             </div>
-            <div className="mt-2 font-display text-5xl font-bold tracking-tight">
+            <div className="fm-holographic-text mt-2 font-display text-5xl font-bold tracking-tight">
               Rare
               <span
                 style={{
-                  color: "#D828A0",
                   fontSize: "0.55em",
                   verticalAlign: "super",
                   marginLeft: "0.05em",

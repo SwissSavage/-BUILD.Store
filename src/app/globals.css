@@ -174,6 +174,72 @@ body {
 }
 
 /* ============================================================ */
+/* Talent hand — cards dealt to the reader                       */
+/*                                                               */
+/* Each card starts translated off-frame (down + right + tilted) */
+/* and rides an ease-out cubic-bezier back to rest. `--deal-index`*/
+/* (set inline per card) staggers the entry so cards land one    */
+/* after another, matching how a dealer flicks a hand across.    */
+/*                                                               */
+/* Fallback: prefers-reduced-motion skips the animation entirely.*/
+/* ============================================================ */
+
+@keyframes fm-hand-deal {
+  0% {
+    transform: translate(60vw, 40vh) rotate(18deg);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 1;
+  }
+}
+
+.fm-hand-track {
+  scroll-padding-inline: 1rem;
+  scrollbar-width: thin;
+}
+
+.fm-hand-card {
+  transform: translate(60vw, 40vh) rotate(18deg);
+  opacity: 0;
+  transition: transform 0.3s ease-out;
+}
+
+.fm-hand-card--dealt {
+  animation: fm-hand-deal 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(var(--deal-index, 0) * 120ms + 100ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-hand-card,
+  .fm-hand-card--dealt {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Tinder-style decision states applied to entire card wrapper when
+   `selectable` mode is on. Skipped cards fade back into the deck;
+   chosen cards get a green rim + subtle lift so the reader can see
+   their in-progress picks at a glance. */
+.fm-hand-card--skipped {
+  opacity: 0.35;
+  filter: saturate(0.6);
+  transition: opacity 0.25s ease-out, filter 0.25s ease-out;
+}
+
+.fm-hand-card--chose {
+  transform: translateY(-4px);
+  filter: drop-shadow(0 8px 20px rgba(0, 112, 72, 0.35));
+  transition: transform 0.25s ease-out, filter 0.25s ease-out;
+}
+
+/* ============================================================ */
 /* Holographic text — for the Rare∞ tagline                      */
 /*                                                               */
 /* Same visual vocabulary as the Champion's Court card backdrop  */

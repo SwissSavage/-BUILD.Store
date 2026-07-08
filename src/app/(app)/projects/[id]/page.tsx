@@ -52,6 +52,12 @@ import {
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { PeerReviewSection } from "@/components/PeerReviewSection";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
+import { TalentHand, type TalentHandEntry } from "@/components/TalentHand";
+import {
+  deriveTradingCardTier,
+} from "@/components/TradingCard";
+import { mvpScoreForUser, MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
+import { championsCourtMembers } from "@/lib/mvp-score";
 import { milestonesForProject } from "@/lib/mock-data/project-milestones";
 import { updateMilestoneStatus } from "@/lib/milestone-actions";
 
@@ -230,23 +236,9 @@ export default async function ProjectDetailPage({
                 Open seat — looking for the right contributor.
               </p>
             ) : (
-              <ul className="mt-3 space-y-2 text-sm">
-                {project.assignedMemberIds.map((memberId) => {
-                  const m = userById(memberId);
-                  if (!m) return null;
-                  return (
-                    <li
-                      key={memberId}
-                      className="flex items-center justify-between"
-                    >
-                      <span>{publicName(m)}</span>
-                      <span className="text-[10px] uppercase tracking-wider text-ink-faint">
-                        {m.primaryIndustry ? INDUSTRY_LABELS[m.primaryIndustry] : "—"}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="mt-3">
+                <TeamHand project={project} />
+              </div>
             )}
           </Card>
 
@@ -842,4 +834,52 @@ function ProjectMilestonesSection({
       )}
     </section>
   );
+}
+
+/**
+ * Team hand — assigned crew rendered as a dealt hand of cards. Retro
+ * view: no selection actions (the crew is locked in), just a
+ * curated presentation of who's on this. Sets up the pattern for the
+ * client-facing quote surface where the same shape gets selection
+ * actions layered on.
+ */
+function TeamHand({ project }: { project: Project }) {
+  const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
+
+  const entries: TalentHandEntry[] = project.assignedMemberIds
+    .map((memberId): TalentHandEntry | null => {
+      const user = MOCK_USERS.find((u) => u.id === memberId);
+      if (!user) return null;
+      const mvpSnapshot = mvpScoreForUser(user.id);
+      const tier = deriveTradingCardTier({
+        ovr: mvpSnapshot ? mvpSnapshot.ovr : null,
+        isProvisional: mvpSnapshot?.isProvisional ?? false,
+        isInChampionsCourt: courtIds.has(user.id),
+      });
+      const entry: TalentHandEntry = {
+        user: {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          handle: user.handle,
+          profileImageUrl: user.profileImageUrl,
+          avatarPortraitUrl: user.avatarPortraitUrl,
+          discipline: user.discipline,
+          membershipTier: user.membershipTier,
+        },
+        tier,
+      };
+      // Discipline reads as the relevance line for retro views —
+      // future quote-side wiring provides real "why this person"
+      // narrative per card.
+      if (user.primaryIndustry) {
+        entry.relevance = `${INDUSTRY_LABELS[user.primaryIndustry]} lead on this engagement.`;
+      }
+      return entry;
+    })
+    .filter((e): e is TalentHandEntry => e !== null);
+
+  if (entries.length === 0) return null;
+
+  return <TalentHand entries={entries} deal aspectRatio="3/4" />;
 }

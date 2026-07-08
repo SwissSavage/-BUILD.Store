@@ -145,6 +145,66 @@ body {
 }
 
 /* ============================================================ */
+/* Brand scrollbar — small attention-to-detail signal            */
+/*                                                               */
+/* Thin scrollbar with the FM magenta → blue brand gradient on   */
+/* the thumb. Direction-aware: vertical thumbs gradient top-to-  */
+/* bottom, horizontal thumbs gradient left-to-right. Firefox     */
+/* doesn't support gradient scrollbars, so it falls back to a    */
+/* solid magenta thumb via scrollbar-color.                      */
+/*                                                               */
+/* Applies globally so every scroll surface (page, TalentHand,   */
+/* admin tables, code blocks) picks it up automatically.         */
+/* ============================================================ */
+
+/* Firefox — solid-color fallback. Applied to * so it catches   */
+/* any scroll container without extra work.                     */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #D828A0 var(--surface-inset);
+}
+
+/* Webkit / Blink — full gradient treatment. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-inset);
+}
+
+::-webkit-scrollbar-thumb {
+  /* Vertical default — gradient runs top-to-bottom. */
+  background: linear-gradient(180deg, #D828A0 0%, #5070F0 100%);
+  border-radius: 8px;
+  /* Inset border creates a small margin without adding a wrapper. */
+  border: 2px solid var(--surface-inset);
+  background-clip: padding-box;
+}
+
+/* Horizontal scrollbars get their gradient running left-to-right
+   so the direction of the color shift echoes the scroll axis. */
+::-webkit-scrollbar-thumb:horizontal {
+  background: linear-gradient(90deg, #D828A0 0%, #5070F0 100%);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #E139B0 0%, #6080FF 100%);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:horizontal:hover {
+  background: linear-gradient(90deg, #E139B0 0%, #6080FF 100%);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--surface-inset);
+}
+
+/* ============================================================ */
 /* Perf posture — paint-budget hygiene                           */
 /*                                                               */
 /* `.fm-below-fold` gives sections outside the initial viewport   */

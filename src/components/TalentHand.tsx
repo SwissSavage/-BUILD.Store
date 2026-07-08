@@ -288,6 +288,17 @@ export function TalentHand({
           );
         })}
       </ol>
+
+      {/* Reversibility affordance. Selectable mode is non-destructive —
+          Skip and Choose both toggle back to null on a second click, and
+          nothing locks in until the parent surface's confirm step fires.
+          This copy signals that so a client doesn't feel Tinder-committed
+          on a mis-tap or after a change-of-mind conversation. */}
+      {selectable && (
+        <p className="mt-1 text-[11px] text-ink-faint">
+          Not final — click again to un-mark, or swap after we talk it through.
+        </p>
+      )}
     </section>
   );
 }

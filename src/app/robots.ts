@@ -38,6 +38,7 @@ export default function robots(): MetadataRoute.Robots {
 
           // Tokenized surfaces — meant for direct-magic-link access
           // only. Never a search-engine-discoverable URL.
+          "/quotes/",
           "/receipts/",
           "/invoices/",
           "/proposals/",

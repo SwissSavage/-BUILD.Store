@@ -2884,6 +2884,106 @@ export interface CohortSpotlight {
 }
 
 // ──────────────────────────────────────────────────────────────────────
+//  Cooperative Quote — pre-project client-facing artifact
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Client-facing quote — the interactive replacement for the old Google
+ * Doc quote sheet.
+ *
+ * The workflow this fits inside:
+ *   1. Consultation call (per FM standards) — admin walks the client
+ *      through the proposed crew live.
+ *   2. Admin composes a Quote in the sandbox (see admin surface, not
+ *      yet built) referencing an existing project, picking the
+ *      proposed cooperators, writing per-member relevance narrative,
+ *      and setting scope + pricing.
+ *   3. Client receives a magic-link (`/quotes/[clientToken]`) via
+ *      email with a face-down card graphic teaser.
+ *   4. Client lands on the surface; card backs flip to reveal the
+ *      proposed crew as TradingCards.
+ *   5. Client evaluates the hand in Tinder-style selectable mode,
+ *      picks their lead (non-destructive — can change their mind),
+ *      approves the quote.
+ *   6. Same URL becomes the ongoing project dashboard as milestones
+ *      ship. Client keeps coming back through the engagement
+ *      lifecycle; every visit is a stickiness moment for FM.
+ *
+ * Token-gated access — no account required on the client side. Same
+ * pattern as CooperativeReceipt and Invoice tokenized surfaces.
+ */
+export interface CooperativeQuote {
+  id: string;
+  /** Tokenized client access — the URL slug. */
+  clientToken: string;
+  /** The engagement this quote proposes. */
+  projectId: string;
+  /**
+   * Display label for the client team — human-readable name shown in
+   * the quote header. Doesn't need to match `Project.clientId` if the
+   * client goes by different marks internally vs externally.
+   */
+  clientDisplayName: string;
+  /**
+   * Proposed cooperators for the engagement. Rendered as a TalentHand
+   * in selectable mode so the client can evaluate + pick their lead.
+   * Order matters — first entry is the recommended lead, but the
+   * client is free to choose any of them.
+   */
+  proposedMemberIds: string[];
+  /**
+   * Per-member relevance narrative — "why this person for this
+   * project" one-liner, admin-authored. Keyed by userId. Shown under
+   * each cooperator's card in the TalentHand.
+   */
+  memberRelevance: Record<string, string>;
+  /** Scope block — what the crew delivers. */
+  scope: {
+    /** One-paragraph scope summary. */
+    summary: string;
+    /** Enumerated deliverables. */
+    deliverables: string[];
+    /** Timeline in human terms — e.g. "8 weeks from kickoff." */
+    timeline: string;
+  };
+  /** Pricing block — total contract value + the 85/15 split. */
+  pricing: {
+    /** Total contract value in USD (integer cents avoided for
+     *  simplicity in sandbox — production may switch to Money type). */
+    baseAmount: number;
+    /** Cooperators' share as a percentage (0-100). Baseline is 85. */
+    talentSplit: number;
+    /** Cooperative operations share as a percentage. Baseline is 15. */
+    operationsSplit: number;
+  };
+  /**
+   * Status lifecycle:
+   *   - draft    : admin authored, not yet dispatched
+   *   - sent     : magic-link dispatched to client
+   *   - viewed   : client opened the surface at least once
+   *   - approved : client approved + selected their lead
+   *   - declined : client declined the quote
+   */
+  status: "draft" | "sent" | "viewed" | "approved" | "declined";
+  /** ISO timestamp — when the magic-link was dispatched. */
+  sentAt: string | null;
+  /** ISO timestamp — first client visit. */
+  viewedAt: string | null;
+  /** ISO timestamp — client's approve/decline decision. */
+  decidedAt: string | null;
+  /** ISO timestamp — quote authored. */
+  createdAt: string;
+  /** Admin who authored the quote. */
+  createdByUserId: string;
+  /**
+   * Client's chosen lead cooperator — set on approval. Null while
+   * status is pre-approval or when the client declined without
+   * selection.
+   */
+  selectedLeadUserId: string | null;
+}
+
+// ──────────────────────────────────────────────────────────────────────
 //  Cooperative Receipt — post-project client-facing artifact
 // ──────────────────────────────────────────────────────────────────────
 
@@ -3032,6 +3132,11 @@ export type AuditLogAction =
   // Cooperative Receipts (post-project client-gated artifact)
   | "receipt.generated"
   | "receipt.removed"
+  // Cooperative Quotes (pre-project client-gated artifact)
+  | "quote.created"
+  | "quote.removed"
+  | "quote.approved"
+  | "quote.declined"
   // Contracts + compensation
   | "rfp.approved"
   | "rfp.rejected"
@@ -3085,6 +3190,10 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "cohort.spotlight_removed": "Cohort spotlight removed",
   "receipt.generated": "Cooperative Receipt generated",
   "receipt.removed": "Cooperative Receipt removed",
+  "quote.created": "Cooperative Quote created",
+  "quote.removed": "Cooperative Quote removed",
+  "quote.approved": "Cooperative Quote approved by client",
+  "quote.declined": "Cooperative Quote declined by client",
   "rfp.approved": "RFP approved",
   "rfp.rejected": "RFP rejected",
   "contract.base_released": "Base pay released",
@@ -3117,6 +3226,7 @@ export type AuditLogResourceKind =
   | "canonization"
   | "cohort_spotlight"
   | "cooperative_receipt"
+  | "cooperative_quote"
   | "project"
   | "milestone"
   | "booking"

@@ -51,7 +51,7 @@ export function TaglineRare({
 
   return (
     <svg
-      viewBox="0 0 210 62"
+      viewBox="0 0 160 62"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       role="img"
@@ -98,18 +98,24 @@ export function TaglineRare({
         Rare
       </text>
 
-      {/* "∞" superscript — spectrum fill, gold rim. Baseline lifted
-          via a lower y-coordinate; smaller font-size makes it read as
-          an exponent. */}
+      {/* "∞" superscript — spectrum fill, gold rim. Sized and
+          positioned so the top of the character aligns with the top
+          of "R" and the bottom lands at roughly the middle of R's
+          counter (the enclosed negative space inside the bowl).
+          fontSize=54 gives the exponent real presence without pushing
+          it into full-height headline weight; y=35 places the baseline
+          low enough that character extent hits both cap-line and
+          counter-mid; x=100 sits tucked against the "e" without
+          overlap. */}
       <text
-        x="128"
-        y="24"
+        x="100"
+        y="35"
         fontFamily="var(--font-abel), system-ui, sans-serif"
-        fontSize="32"
+        fontSize="54"
         fontWeight="700"
         fill={`url(#${spectrumId})`}
         stroke={`url(#${goldId})`}
-        strokeWidth="0.8"
+        strokeWidth="1"
         style={{ paintOrder: "stroke" }}
       >
         ∞

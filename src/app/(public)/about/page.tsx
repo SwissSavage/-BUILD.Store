@@ -17,6 +17,7 @@
 import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Faq, type FaqItem } from "@/components/Faq";
+import { TaglineRare } from "@/components/TaglineRare";
 
 /**
  * Static-rendered. No cookies, no headers, no dynamic search params —
@@ -192,19 +193,8 @@ function PurposeVision() {
             <div className="text-xs uppercase tracking-wider text-ink-muted">
               Tagline
             </div>
-            <div className="fm-holographic-text mt-2 font-display text-5xl font-bold tracking-tight">
-              Rare
-              <span
-                style={{
-                  fontSize: "0.55em",
-                  verticalAlign: "super",
-                  marginLeft: "0.05em",
-                  lineHeight: 1,
-                }}
-                aria-label="to the infinity"
-              >
-                ∞
-              </span>
+            <div className="mt-2 max-w-[280px]">
+              <TaglineRare />
             </div>
           </div>
           <p className="max-w-md text-sm text-ink-muted">

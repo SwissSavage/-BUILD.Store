@@ -25,6 +25,7 @@
  */
 import { cn } from "@/lib/cn";
 import type { TradingCardTier } from "@/components/TradingCard";
+import { TaglineRare } from "@/components/TaglineRare";
 
 /**
  * Per-tier fractal stroke color — the SVG pattern paths use
@@ -174,25 +175,15 @@ export function CardBack({
         Future Modern
       </div>
 
-      {/* Bottom-left — Rare∞ holographic tagline mark. Uses the
-          fm-holographic-text utility from Tier 11 for brand-locked
-          treatment. Kept small so it reads as a brand stamp, not a
-          headline. */}
+      {/* Bottom-left — Rare∞ SVG tagline mark. Same component used
+          on /about at full size; here it's constrained to a small
+          width so it reads as a brand stamp, not a headline. YGO/
+          Pokémon set-code position. */}
       <div
-        className="pointer-events-none absolute bottom-3 left-3 select-none font-display text-base font-bold tracking-tight fm-holographic-text"
+        className="pointer-events-none absolute bottom-3 left-3 w-[70px] select-none"
         aria-hidden
       >
-        Rare
-        <span
-          style={{
-            fontSize: "0.55em",
-            verticalAlign: "super",
-            marginLeft: "0.05em",
-            lineHeight: 1,
-          }}
-        >
-          ∞
-        </span>
+        <TaglineRare ariaLabel="" />
       </div>
     </div>
   );

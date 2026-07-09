@@ -1,9 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
 
   /**
    * Strip the `X-Powered-By: Next.js` header from responses. Cosmetic
@@ -35,10 +32,6 @@ const nextConfig = {
      * the auth + payments swap.
      */
     optimizePackageImports: ["clsx", "tailwind-merge"],
-  },
-};
-
-export default nextConfig;
   },
 };
 

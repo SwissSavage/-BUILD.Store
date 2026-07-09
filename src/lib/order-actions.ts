@@ -25,6 +25,10 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { MOCK_ORDERS } from "@/lib/mock-data/orders";
 import { MOCK_PRODUCTS } from "@/lib/mock-data/products";
+import {
+  logAuditEvent,
+  snapshotActorRole,
+} from "@/lib/mock-data/audit-log";
 import { grossUpForCard } from "@/lib/payments-fees";
 import {
   ORDER_NEXT_STATUSES,
@@ -178,13 +182,30 @@ export async function updateOrderTracking(formData: FormData) {
 }
 
 export async function distributeOrderSplit(formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const order = MOCK_ORDERS.find((o) => o.id === id);
   if (!order) return;
   if (order.status !== "delivered") return;
   if (order.splitDistributedAt) return;
-  order.splitDistributedAt = new Date().toISOString();
+  const now = new Date().toISOString();
+  order.splitDistributedAt = now;
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "contract.revenue_split_recorded",
+    resourceKind: "project",
+    resourceId: order.id,
+    before: { splitDistributedAt: null },
+    after: {
+      splitDistributedAt: now,
+      sellerId: order.sellerId,
+      subtotal: order.subtotal,
+      houseFee: order.houseFee,
+    },
+  });
+
   revalidatePath("/orders");
   revalidatePath(`/orders/${order.id}`);
   revalidatePath("/profile/seller/orders");

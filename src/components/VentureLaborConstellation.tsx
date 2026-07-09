@@ -1,30 +1,17 @@
 /**
- * Venture Labor OS Constellation — Turtle-pentagon system map.
+ * Venture Labor OS Constellation — value-flow turtle diagram.
  *
- * Visual language ported from Future Modern's governance-doc reference
- * (FM_Sankey_Waterfalls turtle-anatomy constellation). The turtle mark
- * is FM's brand identity, so the diagram lives inside it — 5 outer
- * nodes at head + 4 flippers, central hub with "Venture Labor OS" as
- * brand identity, directed flow arrows showing how the systems feed
- * each other. Legend at the bottom explains edge colors.
+ * Ported verbatim from the reference FM_Sankey_Waterfalls governance-
+ * doc HTML. Five outer nodes at head + four flippers describe the
+ * network's value flow — who brings what, where the money and equity
+ * move, who accrues over time. The visible labels stay terse so the
+ * diagram explains the model at a glance.
  *
- * 8 governance systems compressed to 5 outer nodes + hub:
- *   - Head (top center)   → Recognition & Canon (year-end pinnacle;
- *                            Canonization folds into Recognition as the
- *                            annual freeze)
- *   - Top-right flipper   → Compensation
- *   - Bottom-right flipper → Revenue Model
- *   - Bottom-left flipper → Compliance
- *   - Top-left flipper    → MVP Score
- *   - Central hub         → Venture Labor OS (Covenant as sub-label;
- *                            the covenant is the foundational document
- *                            that everything else references)
- *   - Tier Ladder         → folded into the hub as concentric
- *                            progression rings (Viewer → Prospect →
- *                            Partner → Member)
- *
- * Hover any outer node to reveal a detail card below with the section
- * anchor link into /governance.
+ * Hover any outer node to reveal a short value-forward explanation +
+ * link into /governance for the deeper spec. This is where the
+ * governance mechanics (MVP score, recognition, canonization, covenant,
+ * comp structure) live — not on the visible chart. The chart shows the
+ * network; the hover shows how the network is run.
  */
 "use client";
 
@@ -43,204 +30,178 @@ interface ConstellationNode {
   cardW: number;
   cardH: number;
   color: string;
+  /** Value-forward one-liner surfaced on hover. Not a feature list. */
   summary: string;
   href: string;
 }
 
 interface ConstellationEdge {
-  from: string; // node id, or "hub"
-  to: string;
-  color: "green" | "blue" | "magenta" | "gray";
+  color: "magenta" | "blue" | "green" | "gray";
   dashed?: boolean;
   path: string;
 }
 
-// Node positions match the reference turtle anatomy layout (viewBox 960×760).
-// Card rectangles are anchored to leave room for the outer glow ring
-// on the anchor dot. Colors use the FM brand palette.
+// Node positions match the reference turtle anatomy (viewBox 960×760).
 const NODES: ConstellationNode[] = [
   {
-    id: "recognition",
-    label: "RECOGNITION & CANON",
-    subLabel1: "Monthly · Annual · Year-End",
-    subLabel2: "Champion's Court",
+    id: "contributor",
+    label: "CONTRIBUTOR",
+    subLabel1: "Skills · Relationships",
+    subLabel2: "Domain Expertise",
     x: 480,
     y: 120,
-    cardX: 316,
+    cardX: 372,
     cardY: 130,
-    cardW: 328,
-    cardH: 66,
+    cardW: 216,
+    cardH: 58,
     color: "#007048",
     summary:
-      "Future Modernist of the Month, Constellation of the Year, Champion's Court, and the annual canonization card that freezes the year into an ERC-721 with an ERC-6551 wallet.",
-    href: "/governance#recognition",
+      "The people who ship the work. Bring skill, network, and taste. Get paid directly and accrue equity in what they build.",
+    href: "/governance#tier",
   },
   {
-    id: "compensation",
-    label: "COMPENSATION",
-    subLabel1: "Base + Ceiling",
-    subLabel2: "Client rating ≥ 4 gate",
+    id: "platform",
+    label: "PLATFORM",
+    subLabel1: "Infrastructure · Brand",
+    subLabel2: "Distribution · Leverage",
     x: 737,
     y: 307,
     cardX: 740,
     cardY: 280,
     cardW: 196,
-    cardH: 66,
+    cardH: 58,
     color: "#5070F0",
     summary:
-      "Every quote carries base and ceiling. Base pays. Ceiling releases on client rating ≥ 4, or PM 60% + peer 40% composite fallback. Reclaimed ceilings feed the Engagement Recovery Pool.",
-    href: "/governance#compensation",
+      "The shared surface that turns individual work into cooperative reach. Infrastructure, brand, distribution — cooperatively owned, never rented from.",
+    href: "/governance#covenant",
   },
   {
-    id: "revenue",
-    label: "REVENUE MODEL",
-    subLabel1: "85 · 12 · 3",
-    subLabel2: "Talent · Reserve · Ops",
+    id: "client",
+    label: "CLIENT / DEAL",
+    subLabel1: "Revenue Generated",
+    subLabel2: "85 · 12 · 3 Split",
     x: 639,
     y: 608,
-    cardX: 528,
+    cardX: 642,
     cardY: 614,
-    cardW: 220,
+    cardW: 210,
     cardH: 66,
-    color: "#5070F0",
+    color: "#007048",
     summary:
-      "85 to the contributor pool, 12 to cooperative reserve (treasury + LP + benefits), 3 to admin operations. Disclosed on every contract.",
+      "Every dollar the cooperative collects. Disclosed on every contract — 85 to the shippers, 12 to reserve, 3 to admin ops. No silent skim.",
     href: "/governance#revenue",
   },
   {
-    id: "compliance",
-    label: "COMPLIANCE",
-    subLabel1: "−9 OVR · 90 days",
-    subLabel2: "Stacking · Rescinded when appealed",
+    id: "treasury",
+    label: "TREASURY",
+    subLabel1: "Collects 3% · 1.5% ops",
+    subLabel2: "1.5% → liquidity pool",
     x: 321,
     y: 608,
-    cardX: 212,
+    cardX: 108,
     cardY: 614,
-    cardW: 220,
+    cardW: 210,
     cardH: 66,
-    color: "#D828A0",
+    color: "#556",
     summary:
-      "Each covenant violation: −9 OVR for 90 days, stacking. Real-time impact prevents slow decay. Every action audit-logged. Arbitration available on disputed penalties.",
-    href: "/governance#compliance",
+      "Cooperative-owned reserve. Half funds operations. Half seeds the liquidity pool so contributors' passive equity has a market.",
+    href: "/governance#revenue",
   },
   {
-    id: "mvp",
-    label: "MVP SCORE",
-    subLabel1: "0–99 OVR",
-    subLabel2: "Seven sub-ratings · Rolling 12mo",
+    id: "liquidity",
+    label: "LIQUIDITY POOL",
+    subLabel1: "= $BUILD TOKEN",
+    subLabel2: "Passive equity · OTC mobilization",
     x: 223,
     y: 307,
     cardX: 24,
-    cardY: 280,
+    cardY: 278,
     cardW: 196,
-    cardH: 66,
+    cardH: 70,
     color: "#D828A0",
     summary:
-      "Seven sub-ratings on a twelve-month rolling window, weighted recent. Feeds recognition shortlist, year-end canonization tier, and the compliance penalty math. Provisional until promotion.",
-    href: "/governance#mvp",
+      "$BUILD accrues with every contribution and compounds across years. The pool gives it a real market — sit on it, spend it, or mobilize it.",
+    href: "/governance#canonization",
   },
 ];
 
-// Directed flows. Edges paths were sketched to sit alongside the
-// reference layout — same pentagon shape, adjusted arrow endpoints.
-// "green" = covenant defines rule. "blue" = measurement feeds
-// downstream. "magenta" = economic effect. "gray" = enforcement.
-// Dashed = feedback loop.
+// Directed edges from the reference — same colors, same routing, same
+// meaning. Magenta = cash/equity, blue = platform, green = deal flow,
+// gray = treasury flow, dashed = feedback loop.
 const EDGES: ConstellationEdge[] = [
-  // Hub → each outer node (green — covenant defines behavior)
+  // Contributor → Platform (blue — platform leverage)
   {
-    from: "hub",
-    to: "recognition",
-    color: "green",
-    path: "M480,326 L480,196",
-  },
-  {
-    from: "hub",
-    to: "compensation",
-    color: "green",
-    path: "M528,364 L714,314",
-  },
-  {
-    from: "hub",
-    to: "revenue",
-    color: "green",
-    path: "M516,420 L620,580",
-  },
-  {
-    from: "hub",
-    to: "compliance",
-    color: "green",
-    path: "M444,420 L340,580",
-  },
-  {
-    from: "hub",
-    to: "mvp",
-    color: "green",
-    path: "M432,358 L244,314",
-  },
-
-  // MVP → Recognition (blue — data feeds shortlist + year-end tier)
-  {
-    from: "mvp",
-    to: "recognition",
     color: "blue",
-    path: "M244,290 Q332,196 452,138",
+    path: "M510,132 Q660,200 718,292",
   },
-
-  // MVP ↔ Compliance (feedback loop, magenta dashed — penalty affects
-  // OVR; OVR context informs whether penalty is appropriate)
+  // Platform ↔ Client/Deal (dashed blue bidirectional)
   {
-    from: "mvp",
-    to: "compliance",
+    color: "blue",
+    dashed: true,
+    path: "M726,332 Q706,470 644,590",
+  },
+  {
+    color: "blue",
+    dashed: true,
+    path: "M654,586 Q718,462 734,324",
+  },
+  // Client/Deal → Treasury (magenta — cash payment)
+  {
+    color: "magenta",
+    path: "M622,612 Q480,644 358,612",
+  },
+  // Liquidity → Contributor (magenta — cash/equity out)
+  {
+    color: "magenta",
+    path: "M242,290 Q330,196 450,132",
+  },
+  // Contributor → Hub (green — deal flow in)
+  { color: "green", path: "M484,144 L484,342" },
+  // Hub → Contributor (magenta — cash out, reciprocal)
+  { color: "magenta", path: "M472,342 L472,148" },
+  // Hub → Platform (blue — amplifies leverage)
+  { color: "blue", path: "M528,364 L714,314" },
+  // Hub → Client/Deal (green — deal flow out)
+  { color: "green", path: "M518,420 L638,576" },
+  // Client/Deal → Hub (magenta — cash in, parallel offset)
+  { color: "magenta", path: "M628,572 L508,416" },
+  // Treasury → Liquidity (gray)
+  { color: "gray", path: "M310,592 Q248,468 232,326" },
+  // Hub ↔ Treasury (magenta dashed feedback)
+  {
     color: "magenta",
     dashed: true,
-    path: "M232,336 L310,580",
+    path: "M450,422 L340,574",
   },
   {
-    from: "compliance",
-    to: "mvp",
     color: "magenta",
     dashed: true,
-    path: "M320,576 L242,340",
+    path: "M336,570 L446,418",
   },
-
-  // Revenue ↔ Compensation (magenta — pay flows from revenue split)
+  // Hub ↔ Liquidity (magenta dashed feedback)
   {
-    from: "revenue",
-    to: "compensation",
-    color: "magenta",
-    path: "M660,580 Q726,466 738,340",
-  },
-  {
-    from: "compensation",
-    to: "revenue",
     color: "magenta",
     dashed: true,
-    path: "M720,340 Q694,466 634,580",
+    path: "M432,358 L248,308",
   },
-
-  // Compliance → Recognition (gray — active penalties delay
-  // recognition eligibility)
   {
-    from: "compliance",
-    to: "recognition",
-    color: "gray",
+    color: "magenta",
     dashed: true,
-    path: "M336,580 Q400,340 452,138",
+    path: "M244,318 L428,366",
   },
 ];
 
 const EDGE_COLOR: Record<ConstellationEdge["color"], string> = {
-  green: "#007048",
-  blue: "#5070F0",
   magenta: "#D828A0",
+  blue: "#5070F0",
+  green: "#007048",
   gray: "#556",
 };
 
 const MARKER_ID: Record<ConstellationEdge["color"], string> = {
-  green: "am-g",
-  blue: "am-b",
   magenta: "am-m",
+  blue: "am-b",
+  green: "am-g",
   gray: "am-d",
 };
 
@@ -250,11 +211,6 @@ export function VentureLaborConstellation() {
     ? NODES.find((n) => n.id === activeId) ?? null
     : null;
 
-  const isEdgeActive = (edge: ConstellationEdge): boolean => {
-    if (activeId === null) return false;
-    return edge.from === activeId || edge.to === activeId;
-  };
-
   return (
     <div className="w-full">
       <div className="relative overflow-hidden rounded-3xl border border-[var(--surface-border)] bg-[#060a10]">
@@ -262,10 +218,9 @@ export function VentureLaborConstellation() {
           viewBox="0 0 960 760"
           className="h-auto w-full"
           role="img"
-          aria-label="Venture Labor OS turtle constellation — governance systems map"
+          aria-label="Venture Labor OS — value-flow turtle constellation"
         >
           <defs>
-            {/* Arrow markers, one per edge color */}
             <marker
               id="am-m"
               markerWidth="6"
@@ -356,7 +311,7 @@ export function VentureLaborConstellation() {
           <rect width="960" height="760" fill="#060a10" />
           <rect width="960" height="760" fill="url(#dots)" />
 
-          {/* Turtle silhouette (ghost) */}
+          {/* Turtle silhouette (ghost) — ported verbatim from reference */}
           <ellipse
             cx="480"
             cy="400"
@@ -439,7 +394,6 @@ export function VentureLaborConstellation() {
             strokeWidth="0.6"
             opacity="0.1"
           />
-          {/* Flipper suggestions (green) */}
           <ellipse
             cx="737"
             cy="307"
@@ -484,7 +438,6 @@ export function VentureLaborConstellation() {
             opacity="0.1"
             transform="rotate(20 321 608)"
           />
-          {/* Head */}
           <ellipse
             cx="480"
             cy="126"
@@ -497,32 +450,34 @@ export function VentureLaborConstellation() {
           />
 
           {/* Directed edges */}
-          {EDGES.map((edge, i) => {
-            const active = isEdgeActive(edge);
-            return (
-              <path
-                key={`edge-${i}`}
-                d={edge.path}
-                stroke={EDGE_COLOR[edge.color]}
-                strokeWidth={active ? 2.2 : 1.4}
-                fill="none"
-                strokeDasharray={edge.dashed ? "5,3" : "none"}
-                markerEnd={`url(#${MARKER_ID[edge.color]})`}
-                opacity={
-                  activeId === null ? 0.7 : active ? 0.95 : 0.2
-                }
-                style={{ transition: "all 0.25s ease" }}
-              />
-            );
-          })}
+          {EDGES.map((edge, i) => (
+            <path
+              key={`edge-${i}`}
+              d={edge.path}
+              stroke={EDGE_COLOR[edge.color]}
+              strokeWidth={
+                edge.color === "magenta" && !edge.dashed
+                  ? 1.6
+                  : edge.color === "gray"
+                    ? 1.4
+                    : 1.4
+              }
+              fill="none"
+              strokeDasharray={edge.dashed ? "5,3" : "none"}
+              markerEnd={`url(#${MARKER_ID[edge.color]})`}
+              opacity={
+                edge.dashed ? 0.65 : edge.color === "gray" ? 0.8 : 0.75
+              }
+            />
+          ))}
 
-          {/* Central hub — "Venture Labor OS" (Covenant as foundation) */}
+          {/* Central hub — "Venture Labor OS" */}
           <circle
             cx="480"
             cy="380"
             r="68"
             fill="#D828A0"
-            opacity="0.04"
+            opacity="0.03"
             filter="url(#glow-hub)"
           />
           <circle
@@ -597,50 +552,11 @@ export function VentureLaborConstellation() {
             strokeWidth="0.6"
             opacity="0.25"
           />
-
-          {/* Tier ladder concentric rings inside hub — 4 rings for 4 tiers */}
-          <circle
-            cx="480"
-            cy="380"
-            r="18"
-            fill="none"
-            stroke="#5070F0"
-            strokeWidth="0.4"
-            opacity="0.3"
-          />
-          <circle
-            cx="480"
-            cy="380"
-            r="28"
-            fill="none"
-            stroke="#5070F0"
-            strokeWidth="0.4"
-            opacity="0.3"
-          />
-          <circle
-            cx="480"
-            cy="380"
-            r="38"
-            fill="none"
-            stroke="#5070F0"
-            strokeWidth="0.4"
-            opacity="0.3"
-          />
-          <circle
-            cx="480"
-            cy="380"
-            r="48"
-            fill="none"
-            stroke="#5070F0"
-            strokeWidth="0.4"
-            opacity="0.3"
-          />
-
           <text
             x="480"
-            y="370"
+            y="372"
             textAnchor="middle"
-            fontFamily="'Playfair Display', Georgia, serif"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="12"
             fontWeight="700"
             fill="#F5F5F5"
@@ -649,9 +565,9 @@ export function VentureLaborConstellation() {
           </text>
           <text
             x="480"
-            y="386"
+            y="388"
             textAnchor="middle"
-            fontFamily="'Playfair Display', Georgia, serif"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="12"
             fontWeight="700"
             fill="#D828A0"
@@ -660,16 +576,16 @@ export function VentureLaborConstellation() {
           </text>
           <text
             x="480"
-            y="400"
+            y="402"
             textAnchor="middle"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-            fontSize="7"
-            fill="#666"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
+            fontSize="7.5"
+            fill="#444"
           >
-            Covenant · Tier Ladder
+            Future Modern
           </text>
 
-          {/* Outer nodes — cards with anchor circles */}
+          {/* Outer nodes — cards + anchor dots + labels */}
           {NODES.map((node) => {
             const isFocus = activeId === node.id;
             return (
@@ -685,7 +601,6 @@ export function VentureLaborConstellation() {
                 aria-label={`${node.label} — ${node.summary}`}
                 style={{ cursor: "pointer" }}
               >
-                {/* Anchor dot with glow */}
                 <circle
                   cx={node.x}
                   cy={node.y}
@@ -699,8 +614,6 @@ export function VentureLaborConstellation() {
                         : "url(#glow-g)"
                   }
                 />
-
-                {/* Card */}
                 <rect
                   x={node.cardX}
                   y={node.cardY}
@@ -712,12 +625,12 @@ export function VentureLaborConstellation() {
                       ? "#0e060e"
                       : node.color === "#5070F0"
                         ? "#060810"
-                        : "#050e08"
+                        : node.color === "#556"
+                          ? "#090909"
+                          : "#050e08"
                   }
-                  stroke={node.color}
+                  stroke={node.color === "#556" ? "#445" : node.color}
                   strokeWidth={isFocus ? 2 : 1.4}
-                  opacity={activeId === null || isFocus ? 1 : 0.4}
-                  style={{ transition: "all 0.2s ease" }}
                 />
                 <rect
                   x={node.cardX}
@@ -729,10 +642,10 @@ export function VentureLaborConstellation() {
                 />
                 <text
                   x={node.cardX + node.cardW / 2}
-                  y={node.cardY + 22}
+                  y={node.cardY + 20}
                   textAnchor="middle"
-                  fontFamily="'Playfair Display', Georgia, serif"
-                  fontSize="11"
+                  fontFamily="var(--font-abel), system-ui, sans-serif"
+                  fontSize="10"
                   fontWeight="700"
                   fill="#F5F5F5"
                 >
@@ -740,32 +653,36 @@ export function VentureLaborConstellation() {
                 </text>
                 <text
                   x={node.cardX + node.cardW / 2}
-                  y={node.cardY + 40}
+                  y={node.cardY + 34}
                   textAnchor="middle"
-                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                  fontFamily="var(--font-abel), system-ui, sans-serif"
                   fontSize="8"
                   fill={
                     node.color === "#D828A0"
                       ? "#604060"
                       : node.color === "#5070F0"
                         ? "#405060"
-                        : "#406050"
+                        : node.color === "#556"
+                          ? "#505060"
+                          : "#406050"
                   }
                 >
                   {node.subLabel1}
                 </text>
                 <text
                   x={node.cardX + node.cardW / 2}
-                  y={node.cardY + 54}
+                  y={node.cardY + 47}
                   textAnchor="middle"
-                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                  fontFamily="var(--font-abel), system-ui, sans-serif"
                   fontSize="8"
                   fill={
                     node.color === "#D828A0"
                       ? "#604060"
                       : node.color === "#5070F0"
                         ? "#405060"
-                        : "#406050"
+                        : node.color === "#556"
+                          ? "#505060"
+                          : "#406050"
                   }
                 >
                   {node.subLabel2}
@@ -774,106 +691,124 @@ export function VentureLaborConstellation() {
             );
           })}
 
-          {/* Legend */}
+          {/* Legend — verbatim from reference */}
           <rect
-            x="220"
-            y="702"
-            width="520"
-            height="44"
+            x="268"
+            y="700"
+            width="560"
+            height="46"
             rx="2"
             fill="#080a10"
             stroke="#1a2535"
             strokeWidth="1"
           />
           <line
-            x1="236"
+            x1="284"
             y1="716"
-            x2="258"
-            y2="716"
-            stroke="#007048"
-            strokeWidth="1.5"
-          />
-          <text
-            x="262"
-            y="719"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-            fontSize="8"
-            fill="#007048"
-          >
-            covenant defines
-          </text>
-          <line
-            x1="360"
-            y1="716"
-            x2="382"
-            y2="716"
-            stroke="#5070F0"
-            strokeWidth="1.5"
-          />
-          <text
-            x="386"
-            y="719"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-            fontSize="8"
-            fill="#5070F0"
-          >
-            measurement feeds
-          </text>
-          <line
-            x1="500"
-            y1="716"
-            x2="522"
+            x2="306"
             y2="716"
             stroke="#D828A0"
             strokeWidth="1.5"
           />
           <text
-            x="526"
+            x="310"
             y="719"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="8"
             fill="#D828A0"
           >
-            economic effect
+            cash / equity
           </text>
           <line
-            x1="640"
+            x1="390"
             y1="716"
-            x2="662"
+            x2="412"
+            y2="716"
+            stroke="#5070F0"
+            strokeWidth="1.5"
+          />
+          <text
+            x="416"
+            y="719"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
+            fontSize="8"
+            fill="#5070F0"
+          >
+            platform
+          </text>
+          <line
+            x1="470"
+            y1="716"
+            x2="492"
+            y2="716"
+            stroke="#007048"
+            strokeWidth="1.5"
+          />
+          <text
+            x="496"
+            y="719"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
+            fontSize="8"
+            fill="#007048"
+          >
+            deal flow
+          </text>
+          <line
+            x1="608"
+            y1="716"
+            x2="630"
             y2="716"
             stroke="#556"
             strokeWidth="1.5"
           />
           <text
-            x="666"
+            x="634"
             y="719"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="8"
             fill="#889"
           >
-            enforcement
+            treasury flow
           </text>
           <line
-            x1="236"
+            x1="284"
             y1="736"
-            x2="258"
+            x2="306"
             y2="736"
             stroke="#D828A0"
             strokeWidth="1.2"
             strokeDasharray="4,3"
           />
           <text
-            x="262"
+            x="310"
             y="739"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
             fontSize="8"
             fill="#D828A0"
           >
-            feedback loop (dashed)
+            feedback loop
+          </text>
+          <line
+            x1="416"
+            y1="736"
+            x2="438"
+            y2="736"
+            stroke="#5070F0"
+            strokeWidth="1.2"
+            strokeDasharray="4,3"
+          />
+          <text
+            x="442"
+            y="739"
+            fontFamily="var(--font-abel), system-ui, sans-serif"
+            fontSize="8"
+            fill="#5070F0"
+          >
+            platform ↔ client (dashed)
           </text>
         </svg>
 
-        {/* Detail card below the SVG — hover any node to expand */}
+        {/* Value-forward hover reveal below the SVG */}
         <div className="border-t border-[var(--surface-border)] px-6 py-5">
           {activeNode ? (
             <div>
@@ -893,17 +828,19 @@ export function VentureLaborConstellation() {
                 href={activeNode.href}
                 className="mt-2 inline-block text-xs text-brand-magenta hover:underline"
               >
-                Read the specification →
+                See how it&apos;s run →
               </Link>
             </div>
           ) : (
             <div>
               <p className="text-[11px] uppercase tracking-wider text-ink-muted">
-                Venture Labor OS · Turtle constellation
+                The network
               </p>
               <p className="mt-1 text-sm text-ink-muted">
-                Eight interlocking systems, mapped to FM&apos;s turtle
-                brand mark. Hover or tap any point.
+                Contributors ship the work. The platform amplifies it.
+                Clients pay for it. Treasury and $BUILD keep the value
+                circulating back to the people who built it. Hover a
+                point to see how each piece pulls its weight.
               </p>
             </div>
           )}

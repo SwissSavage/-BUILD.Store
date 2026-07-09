@@ -25,7 +25,7 @@ html,
 body {
   background-color: var(--surface);
   color: var(--ink);
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-family: var(--font-abel), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -142,4 +142,233 @@ body {
   );
   background-size: 220% 220%;
   animation: fm-holo-shift 8s ease-in-out infinite;
+}
+
+/* ============================================================ */
+/* Perf posture — paint-budget hygiene                           */
+/*                                                               */
+/* `.fm-below-fold` gives sections outside the initial viewport   */
+/* content-visibility: auto so the browser skips layout + paint  */
+/* until they scroll into range. `contain-intrinsic-size` is the */
+/* placeholder height so the scrollbar behaves.                  */
+/*                                                               */
+/* `prefers-reduced-motion` shuts down the holographic sheen and */
+/* champion background-position animation for users who ask the  */
+/* browser to reduce motion — accessibility win + paint savings  */
+/* on constrained devices.                                       */
+/* ============================================================ */
+
+.fm-below-fold {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 800px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-holo-sheen,
+  .fm-card-bg-champion {
+    animation: none;
+  }
+  .marquee {
+    animation: none;
+  }
+}
+
+/* ============================================================ */
+/* Talent hand — cards dealt to the reader                       */
+/*                                                               */
+/* Each card starts translated off-frame (down + right + tilted) */
+/* and rides an ease-out cubic-bezier back to rest. `--deal-index`*/
+/* (set inline per card) staggers the entry so cards land one    */
+/* after another, matching how a dealer flicks a hand across.    */
+/*                                                               */
+/* Fallback: prefers-reduced-motion skips the animation entirely.*/
+/* ============================================================ */
+
+@keyframes fm-hand-deal {
+  0% {
+    transform: translate(60vw, 40vh) rotate(18deg);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 1;
+  }
+}
+
+.fm-hand-track {
+  scroll-padding-inline: 1rem;
+  scrollbar-width: thin;
+}
+
+.fm-hand-card {
+  transform: translate(60vw, 40vh) rotate(18deg);
+  opacity: 0;
+  transition: transform 0.3s ease-out;
+}
+
+.fm-hand-card--dealt {
+  animation: fm-hand-deal 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(var(--deal-index, 0) * 120ms + 100ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-hand-card,
+  .fm-hand-card--dealt {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Tinder-style decision states applied to entire card wrapper when
+   `selectable` mode is on. Skipped cards fade back into the deck;
+   chosen cards get a green rim + subtle lift so the reader can see
+   their in-progress picks at a glance. */
+.fm-hand-card--skipped {
+  opacity: 0.35;
+  filter: saturate(0.6);
+  transition: opacity 0.25s ease-out, filter 0.25s ease-out;
+}
+
+.fm-hand-card--chose {
+  transform: translateY(-4px);
+  filter: drop-shadow(0 8px 20px rgba(0, 112, 72, 0.35));
+  transition: transform 0.25s ease-out, filter 0.25s ease-out;
+}
+
+/* ============================================================ */
+/* Holographic text — for the Rare∞ tagline                      */
+/*                                                               */
+/* Same visual vocabulary as the Champion's Court card backdrop  */
+/* (gold → magenta → blue → green → gold loop, animated via the  */
+/* fm-holo-shift keyframes) rendered as text via background-clip.*/
+/* Gold `-webkit-text-stroke` gives the tagline a scarce-object  */
+/* rim; a soft gold drop-shadow anchors it against dark surfaces.*/
+/*                                                               */
+/* Legendary tier for text. Reserved for the tagline — do not    */
+/* spread onto other copy, same discipline as the gold color.    */
+/* ============================================================ */
+
+.fm-holographic-text {
+  background-image: linear-gradient(
+    135deg,
+    #D4AF37 0%,    /* gold */
+    #D828A0 28%,   /* magenta */
+    #5070F0 56%,   /* blue */
+    #007048 84%,   /* green */
+    #D4AF37 100%   /* gold loop */
+  );
+  background-size: 220% 220%;
+  animation: fm-holo-shift 8s ease-in-out infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  -webkit-text-stroke: 1px #D4AF37;
+  filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.28));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-holographic-text {
+    animation: none;
+  }
+}
+
+/* ============================================================ */
+/* Trading card 3D — Marvel Snap-style parallax                  */
+/*                                                               */
+/* Perspective-based tilt driven by mouse position (JS-set       */
+/* transforms on `.fm-card-3d-face`). Layers sit at different    */
+/* translateZ values so they parallax naturally when the card    */
+/* rotates. Portrait breaks the card plane; that's the effect.   */
+/*                                                               */
+/* Mouse-following holo sheen positions a radial gradient at     */
+/* --sheen-x / --sheen-y (updated inline by the component).      */
+/*                                                               */
+/* Fallbacks:                                                    */
+/*   - prefers-reduced-motion: reduce → transitions cut so       */
+/*     resting return isn't animated. Interactive tilt stays.    */
+/*   - @media (hover: none) → touch devices get the flat card.   */
+/* ============================================================ */
+
+.fm-card-3d-wrapper {
+  position: relative;
+  perspective: 1200px;
+  perspective-origin: center;
+}
+
+.fm-card-3d-face {
+  transform-style: preserve-3d;
+  transform: rotateX(0deg) rotateY(0deg);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* Layer depth stack. translateZ values chosen so the parallax
+   feels tangible without the portrait clipping through the card
+   frame at max tilt. */
+.fm-card-3d-layer-back {
+  transform: translateZ(-30px);
+}
+
+.fm-card-3d-layer-mid {
+  transform: translateZ(0);
+}
+
+.fm-card-3d-layer-front {
+  transform: translateZ(40px);
+  transform-style: preserve-3d;
+}
+
+/* Sheen: radial gradient tracks the cursor via the custom
+   properties updated by the component's mousemove handler. */
+.fm-card-3d-sheen {
+  transform: translateZ(60px);
+  background: radial-gradient(
+    circle at var(--sheen-x, 50%) var(--sheen-y, 50%),
+    rgba(255, 255, 255, 0.28) 0%,
+    rgba(255, 255, 255, 0.08) 25%,
+    transparent 55%
+  );
+  mix-blend-mode: overlay;
+  transition: background-position 0.05s linear;
+}
+
+/* Content composed by the card caller (name, badges, etc.) sits
+   above the parallax layers. */
+.fm-card-3d-content {
+  transform: translateZ(50px);
+}
+
+/* Reduced motion: cut the resting-return animation. Interactive
+   tilt still available but the card doesn't animate on its own. */
+@media (prefers-reduced-motion: reduce) {
+  .fm-card-3d-face {
+    transition: none;
+  }
+}
+
+/* Touch devices: no mouse means no parallax. Cut the perspective
+   so the card renders flat, matching the base TradingCard visual. */
+@media (hover: none) {
+  .fm-card-3d-wrapper {
+    perspective: none;
+  }
+  .fm-card-3d-face {
+    transform: none !important;
+    transition: none;
+  }
+  .fm-card-3d-layer-back,
+  .fm-card-3d-layer-mid,
+  .fm-card-3d-layer-front,
+  .fm-card-3d-sheen,
+  .fm-card-3d-content {
+    transform: none;
+  }
+  .fm-card-3d-sheen {
+    display: none;
+  }
 }

@@ -34,8 +34,12 @@ export default function GlobalError({
           minHeight: "100vh",
           background: "#000",
           color: "#fff",
+          // global-error renders when the root layout itself may have
+          // failed — CSS variables like --font-abel may not be
+          // available. Use a system font stack directly so this always
+          // renders cleanly regardless of what broke.
           fontFamily:
-            "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+            "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         }}
       >
         <div
@@ -59,7 +63,6 @@ export default function GlobalError({
           <h1
             style={{
               fontSize: 32,
-              fontFamily: "'Playfair Display', Georgia, serif",
               fontWeight: 600,
               marginBottom: 12,
             }}

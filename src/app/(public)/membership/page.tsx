@@ -101,7 +101,7 @@ export default async function MembershipPage() {
         ) : !nextTier ? (
           <Card className="mt-4">
             <p className="text-sm text-ink-muted">
-              You&apos;re at the top tier — nothing to apply for.
+              You&apos;re at the top tier. Nothing to apply for.
             </p>
           </Card>
         ) : (

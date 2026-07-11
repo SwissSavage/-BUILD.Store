@@ -50,22 +50,22 @@ export default function GovernancePage() {
             </p>
             <ul className="mt-3 space-y-1 pl-5 text-sm text-ink-muted list-disc">
               <li>
-                <strong className="text-ink">Viewer</strong> —
+                <strong className="text-ink">Viewer:</strong>{" "}
                 unauthenticated public. Sees marketing surfaces, open
                 RFPs, published showcase, policies, trust page.
               </li>
               <li>
-                <strong className="text-ink">Prospect</strong> — signed
+                <strong className="text-ink">Prospect:</strong> signed
                 up. Can manage own profile, opt in/out of Tier-2 data
                 participation, apply toward Partner status.
               </li>
               <li>
-                <strong className="text-ink">Partner</strong> — vetted
+                <strong className="text-ink">Partner:</strong> vetted
                 counterparty. Limited-scope EPK. Discovery-hidden by
                 default; recognition unlocks a discovery window.
               </li>
               <li>
-                <strong className="text-ink">Member</strong> — full
+                <strong className="text-ink">Member:</strong> full
                 cooperator. Sees the internal directory, calendar,
                 activity feed. Full MVP score visibility. Co-brand
                 rights. Canonization at year end.
@@ -91,7 +91,7 @@ export default function GovernancePage() {
               honest peer review. Respect confidentiality.
             </p>
             <p className="mt-3 text-sm text-ink-muted">
-              Each carries a consequence — compliance penalty, or
+              Each carries a consequence. Compliance penalty, or
               expulsion per bylaws.
             </p>
           </>
@@ -105,7 +105,7 @@ export default function GovernancePage() {
       <Section
         eyebrow="Standing"
         id="mvp"
-        title="MVP Score — 0-99 OVR, updated daily"
+        title="MVP Score. 0-99 OVR, updated daily."
         body={
           <>
             <p>
@@ -132,7 +132,7 @@ export default function GovernancePage() {
       <Section
         eyebrow="Enforcement"
         id="compliance"
-        title="Compliance ladder — real consequences, recorded"
+        title="Compliance ladder. Real consequences, recorded."
         body={
           <>
             <p>
@@ -163,22 +163,22 @@ export default function GovernancePage() {
             <ul className="space-y-2 pl-5 text-sm text-ink-muted list-disc">
               <li>
                 <strong className="text-ink">
-                  Future Modernist of the Month
+                  Future Modernist of the Month:
                 </strong>{" "}
-                — metric shortlist + admin editorial pick while the
+                metric shortlist + admin editorial pick while the
                 cooperative is small. Member vote once the voting
                 Membership is large enough to make the outcome
                 meaningful. Open to Members and Partners. Unlocks a
                 public-discovery window for Partners.
               </li>
               <li>
-                <strong className="text-ink">Constellation of the Year</strong>{" "}
-                — annual cohort of Members who held Champion&apos;s
+                <strong className="text-ink">Constellation of the Year:</strong>{" "}
+                annual cohort of Members who held Champion&apos;s
                 Court standing during the year.
               </li>
               <li>
-                <strong className="text-ink">Champion&apos;s Court</strong>{" "}
-                — top 10% of Members at OVR ≥ 90. Refreshes daily.
+                <strong className="text-ink">Champion&apos;s Court:</strong>{" "}
+                top 10% of Members at OVR ≥ 90. Refreshes daily.
               </li>
             </ul>
             <p className="mt-4 text-sm text-ink-muted">
@@ -195,7 +195,7 @@ export default function GovernancePage() {
 
       {/* Section 6 · Compensation */}
       <Section
-        eyebrow="Money — talent side"
+        eyebrow="Money · talent side"
         id="compensation"
         title="Base pay guaranteed. Performance ceiling gated."
         body={
@@ -222,7 +222,7 @@ export default function GovernancePage() {
 
       {/* Section 7 · Revenue Model */}
       <Section
-        eyebrow="Money — cooperative side"
+        eyebrow="Money · cooperative side"
         id="revenue"
         title="85 / 12 / 3 split, disclosed"
         body={
@@ -234,8 +234,8 @@ export default function GovernancePage() {
                 contributor pool (talent + admin pool per contract).
               </li>
               <li>
-                <strong className="text-ink">12%</strong> to reserve —
-                subdivides for treasury, LP for the token rail, and
+                <strong className="text-ink">12%</strong> to reserve.
+                Subdivides for treasury, LP for the token rail, and
                 cooperative benefits (health fund, sabbatical, etc.).
               </li>
               <li>
@@ -258,14 +258,14 @@ export default function GovernancePage() {
       <Section
         eyebrow="Year-end ritual"
         id="canonization"
-        title="Annual canonization — ERC-721 + ERC-6551"
+        title="Annual canonization. ERC-721 + ERC-6551."
         body={
           <>
             <p>
               End of every calendar year, each active Member (plus every
               Partner who held a recognition that year) mints a
               canonization card. ERC-721 NFT with an ERC-6551 token-
-              bound account — a wallet for that Member&apos;s year.
+              bound account. A wallet for that Member&apos;s year.
             </p>
             <p className="mt-3 text-sm text-ink-muted">
               Tier locks to the year-end rarity band (gray probation,
@@ -276,7 +276,7 @@ export default function GovernancePage() {
               from the cohort.
             </p>
             <p className="mt-3 text-sm text-ink-muted">
-              Phygital versions become a marketplace product class —
+              Phygital versions become a marketplace product class.
               Members buy their own at near-cost; outsiders buy as
               collectibles at market rate.
             </p>
@@ -300,7 +300,7 @@ export default function GovernancePage() {
           <>
             <p>
               Covenant, MVP mechanic, recognition rails, compensation,
-              revenue split — all change on Member vote. Posted 30 days
+              revenue split. All change on Member vote. Posted 30 days
               before.
             </p>
             <p className="mt-3 text-sm text-ink-muted">
@@ -362,22 +362,22 @@ function FaqSection() {
     {
       question: "How does the MVP score actually work?",
       answer:
-        "Every active Member carries an OVR (0-99) computed from seven sub-ratings: quality, outcomes, reliability, hustle, collaboration, attendance, referrals + BD. Twelve-month rolling window, weighted to recent work. Provisional new Members don't carry a public OVR until they cross the promotion threshold — roughly three completed engagements plus two peer reviews received.\n\nBands: 90+ Champion's Court eligible. 75-89 promotion eligible. 65-74 good standing. Below 65 probation. Standing refreshes with each daily compute.",
+        "Every active Member carries an OVR (0-99) computed from seven sub-ratings: quality, outcomes, reliability, hustle, collaboration, attendance, referrals + BD. Twelve-month rolling window, weighted to recent work. Provisional new Members don't carry a public OVR until they cross the promotion threshold. Roughly three completed engagements plus two peer reviews received.\n\nBands: 90+ Champion's Court eligible. 75-89 promotion eligible. 65-74 good standing. Below 65 probation. Standing refreshes with each daily compute.",
     },
     {
       question: "What triggers a compliance penalty?",
       answer:
-        "Covenant violations — missed milestones without communication, silence when the cooperative needs a signal, direct-hire circumvention around the platform, dishonest peer review, breach of client-privileged confidentiality. Each penalty is -9 OVR for 90 days, stacking.\n\nThe math is deliberate: three penalties inside 90 days moves a middle-band Member into probation; four moves them toward removal. Real-time impact — no slow decline that only surfaces after a year of accumulated damage.",
+        "Covenant violations: missed milestones without communication, silence when the cooperative needs a signal, direct-hire circumvention around the platform, dishonest peer review, breach of client-privileged confidentiality. Each penalty is -9 OVR for 90 days, stacking.\n\nThe math is deliberate: three penalties inside 90 days moves a middle-band Member into probation; four moves them toward removal. Real-time impact. No slow decline that only surfaces after a year of accumulated damage.",
     },
     {
       question: "How does Champion's Court work?",
       answer:
-        "Top 10% of active Members AND OVR ≥ 90. Both gates apply. Refreshes with each daily compute — you can enter and leave depending on how the cooperative is performing that week. Champion's Court is the only tier that carries the gold holographic canonization card.\n\nAt year-end, every Member who held Champion's Court standing during the year enters the Constellation of that year — the annual canonization cohort minted permanently on-chain.",
+        "Top 10% of active Members AND OVR ≥ 90. Both gates apply. Refreshes with each daily compute. You can enter and leave depending on how the cooperative is performing that week. Champion's Court is the only tier that carries the gold holographic canonization card.\n\nAt year-end, every Member who held Champion's Court standing during the year enters the Constellation of that year. The annual canonization cohort minted permanently on-chain.",
     },
     {
       question: "What is annual canonization?",
       answer:
-        "At the end of each calendar year, every active Member (and any Partner who held a recognition during the year) mints an ERC-721 canonization card with an ERC-6551 token-bound account. Tier locks to their year-end rarity band.\n\nThe first canonization runs at the end of the cooperative's first full calendar year of operation. No retroactive canon — Members don't receive credit for pre-launch work through the cooperative record. Retroactive minting would invent standing nobody earned through the system. That's the integrity floor.",
+        "At the end of each calendar year, every active Member (and any Partner who held a recognition during the year) mints an ERC-721 canonization card with an ERC-6551 token-bound account. Tier locks to their year-end rarity band.\n\nThe first canonization runs at the end of the cooperative's first full calendar year of operation. No retroactive canon. Members don't receive credit for pre-launch work through the cooperative record. Retroactive minting would invent standing nobody earned through the system. That's the integrity floor.",
     },
     {
       question: "Can the Covenant change?",

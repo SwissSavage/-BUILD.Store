@@ -33,7 +33,7 @@ export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: "Cohort",
   description:
-    "Monthly onboarding spotlights — new cooperators joining Future Modern in real time. Who they are, what they're bringing, why the cooperative is glad to have them.",
+    "Monthly onboarding spotlights on new cooperators joining Future Modern in real time. Who they are, what they're bringing, why the cooperative is glad to have them.",
 };
 
 export default function CohortIndexPage() {
@@ -48,7 +48,7 @@ export default function CohortIndexPage() {
       <p className="mt-4 max-w-2xl text-lg text-ink-muted">
         Monthly spotlights on the cooperators arriving in real time.
         The cooperative grows by considered addition, not open
-        registration — this rail is how the network sees new
+        registration. This rail is how the network sees new
         Members and Partners as they land.
       </p>
 

@@ -117,7 +117,7 @@ export function FeedbackPrompt({
           required
           minLength={4}
           rows={isWalkthrough ? 2 : 3}
-          placeholder="A sentence or two — the rougher the better."
+          placeholder="A sentence or two. The rougher the better."
           className="mt-3 w-full rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-3 text-sm placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none"
         />
       )}

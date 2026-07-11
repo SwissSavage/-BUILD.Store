@@ -410,17 +410,17 @@ function FaqSection() {
     {
       question: "What is $BUILD.Store?",
       answer:
-        "$BUILD.Store is the cooperative talent platform of Future Modern Builderberg LLC — a member-owned network of STEM, Creative Media, and Professional Services professionals who ship serious work for serious clients.\n\nInstead of a marketplace that skims from every transaction, cash flows to the Members who did the work. Ownership stays with the people who built the platform.",
+        "$BUILD.Store is the cooperative talent platform of Future Modern. A member-owned network of STEM, Creative Media, and Professional Services professionals who ship serious work for serious clients.\n\nInstead of a marketplace that skims from every transaction, cash flows to the Members who did the work. Ownership stays with the people who built the platform.",
     },
     {
       question: "How is this different from Upwork or Toptal?",
       answer:
-        "Upwork and Toptal are marketplaces owned by shareholders. When you hire through them, most of the money reaches the freelancer; the platform keeps the rest and the freelancer keeps none of the platform.\n\n$BUILD.Store is owned by its Members. The people you hire hold governance in the platform they work through. That changes the incentives all the way down — quality, retention, follow-through — because the cooperators aren't renting the platform, they own it.",
+        "Upwork and Toptal are marketplaces owned by shareholders. When you hire through them, most of the money reaches the freelancer; the platform keeps the rest and the freelancer keeps none of the platform.\n\n$BUILD.Store is owned by its Members. The people you hire hold governance in the platform they work through. That changes the incentives all the way down: quality, retention, follow-through. The cooperators aren't renting the platform. They own it.",
     },
     {
       question: "Who's in the cooperative?",
       answer:
-        "Fortune 500-level professionals across three pillars: STEM (engineering, data, AI/ML, blockchain, cybersecurity, research), Creative Media (music, film, editorial, design, direction, post-production), and Professional Services (strategy, legal, finance, operations, management consulting).\n\nEvery Member is vouched in. There's a whitelist and a covenant. Standing is earned through shipped work and honest peer review — not gamed through ratings inflation.",
+        "Fortune 500-level professionals across three pillars: STEM (engineering, data, AI/ML, blockchain, cybersecurity, research), Creative Media (music, film, editorial, design, direction, post-production), and Professional Services (strategy, legal, finance, operations, management consulting).\n\nEvery Member is vouched in. There's a whitelist and a covenant. Standing is earned through shipped work and honest peer review. Not gamed through ratings inflation.",
     },
     {
       question: "How does hiring work?",
@@ -430,12 +430,12 @@ function FaqSection() {
     {
       question: "What does \"Web3-native\" actually mean here?",
       answer:
-        "Every Member holds their contribution record on-chain through an ERC-721 canonization card with an ERC-6551 token-bound account. That's how the cooperative encodes standing — not as a rating in someone else's database, but as portable proof the Member owns.\n\nClients don't need a wallet to hire us. But if you care about how the cooperative treats provenance, the receipts are on-chain.",
+        "Every Member holds their contribution record on-chain through an ERC-721 canonization card with an ERC-6551 token-bound account. That's how the cooperative encodes standing. Not as a rating in someone else's database, but as portable proof the Member owns.\n\nClients don't need a wallet to hire us. But if you care about how the cooperative treats provenance, the receipts are on-chain.",
     },
     {
       question: "How do I join?",
       answer:
-        "The whitelist at /whitelist is the front door. It's currently a curated intake — the cooperative is small enough that every Member is a considered addition. As we scale, more of that intake automates.\n\nProspects can start by contributing on projects; Partners can co-deliver with Members. The full membership tier structure is documented in the Cooperative Covenant.",
+        "The whitelist at /whitelist is the front door. It's currently a curated intake. The cooperative is small enough that every Member is a considered addition. As we scale, more of that intake automates.\n\nProspects can start by contributing on projects; Partners can co-deliver with Members. The full membership tier structure is documented in the Cooperative Covenant.",
     },
   ];
 

@@ -178,7 +178,7 @@ export default async function CooperativeQuotePage({
             </p>
             <p className="mt-1 text-sm text-ink-muted">
               ${opsSplitDollars.toLocaleString()} funds shared cooperative
-              operations — matching, coordination, treasury reserve, tools
+              operations: matching, coordination, treasury reserve, tools
               every Member relies on.
             </p>
           </Card>
@@ -194,7 +194,7 @@ export default async function CooperativeQuotePage({
           Pick your lead cooperator above, then approve the quote. On
           approval, we kick off contracts + calendar within one business
           day. If you want to iterate on the crew, scope, or price
-          first, reply to the email that got you here — we&apos;ll
+          first, reply to the email that got you here. We&apos;ll
           adjust and re-send.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
@@ -202,7 +202,7 @@ export default async function CooperativeQuotePage({
             type="button"
             disabled
             className="inline-flex items-center rounded-full bg-brand-magenta px-6 py-2.5 text-sm font-medium text-brand-white opacity-60 shadow-lg shadow-brand-magenta/20"
-            title="Sandbox — approve action lands with the admin flow"
+            title="Sandbox. Approve action lands with the admin flow."
           >
             Approve quote
           </button>
@@ -214,7 +214,7 @@ export default async function CooperativeQuotePage({
           </a>
         </div>
         <p className="mt-4 text-[11px] text-ink-faint">
-          Sandbox surface — the Approve action wires to a real client-
+          Sandbox surface. The Approve action wires to a real client-
           decision server action at production.
         </p>
       </section>
@@ -231,7 +231,7 @@ export default async function CooperativeQuotePage({
           >
             <CardTitle className="text-base">How the model works</CardTitle>
             <p className="mt-1 text-xs text-ink-muted">
-              The Venture Labor OS — governance, tiers, canon.
+              The Venture Labor OS. Governance, tiers, canon.
             </p>
           </Link>
           <Link
@@ -251,7 +251,7 @@ export default async function CooperativeQuotePage({
               Who&apos;s joining
             </CardTitle>
             <p className="mt-1 text-xs text-ink-muted">
-              Monthly cohort spotlights — new cooperators.
+              Monthly cohort spotlights of new cooperators.
             </p>
           </Link>
           <Link

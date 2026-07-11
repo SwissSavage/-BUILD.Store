@@ -86,7 +86,7 @@ export function PillarMultiSelect() {
       </legend>
       <p className="text-xs text-ink-muted">
         Cross-pillar engagements are common. Pick every discipline this
-        team needs to cover — we balance the squad against your scope.
+        team needs to cover. We balance the squad against your scope.
       </p>
       <div className="grid gap-2 md:grid-cols-3">
         {INDUSTRY_OPTIONS.map((i) => (

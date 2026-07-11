@@ -296,7 +296,7 @@ export function TalentHand({
           on a mis-tap or after a change-of-mind conversation. */}
       {selectable && (
         <p className="mt-1 text-[11px] text-ink-faint">
-          Not final — click again to un-mark, or swap after we talk it through.
+          Not final. Click again to un-mark, or swap after we talk it through.
         </p>
       )}
     </section>

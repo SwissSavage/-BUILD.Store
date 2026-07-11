@@ -13,6 +13,7 @@
  */
 import Link from "next/link";
 import { StoreDropdown } from "@/components/StoreDropdown";
+import { MobileMenu } from "@/components/MobileMenu";
 
 const navLink = "text-ink-muted hover:text-ink transition-colors";
 
@@ -22,7 +23,7 @@ export function PublicNav() {
       <div className="mx-auto flex max-w-app items-center justify-between gap-4 px-6 py-4">
         <Link
           href="/"
-          aria-label="Future Modern — home"
+          aria-label="Future Modern home"
           className="flex items-center gap-2.5 font-display text-xl font-semibold tracking-tight transition-opacity hover:opacity-80"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -46,7 +47,9 @@ export function PublicNav() {
           </div>
         </div>
 
-        <nav className="flex items-center gap-4 text-sm">
+        {/* Desktop nav — horizontal row of links. Hidden on mobile so
+            the row doesn't wrap into a wall of text. */}
+        <nav className="hidden items-center gap-4 text-sm md:flex">
           <Link href="/about" className={navLink}>
             About
           </Link>
@@ -83,6 +86,13 @@ export function PublicNav() {
             $BUILD a team
           </Link>
         </nav>
+
+        {/* Mobile hamburger — visible only on mobile. Opens a full-
+            screen drawer with the same links stacked vertically + the
+            primary CTA pinned to the drawer's bottom. */}
+        <div className="md:hidden">
+          <MobileMenu />
+        </div>
       </div>
     </header>
   );

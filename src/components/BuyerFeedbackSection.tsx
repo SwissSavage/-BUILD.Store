@@ -22,7 +22,7 @@ export function BuyerFeedbackSection({ orderId }: { orderId: string }) {
       <Card className="mt-6 border-[#007048]/40">
         <CardEyebrow>Feedback received</CardEyebrow>
         <p className="mt-2 text-sm text-ink-muted">
-          Thanks for the review — admin will pull the strongest line for
+          Thanks for the review. Admin will pull the strongest line for
           the seller&apos;s public-to-members profile after a quick scrub.
         </p>
       </Card>
@@ -54,7 +54,7 @@ export function BuyerFeedbackSection({ orderId }: { orderId: string }) {
         <ProseField
           name="prose"
           label="Tell us more (≥ 20 chars)"
-          placeholder="Packaging, item quality, fulfillment speed — anything worth flagging."
+          placeholder="Packaging, item quality, fulfillment speed. Anything worth flagging."
         />
 
         <button

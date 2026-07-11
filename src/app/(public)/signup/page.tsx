@@ -70,7 +70,7 @@ export default function SignupChooserPage() {
 
       <p className="mt-12 text-xs text-ink-faint">
         Not sure which client path fits? Start with &ldquo;$BUILD a
-        team&rdquo; — it&apos;s the widest door and the cooperative
+        team.&rdquo; It&apos;s the widest door and the cooperative
         can re-route you from there.
       </p>
     </div>

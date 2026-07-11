@@ -20,7 +20,7 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 export const dynamic = "force-static";
 
 export const metadata = {
-  title: "Data Use Policy — $BUILD.Store",
+  title: "Data Use Policy · $BUILD.Store",
   description:
     "How Future Modern Builderberg LLC collects, aggregates, and uses Member-Partner engagement data, with worker-side covenants.",
 };

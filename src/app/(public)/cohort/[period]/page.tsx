@@ -44,7 +44,7 @@ export async function generateMetadata({
     return { title: "Cohort spotlight" };
   }
   return {
-    title: `${spotlight.headline} — ${spotlight.periodLabel}`,
+    title: `${spotlight.headline} · ${spotlight.periodLabel}`,
     description: spotlight.narrative,
   };
 }

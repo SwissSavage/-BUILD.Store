@@ -37,7 +37,7 @@ export default function JoinAsTalentSignupPage() {
           <p className="text-xs text-ink-muted">
             Paste a link to your resume, portfolio, LinkedIn, GitHub,
             or wherever your best work lives. A short summary helps
-            too — tell us what you want to work on through the
+            too. Tell us what you want to work on through the
             cooperative.
           </p>
           <input

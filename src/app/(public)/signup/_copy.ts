@@ -12,16 +12,16 @@ export const INTENT_COPY: Record<
 > = {
   hire_talent: {
     label: "Hire talent",
-    headline: "Hire talent — post a JD",
+    headline: "Hire talent · post a JD",
     blurb:
-      "You have a specific role or opportunity for hire. Describe the JD — scope, seniority, timeline, compensation — and we route it to vetted contributors in the matching pillar. Skip the cold-pitch sift; the cooperative has already done the vetting.",
+      "You have a specific role or opportunity for hire. Describe the JD (scope, seniority, timeline, compensation) and we route it to vetted contributors in the matching pillar. Skip the cold-pitch sift; the cooperative has already done the vetting.",
     route: "/signup/hire",
   },
   build_a_team: {
     label: "$BUILD a team",
     headline: "$BUILD a team",
     blurb:
-      "You need a cross-pillar team assembled for a defined engagement — brand + build + GTM, or retrofit + financing + community, etc. Tell us the scope and we pull the right mix of STEM, Creative Media, and Professional Services members into a working squad.",
+      "You need a cross-pillar team assembled for a defined engagement (brand + build + GTM, or retrofit + financing + community, etc.). Tell us the scope and we pull the right mix of STEM, Creative Media, and Professional Services members into a working squad.",
     route: "/signup/build-team",
   },
   join_as_talent: {

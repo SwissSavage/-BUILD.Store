@@ -89,7 +89,7 @@ export function AdminAllocator({
     <div className="mt-4">
       {rows.length === 0 ? (
         <p className="rounded-lg bg-[var(--surface-inset)] px-4 py-3 text-sm text-ink-muted">
-          No admins on this contract yet. Add one or more below — the admin
+          No admins on this contract yet. Add one or more below. The admin
           pool can&apos;t be settled until at least one admin is allocated.
         </p>
       ) : (
@@ -126,7 +126,7 @@ export function AdminAllocator({
                         className="mt-0.5 text-xs"
                         style={{ color: "#E53E3E" }}
                       >
-                        Stripe payouts not enabled — transfer will fail.
+                        Stripe payouts not enabled. Transfer will fail.
                       </p>
                     )}
                   </td>

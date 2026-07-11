@@ -117,7 +117,7 @@ export default async function TeamPage({
           </h1>
           <p className="mt-2 max-w-2xl text-ink-muted">
             Every active Member of Future Modern plus Partners with
-            active recognition windows. Ranked by tier — Champion&apos;s
+            active recognition windows. Ranked by tier. Champion&apos;s
             Court holographic-gold cards at the top, then Future
             Modernist pool, promotion-eligible, and good standing.
           </p>
@@ -216,7 +216,7 @@ export default async function TeamPage({
         <p className="mt-2 text-sm text-ink-muted">
           Members always appear (unless they&apos;ve opted out of
           discovery via the profile-public flag). Partners appear
-          during active recognition windows — win a Future Modernist
+          during active recognition windows. Win a Future Modernist
           spot and your profile lists here for the window. Prospects
           and Viewers aren&apos;t on the roster; they&apos;re
           pre-Member.

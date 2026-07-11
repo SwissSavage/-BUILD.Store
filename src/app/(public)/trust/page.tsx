@@ -74,7 +74,7 @@ export default function TrustPage() {
           <Pillar
             title="Compensation with receipts"
             body={
-              "Every base release, bonus decision, revenue split — a distinct audit entry with the gate rationale. Client rating, PM rating, peer composite, whichever applied. Talent sees the full record on wallet."
+              "Every base release, bonus decision, revenue split gets a distinct audit entry with the gate rationale. Client rating, PM rating, peer composite, whichever applied. Talent sees the full record on wallet."
             }
             evidence="SOC 2 CC7.2 · Processing Integrity"
           />
@@ -151,7 +151,7 @@ export default function TrustPage() {
               Privacy Policy →
             </Link>{" "}
             <span className="text-ink-muted">
-              — what we collect, why, and your rights.
+              What we collect, why, and your rights.
             </span>
           </li>
           <li>
@@ -162,7 +162,7 @@ export default function TrustPage() {
               Cooperative Covenant →
             </Link>{" "}
             <span className="text-ink-muted">
-              — the behavior expected of every Member and Partner.
+              The behavior expected of every Member and Partner.
             </span>
           </li>
           <li>
@@ -173,7 +173,7 @@ export default function TrustPage() {
               Subprocessor Registry →
             </Link>{" "}
             <span className="text-ink-muted">
-              — third parties we share data with.
+              Third parties we share data with.
             </span>
           </li>
           <li>

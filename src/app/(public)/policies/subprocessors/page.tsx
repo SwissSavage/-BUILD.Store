@@ -42,7 +42,7 @@ const SUBPROCESSORS: Subprocessor[] = [
       "Financial",
       "Audit log",
     ],
-    jurisdiction: "United States (provider selection pending — Neon / RDS / Vercel Postgres candidates)",
+    jurisdiction: "United States (provider selection pending: Neon / RDS / Vercel Postgres candidates)",
     dpaStatus: "planned",
     addedAt: "2026-07-01 (planned at production launch)",
   },
@@ -74,7 +74,7 @@ const SUBPROCESSORS: Subprocessor[] = [
     purpose: "Authentication + session management.",
     dataCategories: ["Identity + contact (email, hashed password)"],
     jurisdiction:
-      "Provider selection pending — Clerk / Auth.js / WorkOS candidates",
+      "Provider selection pending: Clerk / Auth.js / WorkOS candidates",
     dpaStatus: "planned",
     addedAt: "2026-07-01 (planned at production launch)",
   },
@@ -84,7 +84,7 @@ const SUBPROCESSORS: Subprocessor[] = [
       "Transactional email (auth, order confirmations, notifications, milestone deadlines).",
     dataCategories: ["Identity + contact (email, notification body)"],
     jurisdiction:
-      "Provider selection pending — Resend / Postmark / SendGrid candidates",
+      "Provider selection pending: Resend / Postmark / SendGrid candidates",
     dpaStatus: "planned",
     addedAt: "2026-07-01 (planned at production launch)",
   },
@@ -93,7 +93,7 @@ const SUBPROCESSORS: Subprocessor[] = [
     purpose:
       "Ingestion of meeting recordings + transcripts for the internal minutes rail. Only when a Member chooses to connect their own account.",
     dataCategories: [
-      "Meeting content (audio, transcript text, attendee list) — only for meetings the Member uploads",
+      "Meeting content (audio, transcript text, attendee list) for meetings the Member uploads",
     ],
     jurisdiction:
       "Varies by provider (Otter, Granola, Fireflies, Zoom Cloud Recording)",
@@ -106,7 +106,7 @@ const SUBPROCESSORS: Subprocessor[] = [
       "Fulfillment of physical canonization cards when Members request the phygital extension.",
     dataCategories: [
       "Identity + contact (shipping address, name)",
-      "Contribution record (card art, tier, year — non-personal beyond name)",
+      "Contribution record (card art, tier, year; non-personal beyond name)",
     ],
     jurisdiction: "Provider selection pending",
     dpaStatus: "planned",
@@ -151,7 +151,7 @@ export default function SubprocessorRegistry() {
         </p>
         <p className="mt-1 text-sm text-ink">
           Intended production subprocessors with DPAs at production
-          onboarding. Sandbox routes no data to any of these — all state
+          onboarding. Sandbox routes no data to any of these. All state
           is in-memory locally.
         </p>
       </div>

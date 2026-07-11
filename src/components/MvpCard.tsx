@@ -197,7 +197,7 @@ function SelfBody({
                   {new Date(p.appliedAt).toLocaleDateString()} →{" "}
                   {new Date(p.expiresAt).toLocaleDateString()}
                 </span>{" "}
-                — {p.reason}
+                · {p.reason}
               </li>
             ))}
           </ul>
@@ -369,7 +369,7 @@ function ProvisionalCard({
             style={{ color: "#5070F0" }}
             aria-label="OVR not yet scored"
           >
-            —
+            ·
           </div>
         </div>
       </div>

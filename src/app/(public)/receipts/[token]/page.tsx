@@ -143,7 +143,7 @@ export default async function CooperativeReceiptPage({
           </p>
           <p className="mt-2 text-sm text-ink-muted">
             The cooperators on this project earned this OVR gain from
-            peer review after your engagement — quality validated by
+            peer review after your engagement. Quality validated by
             the people they ship alongside.
           </p>
         </Card>
@@ -161,8 +161,8 @@ export default async function CooperativeReceiptPage({
             your engagement settled, they&apos;ve shipped{" "}
             {subsequentProjects.length}{" "}
             {subsequentProjects.length === 1 ? "engagement" : "engagements"}{" "}
-            through the cooperative. You didn&apos;t just close a contract
-            — you kept a team building.
+            through the cooperative. You didn&apos;t just close a contract.
+            You kept a team building.
           </p>
           <ul className="mt-6 space-y-3">
             {subsequentProjects.map((p) => (
@@ -187,7 +187,7 @@ export default async function CooperativeReceiptPage({
         </h2>
         <p className="mt-3 text-sm text-ink-muted">
           At mint launch, every client who ships through the cooperative
-          will be able to claim a Collaborator Card — a lightweight
+          will be able to claim a Collaborator Card. A lightweight
           ERC-721 tied to the engagement, held in your own wallet. Not
           a bill, not a receipt of payment; a durable record that you
           helped build a piece of the cooperative. When that rail opens,

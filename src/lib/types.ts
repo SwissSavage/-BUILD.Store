@@ -2916,6 +2916,43 @@ export interface CohortSpotlight {
  * Token-gated access — no account required on the client side. Same
  * pattern as CooperativeReceipt and Invoice tokenized surfaces.
  */
+/**
+ * Discriminated union covering the three ways FM prices engagements.
+ * Every variant carries the standard talent / operations split so the
+ * client-facing surface can render "direct to cooperators" and
+ * "cooperative operations" side by side in whichever unit applies.
+ */
+export type CooperativeQuotePricing =
+  | {
+      type: "fixed";
+      /** Total contract value in USD. */
+      baseAmount: number;
+      /** Cooperators' share as a percentage (0-100). Baseline is 85. */
+      talentSplit: number;
+      /** Cooperative operations share as a percentage. Baseline is 15. */
+      operationsSplit: number;
+    }
+  | {
+      type: "range";
+      /** Low end of the expected total contract value in USD. */
+      baseAmountMin: number;
+      /** High end of the expected total contract value in USD. */
+      baseAmountMax: number;
+      /** Cooperators' share as a percentage (0-100). Baseline is 85. */
+      talentSplit: number;
+      /** Cooperative operations share as a percentage. Baseline is 15. */
+      operationsSplit: number;
+    }
+  | {
+      type: "hourly";
+      /** Hourly rate in USD. Open-ended engagement (no total). */
+      hourlyRate: number;
+      /** Cooperators' share as a percentage (0-100). Baseline is 85. */
+      talentSplit: number;
+      /** Cooperative operations share as a percentage. Baseline is 15. */
+      operationsSplit: number;
+    };
+
 export interface CooperativeQuote {
   id: string;
   /** Tokenized client access — the URL slug. */
@@ -2950,16 +2987,23 @@ export interface CooperativeQuote {
     /** Timeline in human terms — e.g. "8 weeks from kickoff." */
     timeline: string;
   };
-  /** Pricing block — total contract value + the 85/15 split. */
-  pricing: {
-    /** Total contract value in USD (integer cents avoided for
-     *  simplicity in sandbox — production may switch to Money type). */
-    baseAmount: number;
-    /** Cooperators' share as a percentage (0-100). Baseline is 85. */
-    talentSplit: number;
-    /** Cooperative operations share as a percentage. Baseline is 15. */
-    operationsSplit: number;
-  };
+  /**
+   * Pricing block. Discriminated by `type`. Three shapes to cover the
+   * three ways FM prices engagements:
+   *   - "fixed"  : a single total contract value.
+   *   - "range"  : a bracketed contract value (low + high). Most common
+   *                for exploratory scoping.
+   *   - "hourly" : an hourly rate, open-ended (no total, billed as
+   *                delivered). For flexible retainers + T&M work.
+   *
+   * All three carry the standard 85/12/3 split percentages so the
+   * client-facing surface can render the "direct to cooperators" +
+   * "cooperative operations" math against whichever base unit applies.
+   *
+   * All monetary numbers are USD, integer for sandbox simplicity.
+   * Production may switch to a Money type.
+   */
+  pricing: CooperativeQuotePricing;
   /**
    * Status lifecycle:
    *   - draft    : admin authored, not yet dispatched

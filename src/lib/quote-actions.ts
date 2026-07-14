@@ -33,6 +33,7 @@ import {
 } from "@/lib/mock-data/audit-log";
 import type {
   CooperativeQuote,
+  CooperativeQuotePricing,
   Notification,
   NotificationKind,
 } from "@/lib/types";
@@ -147,7 +148,14 @@ export async function createCooperativeQuote(formData: FormData) {
   const scopeSummary = String(formData.get("scopeSummary") ?? "").trim();
   const deliverablesRaw = String(formData.get("deliverables") ?? "").trim();
   const timeline = String(formData.get("timeline") ?? "").trim();
+  const pricingTypeRaw = String(
+    formData.get("pricingType") ?? "fixed",
+  ).trim();
   const baseAmountRaw = String(formData.get("baseAmount") ?? "").trim();
+  const baseAmountMaxRaw = String(
+    formData.get("baseAmountMax") ?? "",
+  ).trim();
+  const hourlyRateRaw = String(formData.get("hourlyRate") ?? "").trim();
   const talentSplitRaw = String(formData.get("talentSplit") ?? "85").trim();
   const operationsSplitRaw = String(
     formData.get("operationsSplit") ?? "15",
@@ -200,11 +208,6 @@ export async function createCooperativeQuote(formData: FormData) {
     throw new Error("Timeline is required. One line, human-readable.");
   }
 
-  const baseAmount = Number.parseInt(baseAmountRaw, 10);
-  if (Number.isNaN(baseAmount) || baseAmount <= 0) {
-    throw new Error("Base amount must be a positive integer (USD).");
-  }
-
   const talentSplit = Number.parseFloat(talentSplitRaw);
   const operationsSplit = Number.parseFloat(operationsSplitRaw);
   if (
@@ -215,6 +218,53 @@ export async function createCooperativeQuote(formData: FormData) {
     Math.abs(talentSplit + operationsSplit - 100) > 0.01
   ) {
     throw new Error("Splits must be non-negative and sum to 100.");
+  }
+
+  // Discriminated union: fixed / range / hourly. Each shape takes its
+  // own set of amount fields; admin form radio picks the type.
+  let pricing: CooperativeQuotePricing;
+  if (pricingTypeRaw === "range") {
+    const min = Number.parseInt(baseAmountRaw, 10);
+    const max = Number.parseInt(baseAmountMaxRaw, 10);
+    if (Number.isNaN(min) || min <= 0) {
+      throw new Error("Range min must be a positive integer (USD).");
+    }
+    if (Number.isNaN(max) || max <= 0) {
+      throw new Error("Range max must be a positive integer (USD).");
+    }
+    if (max < min) {
+      throw new Error("Range max cannot be less than range min.");
+    }
+    pricing = {
+      type: "range",
+      baseAmountMin: min,
+      baseAmountMax: max,
+      talentSplit,
+      operationsSplit,
+    };
+  } else if (pricingTypeRaw === "hourly") {
+    const rate = Number.parseInt(hourlyRateRaw, 10);
+    if (Number.isNaN(rate) || rate <= 0) {
+      throw new Error("Hourly rate must be a positive integer (USD).");
+    }
+    pricing = {
+      type: "hourly",
+      hourlyRate: rate,
+      talentSplit,
+      operationsSplit,
+    };
+  } else {
+    // Default is fixed.
+    const amount = Number.parseInt(baseAmountRaw, 10);
+    if (Number.isNaN(amount) || amount <= 0) {
+      throw new Error("Base amount must be a positive integer (USD).");
+    }
+    pricing = {
+      type: "fixed",
+      baseAmount: amount,
+      talentSplit,
+      operationsSplit,
+    };
   }
 
   const now = new Date().toISOString();
@@ -230,14 +280,10 @@ export async function createCooperativeQuote(formData: FormData) {
       deliverables,
       timeline,
     },
-    pricing: {
-      baseAmount,
-      talentSplit,
-      operationsSplit,
-    },
-    // Newly-authored quotes ship as `sent` in sandbox — production
-    // adds an explicit dispatch step. Admin can compose + dispatch in
-    // one action for now.
+    pricing,
+    // Newly-authored quotes ship as `sent` in sandbox. Production adds
+    // an explicit dispatch step. Admin can compose + dispatch in one
+    // action for now.
     status: "sent",
     sentAt: now,
     viewedAt: null,
@@ -260,7 +306,7 @@ export async function createCooperativeQuote(formData: FormData) {
       clientToken: row.clientToken,
       clientDisplayName,
       proposedMemberIds,
-      baseAmount,
+      pricingType: pricing.type,
     },
     reason: `Quote for ${project.title}`,
   });

@@ -29,27 +29,32 @@ export const MOCK_COOPERATIVE_QUOTES: CooperativeQuote[] = [
     proposedMemberIds: ["u_bbg", "u_sunny", "u_bayu"],
     memberRelevance: {
       u_bbg:
-        "BBG carries the FM voice through every read. The film needs a director whose creative read is on the exact tone URL Media has been building — that's him.",
+        "BBG carries the FM voice through every read. The film needs a director whose creative read is on the exact tone URL Media has been building. That's him.",
       u_sunny:
         "Sunny's brand direction chops mean the film ships with a visual system, not just a piece. When URL Media wants to spin it into stills, cutdowns, and OOH, the assets are already coherent.",
       u_bayu:
-        "Bayu handles the interactive companion — landing microsite for the launch. His brand systems work translates the film's design language into an owned digital surface.",
+        "Bayu handles the interactive companion, a landing microsite for the launch. His brand systems work translates the film's design language into an owned digital surface.",
     },
     scope: {
       summary:
         "Three-minute hero film with Afrofuturist direction, plus social cutdowns and a launch microsite. Delivery in 8 weeks from kickoff.",
       deliverables: [
-        "Hero film — 3 minutes, delivered in ProRes + H.264 with subtitle track",
-        "Social cutdowns — 60s, 30s, 15s for Instagram + TikTok",
-        "Launch microsite — single-page interactive with the film + credits",
-        "Stills package — 20 high-res frames selected + color-graded from the shoot",
-        "Behind-the-scenes documentary — 8-minute companion piece for URL Media's own channels",
+        "Hero film, 3 minutes, delivered in ProRes + H.264 with subtitle track",
+        "Social cutdowns: 60s, 30s, 15s for Instagram + TikTok",
+        "Launch microsite: single-page interactive with the film + credits",
+        "Stills package: 20 high-res frames selected + color-graded from the shoot",
+        "Behind-the-scenes documentary, 8-minute companion piece for URL Media's own channels",
       ],
       timeline:
-        "8 weeks from kickoff — 2 weeks pre-production, 3 weeks production + shoot, 3 weeks post + microsite.",
+        "8 weeks from kickoff. 2 weeks pre-production, 3 weeks production + shoot, 3 weeks post + microsite.",
     },
+    // Range pricing — exploratory total value with a bracket, most
+    // common quote shape for creative engagements where the final
+    // scope shakes out during pre-production.
     pricing: {
-      baseAmount: 45000,
+      type: "range",
+      baseAmountMin: 38000,
+      baseAmountMax: 52000,
       talentSplit: 85,
       operationsSplit: 15,
     },
@@ -62,29 +67,35 @@ export const MOCK_COOPERATIVE_QUOTES: CooperativeQuote[] = [
     selectedLeadUserId: null,
   },
   {
-    id: "quote_p002_dcg",
-    clientToken: "q_dcg_erc6551_audit",
-    projectId: "p_002",
-    clientDisplayName: "Direct Connect Global",
+    // Second seed illustrates the fixed-price mode. Different project
+    // (p_003 is the follow-on URL Media newsletter build per the
+    // active-projects memory) so each seeded quote uses a distinct
+    // project id.
+    id: "quote_p003_urlmedia_newsletter",
+    clientToken: "q_urlmedia_newsletter_platform",
+    projectId: "p_003",
+    clientDisplayName: "URL Media",
     proposedMemberIds: ["u_tolgay"],
     memberRelevance: {
       u_tolgay:
-        "Tolgay wrote the ERC-6551 primitive that FM's own canonization system runs on. Your vault migration is exactly the kind of audit he'd do for us internally — same rigor, zero context transfer.",
+        "Tolgay wrote the ERC-6551 primitive that FM's own canonization system runs on. Your newsletter platform migration is exactly the kind of build he'd do for us internally, same rigor, zero context transfer.",
     },
     scope: {
       summary:
-        "Audit of existing ERC-6551 token-bound account implementation, propose a multisig-compatible migration path, deliver a written report + reference migration contracts.",
+        "Migrate the newsletter platform to a new stack, deliver an admin-authored editorial pipeline plus subscriber-facing surfaces. Fixed price on a well-scoped rewrite.",
       deliverables: [
-        "Written audit report — vulnerabilities, gas-optimization opportunities, upgrade paths",
-        "Reference migration contracts — Solidity implementing the recommended multisig-compatible approach",
-        "Test suite — Foundry-based, covering the migration path end-to-end",
-        "Deployment guide — step-by-step for your engineering team to execute the migration",
+        "Migration plan document, mapped module-by-module from the current stack",
+        "Editorial admin surface, authored + queued + scheduled posts",
+        "Subscriber-facing surfaces, list + issue + archive",
+        "Test suite covering the editorial workflow end-to-end",
+        "Deployment guide for the engineering team to run the cutover",
       ],
       timeline:
-        "4 weeks from kickoff — 2 weeks audit + report, 2 weeks migration contract + tests.",
+        "6 weeks from kickoff. 1 week migration mapping, 4 weeks build, 1 week cutover + hardening.",
     },
     pricing: {
-      baseAmount: 28000,
+      type: "fixed",
+      baseAmount: 32000,
       talentSplit: 85,
       operationsSplit: 15,
     },

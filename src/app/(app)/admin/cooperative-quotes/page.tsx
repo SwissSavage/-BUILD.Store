@@ -22,6 +22,7 @@ import {
 } from "@/lib/quote-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
+import { pricingCompactSummary } from "@/lib/quote-pricing";
 
 /**
  * Candidate cooperators for proposal: Members + Partners. Sorted for
@@ -287,10 +288,56 @@ export default async function AdminCooperativeQuotesPage() {
                 name="timeline"
                 type="text"
                 required
-                placeholder="8 weeks from kickoff — 2 pre-production, 3 production, 3 post."
+                placeholder="8 weeks from kickoff. 2 pre-production, 3 production, 3 post."
                 className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
               />
             </div>
+
+            {/* Pricing type radio. Server action reads `pricingType`
+                and picks the right amount fields (fixed uses baseAmount
+                only, range uses baseAmount + baseAmountMax, hourly uses
+                hourlyRate). All three fields are rendered here so the
+                admin can pick without a JS-driven conditional show/hide;
+                unused fields are ignored server-side. */}
+            <fieldset>
+              <legend className="block text-xs uppercase tracking-wider text-ink-muted">
+                Pricing type
+              </legend>
+              <div className="mt-2 flex flex-wrap gap-3 text-sm">
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="pricingType"
+                    value="fixed"
+                    defaultChecked
+                    className="accent-brand-magenta"
+                  />
+                  Fixed
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="pricingType"
+                    value="range"
+                    className="accent-brand-magenta"
+                  />
+                  Range
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="pricingType"
+                    value="hourly"
+                    className="accent-brand-magenta"
+                  />
+                  Hourly
+                </label>
+              </div>
+              <p className="mt-2 text-[11px] text-ink-faint">
+                Fixed uses base amount only. Range uses base amount as
+                min plus max. Hourly uses the hourly rate.
+              </p>
+            </fieldset>
 
             <div className="grid gap-5 sm:grid-cols-3">
               <div>
@@ -298,17 +345,54 @@ export default async function AdminCooperativeQuotesPage() {
                   htmlFor="baseAmount"
                   className="block text-xs uppercase tracking-wider text-ink-muted"
                 >
-                  Base amount (USD)
+                  Base amount / range min (USD)
                 </label>
                 <input
                   id="baseAmount"
                   name="baseAmount"
                   type="number"
-                  required
                   min={1}
                   placeholder="45000"
                   className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 />
+              </div>
+              <div>
+                <label
+                  htmlFor="baseAmountMax"
+                  className="block text-xs uppercase tracking-wider text-ink-muted"
+                >
+                  Range max (USD)
+                </label>
+                <input
+                  id="baseAmountMax"
+                  name="baseAmountMax"
+                  type="number"
+                  min={1}
+                  placeholder="55000"
+                  className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                />
+                <p className="mt-1 text-[10px] text-ink-faint">
+                  Range only. Leave blank for fixed or hourly.
+                </p>
+              </div>
+              <div>
+                <label
+                  htmlFor="hourlyRate"
+                  className="block text-xs uppercase tracking-wider text-ink-muted"
+                >
+                  Hourly rate (USD/hr)
+                </label>
+                <input
+                  id="hourlyRate"
+                  name="hourlyRate"
+                  type="number"
+                  min={1}
+                  placeholder="150"
+                  className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                />
+                <p className="mt-1 text-[10px] text-ink-faint">
+                  Hourly only. Leave blank for fixed or range.
+                </p>
               </div>
               <div>
                 <label
@@ -401,7 +485,7 @@ export default async function AdminCooperativeQuotesPage() {
                       </span>
                     </div>
                     <CardTitle className="mt-1 text-lg">
-                      ${quote.pricing.baseAmount.toLocaleString()} ·{" "}
+                      {pricingCompactSummary(quote.pricing)} ·{" "}
                       {quote.proposedMemberIds.length}{" "}
                       {quote.proposedMemberIds.length === 1
                         ? "cooperator"

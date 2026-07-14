@@ -94,13 +94,6 @@ export default async function CooperativeQuotePage({
     })
     .filter((c): c is QuoteFlipReveaCrewMember => c !== null);
 
-  const talentSplitDollars = Math.round(
-    (quote.pricing.baseAmount * quote.pricing.talentSplit) / 100,
-  );
-  const opsSplitDollars = Math.round(
-    (quote.pricing.baseAmount * quote.pricing.operationsSplit) / 100,
-  );
-
   const decided =
     quote.status === "approved" || quote.status === "declined";
   const selectedLead = quote.selectedLeadUserId
@@ -129,8 +122,6 @@ export default async function CooperativeQuotePage({
           clientToken={quote.clientToken}
           scope={quote.scope}
           pricing={quote.pricing}
-          talentSplitDollars={talentSplitDollars}
-          opsSplitDollars={opsSplitDollars}
           crew={crew}
         />
       )}

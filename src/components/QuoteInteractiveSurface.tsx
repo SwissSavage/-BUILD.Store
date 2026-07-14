@@ -41,6 +41,13 @@ import {
   approveCooperativeQuote,
   declineCooperativeQuote,
 } from "@/lib/quote-actions";
+import {
+  pricingHeadline,
+  pricingUnitLabel,
+  pricingTalentAmount,
+  pricingOperationsAmount,
+} from "@/lib/quote-pricing";
+import type { CooperativeQuotePricing } from "@/lib/types";
 
 interface QuoteInteractiveSurfaceProps {
   clientToken: string;
@@ -49,13 +56,7 @@ interface QuoteInteractiveSurfaceProps {
     deliverables: string[];
     timeline: string;
   };
-  pricing: {
-    baseAmount: number;
-    talentSplit: number;
-    operationsSplit: number;
-  };
-  talentSplitDollars: number;
-  opsSplitDollars: number;
+  pricing: CooperativeQuotePricing;
   crew: QuoteFlipReveaCrewMember[];
 }
 
@@ -63,8 +64,6 @@ export function QuoteInteractiveSurface({
   clientToken,
   scope,
   pricing,
-  talentSplitDollars,
-  opsSplitDollars,
   crew,
 }: QuoteInteractiveSurfaceProps) {
   const [selectedLeadUserId, setSelectedLeadUserId] = useState<string | null>(
@@ -163,13 +162,16 @@ export function QuoteInteractiveSurface({
         </div>
       </section>
 
-      {/* Pricing block */}
+      {/* Pricing block. Discriminated union: fixed / range / hourly.
+          Headline + split cards all render in whichever unit the
+          admin chose at quote-authoring time. Split cards sit side by
+          side with the correct unit on each. */}
       <section className="mt-20">
         <CardEyebrow>Pricing</CardEyebrow>
         <h2 className="mt-2 font-display text-3xl font-semibold">
-          ${pricing.baseAmount.toLocaleString()}{" "}
+          {pricingHeadline(pricing)}{" "}
           <span className="text-base font-normal text-ink-muted">
-            total contract value
+            {pricingUnitLabel(pricing)}
           </span>
         </h2>
 
@@ -180,8 +182,8 @@ export function QuoteInteractiveSurface({
               {pricing.talentSplit}%
             </p>
             <p className="mt-1 text-sm text-ink-muted">
-              ${talentSplitDollars.toLocaleString()} paid directly to the
-              crew who ships the work. No agency middleman, no platform
+              {pricingTalentAmount(pricing)} paid directly to the crew
+              who ships the work. No agency middleman, no platform
               take-rate stacked on top.
             </p>
           </Card>
@@ -191,9 +193,9 @@ export function QuoteInteractiveSurface({
               {pricing.operationsSplit}%
             </p>
             <p className="mt-1 text-sm text-ink-muted">
-              ${opsSplitDollars.toLocaleString()} funds shared cooperative
-              operations: matching, coordination, treasury reserve, tools
-              every Member relies on.
+              {pricingOperationsAmount(pricing)} funds shared cooperative
+              operations: matching, coordination, treasury reserve,
+              tools every Member relies on.
             </p>
           </Card>
         </div>

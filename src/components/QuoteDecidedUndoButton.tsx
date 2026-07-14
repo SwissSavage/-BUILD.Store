@@ -27,11 +27,20 @@ interface QuoteDecidedUndoButtonProps {
   clientToken: string;
   /** Which state the client is undoing. Only affects button copy. */
   previousDecision: "approved" | "declined";
+  /**
+   * Optional callback fired once the undo succeeds server-side.
+   * Used by the parent client shell (QuoteInteractiveSurface) to
+   * reset any optimistic post-decision state so the reveal UI
+   * comes back. Server-rendered decided sections don't need this
+   * because they'll re-render from the fresh server tree.
+   */
+  onUndoSuccess?: () => void;
 }
 
 export function QuoteDecidedUndoButton({
   clientToken,
   previousDecision,
+  onUndoSuccess,
 }: QuoteDecidedUndoButtonProps) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
@@ -46,6 +55,7 @@ export function QuoteDecidedUndoButton({
     startTransition(async () => {
       try {
         await undoCooperativeQuoteDecision(formData);
+        onUndoSuccess?.();
         router.refresh();
       } catch (e) {
         setError((e as Error).message);

@@ -38,6 +38,7 @@ import {
 } from "@/components/QuoteFlipReveal";
 import { CardEyebrow } from "@/components/Card";
 import type { TalentHandDecision } from "@/components/TalentHand";
+import { QuoteDecidedUndoButton } from "@/components/QuoteDecidedUndoButton";
 import {
   approveCooperativeQuote,
   declineCooperativeQuote,
@@ -146,8 +147,18 @@ export function QuoteInteractiveSurface({
   // Optimistic post-decision UI. Runs the moment the server action
   // returns, before the parent server component re-renders. Once the
   // parent's server re-render lands with the real quote.status, the
-  // parent stops rendering this client component and the ApprovedSection
-  // or DeclinedSection on the server surface takes over.
+  // parent stops rendering this client component and the
+  // ApprovedSection or DeclinedSection on the server surface takes
+  // over. Both branches include the undo affordance so the client
+  // isn't stuck if the server refresh lags. The onUndoSuccess callback
+  // resets local state so the reveal UI comes back after undoing.
+  const handleUndoSuccess = () => {
+    setOptimisticDecision(null);
+    setSelectedLeadUserId(null);
+    setShowDeclineForm(false);
+    setDeclineReason("");
+  };
+
   if (optimisticDecision === "approved") {
     return (
       <section className="mt-16 rounded-2xl border border-brand-green/40 bg-brand-green/5 px-6 py-8">
@@ -164,6 +175,11 @@ export function QuoteInteractiveSurface({
             will evolve into your engagement dashboard so keep it handy.
           </p>
         )}
+        <QuoteDecidedUndoButton
+          clientToken={clientToken}
+          previousDecision="approved"
+          onUndoSuccess={handleUndoSuccess}
+        />
       </section>
     );
   }
@@ -181,6 +197,11 @@ export function QuoteInteractiveSurface({
           and we&apos;ll re-pitch. The cooperative isn&apos;t going
           anywhere.
         </p>
+        <QuoteDecidedUndoButton
+          clientToken={clientToken}
+          previousDecision="declined"
+          onUndoSuccess={handleUndoSuccess}
+        />
       </section>
     );
   }

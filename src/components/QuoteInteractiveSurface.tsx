@@ -35,7 +35,7 @@ import {
   QuoteFlipReveal,
   type QuoteFlipReveaCrewMember,
 } from "@/components/QuoteFlipReveal";
-import { Card, CardEyebrow } from "@/components/Card";
+import { CardEyebrow } from "@/components/Card";
 import type { TalentHandDecision } from "@/components/TalentHand";
 import {
   approveCooperativeQuote,
@@ -44,8 +44,6 @@ import {
 import {
   pricingHeadline,
   pricingUnitLabel,
-  pricingTalentAmount,
-  pricingOperationsAmount,
 } from "@/lib/quote-pricing";
 import type { CooperativeQuotePricing } from "@/lib/types";
 
@@ -163,9 +161,11 @@ export function QuoteInteractiveSurface({
       </section>
 
       {/* Pricing block. Discriminated union: fixed / range / hourly.
-          Headline + split cards all render in whichever unit the
-          admin chose at quote-authoring time. Split cards sit side by
-          side with the correct unit on each. */}
+          Just the headline + unit label. The 85/15 split isn't
+          restated here. Clients receiving a quote already know the
+          FM deal structure from the marketing surfaces; repeating
+          the percentages on the quote itself reads as marketing
+          repetition on a document that should be all business. */}
       <section className="mt-20">
         <CardEyebrow>Pricing</CardEyebrow>
         <h2 className="mt-2 font-display text-3xl font-semibold">
@@ -174,31 +174,6 @@ export function QuoteInteractiveSurface({
             {pricingUnitLabel(pricing)}
           </span>
         </h2>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <Card>
-            <CardEyebrow>Direct to cooperators</CardEyebrow>
-            <p className="mt-2 font-display text-3xl font-semibold text-brand-green">
-              {pricing.talentSplit}%
-            </p>
-            <p className="mt-1 text-sm text-ink-muted">
-              {pricingTalentAmount(pricing)} paid directly to the crew
-              who ships the work. No agency middleman, no platform
-              take-rate stacked on top.
-            </p>
-          </Card>
-          <Card>
-            <CardEyebrow>Cooperative operations</CardEyebrow>
-            <p className="mt-2 font-display text-3xl font-semibold text-brand-blue">
-              {pricing.operationsSplit}%
-            </p>
-            <p className="mt-1 text-sm text-ink-muted">
-              {pricingOperationsAmount(pricing)} funds shared cooperative
-              operations: matching, coordination, treasury reserve,
-              tools every Member relies on.
-            </p>
-          </Card>
-        </div>
       </section>
 
       {/* Decision panel */}

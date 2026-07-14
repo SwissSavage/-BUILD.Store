@@ -52,7 +52,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   /**
    * Cohort spotlight pages — one indexable URL per period. Each is a
-   * long-tail landing that ranks for the spotlighted cooperators.
+   * long-tail landing that ranks for the spotlighted builders.
    */
   const cohortRoutes: MetadataRoute.Sitemap = cohortSpotlightsByRecency().map(
     (spotlight) => ({

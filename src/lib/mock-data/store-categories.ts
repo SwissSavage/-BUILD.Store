@@ -29,7 +29,7 @@ export const MOCK_STORE_CATEGORIES: StoreCategory[] = [
     slug: "hardware",
     name: "Hardware",
     description:
-      "Physical tools, gear, components. Everything from instrument cables to cooperator-built electronics.",
+      "Physical tools, gear, components. Everything from instrument cables to builder-built electronics.",
     displayOrder: 10,
     isActive: true,
     vertical: "goods",

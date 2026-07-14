@@ -151,7 +151,7 @@ export default function WhitelistPage() {
         <p className="mt-3 max-w-3xl text-sm text-ink-muted">
           We get asked, often, if there&apos;s a way to write a check and
           jump the line. There isn&apos;t. The exclusivity is part of the
-          value. For cooperators and for the clients who hire them.
+          value. For builders and for the clients who hire them.
         </p>
       </header>
 
@@ -196,7 +196,7 @@ export default function WhitelistPage() {
             >
               Path 1 · Invitation
             </div>
-            <CardTitle className="mt-3 text-2xl">Invited by a cooperator</CardTitle>
+            <CardTitle className="mt-3 text-2xl">Invited by a builder</CardTitle>
             <p className="mt-2 text-sm text-ink-muted">
               Someone already inside vouches for you. They take some
               reputational skin in the game when they do. That&apos;s

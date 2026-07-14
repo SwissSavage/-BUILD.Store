@@ -41,7 +41,7 @@ export const MOCK_PEER_REVIEWS: PeerReview[] = [
     craft: 4,
     reliability: 4,
     prose:
-      "Rob's market selection memo was the spine of the whole deliverable. Caught one timeline slip mid-week — owned it, recovered it, no drama. Strong cooperator.",
+      "Rob's market selection memo was the spine of the whole deliverable. Caught one timeline slip mid-week — owned it, recovered it, no drama. Strong builder.",
     createdAt: "2026-04-21T10:12:00Z",
   },
 

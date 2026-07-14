@@ -66,7 +66,7 @@ export default function GovernancePage() {
               </li>
               <li>
                 <strong className="text-ink">Member:</strong> full
-                cooperator. Sees the internal directory, calendar,
+                builder. Sees the internal directory, calendar,
                 activity feed. Full MVP score visibility. Co-brand
                 rights. Canonization at year end.
               </li>

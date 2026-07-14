@@ -40,8 +40,8 @@ export default function Home() {
  *
  * Mirrors the framing Bayu shipped on afuturemodern.com: instead of
  * "trusted by 800k businesses" scale flex or "we shipped for X client"
- * (which mixes client history with cooperator provenance), this is
- * personnel provenance — where cooperators have done credited work.
+ * (which mixes client history with builder provenance), this is
+ * personnel provenance — where builders have done credited work.
  * Bigger brand torque, cleaner legal posture, more honest to FM's
  * real leverage.
  *
@@ -324,7 +324,7 @@ function Pillars() {
       <div className="mx-auto max-w-app px-6 py-20">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">Three pillars</h2>
         <p className="mt-2 max-w-2xl text-ink-muted">
-          Fortune 500-caliber cooperators across the industries we serve.
+          Fortune 500-caliber builders across the industries we serve.
         </p>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {pillars.map((p) => {
@@ -415,7 +415,7 @@ function FaqSection() {
     {
       question: "How is this different from Upwork or Toptal?",
       answer:
-        "Upwork and Toptal are marketplaces owned by shareholders. When you hire through them, most of the money reaches the freelancer; the platform keeps the rest and the freelancer keeps none of the platform.\n\n$BUILD.Store is owned by its Members. The people you hire hold governance in the platform they work through. That changes the incentives all the way down: quality, retention, follow-through. The cooperators aren't renting the platform. They own it.",
+        "Upwork and Toptal are marketplaces owned by shareholders. When you hire through them, most of the money reaches the freelancer; the platform keeps the rest and the freelancer keeps none of the platform.\n\n$BUILD.Store is owned by its Members. The people you hire hold governance in the platform they work through. That changes the incentives all the way down: quality, retention, follow-through. The builders aren't renting the platform. They own it.",
     },
     {
       question: "Who's in the cooperative?",
@@ -454,7 +454,7 @@ function FaqSection() {
  * Rolling monthly content engine: whoever most recently joined the
  * cooperative gets a small hero card here on the homepage, cycling
  * as the roster grows. Click through to /cohort/[period] for the
- * full narrative + cross-linked cooperator profiles.
+ * full narrative + cross-linked builder profiles.
  */
 function CohortRail() {
   const spotlight = latestCohortSpotlight();

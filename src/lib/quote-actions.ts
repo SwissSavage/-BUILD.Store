@@ -129,7 +129,7 @@ function parseDeliverables(raw: string): string[] {
 
 /**
  * Author a new quote. Admin picks a project, adds a client display
- * name, selects 1-5 cooperators, writes per-member relevance
+ * name, selects 1-5 builders, writes per-member relevance
  * narratives, defines scope + pricing. Blocks duplicates on the same
  * project — remove the existing quote first if the plan changes.
  */
@@ -175,16 +175,16 @@ export async function createCooperativeQuote(formData: FormData) {
     throw new Error("Client display name is required.");
   }
   if (proposedMemberIds.length === 0) {
-    throw new Error("Propose at least one cooperator.");
+    throw new Error("Propose at least one builder.");
   }
   if (proposedMemberIds.length > 5) {
     throw new Error(
-      "Propose no more than five cooperators. Quality of curation is the whole point.",
+      "Propose no more than five builders. Quality of curation is the whole point.",
     );
   }
   for (const uid of proposedMemberIds) {
     if (!MOCK_USERS.some((u) => u.id === uid)) {
-      throw new Error(`Unknown cooperator: ${uid}`);
+      throw new Error(`Unknown builder: ${uid}`);
     }
   }
 
@@ -356,7 +356,7 @@ export async function removeCooperativeQuote(formData: FormData) {
  * credential (same pattern as /invoices/[token] and /receipts/[token]).
  * Anyone in possession of the magic link can approve the quote.
  *
- * Flips status → "approved", records the selected lead cooperator +
+ * Flips status → "approved", records the selected lead builder +
  * decision timestamp, logs the audit event, and fans out notifications
  * to every admin on the deal's roster so kickoff logistics can start.
  *
@@ -373,7 +373,7 @@ export async function approveCooperativeQuote(formData: FormData) {
   ).trim();
   if (!token) throw new Error("Quote token is required.");
   if (!selectedLeadUserId) {
-    throw new Error("Select a lead cooperator before approving.");
+    throw new Error("Select a lead builder before approving.");
   }
 
   const quote = MOCK_COOPERATIVE_QUOTES.find((q) => q.clientToken === token);
@@ -388,7 +388,7 @@ export async function approveCooperativeQuote(formData: FormData) {
   }
   if (!quote.proposedMemberIds.includes(selectedLeadUserId)) {
     throw new Error(
-      "Selected lead is not among the proposed cooperators for this quote.",
+      "Selected lead is not among the proposed builders for this quote.",
     );
   }
 

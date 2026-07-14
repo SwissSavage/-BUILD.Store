@@ -20,7 +20,7 @@ export default async function WhitelistThanksPage({
         </CardEyebrow>
         <CardTitle className="mt-2 text-3xl">
           {isConsult
-            ? "A cooperator will be in touch in 3 business days"
+            ? "A builder will be in touch in 3 business days"
             : "Thanks. We'll be in touch."}
         </CardTitle>
         <p className="mt-3 text-sm text-ink-muted">

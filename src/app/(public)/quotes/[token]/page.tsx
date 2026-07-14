@@ -33,8 +33,20 @@ import { CardEyebrow, CardTitle } from "@/components/Card";
 import type { QuoteFlipReveaCrewMember } from "@/components/QuoteFlipReveal";
 import { QuoteInteractiveSurface } from "@/components/QuoteInteractiveSurface";
 
-/** Static per-token — one page pre-built per known quote. */
-export const dynamic = "force-static";
+/**
+ * Server-rendered per request. The old `force-static` posture broke
+ * the client-facing Approve/Decline flow because revalidatePath after
+ * the server action didn't reliably regenerate the pre-built page in
+ * dev, so clients saw "nothing happen" on click. Since the surface is
+ * inherently stateful (evolves through the engagement lifecycle) and
+ * token-gated (each URL is unique), static generation was the wrong
+ * default anyway.
+ *
+ * generateStaticParams stays for the build-time indexability of known
+ * tokens even without force-static; Next.js will still pre-render on
+ * first request per token and serve subsequent requests from the
+ * fresh render.
+ */
 
 /**
  * Pre-generate one page per known quote token. Production swaps to a
@@ -135,7 +147,7 @@ export default async function CooperativeQuotePage({
           </h2>
           {selectedLead && (
             <p className="mt-4 max-w-xl text-ink-muted">
-              Your lead cooperator is{" "}
+              Your lead builder is{" "}
               <strong className="text-ink">
                 {selectedLead.user.firstName} {selectedLead.user.lastName}
               </strong>
@@ -216,7 +228,7 @@ export default async function CooperativeQuotePage({
               Who&apos;s joining
             </CardTitle>
             <p className="mt-1 text-xs text-ink-muted">
-              Monthly cohort spotlights of new cooperators.
+              Monthly cohort spotlights of new builders.
             </p>
           </Link>
           <Link

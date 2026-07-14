@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * TalentHand — cooperators presented as a dealt hand of cards.
+ * TalentHand — builders presented as a dealt hand of cards.
  *
  * Every time the cooperative surfaces people to clients (RFP quote
  * responses, team selection options, "who was on this" retro views on
@@ -166,7 +166,7 @@ export function TalentHand({
           centered when the user swipes / arrow-keys through. */}
       <ol
         className="fm-hand-track flex snap-x snap-mandatory gap-6 overflow-x-auto pb-6 pt-2"
-        aria-label={contextLabel ?? "Cooperators presented as a hand of cards"}
+        aria-label={contextLabel ?? "Builders presented as a hand of cards"}
       >
         {entries.map((entry, idx) => {
           const decision = decisions[entry.user.id] ?? null;

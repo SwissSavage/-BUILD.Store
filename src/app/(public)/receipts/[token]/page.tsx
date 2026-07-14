@@ -7,13 +7,13 @@
  * /invoices/[token], /proposals/[token]).
  *
  * What the client sees:
- *   - Cash flow % to the cooperators who did the work.
+ *   - Cash flow % to the builders who did the work.
  *   - Time from RFP to matched crew.
  *   - Milestone hit rate on the engagement.
  *   - Aggregate peer-review OVR delta the crew earned during the
  *     project — signals how they held up under cooperative scrutiny.
  *   - "What the crew shipped after you" — subsequent engagements the
- *     same cooperators contributed to. Turns the receipt into an
+ *     same builders contributed to. Turns the receipt into an
  *     ongoing story: the client's project helped fund what came next.
  *   - Optional Collaborator Card claim (phase 3 mint, currently
  *     surfaced as coming-soon copy).
@@ -96,13 +96,13 @@ export default async function CooperativeReceiptPage({
           differentiated commitments. */}
       <div className="mt-12 grid gap-4 sm:grid-cols-2">
         <Card>
-          <CardEyebrow>Cash flow to cooperators</CardEyebrow>
+          <CardEyebrow>Cash flow to builders</CardEyebrow>
           <p className="mt-2 font-display text-4xl font-semibold text-brand-green">
             {receipt.cashFlowPct}
             <span className="text-2xl">%</span>
           </p>
           <p className="mt-2 text-sm text-ink-muted">
-            of contract value paid directly to the cooperators who
+            of contract value paid directly to the builders who
             shipped this project. The remaining 15% covers cooperative
             operations. No platform take-rate. No agency middleman.
           </p>
@@ -142,7 +142,7 @@ export default async function CooperativeReceiptPage({
             +{receipt.crewPeerReviewOvrDelta.toFixed(1)}
           </p>
           <p className="mt-2 text-sm text-ink-muted">
-            The cooperators on this project earned this OVR gain from
+            The builders on this project earned this OVR gain from
             peer review after your engagement. Quality validated by
             the people they ship alongside.
           </p>
@@ -157,7 +157,7 @@ export default async function CooperativeReceiptPage({
             Your engagement helped fund the next builds.
           </h2>
           <p className="mt-3 text-ink-muted">
-            The cooperators on your project didn&apos;t clock out. Since
+            The builders on your project didn&apos;t clock out. Since
             your engagement settled, they&apos;ve shipped{" "}
             {subsequentProjects.length}{" "}
             {subsequentProjects.length === 1 ? "engagement" : "engagements"}{" "}

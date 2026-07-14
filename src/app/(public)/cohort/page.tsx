@@ -2,7 +2,7 @@
  * /cohort — monthly onboarding spotlight index.
  *
  * The forward-looking editorial rail. Every month, one or two new
- * cooperators get a spotlight — the story of who they are, why the
+ * builders get a spotlight — the story of who they are, why the
  * cooperative is glad to have them, what they're bringing.
  *
  * Complements /showcase (browsable talent), /team (full member roster
@@ -12,7 +12,7 @@
  *
  * Rolling content engine — always something new because real people
  * are actually joining. Every spotlight is an indexable landing page
- * ranking for the cooperator's name plus their discipline.
+ * ranking for the builder's name plus their discipline.
  */
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -33,7 +33,7 @@ export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: "Cohort",
   description:
-    "Monthly onboarding spotlights on new cooperators joining Future Modern in real time. Who they are, what they're bringing, why the cooperative is glad to have them.",
+    "Monthly onboarding spotlights on new builders joining Future Modern in real time. Who they are, what they're bringing, why the cooperative is glad to have them.",
 };
 
 export default function CohortIndexPage() {
@@ -46,7 +46,7 @@ export default function CohortIndexPage() {
         Who&apos;s joining the cooperative
       </h1>
       <p className="mt-4 max-w-2xl text-lg text-ink-muted">
-        Monthly spotlights on the cooperators arriving in real time.
+        Monthly spotlights on the builders arriving in real time.
         The cooperative grows by considered addition, not open
         registration. This rail is how the network sees new
         Members and Partners as they land.
@@ -93,8 +93,8 @@ export default function CohortIndexPage() {
                       <span className="text-[11px] text-ink-faint">
                         {spotlightUsers.length}{" "}
                         {spotlightUsers.length === 1
-                          ? "cooperator"
-                          : "cooperators"}
+                          ? "builder"
+                          : "builders"}
                       </span>
                     </div>
                     <CardTitle className="mt-1 text-xl">

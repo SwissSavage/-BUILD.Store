@@ -31,7 +31,7 @@ export default function SignupChooserPage() {
       </h1>
       <p className="mt-3 max-w-2xl text-ink-muted">
         Pick the door that fits. Each path asks for a short, specific
-        brief so the right cooperators can pick it up. You can always
+        brief so the right builders can pick it up. You can always
         come back and take another path.
       </p>
 

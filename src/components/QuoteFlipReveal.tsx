@@ -6,11 +6,11 @@
  * Choreography, per the design brief:
  *   1. Client lands on the quote surface.
  *   2. Face-down TradingCards (CardBack) are shown, one per proposed
- *      cooperator. Client sees the tier-tinted fractal backs but
+ *      builder. Client sees the tier-tinted fractal backs but
  *      doesn't yet know who's under them.
  *   3. Client can either:
  *        - Click any individual face-down card to flip that one card
- *          (curiosity-driven, per-cooperator reveal), or
+ *          (curiosity-driven, per-builder reveal), or
  *        - Click "Reveal all" to flip every remaining card at once
  *          (dramatic bulk reveal, same effect as the original design).
  *   4. Cards flip via CSS transform to reveal TradingCard3D fronts.
@@ -19,7 +19,7 @@
  *      their lead (Skip/Choose, non-destructive per Tier 13's
  *      reversibility).
  *   6. Parent surface (`/quotes/[token]`) reveals the Approve action
- *      once at least one cooperator is marked as chosen.
+ *      once at least one builder is marked as chosen.
  *
  * The flip animation itself is driven by CSS `.fm-card-flipper--revealed`
  * (set on state change per card). Reduced-motion clients skip the
@@ -79,7 +79,7 @@ export function QuoteFlipReveal({
   if (crew.length === 0) {
     return (
       <p className="text-sm text-ink-muted">
-        No cooperators proposed on this quote yet.
+        No builders proposed on this quote yet.
       </p>
     );
   }

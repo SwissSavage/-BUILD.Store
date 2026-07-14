@@ -7,7 +7,7 @@
  *   - hourly : hourly rate in USD (open-ended, billed as delivered)
  *
  * The 85/12/3 split math applies to whichever base unit is active. The
- * client-facing surface renders "direct to cooperators" and
+ * client-facing surface renders "direct to builders" and
  * "cooperative operations" cards side by side, each showing the split
  * amount in the correct unit. Admin surfaces render a compact summary
  * for the list view.
@@ -76,7 +76,7 @@ export function pricingUnitLabel(pricing: CooperativeQuotePricing): string {
 }
 
 /**
- * Amount that flows to the cooperator crew (talent side of the split).
+ * Amount that flows to the builder crew (talent side of the split).
  * Returns a display-formatted string in the correct unit.
  */
 export function pricingTalentAmount(

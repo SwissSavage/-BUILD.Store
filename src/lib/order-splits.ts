@@ -3,7 +3,7 @@
  *
  * Same structural pattern as contract settlement, with one party in
  * each pool:
- *   - seller (85%) — the cooperator who listed the product/service.
+ *   - seller (85%) — the builder who listed the product/service.
  *   - admin pool (12%) — operating share for the cooperative.
  *   - reserve (3%)  — 50/50 Treasury + Liquidity Pool, non-negotiable.
  *

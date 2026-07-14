@@ -2,7 +2,7 @@
  * Cohort spotlight admin actions.
  *
  * Author monthly onboarding spotlights — the forward-looking
- * editorial rail highlighting cooperators joining the cooperative in
+ * editorial rail highlighting builders joining the cooperative in
  * real time. Complements the Future Modernist of the Month
  * (backward-looking, honoring shipped work) and annual Canonization
  * (year-end standing minted on-chain).
@@ -57,7 +57,7 @@ function labelFromPeriodKey(periodKey: string): string {
 
 /**
  * Author a new cohort spotlight for a given period. Admin picks the
- * period key (year-month, e.g. "2026-07"), one or more cooperators to
+ * period key (year-month, e.g. "2026-07"), one or more builders to
  * spotlight, an editorial headline, and a narrative. Duplicate
  * spotlights per period are blocked — remove the existing one first
  * if the plan changes.
@@ -93,11 +93,11 @@ export async function createCohortSpotlight(formData: FormData) {
     );
   }
   if (userIds.length === 0) {
-    throw new Error("Pick at least one cooperator to spotlight.");
+    throw new Error("Pick at least one builder to spotlight.");
   }
   if (userIds.length > 3) {
     throw new Error(
-      "Spotlight up to three cooperators per period — the rail favors focus.",
+      "Spotlight up to three builders per period — the rail favors focus.",
     );
   }
 
@@ -105,7 +105,7 @@ export async function createCohortSpotlight(formData: FormData) {
   for (const uid of userIds) {
     const target = MOCK_USERS.find((u) => u.id === uid);
     if (!target) {
-      throw new Error(`Unknown cooperator: ${uid}`);
+      throw new Error(`Unknown builder: ${uid}`);
     }
   }
 

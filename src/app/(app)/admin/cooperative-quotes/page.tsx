@@ -25,7 +25,7 @@ import { Avatar } from "@/components/Avatar";
 import { pricingCompactSummary } from "@/lib/quote-pricing";
 
 /**
- * Candidate cooperators for proposal: Members + Partners. Sorted for
+ * Candidate builders for proposal: Members + Partners. Sorted for
  * a predictable form. Admins can propose themselves — sometimes the
  * founder IS the lead on a founding-client engagement.
  */
@@ -175,7 +175,7 @@ export default async function AdminCooperativeQuotesPage() {
 
             <div>
               <label className="block text-xs uppercase tracking-wider text-ink-muted">
-                Proposed cooperators (1-5)
+                Proposed builders (1-5)
               </label>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {candidates.map((user) => (
@@ -202,7 +202,7 @@ export default async function AdminCooperativeQuotesPage() {
                 ))}
               </div>
               <p className="mt-1 text-[11px] text-ink-faint">
-                Order matters — the first checked cooperator is the
+                Order matters — the first checked builder is the
                 recommended lead. Copy user IDs into the relevance
                 textarea below.
               </p>
@@ -227,7 +227,7 @@ export default async function AdminCooperativeQuotesPage() {
                 className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 font-mono text-xs"
               />
               <p className="mt-1 text-[11px] text-ink-faint">
-                One line per cooperator. Format:{" "}
+                One line per builder. Format:{" "}
                 <code>userId: narrative</code>. Lines without a colon
                 or with unknown userIds are silently skipped.
               </p>
@@ -488,8 +488,8 @@ export default async function AdminCooperativeQuotesPage() {
                       {pricingCompactSummary(quote.pricing)} ·{" "}
                       {quote.proposedMemberIds.length}{" "}
                       {quote.proposedMemberIds.length === 1
-                        ? "cooperator"
-                        : "cooperators"}{" "}
+                        ? "builder"
+                        : "builders"}{" "}
                       · {quote.pricing.talentSplit}/
                       {quote.pricing.operationsSplit} split
                     </CardTitle>

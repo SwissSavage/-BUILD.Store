@@ -77,7 +77,7 @@ export const MOCK_CUSTOMER_FEEDBACK: CustomerFeedback[] = [
     communication: 5,
     wouldHireAgain: true,
     prose:
-      "Zine arrived faster than the estimate and packaged with care — even the insert card felt considered. This is the kind of object I want more cooperators making.",
+      "Zine arrived faster than the estimate and packaged with care — even the insert card felt considered. This is the kind of object I want more builders making.",
     contributorShoutout: null,
     attributionConsent: "anonymized",
     googleReviewOptIn: "no",

@@ -3,7 +3,7 @@
  *
  * `[period]` is a period key like "2026-07". Each spotlight gets its
  * own indexable URL — long-tail SEO surface tied to the specific
- * cooperators highlighted that month.
+ * builders highlighted that month.
  */
 import Link from "next/link";
 import type { Metadata } from "next";

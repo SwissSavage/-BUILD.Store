@@ -5,9 +5,9 @@
  * existing spotlights (freshest first) with a remove action, plus a
  * form to author a new one.
  *
- * The forward-looking editorial rail. When a new cooperator joins the
+ * The forward-looking editorial rail. When a new builder joins the
  * cooperative, an admin authors a spotlight here — headline, narrative,
- * period, one to three highlighted cooperators, optional Paragraph
+ * period, one to three highlighted builders, optional Paragraph
  * link. Publishing appears immediately on /cohort and on the landing
  * page's current-month rail.
  *
@@ -30,8 +30,8 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
 
 /**
- * Pick candidate cooperators for spotlighting. Members + Partners
- * (spotlight is meant for cooperators, not prospects/viewers) sorted
+ * Pick candidate builders for spotlighting. Members + Partners
+ * (spotlight is meant for builders, not prospects/viewers) sorted
  * by name for a predictable form. Admins can spotlight themselves —
  * useful when a founding Member wants to acknowledge their own
  * onboarding period.
@@ -76,7 +76,7 @@ export default async function AdminCohortPage() {
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-ink-muted">
             Author the monthly onboarding spotlight — the forward-looking
-            rail highlighting cooperators arriving in real time.
+            rail highlighting builders arriving in real time.
             Different rhythm from{" "}
             <Link
               href="/admin/mvp/recognition"
@@ -174,13 +174,13 @@ export default async function AdminCohortPage() {
               className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
             />
             <p className="mt-1 text-[11px] text-ink-faint">
-              Minimum 50 characters. First-name only for cooperators.
+              Minimum 50 characters. First-name only for builders.
             </p>
           </div>
 
           <div>
             <label className="block text-xs uppercase tracking-wider text-ink-muted">
-              Cooperators to spotlight (1-3)
+              Builders to spotlight (1-3)
             </label>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               {candidates.map((user) => (

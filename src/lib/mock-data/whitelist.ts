@@ -95,7 +95,7 @@ export const MOCK_WHITELIST_TIERS: WhitelistTier[] = [
     slug: "consultation",
     name: "Custom build · consultation",
     blurb:
-      "External client looking for a custom build? Book a scoping call. We take the briefing, route to the right cooperators, and come back with a tailored proposal.",
+      "External client looking for a custom build? Book a scoping call. We take the briefing, route to the right builders, and come back with a tailored proposal.",
     priceUsd: "0.00",
     seatCap: null,
     seatsClaimed: 0,

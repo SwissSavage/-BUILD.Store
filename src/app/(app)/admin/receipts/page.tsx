@@ -131,7 +131,7 @@ export default async function AdminReceiptsPage() {
                   htmlFor="cashFlowPct"
                   className="block text-xs uppercase tracking-wider text-ink-muted"
                 >
-                  Cash flow to cooperators (%)
+                  Cash flow to builders (%)
                 </label>
                 <input
                   id="cashFlowPct"
@@ -306,7 +306,7 @@ export default async function AdminReceiptsPage() {
                       </span>
                     </div>
                     <CardTitle className="mt-1 text-lg">
-                      Receipt · {receipt.cashFlowPct}% to cooperators ·{" "}
+                      Receipt · {receipt.cashFlowPct}% to builders ·{" "}
                       {receipt.milestonesHit}/{receipt.milestonesTotal}{" "}
                       milestones ({hitRatePct}%)
                     </CardTitle>

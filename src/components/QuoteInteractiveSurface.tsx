@@ -31,6 +31,7 @@
  */
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   QuoteFlipReveal,
   type QuoteFlipReveaCrewMember,
@@ -64,6 +65,7 @@ export function QuoteInteractiveSurface({
   pricing,
   crew,
 }: QuoteInteractiveSurfaceProps) {
+  const router = useRouter();
   const [selectedLeadUserId, setSelectedLeadUserId] = useState<string | null>(
     null,
   );
@@ -94,8 +96,11 @@ export function QuoteInteractiveSurface({
     startTransition(async () => {
       try {
         await approveCooperativeQuote(formData);
-        // Server revalidates; the parent server component re-renders
-        // into the approved state.
+        // router.refresh() forces the parent server component to
+        // re-fetch and re-render into the approved state. Without
+        // this the client stays mounted with pre-approval UI and
+        // the client sees "nothing happen" on click.
+        router.refresh();
       } catch (e) {
         setError((e as Error).message);
       }
@@ -111,6 +116,7 @@ export function QuoteInteractiveSurface({
     startTransition(async () => {
       try {
         await declineCooperativeQuote(formData);
+        router.refresh();
       } catch (e) {
         setError((e as Error).message);
       }
@@ -192,7 +198,7 @@ export function QuoteInteractiveSurface({
           </p>
         ) : (
           <p className="mt-3 max-w-xl text-sm text-ink-muted">
-            Pick your lead cooperator above, then approve the quote. If
+            Pick your lead builder above, then approve the quote. If
             you want to iterate on the crew, scope, or price first,
             reply to the email that got you here. We&apos;ll adjust and
             re-send.

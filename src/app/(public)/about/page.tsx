@@ -214,7 +214,7 @@ function FaqSection() {
     {
       question: "Who owns the platform?",
       answer:
-        "Members do. Governance weight tracks the annual canonization each Member mints: an ERC-721 with an ERC-6551 token-bound account that carries their standing for that year. Members vote on covenant changes, subprocessor decisions, and major direction shifts.\n\nFuture Modern is the operator. The cooperators are the owners.",
+        "Members do. Governance weight tracks the annual canonization each Member mints: an ERC-721 with an ERC-6551 token-bound account that carries their standing for that year. Members vote on covenant changes, subprocessor decisions, and major direction shifts.\n\nFuture Modern is the operator. The builders are the owners.",
     },
     {
       question: "How does someone become a Member?",

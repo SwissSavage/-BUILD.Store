@@ -1788,7 +1788,7 @@ export interface ProspectiveContribution {
  * aggregate.
  *
  * The four star fields are a short questionnaire — overall plus three
- * dimensions cooperators care about (collaboration, craft, reliability).
+ * dimensions builders care about (collaboration, craft, reliability).
  * Aggregate display rolls them up into a single mean star score so the
  * profile surface stays scannable.
  *
@@ -2845,7 +2845,7 @@ export interface FutureModernistRecognition {
 // ──────────────────────────────────────────────────────────────────────
 
 /**
- * Monthly onboarding spotlight — highlights cooperators joining the
+ * Monthly onboarding spotlight — highlights builders joining the
  * cooperative in real time as the roster grows.
  *
  * Distinct from `FutureModernistRecognition` (which honors *shipped*
@@ -2856,10 +2856,10 @@ export interface FutureModernistRecognition {
  *
  * Rhythm:
  *   - One entry per month (usually).
- *   - Can spotlight 1-3 cooperators per month.
+ *   - Can spotlight 1-3 builders per month.
  *   - Editorial headline + narrative authored by admin.
  *   - Optional Paragraph article link when a piece has been written
- *     about the new cooperator's arrival.
+ *     about the new builder's arrival.
  *
  * Surfaces:
  *   - /cohort — index of all spotlights, freshest first.
@@ -2872,7 +2872,7 @@ export interface CohortSpotlight {
   periodKey: string;
   /** Display label — e.g. "July 2026". */
   periodLabel: string;
-  /** Cooperators being spotlighted this period. 1-3 typical. */
+  /** Builders being spotlighted this period. 1-3 typical. */
   userIds: string[];
   /** Editorial headline for the spotlight — punchy, first-person plural. */
   headline: string;
@@ -2900,7 +2900,7 @@ export interface CohortSpotlight {
  *      through the proposed crew live.
  *   2. Admin composes a Quote in the sandbox (see admin surface, not
  *      yet built) referencing an existing project, picking the
- *      proposed cooperators, writing per-member relevance narrative,
+ *      proposed builders, writing per-member relevance narrative,
  *      and setting scope + pricing.
  *   3. Client receives a magic-link (`/quotes/[clientToken]`) via
  *      email with a face-down card graphic teaser.
@@ -2919,7 +2919,7 @@ export interface CohortSpotlight {
 /**
  * Discriminated union covering the three ways FM prices engagements.
  * Every variant carries the standard talent / operations split so the
- * client-facing surface can render "direct to cooperators" and
+ * client-facing surface can render "direct to builders" and
  * "cooperative operations" side by side in whichever unit applies.
  */
 export type CooperativeQuotePricing =
@@ -2927,7 +2927,7 @@ export type CooperativeQuotePricing =
       type: "fixed";
       /** Total contract value in USD. */
       baseAmount: number;
-      /** Cooperators' share as a percentage (0-100). Baseline is 85. */
+      /** Builders' share as a percentage (0-100). Baseline is 85. */
       talentSplit: number;
       /** Cooperative operations share as a percentage. Baseline is 15. */
       operationsSplit: number;
@@ -2938,7 +2938,7 @@ export type CooperativeQuotePricing =
       baseAmountMin: number;
       /** High end of the expected total contract value in USD. */
       baseAmountMax: number;
-      /** Cooperators' share as a percentage (0-100). Baseline is 85. */
+      /** Builders' share as a percentage (0-100). Baseline is 85. */
       talentSplit: number;
       /** Cooperative operations share as a percentage. Baseline is 15. */
       operationsSplit: number;
@@ -2947,7 +2947,7 @@ export type CooperativeQuotePricing =
       type: "hourly";
       /** Hourly rate in USD. Open-ended engagement (no total). */
       hourlyRate: number;
-      /** Cooperators' share as a percentage (0-100). Baseline is 85. */
+      /** Builders' share as a percentage (0-100). Baseline is 85. */
       talentSplit: number;
       /** Cooperative operations share as a percentage. Baseline is 15. */
       operationsSplit: number;
@@ -2966,7 +2966,7 @@ export interface CooperativeQuote {
    */
   clientDisplayName: string;
   /**
-   * Proposed cooperators for the engagement. Rendered as a TalentHand
+   * Proposed builders for the engagement. Rendered as a TalentHand
    * in selectable mode so the client can evaluate + pick their lead.
    * Order matters — first entry is the recommended lead, but the
    * client is free to choose any of them.
@@ -2975,7 +2975,7 @@ export interface CooperativeQuote {
   /**
    * Per-member relevance narrative — "why this person for this
    * project" one-liner, admin-authored. Keyed by userId. Shown under
-   * each cooperator's card in the TalentHand.
+   * each builder's card in the TalentHand.
    */
   memberRelevance: Record<string, string>;
   /** Scope block — what the crew delivers. */
@@ -2997,7 +2997,7 @@ export interface CooperativeQuote {
    *                delivered). For flexible retainers + T&M work.
    *
    * All three carry the standard 85/12/3 split percentages so the
-   * client-facing surface can render the "direct to cooperators" +
+   * client-facing surface can render the "direct to builders" +
    * "cooperative operations" math against whichever base unit applies.
    *
    * All monetary numbers are USD, integer for sandbox simplicity.
@@ -3024,7 +3024,7 @@ export interface CooperativeQuote {
   /** Admin who authored the quote. */
   createdByUserId: string;
   /**
-   * Client's chosen lead cooperator — set on approval. Null while
+   * Client's chosen lead builder — set on approval. Null while
    * status is pre-approval or when the client declined without
    * selection.
    */
@@ -3063,7 +3063,7 @@ export interface CooperativeReceipt {
   clientToken: string;
   /** The engagement this receipt describes. */
   projectId: string;
-  /** Cooperators' share of contract value, expressed as a percentage
+  /** Builders' share of contract value, expressed as a percentage
    *  0-100. Baseline cooperative rule is 85%; individual receipts
    *  reflect the actual distribution once settled. */
   cashFlowPct: number;
@@ -3081,9 +3081,9 @@ export interface CooperativeReceipt {
   crewPeerReviewOvrDelta: number;
   /**
    * "What the crew shipped after you" — subsequent project IDs the
-   * same cooperators worked on. Turns a transactional receipt into
+   * same builders worked on. Turns a transactional receipt into
    * an ongoing story: the client's engagement helped fund the next
-   * thing these cooperators built.
+   * thing these builders built.
    */
   subsequentProjectIds: string[];
   /** ISO date the receipt was generated. */

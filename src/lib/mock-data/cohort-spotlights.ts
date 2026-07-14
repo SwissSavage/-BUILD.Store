@@ -12,7 +12,7 @@
  *
  * Editorial voice: first-person plural, first-name basis, sparing
  * with hype. Reads like a welcome, not a press release. When a
- * cooperator has a Paragraph piece, link it — otherwise the
+ * builder has a Paragraph piece, link it — otherwise the
  * narrative here is the entry.
  */
 import type { CohortSpotlight } from "@/lib/types";

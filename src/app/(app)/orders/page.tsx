@@ -69,7 +69,7 @@ export default async function OrdersPage() {
                         {o.items.map((i) => i.titleSnapshot).join(" · ")}
                       </CardTitle>
                       <p className="mt-1 text-xs text-ink-muted">
-                        From {seller ? publicName(seller) : "a cooperator"} ·
+                        From {seller ? publicName(seller) : "a builder"} ·
                         Placed {new Date(o.placedAt).toLocaleDateString()}
                       </p>
                     </div>

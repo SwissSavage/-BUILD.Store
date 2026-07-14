@@ -32,25 +32,25 @@ import { deriveTradingCardTier } from "@/components/TradingCard";
 import { CardEyebrow, CardTitle } from "@/components/Card";
 import type { QuoteFlipReveaCrewMember } from "@/components/QuoteFlipReveal";
 import { QuoteInteractiveSurface } from "@/components/QuoteInteractiveSurface";
+import { QuoteDecidedUndoButton } from "@/components/QuoteDecidedUndoButton";
 
 /**
- * Server-rendered per request. The old `force-static` posture broke
- * the client-facing Approve/Decline flow because revalidatePath after
- * the server action didn't reliably regenerate the pre-built page in
- * dev, so clients saw "nothing happen" on click. Since the surface is
- * inherently stateful (evolves through the engagement lifecycle) and
- * token-gated (each URL is unique), static generation was the wrong
- * default anyway.
- *
- * generateStaticParams stays for the build-time indexability of known
- * tokens even without force-static; Next.js will still pre-render on
- * first request per token and serve subsequent requests from the
- * fresh render.
+ * Force-dynamic on this route. The surface is stateful (evolves
+ * through the engagement lifecycle) and token-gated (each URL is
+ * unique per client). Static rendering with generateStaticParams
+ * caused Approve/Decline mutations to not reflect on subsequent
+ * renders because the pre-built HTML sat in front of the fresh
+ * server render. Explicit force-dynamic guarantees the server
+ * component re-runs on every request, which is what we want for
+ * a surface that reads mutating state.
  */
+export const dynamic = "force-dynamic";
 
 /**
- * Pre-generate one page per known quote token. Production swaps to a
- * Drizzle query on `cooperative_quotes.client_token`.
+ * Pre-generate one page per known quote token at build time. Even
+ * with force-dynamic, generateStaticParams provides build-time
+ * indexability. Production swaps to a Drizzle query on
+ * `cooperative_quotes.client_token`.
  */
 export function generateStaticParams() {
   return MOCK_COOPERATIVE_QUOTES.map((q) => ({ token: q.clientToken }));
@@ -167,6 +167,10 @@ export default async function CooperativeQuotePage({
               .
             </p>
           )}
+          <QuoteDecidedUndoButton
+            clientToken={quote.clientToken}
+            previousDecision="approved"
+          />
         </section>
       )}
 
@@ -193,10 +197,14 @@ export default async function CooperativeQuotePage({
               .
             </p>
           )}
+          <QuoteDecidedUndoButton
+            clientToken={quote.clientToken}
+            previousDecision="declined"
+          />
         </section>
       )}
 
-      {/* Marketing rail — stickiness lever */}
+      {/* Marketing rail. Stickiness lever. */}
       <section className="mt-20 border-t border-[var(--surface-border)] pt-12">
         <p className="text-[11px] uppercase tracking-[0.15em] text-ink-muted">
           More from the cooperative

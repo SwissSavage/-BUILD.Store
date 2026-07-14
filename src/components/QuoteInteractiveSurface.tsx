@@ -73,6 +73,16 @@ export function QuoteInteractiveSurface({
   const [declineReason, setDeclineReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Optimistic post-decision state. Once the server action returns,
+  // we flip this so the client shows the confirmation immediately
+  // instead of waiting for router.refresh() + server re-render to
+  // propagate. When the server render eventually catches up, the
+  // parent server component stops rendering this client component
+  // entirely (it branches into the approved/declined section based
+  // on quote.status), and this state becomes moot.
+  const [optimisticDecision, setOptimisticDecision] = useState<
+    "approved" | "declined" | null
+  >(null);
 
   function handleDecision(userId: string, decision: TalentHandDecision) {
     if (decision === "choose") {
@@ -96,10 +106,12 @@ export function QuoteInteractiveSurface({
     startTransition(async () => {
       try {
         await approveCooperativeQuote(formData);
-        // router.refresh() forces the parent server component to
-        // re-fetch and re-render into the approved state. Without
-        // this the client stays mounted with pre-approval UI and
-        // the client sees "nothing happen" on click.
+        // Flip optimistic state immediately so the client sees the
+        // confirmation without waiting on server-side revalidation.
+        // Also call router.refresh() so the parent server component
+        // eventually re-renders into the real approved section
+        // (which then unmounts this client component).
+        setOptimisticDecision("approved");
         router.refresh();
       } catch (e) {
         setError((e as Error).message);
@@ -116,6 +128,7 @@ export function QuoteInteractiveSurface({
     startTransition(async () => {
       try {
         await declineCooperativeQuote(formData);
+        setOptimisticDecision("declined");
         router.refresh();
       } catch (e) {
         setError((e as Error).message);
@@ -129,6 +142,48 @@ export function QuoteInteractiveSurface({
     if (!found) return null;
     return `${found.user.firstName} ${found.user.lastName}`.trim();
   })();
+
+  // Optimistic post-decision UI. Runs the moment the server action
+  // returns, before the parent server component re-renders. Once the
+  // parent's server re-render lands with the real quote.status, the
+  // parent stops rendering this client component and the ApprovedSection
+  // or DeclinedSection on the server surface takes over.
+  if (optimisticDecision === "approved") {
+    return (
+      <section className="mt-16 rounded-2xl border border-brand-green/40 bg-brand-green/5 px-6 py-8">
+        <CardEyebrow>Approved</CardEyebrow>
+        <h2 className="mt-2 font-display text-3xl font-semibold text-brand-green">
+          You&apos;re in. We&apos;re on it.
+        </h2>
+        {leadName && (
+          <p className="mt-4 max-w-xl text-ink-muted">
+            Your lead builder is{" "}
+            <strong className="text-ink">{leadName}</strong>. We&apos;re
+            kicking off contracts and calendar within one business day.
+            You&apos;ll hear from Future Modern on email; this same URL
+            will evolve into your engagement dashboard so keep it handy.
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  if (optimisticDecision === "declined") {
+    return (
+      <section className="mt-16 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-6 py-8">
+        <CardEyebrow>Declined</CardEyebrow>
+        <h2 className="mt-2 font-display text-3xl font-semibold">
+          Thanks for the consideration.
+        </h2>
+        <p className="mt-4 max-w-xl text-ink-muted">
+          No hard feelings. If any of it lands differently later (crew,
+          scope, price, timing), reply to the email that got you here
+          and we&apos;ll re-pitch. The cooperative isn&apos;t going
+          anywhere.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <>

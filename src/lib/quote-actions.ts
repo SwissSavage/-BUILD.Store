@@ -504,3 +504,73 @@ export async function declineCooperativeQuote(formData: FormData) {
   revalidatePath("/admin/cooperative-quotes");
   revalidatePath(`/quotes/${quote.clientToken}`);
 }
+
+/**
+ * Client-facing undo action. Reverts an approved or declined quote
+ * back to "viewed" so the client can re-evaluate. Same token-based
+ * auth as approve/decline. No admin required. Idempotent: refuses to
+ * revert an already-open quote.
+ *
+ * Clears selectedLeadUserId + decidedAt. Logs the undo as its own
+ * audit event with the previous decided-status in the before payload
+ * so the trail preserves what the client had chosen.
+ *
+ * Notifies admins so they know to pause any kickoff momentum that
+ * might have started off the original approve. Uses the same
+ * quote_declined kind (nearest fit) with body text that spells out
+ * this is a revert, not a fresh decline.
+ */
+export async function undoCooperativeQuoteDecision(formData: FormData) {
+  const token = String(formData.get("token") ?? "").trim();
+  if (!token) throw new Error("Quote token is required.");
+
+  const quote = MOCK_COOPERATIVE_QUOTES.find((q) => q.clientToken === token);
+  if (!quote) throw new Error("Quote not found.");
+  if (quote.status !== "approved" && quote.status !== "declined") {
+    throw new Error(
+      "Only approved or declined quotes can be reopened.",
+    );
+  }
+
+  const previousStatus = quote.status;
+  const previousLead = quote.selectedLeadUserId;
+  const previousDecidedAt = quote.decidedAt;
+  quote.status = "viewed";
+  quote.decidedAt = null;
+  quote.selectedLeadUserId = null;
+
+  const project = MOCK_PROJECTS.find((p) => p.id === quote.projectId);
+  const projectTitle = project?.title ?? quote.projectId;
+
+  logAuditEvent({
+    actorUserId: quote.createdByUserId,
+    actorRoleSnapshot: "system",
+    action:
+      previousStatus === "approved"
+        ? "quote.approved"
+        : "quote.declined",
+    resourceKind: "cooperative_quote",
+    resourceId: quote.id,
+    before: {
+      status: previousStatus,
+      selectedLeadUserId: previousLead,
+      decidedAt: previousDecidedAt,
+    },
+    after: {
+      status: "viewed",
+      selectedLeadUserId: null,
+      decidedAt: null,
+    },
+    reason: `Client ${quote.clientDisplayName} reopened the quote after ${previousStatus}. Selection cleared.`,
+  });
+
+  notifyAdminsOnQuoteDecision(
+    quote,
+    "quote_declined",
+    `${quote.clientDisplayName} reopened: ${projectTitle}`,
+    `Previously ${previousStatus}. Selection cleared. Pause any kickoff momentum and re-engage.`,
+  );
+
+  revalidatePath("/admin/cooperative-quotes");
+  revalidatePath(`/quotes/${quote.clientToken}`);
+}

@@ -2189,7 +2189,9 @@ export type NotificationKind =
   | "booking_request_received"
   | "booking_request_approved"
   | "booking_request_declined"
-  | "booking_confirmed";
+  | "booking_confirmed"
+  | "quote_approved"
+  | "quote_declined";
 
 export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   order_status: "Order update",
@@ -2216,6 +2218,8 @@ export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   booking_request_approved: "Booking approved",
   booking_request_declined: "Booking declined",
   booking_confirmed: "Booking confirmed",
+  quote_approved: "Quote approved",
+  quote_declined: "Quote declined",
   milestone_due_soon: "Milestone due soon",
   milestone_overdue: "Milestone overdue",
   milestone_status_changed: "Milestone status",

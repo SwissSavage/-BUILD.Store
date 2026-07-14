@@ -26,11 +26,16 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_COOPERATIVE_QUOTES } from "@/lib/mock-data/cooperative-quotes";
+import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import {
   logAuditEvent,
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
-import type { CooperativeQuote } from "@/lib/types";
+import type {
+  CooperativeQuote,
+  Notification,
+  NotificationKind,
+} from "@/lib/types";
 
 function newQuoteId(): string {
   return `quote_${Date.now().toString(36)}_${Math.random()
@@ -41,6 +46,46 @@ function newQuoteId(): string {
 function newClientToken(projectId: string): string {
   const rand = Math.random().toString(36).slice(2, 8);
   return `q_${projectId.replace(/^p_/, "")}_${rand}`;
+}
+
+/**
+ * Fan out one notification per admin on the project's roster. Used when
+ * the client makes a quote decision (approve or decline) so the admin
+ * pool knows to move on kickoff logistics (or on iterating the pitch).
+ * Same pattern as booking / DM / customer-feedback notifications.
+ */
+function notifyAdminsOnQuoteDecision(
+  quote: CooperativeQuote,
+  kind: NotificationKind,
+  title: string,
+  body: string,
+): void {
+  const project = MOCK_PROJECTS.find((p) => p.id === quote.projectId);
+  const adminUserIds = project?.adminUserIds ?? [];
+  if (adminUserIds.length === 0) {
+    // Fall back to notifying the quote's creator so it doesn't get
+    // dropped if the project's admin roster is empty. Rare in practice
+    // (every project should have at least the creator as admin), but
+    // the fallback avoids silent black-hole cases.
+    adminUserIds.push(quote.createdByUserId);
+  }
+  const href = `/admin/cooperative-quotes`;
+  const now = new Date().toISOString();
+  for (const adminId of adminUserIds) {
+    const ntf: Notification = {
+      id: `ntf_quote_${quote.id}_${adminId}_${Math.random()
+        .toString(36)
+        .slice(2, 5)}`,
+      userId: adminId,
+      kind,
+      title,
+      body,
+      href,
+      createdAt: now,
+      readAt: null,
+    };
+    MOCK_NOTIFICATIONS.push(ntf);
+  }
 }
 
 /**
@@ -126,7 +171,7 @@ export async function createCooperativeQuote(formData: FormData) {
   }
   if (proposedMemberIds.length > 5) {
     throw new Error(
-      "Propose no more than five cooperators — quality of curation is the whole point.",
+      "Propose no more than five cooperators. Quality of curation is the whole point.",
     );
   }
   for (const uid of proposedMemberIds) {
@@ -142,7 +187,7 @@ export async function createCooperativeQuote(formData: FormData) {
 
   if (scopeSummary.length < 20) {
     throw new Error(
-      "Scope summary is too thin — write a full paragraph, minimum.",
+      "Scope summary is too thin. Write a full paragraph, minimum.",
     );
   }
 
@@ -152,7 +197,7 @@ export async function createCooperativeQuote(formData: FormData) {
   }
 
   if (timeline.length < 4) {
-    throw new Error("Timeline is required — one line, human-readable.");
+    throw new Error("Timeline is required. One line, human-readable.");
   }
 
   const baseAmount = Number.parseInt(baseAmountRaw, 10);
@@ -257,4 +302,159 @@ export async function removeCooperativeQuote(formData: FormData) {
 
   revalidatePath("/admin/quotes");
   revalidatePath(`/quotes/${removed.clientToken}`);
+}
+
+/**
+ * Client-facing approve action. Called from the tokenized quote surface
+ * at /quotes/[token]. No admin auth requirement — the token IS the
+ * credential (same pattern as /invoices/[token] and /receipts/[token]).
+ * Anyone in possession of the magic link can approve the quote.
+ *
+ * Flips status → "approved", records the selected lead cooperator +
+ * decision timestamp, logs the audit event, and fans out notifications
+ * to every admin on the deal's roster so kickoff logistics can start.
+ *
+ * The actor on the audit log is the quote's creator (not the client)
+ * because the sandbox has no client-side identity model. In production,
+ * the client_token → client_contact resolution lets us stamp the actor
+ * as the actual client email or a synthetic "client:<token-hash>"
+ * pseudo-actor for compliance traceability.
+ */
+export async function approveCooperativeQuote(formData: FormData) {
+  const token = String(formData.get("token") ?? "").trim();
+  const selectedLeadUserId = String(
+    formData.get("selectedLeadUserId") ?? "",
+  ).trim();
+  if (!token) throw new Error("Quote token is required.");
+  if (!selectedLeadUserId) {
+    throw new Error("Select a lead cooperator before approving.");
+  }
+
+  const quote = MOCK_COOPERATIVE_QUOTES.find((q) => q.clientToken === token);
+  if (!quote) throw new Error("Quote not found.");
+  if (quote.status === "approved" || quote.status === "declined") {
+    throw new Error(
+      `This quote has already been ${quote.status}. Contact your Future Modern account owner if you need to change the decision.`,
+    );
+  }
+  if (quote.status === "draft") {
+    throw new Error("This quote hasn't been sent yet.");
+  }
+  if (!quote.proposedMemberIds.includes(selectedLeadUserId)) {
+    throw new Error(
+      "Selected lead is not among the proposed cooperators for this quote.",
+    );
+  }
+
+  const previousStatus = quote.status;
+  const now = new Date().toISOString();
+  quote.status = "approved";
+  quote.decidedAt = now;
+  quote.selectedLeadUserId = selectedLeadUserId;
+
+  const leadUser = MOCK_USERS.find((u) => u.id === selectedLeadUserId);
+  const leadName = leadUser
+    ? `${leadUser.firstName} ${leadUser.lastName}`.trim()
+    : selectedLeadUserId;
+  const project = MOCK_PROJECTS.find((p) => p.id === quote.projectId);
+  const projectTitle = project?.title ?? quote.projectId;
+
+  logAuditEvent({
+    actorUserId: quote.createdByUserId,
+    actorRoleSnapshot: "system",
+    action: "quote.approved",
+    resourceKind: "cooperative_quote",
+    resourceId: quote.id,
+    before: {
+      status: previousStatus,
+      selectedLeadUserId: null,
+      decidedAt: null,
+    },
+    after: {
+      status: "approved",
+      selectedLeadUserId,
+      decidedAt: now,
+    },
+    reason: `Client ${quote.clientDisplayName} approved the quote and selected ${leadName} as lead.`,
+  });
+
+  notifyAdminsOnQuoteDecision(
+    quote,
+    "quote_approved",
+    `${quote.clientDisplayName} approved: ${projectTitle}`,
+    `Lead: ${leadName}. Kick off contracts + calendar within one business day.`,
+  );
+
+  revalidatePath("/admin/cooperative-quotes");
+  revalidatePath(`/quotes/${quote.clientToken}`);
+}
+
+/**
+ * Client-facing decline action. Same auth model as approve (token is
+ * the credential). Optional free-text reason lets the client name what
+ * would need to change (crew, scope, price, timing). Admin follow-up
+ * lives outside this action.
+ */
+export async function declineCooperativeQuote(formData: FormData) {
+  const token = String(formData.get("token") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!token) throw new Error("Quote token is required.");
+
+  const quote = MOCK_COOPERATIVE_QUOTES.find((q) => q.clientToken === token);
+  if (!quote) throw new Error("Quote not found.");
+  if (quote.status === "approved" || quote.status === "declined") {
+    throw new Error(
+      `This quote has already been ${quote.status}. Contact your Future Modern account owner if you need to change the decision.`,
+    );
+  }
+  if (quote.status === "draft") {
+    throw new Error("This quote hasn't been sent yet.");
+  }
+
+  const previousStatus = quote.status;
+  const now = new Date().toISOString();
+  quote.status = "declined";
+  quote.decidedAt = now;
+  // Preserve selectedLeadUserId if it was chosen before the decline —
+  // useful signal for the admin follow-up. But null it if the client
+  // never chose a lead, so the record accurately reflects "no lead
+  // selected."
+  // (In practice most declines will null out selectedLeadUserId.)
+
+  const project = MOCK_PROJECTS.find((p) => p.id === quote.projectId);
+  const projectTitle = project?.title ?? quote.projectId;
+
+  logAuditEvent({
+    actorUserId: quote.createdByUserId,
+    actorRoleSnapshot: "system",
+    action: "quote.declined",
+    resourceKind: "cooperative_quote",
+    resourceId: quote.id,
+    before: {
+      status: previousStatus,
+      decidedAt: null,
+    },
+    after: {
+      status: "declined",
+      decidedAt: now,
+      reason: reason || null,
+    },
+    reason: reason
+      ? `Client ${quote.clientDisplayName} declined the quote. Reason: ${reason}`
+      : `Client ${quote.clientDisplayName} declined the quote.`,
+  });
+
+  const bodyLine = reason
+    ? `Reason: ${reason}`
+    : `No reason provided. Follow up to iterate on crew, scope, or price.`;
+
+  notifyAdminsOnQuoteDecision(
+    quote,
+    "quote_declined",
+    `${quote.clientDisplayName} declined: ${projectTitle}`,
+    bodyLine,
+  );
+
+  revalidatePath("/admin/cooperative-quotes");
+  revalidatePath(`/quotes/${quote.clientToken}`);
 }

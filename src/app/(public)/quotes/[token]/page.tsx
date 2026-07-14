@@ -6,15 +6,16 @@
  * "Reveal your team", flips are staggered to unveil the proposed
  * crew as TradingCards, evaluates the hand in Tinder-style
  * selectable mode (non-destructive), picks their lead, approves the
- * quote.
+ * quote (or declines with an optional reason).
  *
  * The same URL is designed to evolve into the ongoing project
- * dashboard after approval — client keeps coming back to this same
+ * dashboard after approval. Client keeps coming back to this same
  * link through the engagement lifecycle. Every visit is a stickiness
  * moment for FM. That evolution lands in a follow-on tier; for now
- * this surface handles the pre-approval quote experience.
+ * this surface handles the pre-approval quote experience plus the
+ * post-decision confirmation state.
  *
- * Access is tokenized — no account needed. Same pattern as
+ * Access is tokenized. No account needed. Same pattern as
  * /invoices/[token], /proposals/[token], /receipts/[token].
  */
 import Link from "next/link";
@@ -28,8 +29,9 @@ import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_MVP_SCORES, mvpScoreForUser } from "@/lib/mock-data/mvp-scores";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import { deriveTradingCardTier } from "@/components/TradingCard";
-import { Card, CardEyebrow, CardTitle } from "@/components/Card";
-import { QuoteFlipReveal, type QuoteFlipReveaCrewMember } from "@/components/QuoteFlipReveal";
+import { CardEyebrow, CardTitle } from "@/components/Card";
+import type { QuoteFlipReveaCrewMember } from "@/components/QuoteFlipReveal";
+import { QuoteInteractiveSurface } from "@/components/QuoteInteractiveSurface";
 
 /** Static per-token — one page pre-built per known quote. */
 export const dynamic = "force-static";
@@ -60,7 +62,7 @@ export default async function CooperativeQuotePage({
   if (!quote) notFound();
   if (quote.status === "draft") notFound();
 
-  // Build crew members — resolve users, derive tiers, layer in
+  // Build crew members. Resolve users, derive tiers, layer in
   // per-member relevance narrative.
   const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
   const crew: QuoteFlipReveaCrewMember[] = quote.proposedMemberIds
@@ -99,6 +101,12 @@ export default async function CooperativeQuotePage({
     (quote.pricing.baseAmount * quote.pricing.operationsSplit) / 100,
   );
 
+  const decided =
+    quote.status === "approved" || quote.status === "declined";
+  const selectedLead = quote.selectedLeadUserId
+    ? crew.find((c) => c.user.id === quote.selectedLeadUserId) ?? null
+    : null;
+
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
       {/* Header — client + project context */}
@@ -107,117 +115,83 @@ export default async function CooperativeQuotePage({
         <h1 className="mt-2 font-display text-4xl font-semibold leading-tight md:text-5xl">
           A proposal for {quote.clientDisplayName}
         </h1>
-        <p className="mt-4 max-w-2xl text-lg text-ink-muted">
-          We assembled a crew, wrote the scope, priced the engagement.
-          Reveal your team below to see who we&apos;re proposing.
-        </p>
-      </div>
-
-      {/* The reveal — flip animation + TalentHand for selection */}
-      <div className="mt-16">
-        <QuoteFlipReveal crew={crew} />
-      </div>
-
-      {/* Scope block */}
-      <section className="mt-20">
-        <CardEyebrow>Scope</CardEyebrow>
-        <h2 className="mt-2 font-display text-3xl font-semibold">
-          What the crew delivers
-        </h2>
-        <p className="mt-4 text-ink-muted">{quote.scope.summary}</p>
-
-        <ul className="mt-8 space-y-3">
-          {quote.scope.deliverables.map((deliverable) => (
-            <li
-              key={deliverable}
-              className="flex items-start gap-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-5 py-4 text-sm"
-            >
-              <span
-                aria-hidden
-                className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-brand-magenta"
-              />
-              <span className="text-ink">{deliverable}</span>
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-6 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-5 py-4">
-          <CardEyebrow>Timeline</CardEyebrow>
-          <p className="mt-2 text-sm text-ink-muted">
-            {quote.scope.timeline}
+        {!decided && (
+          <p className="mt-4 max-w-2xl text-lg text-ink-muted">
+            We assembled a crew, wrote the scope, priced the engagement.
+            Reveal your team below to see who we&apos;re proposing.
           </p>
-        </div>
-      </section>
+        )}
+      </div>
 
-      {/* Pricing block — visible 85/15 split */}
-      <section className="mt-20">
-        <CardEyebrow>Pricing</CardEyebrow>
-        <h2 className="mt-2 font-display text-3xl font-semibold">
-          ${quote.pricing.baseAmount.toLocaleString()}{" "}
-          <span className="text-base font-normal text-ink-muted">
-            total contract value
-          </span>
-        </h2>
+      {/* Pre-decision: interactive shell */}
+      {!decided && (
+        <QuoteInteractiveSurface
+          clientToken={quote.clientToken}
+          scope={quote.scope}
+          pricing={quote.pricing}
+          talentSplitDollars={talentSplitDollars}
+          opsSplitDollars={opsSplitDollars}
+          crew={crew}
+        />
+      )}
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <Card>
-            <CardEyebrow>Direct to cooperators</CardEyebrow>
-            <p className="mt-2 font-display text-3xl font-semibold text-brand-green">
-              {quote.pricing.talentSplit}%
+      {/* Post-decision: approved confirmation */}
+      {quote.status === "approved" && (
+        <section className="mt-16 rounded-2xl border border-brand-green/40 bg-brand-green/5 px-6 py-8">
+          <CardEyebrow>Approved</CardEyebrow>
+          <h2 className="mt-2 font-display text-3xl font-semibold text-brand-green">
+            You&apos;re in. We&apos;re on it.
+          </h2>
+          {selectedLead && (
+            <p className="mt-4 max-w-xl text-ink-muted">
+              Your lead cooperator is{" "}
+              <strong className="text-ink">
+                {selectedLead.user.firstName} {selectedLead.user.lastName}
+              </strong>
+              . We&apos;re kicking off contracts and calendar within one
+              business day. You&apos;ll hear from Future Modern on
+              email; this same URL will evolve into your engagement
+              dashboard so keep it handy.
             </p>
-            <p className="mt-1 text-sm text-ink-muted">
-              ${talentSplitDollars.toLocaleString()} paid directly to the
-              crew who ships the work. No agency middleman, no platform
-              take-rate stacked on top.
+          )}
+          {quote.decidedAt && (
+            <p className="mt-4 text-xs text-ink-faint">
+              Approved{" "}
+              {new Date(quote.decidedAt).toLocaleString(undefined, {
+                dateStyle: "long",
+                timeStyle: "short",
+              })}
+              .
             </p>
-          </Card>
-          <Card>
-            <CardEyebrow>Cooperative operations</CardEyebrow>
-            <p className="mt-2 font-display text-3xl font-semibold text-brand-blue">
-              {quote.pricing.operationsSplit}%
-            </p>
-            <p className="mt-1 text-sm text-ink-muted">
-              ${opsSplitDollars.toLocaleString()} funds shared cooperative
-              operations: matching, coordination, treasury reserve, tools
-              every Member relies on.
-            </p>
-          </Card>
-        </div>
-      </section>
+          )}
+        </section>
+      )}
 
-      {/* Decision + follow-up */}
-      <section className="mt-20 rounded-2xl border border-brand-magenta/30 bg-brand-magenta/5 px-6 py-8">
-        <h2 className="font-display text-2xl font-semibold text-brand-magenta">
-          Ready to $BUILD together?
-        </h2>
-        <p className="mt-3 max-w-xl text-sm text-ink-muted">
-          Pick your lead cooperator above, then approve the quote. On
-          approval, we kick off contracts + calendar within one business
-          day. If you want to iterate on the crew, scope, or price
-          first, reply to the email that got you here. We&apos;ll
-          adjust and re-send.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button
-            type="button"
-            disabled
-            className="inline-flex items-center rounded-full bg-brand-magenta px-6 py-2.5 text-sm font-medium text-brand-white opacity-60 shadow-lg shadow-brand-magenta/20"
-            title="Sandbox. Approve action lands with the admin flow."
-          >
-            Approve quote
-          </button>
-          <a
-            href="mailto:hello@buildstore.example"
-            className="inline-flex items-center rounded-full border border-brand-blue/60 px-6 py-2.5 text-sm font-medium text-brand-blue transition-colors hover:bg-brand-blue/10"
-          >
-            Talk it through first
-          </a>
-        </div>
-        <p className="mt-4 text-[11px] text-ink-faint">
-          Sandbox surface. The Approve action wires to a real client-
-          decision server action at production.
-        </p>
-      </section>
+      {/* Post-decision: declined acknowledgment */}
+      {quote.status === "declined" && (
+        <section className="mt-16 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-6 py-8">
+          <CardEyebrow>Declined</CardEyebrow>
+          <h2 className="mt-2 font-display text-3xl font-semibold">
+            Thanks for the consideration.
+          </h2>
+          <p className="mt-4 max-w-xl text-ink-muted">
+            No hard feelings. If any of it lands differently later
+            (crew, scope, price, timing), reply to the email that got
+            you here and we&apos;ll re-pitch. The cooperative
+            isn&apos;t going anywhere.
+          </p>
+          {quote.decidedAt && (
+            <p className="mt-4 text-xs text-ink-faint">
+              Declined{" "}
+              {new Date(quote.decidedAt).toLocaleString(undefined, {
+                dateStyle: "long",
+                timeStyle: "short",
+              })}
+              .
+            </p>
+          )}
+        </section>
+      )}
 
       {/* Marketing rail — stickiness lever */}
       <section className="mt-20 border-t border-[var(--surface-border)] pt-12">
@@ -273,3 +247,4 @@ export default async function CooperativeQuotePage({
     </div>
   );
 }
+

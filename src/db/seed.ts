@@ -20,7 +20,9 @@
  * Requires DATABASE_URL in env. Drizzle will use the pool defined in
  * client.ts.
  */
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
+config(); // fallback to .env
 import { db, pool } from "./client";
 import * as schema from "./schema";
 

@@ -1,21 +1,28 @@
 /**
  * Cooperative Quote admin actions.
  *
- * Compose + remove client-facing quotes at /admin/quotes. Sandbox
- * mutates MOCK_COOPERATIVE_QUOTES in memory; production persists to
- * a `cooperative_quotes` Drizzle table and dispatches magic-link
- * emails via the email provider (§7c).
+ * Compose + remove client-facing quotes at /admin/cooperative-quotes.
+ * Sandbox mutates MOCK_COOPERATIVE_QUOTES in memory; production
+ * persists to a `cooperative_quotes` Drizzle table and dispatches
+ * magic-link emails via the email provider.
  *
- * Design posture:
+ * Design posture (Tier 21):
  *   - Every quote maps to an existing project. The project provides
  *     the domain context (client, scope base); the quote layers the
- *     admin's proposal (crew + relevance + delivery scope + price).
+ *     admin's proposal (crew + relevance + delivery scope + per-
+ *     Builder pricing).
+ *   - Pricing lives on each proposed Builder — same shape as Jamar's
+ *     historical Google Doc quote sheet (Service Provider | Quote |
+ *     Timeline per row). Aggregate quote total is derived from picked
+ *     Builders at approval time (see `quote-pricing.ts`
+ *     deriveAggregatePricing).
  *   - Client token is generated server-side using the project id +
  *     a random suffix. Legible in sandbox for testing convenience;
  *     production swaps for opaque token or signed JWT.
- *   - Per-member relevance narratives arrive as a single textarea in
- *     a "userId: narrative" line format (one per line). Simplest MVP
- *     that avoids dynamic form-field arrays.
+ *   - Admin composer serializes proposedBuilders as a JSON blob under
+ *     `proposedBuildersJson` — dynamic-form-fields would be awkward
+ *     for N Builders with per-Builder pricing sub-forms, JSON is the
+ *     escape hatch.
  *   - Deliverables arrive as a newline-separated textarea. Empty
  *     lines are skipped.
  */
@@ -36,6 +43,7 @@ import type {
   CooperativeQuotePricing,
   Notification,
   NotificationKind,
+  ProposedBuilder,
 } from "@/lib/types";
 
 function newQuoteId(): string {
@@ -90,33 +98,6 @@ function notifyAdminsOnQuoteDecision(
 }
 
 /**
- * Parse the "userId: narrative" relevance textarea into a keyed map.
- * Silently drops lines that don't match the format, and lines with
- * userIds that aren't in the selected proposedMemberIds. Preserves
- * whichever narrative appears last if a userId is repeated.
- */
-function parseRelevanceLines(
-  raw: string,
-  proposedMemberIds: string[],
-): Record<string, string> {
-  const proposed = new Set(proposedMemberIds);
-  const result: Record<string, string> = {};
-  const lines = raw.split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const colonIdx = trimmed.indexOf(":");
-    if (colonIdx < 0) continue;
-    const userId = trimmed.slice(0, colonIdx).trim();
-    const narrative = trimmed.slice(colonIdx + 1).trim();
-    if (!userId || !narrative) continue;
-    if (!proposed.has(userId)) continue;
-    result[userId] = narrative;
-  }
-  return result;
-}
-
-/**
  * Parse a newline-separated deliverables list. Empty lines skipped;
  * leading bullets stripped so admins can paste from anywhere.
  */
@@ -128,10 +109,163 @@ function parseDeliverables(raw: string): string[] {
 }
 
 /**
+ * Validate one per-Builder pricing payload from JSON parse. Returns
+ * a typed CooperativeQuotePricing on success, throws with a specific
+ * error message on failure so the admin knows which Builder failed
+ * validation and why.
+ */
+function validateBuilderPricing(
+  raw: unknown,
+  builderLabel: string,
+): CooperativeQuotePricing {
+  if (!raw || typeof raw !== "object") {
+    throw new Error(`${builderLabel}: pricing is missing.`);
+  }
+  const p = raw as Record<string, unknown>;
+  const type = String(p.type ?? "").trim();
+  const talentSplit =
+    typeof p.talentSplit === "number" ? p.talentSplit : 85;
+  const operationsSplit =
+    typeof p.operationsSplit === "number" ? p.operationsSplit : 15;
+  if (
+    talentSplit < 0 ||
+    operationsSplit < 0 ||
+    Math.abs(talentSplit + operationsSplit - 100) > 0.01
+  ) {
+    throw new Error(
+      `${builderLabel}: splits must be non-negative and sum to 100.`,
+    );
+  }
+  if (type === "fixed") {
+    const baseAmount = Number(p.baseAmount);
+    if (!Number.isFinite(baseAmount) || baseAmount <= 0) {
+      throw new Error(
+        `${builderLabel}: fixed pricing needs a positive base amount.`,
+      );
+    }
+    return {
+      type: "fixed",
+      baseAmount: Math.round(baseAmount),
+      talentSplit,
+      operationsSplit,
+    };
+  }
+  if (type === "range") {
+    const min = Number(p.baseAmountMin);
+    const max = Number(p.baseAmountMax);
+    if (!Number.isFinite(min) || min <= 0) {
+      throw new Error(
+        `${builderLabel}: range needs a positive min.`,
+      );
+    }
+    if (!Number.isFinite(max) || max <= 0) {
+      throw new Error(
+        `${builderLabel}: range needs a positive max.`,
+      );
+    }
+    if (max < min) {
+      throw new Error(
+        `${builderLabel}: range max cannot be less than range min.`,
+      );
+    }
+    return {
+      type: "range",
+      baseAmountMin: Math.round(min),
+      baseAmountMax: Math.round(max),
+      talentSplit,
+      operationsSplit,
+    };
+  }
+  if (type === "hourly") {
+    const rate = Number(p.hourlyRate);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      throw new Error(
+        `${builderLabel}: hourly needs a positive hourly rate.`,
+      );
+    }
+    return {
+      type: "hourly",
+      hourlyRate: Math.round(rate),
+      talentSplit,
+      operationsSplit,
+    };
+  }
+  throw new Error(
+    `${builderLabel}: unknown pricing type "${type}". Use fixed, range, or hourly.`,
+  );
+}
+
+/**
+ * Parse the proposedBuildersJson payload. Validates every entry has
+ * a userId, pricing, timeline, and relevance. Returns typed builders.
+ */
+function parseProposedBuilders(raw: string): ProposedBuilder[] {
+  if (!raw.trim()) {
+    throw new Error("Propose at least one builder.");
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(
+      "proposedBuildersJson is not valid JSON. Fix the composer.",
+    );
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error("proposedBuildersJson must be an array.");
+  }
+  if (parsed.length === 0) {
+    throw new Error("Propose at least one builder.");
+  }
+  if (parsed.length > 5) {
+    throw new Error(
+      "Propose no more than five builders. Quality of curation is the whole point.",
+    );
+  }
+  const seen = new Set<string>();
+  const result: ProposedBuilder[] = [];
+  for (const item of parsed) {
+    if (!item || typeof item !== "object") {
+      throw new Error("Each builder entry must be an object.");
+    }
+    const b = item as Record<string, unknown>;
+    const userId = String(b.userId ?? "").trim();
+    if (!userId) {
+      throw new Error("A builder is missing userId.");
+    }
+    if (seen.has(userId)) {
+      throw new Error(
+        `Duplicate builder ${userId}. Each Builder can appear at most once per quote.`,
+      );
+    }
+    const user = MOCK_USERS.find((u) => u.id === userId);
+    if (!user) {
+      throw new Error(`Unknown builder: ${userId}`);
+    }
+    const label = `${user.firstName ?? userId}`;
+    const timeline = String(b.timeline ?? "").trim();
+    if (timeline.length < 3) {
+      throw new Error(`${label}: timeline is required.`);
+    }
+    const relevance = String(b.relevance ?? "").trim();
+    if (relevance.length < 10) {
+      throw new Error(
+        `${label}: relevance line is too thin. Write one honest sentence.`,
+      );
+    }
+    const pricing = validateBuilderPricing(b.pricing, label);
+    seen.add(userId);
+    result.push({ userId, pricing, timeline, relevance });
+  }
+  return result;
+}
+
+/**
  * Author a new quote. Admin picks a project, adds a client display
- * name, selects 1-5 builders, writes per-member relevance
- * narratives, defines scope + pricing. Blocks duplicates on the same
- * project — remove the existing quote first if the plan changes.
+ * name, composes the proposed hand as JSON (each Builder carrying
+ * per-Builder pricing + timeline + relevance), defines engagement-
+ * level scope. Blocks duplicates on the same project — remove the
+ * existing quote first if the plan changes.
  */
 export async function createCooperativeQuote(formData: FormData) {
   const admin = await requireAdmin();
@@ -140,26 +274,12 @@ export async function createCooperativeQuote(formData: FormData) {
   const clientDisplayName = String(
     formData.get("clientDisplayName") ?? "",
   ).trim();
-  const proposedMemberIds = formData
-    .getAll("proposedMemberIds")
-    .map((v) => String(v).trim())
-    .filter((v) => v.length > 0);
-  const relevanceRaw = String(formData.get("memberRelevance") ?? "").trim();
+  const proposedBuildersJson = String(
+    formData.get("proposedBuildersJson") ?? "",
+  );
   const scopeSummary = String(formData.get("scopeSummary") ?? "").trim();
   const deliverablesRaw = String(formData.get("deliverables") ?? "").trim();
   const timeline = String(formData.get("timeline") ?? "").trim();
-  const pricingTypeRaw = String(
-    formData.get("pricingType") ?? "fixed",
-  ).trim();
-  const baseAmountRaw = String(formData.get("baseAmount") ?? "").trim();
-  const baseAmountMaxRaw = String(
-    formData.get("baseAmountMax") ?? "",
-  ).trim();
-  const hourlyRateRaw = String(formData.get("hourlyRate") ?? "").trim();
-  const talentSplitRaw = String(formData.get("talentSplit") ?? "85").trim();
-  const operationsSplitRaw = String(
-    formData.get("operationsSplit") ?? "15",
-  ).trim();
 
   if (!projectId) throw new Error("Pick a project for this quote.");
   const project = MOCK_PROJECTS.find((p) => p.id === projectId);
@@ -174,24 +294,8 @@ export async function createCooperativeQuote(formData: FormData) {
   if (clientDisplayName.length < 2) {
     throw new Error("Client display name is required.");
   }
-  if (proposedMemberIds.length === 0) {
-    throw new Error("Propose at least one builder.");
-  }
-  if (proposedMemberIds.length > 5) {
-    throw new Error(
-      "Propose no more than five builders. Quality of curation is the whole point.",
-    );
-  }
-  for (const uid of proposedMemberIds) {
-    if (!MOCK_USERS.some((u) => u.id === uid)) {
-      throw new Error(`Unknown builder: ${uid}`);
-    }
-  }
 
-  const memberRelevance = parseRelevanceLines(
-    relevanceRaw,
-    proposedMemberIds,
-  );
+  const proposedBuilders = parseProposedBuilders(proposedBuildersJson);
 
   if (scopeSummary.length < 20) {
     throw new Error(
@@ -205,66 +309,9 @@ export async function createCooperativeQuote(formData: FormData) {
   }
 
   if (timeline.length < 4) {
-    throw new Error("Timeline is required. One line, human-readable.");
-  }
-
-  const talentSplit = Number.parseFloat(talentSplitRaw);
-  const operationsSplit = Number.parseFloat(operationsSplitRaw);
-  if (
-    Number.isNaN(talentSplit) ||
-    Number.isNaN(operationsSplit) ||
-    talentSplit < 0 ||
-    operationsSplit < 0 ||
-    Math.abs(talentSplit + operationsSplit - 100) > 0.01
-  ) {
-    throw new Error("Splits must be non-negative and sum to 100.");
-  }
-
-  // Discriminated union: fixed / range / hourly. Each shape takes its
-  // own set of amount fields; admin form radio picks the type.
-  let pricing: CooperativeQuotePricing;
-  if (pricingTypeRaw === "range") {
-    const min = Number.parseInt(baseAmountRaw, 10);
-    const max = Number.parseInt(baseAmountMaxRaw, 10);
-    if (Number.isNaN(min) || min <= 0) {
-      throw new Error("Range min must be a positive integer (USD).");
-    }
-    if (Number.isNaN(max) || max <= 0) {
-      throw new Error("Range max must be a positive integer (USD).");
-    }
-    if (max < min) {
-      throw new Error("Range max cannot be less than range min.");
-    }
-    pricing = {
-      type: "range",
-      baseAmountMin: min,
-      baseAmountMax: max,
-      talentSplit,
-      operationsSplit,
-    };
-  } else if (pricingTypeRaw === "hourly") {
-    const rate = Number.parseInt(hourlyRateRaw, 10);
-    if (Number.isNaN(rate) || rate <= 0) {
-      throw new Error("Hourly rate must be a positive integer (USD).");
-    }
-    pricing = {
-      type: "hourly",
-      hourlyRate: rate,
-      talentSplit,
-      operationsSplit,
-    };
-  } else {
-    // Default is fixed.
-    const amount = Number.parseInt(baseAmountRaw, 10);
-    if (Number.isNaN(amount) || amount <= 0) {
-      throw new Error("Base amount must be a positive integer (USD).");
-    }
-    pricing = {
-      type: "fixed",
-      baseAmount: amount,
-      talentSplit,
-      operationsSplit,
-    };
+    throw new Error(
+      "Engagement timeline is required. One line, human-readable.",
+    );
   }
 
   const now = new Date().toISOString();
@@ -273,14 +320,12 @@ export async function createCooperativeQuote(formData: FormData) {
     clientToken: newClientToken(projectId),
     projectId,
     clientDisplayName,
-    proposedMemberIds,
-    memberRelevance,
+    proposedBuilders,
     scope: {
       summary: scopeSummary,
       deliverables,
       timeline,
     },
-    pricing,
     // Newly-authored quotes ship as `sent` in sandbox. Production adds
     // an explicit dispatch step. Admin can compose + dispatch in one
     // action for now.
@@ -305,13 +350,13 @@ export async function createCooperativeQuote(formData: FormData) {
       projectId,
       clientToken: row.clientToken,
       clientDisplayName,
-      proposedMemberIds,
-      pricingType: pricing.type,
+      proposedBuilderIds: proposedBuilders.map((b) => b.userId),
+      builderPricingTypes: proposedBuilders.map((b) => b.pricing.type),
     },
     reason: `Quote for ${project.title}`,
   });
 
-  revalidatePath("/admin/quotes");
+  revalidatePath("/admin/cooperative-quotes");
   revalidatePath(`/quotes/${row.clientToken}`);
 }
 
@@ -346,7 +391,7 @@ export async function removeCooperativeQuote(formData: FormData) {
     reason: null,
   });
 
-  revalidatePath("/admin/quotes");
+  revalidatePath("/admin/cooperative-quotes");
   revalidatePath(`/quotes/${removed.clientToken}`);
 }
 
@@ -386,7 +431,9 @@ export async function approveCooperativeQuote(formData: FormData) {
   if (quote.status === "draft") {
     throw new Error("This quote hasn't been sent yet.");
   }
-  if (!quote.proposedMemberIds.includes(selectedLeadUserId)) {
+  if (
+    !quote.proposedBuilders.some((b) => b.userId === selectedLeadUserId)
+  ) {
     throw new Error(
       "Selected lead is not among the proposed builders for this quote.",
     );

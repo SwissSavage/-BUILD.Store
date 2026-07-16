@@ -2953,6 +2953,42 @@ export type CooperativeQuotePricing =
       operationsSplit: number;
     };
 
+/**
+ * A single proposed Builder on a CooperativeQuote — Jamar's Google
+ * Doc quote-sheet format canonized. Each Builder carries their own
+ * pricing line (fixed / range / hourly), their own timeline, and their
+ * own relevance pitch. Aggregate quote total is derived from the sum
+ * of picked Builders (see `quote-pricing.ts` deriveAggregatePricing).
+ *
+ * Strengths / weaknesses (which the historical quote sheet carried
+ * as freeform text) are substituted by the on-platform MVP OVR + sub-
+ * rating breakdown, surfaced on the TradingCard. Quantified beats
+ * freeform for cooperative-facing consistency.
+ */
+export interface ProposedBuilder {
+  /** FK to User.id — the proposed Builder. */
+  userId: string;
+  /**
+   * Per-Builder pricing. Same fixed / range / hourly discriminated
+   * union used previously at quote root. Each Builder is priced on
+   * their own line so the aggregate total is a derived sum, not a
+   * top-down single number.
+   */
+  pricing: CooperativeQuotePricing;
+  /**
+   * Per-Builder timeline in human terms — e.g. "6 weeks" or "part-
+   * time across the engagement." Distinct from `scope.timeline`,
+   * which is the engagement-level rhythm (kickoff → close phases).
+   */
+  timeline: string;
+  /**
+   * "Why this person for this project" one-liner. Admin-authored,
+   * first-name basis, no jargon. Shown under the Builder's card in
+   * the TalentHand.
+   */
+  relevance: string;
+}
+
 export interface CooperativeQuote {
   id: string;
   /** Tokenized client access — the URL slug. */
@@ -2966,44 +3002,32 @@ export interface CooperativeQuote {
    */
   clientDisplayName: string;
   /**
-   * Proposed builders for the engagement. Rendered as a TalentHand
-   * in selectable mode so the client can evaluate + pick their lead.
-   * Order matters — first entry is the recommended lead, but the
-   * client is free to choose any of them.
+   * Proposed builders for the engagement — the canonized replacement
+   * for the historical Google Doc "service provider" rows. Each entry
+   * carries per-Builder pricing + timeline + relevance so the client
+   * assembles their hand from priced options. Order matters — first
+   * entry is the recommended lead, but the client is free to choose
+   * any of them (multi-role selection is supported once wired).
+   *
+   * Rendered as face-down cards on reveal; flipping surfaces the
+   * TradingCard identity and the per-Builder quote line beneath.
    */
-  proposedMemberIds: string[];
-  /**
-   * Per-member relevance narrative — "why this person for this
-   * project" one-liner, admin-authored. Keyed by userId. Shown under
-   * each builder's card in the TalentHand.
-   */
-  memberRelevance: Record<string, string>;
+  proposedBuilders: ProposedBuilder[];
   /** Scope block — what the crew delivers. */
   scope: {
     /** One-paragraph scope summary. */
     summary: string;
     /** Enumerated deliverables. */
     deliverables: string[];
-    /** Timeline in human terms — e.g. "8 weeks from kickoff." */
+    /**
+     * Engagement-level timeline rhythm — e.g. "8 weeks from kickoff.
+     * 2 weeks pre-production, 3 weeks production, 3 weeks post."
+     * Distinct from per-Builder timeline on each `proposedBuilders`
+     * entry — this is the phase story, that is the individual
+     * availability window.
+     */
     timeline: string;
   };
-  /**
-   * Pricing block. Discriminated by `type`. Three shapes to cover the
-   * three ways FM prices engagements:
-   *   - "fixed"  : a single total contract value.
-   *   - "range"  : a bracketed contract value (low + high). Most common
-   *                for exploratory scoping.
-   *   - "hourly" : an hourly rate, open-ended (no total, billed as
-   *                delivered). For flexible retainers + T&M work.
-   *
-   * All three carry the standard 85/12/3 split percentages so the
-   * client-facing surface can render the "direct to builders" +
-   * "cooperative operations" math against whichever base unit applies.
-   *
-   * All monetary numbers are USD, integer for sandbox simplicity.
-   * Production may switch to a Money type.
-   */
-  pricing: CooperativeQuotePricing;
   /**
    * Status lifecycle:
    *   - draft    : admin authored, not yet dispatched

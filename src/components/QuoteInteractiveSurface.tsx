@@ -6,17 +6,19 @@
  * flow end-to-end.
  *
  * Renders:
- *   1. QuoteFlipReveal (reveal moment + TalentHand selection)
- *   2. Scope block (static, but rendered here so the client component
- *      owns the full pre-decision surface as one boundary)
- *   3. Pricing block (same)
+ *   1. QuoteFlipReveal (reveal moment + TalentHand selection with
+ *      per-Builder pricing on each flipped card).
+ *   2. Scope block (deliverables + engagement-level timeline rhythm).
+ *   3. Aggregate pricing block — derived from the picked hand. Total
+ *      updates as the client trims / expands their selection.
  *   4. Decision panel with Approve + Decline buttons + optional
  *      decline reason textarea
  *
  * State model:
  *   - selectedLeadUserId is the "chose" mark from QuoteFlipReveal.
- *     Only one lead can be chosen at a time — the most recent chose
- *     wins. Skipping the current lead clears the selection.
+ *     Only one lead can be chosen at a time (single-lead mode). Multi-
+ *     role selection lands in a follow-on tier and folds into the same
+ *     aggregate math with no schema change.
  *   - Approve is disabled until a lead is chosen.
  *   - Decline shows a reveal-on-click reason textarea that submits
  *     the decline action.
@@ -30,7 +32,7 @@
  * pattern as /invoices/[token] and /receipts/[token].
  */
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   QuoteFlipReveal,
@@ -44,10 +46,11 @@ import {
   declineCooperativeQuote,
 } from "@/lib/quote-actions";
 import {
-  pricingHeadline,
-  pricingUnitLabel,
+  aggregateHeadline,
+  aggregateUnitLabel,
+  deriveAggregatePricing,
 } from "@/lib/quote-pricing";
-import type { CooperativeQuotePricing } from "@/lib/types";
+import type { ProposedBuilder } from "@/lib/types";
 
 interface QuoteInteractiveSurfaceProps {
   clientToken: string;
@@ -56,14 +59,20 @@ interface QuoteInteractiveSurfaceProps {
     deliverables: string[];
     timeline: string;
   };
-  pricing: CooperativeQuotePricing;
+  /**
+   * Raw per-Builder pricing shapes — used to derive the aggregate
+   * engagement total. The `crew` array is the display projection
+   * used by the reveal surface (already carries denormalized quote
+   * lines for card render).
+   */
+  proposedBuilders: ProposedBuilder[];
   crew: QuoteFlipReveaCrewMember[];
 }
 
 export function QuoteInteractiveSurface({
   clientToken,
   scope,
-  pricing,
+  proposedBuilders,
   crew,
 }: QuoteInteractiveSurfaceProps) {
   const router = useRouter();
@@ -84,6 +93,15 @@ export function QuoteInteractiveSurface({
   const [optimisticDecision, setOptimisticDecision] = useState<
     "approved" | "declined" | null
   >(null);
+
+  // Aggregate engagement pricing — sum of all proposed Builders.
+  // Multi-role selection (Tier 21+) will swap this to a picked-only
+  // aggregate; the derivation function already handles arbitrary
+  // subsets of ProposedBuilders.
+  const aggregate = useMemo(
+    () => deriveAggregatePricing(proposedBuilders),
+    [proposedBuilders],
+  );
 
   function handleDecision(userId: string, decision: TalentHandDecision) {
     if (decision === "choose") {
@@ -242,20 +260,26 @@ export function QuoteInteractiveSurface({
         </div>
       </section>
 
-      {/* Pricing block. Discriminated union: fixed / range / hourly.
-          Just the headline + unit label. The 85/15 split isn't
-          restated here. Clients receiving a quote already know the
-          FM deal structure from the marketing surfaces; repeating
-          the percentages on the quote itself reads as marketing
-          repetition on a document that should be all business. */}
+      {/* Aggregate pricing block. Derived from sum of per-Builder
+          quotes. Fixed + range sum into a numeric total; hourly
+          Builders show as pass-through rates alongside. Same math
+          as adding up the Quote column on Jamar's Google Doc quote
+          sheet, just live. */}
       <section className="mt-20">
-        <CardEyebrow>Pricing</CardEyebrow>
+        <CardEyebrow>Engagement Total</CardEyebrow>
         <h2 className="mt-2 font-display text-3xl font-semibold">
-          {pricingHeadline(pricing)}{" "}
-          <span className="text-base font-normal text-ink-muted">
-            {pricingUnitLabel(pricing)}
-          </span>
+          {aggregateHeadline(aggregate)}
+          {aggregateUnitLabel(aggregate) && (
+            <span className="ml-3 text-base font-normal text-ink-muted">
+              {aggregateUnitLabel(aggregate)}
+            </span>
+          )}
         </h2>
+        <p className="mt-3 max-w-xl text-sm text-ink-muted">
+          Sum of the per-Builder quotes on the cards above. Each
+          Builder&apos;s price + timeline is theirs; the total is what
+          you pay when the full crew ships together.
+        </p>
       </section>
 
       {/* Decision panel */}

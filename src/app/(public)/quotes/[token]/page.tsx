@@ -8,6 +8,12 @@
  * selectable mode (non-destructive), picks their lead, approves the
  * quote (or declines with an optional reason).
  *
+ * Per-Builder pricing lands here (Tier 21). Each Builder carries
+ * their own price + timeline right on the flipped card — same shape
+ * as Jamar's Google Doc quote sheet (Service Provider | Quote |
+ * Timeline per row). Engagement total is derived from the picked
+ * hand.
+ *
  * The same URL is designed to evolve into the ongoing project
  * dashboard after approval. Client keeps coming back to this same
  * link through the engagement lifecycle. Every visit is a stickiness
@@ -33,6 +39,10 @@ import { CardEyebrow, CardTitle } from "@/components/Card";
 import type { QuoteFlipReveaCrewMember } from "@/components/QuoteFlipReveal";
 import { QuoteInteractiveSurface } from "@/components/QuoteInteractiveSurface";
 import { QuoteDecidedUndoButton } from "@/components/QuoteDecidedUndoButton";
+import {
+  pricingHeadline,
+  pricingUnitLabel,
+} from "@/lib/quote-pricing";
 
 /**
  * Force-dynamic on this route. The surface is stateful (evolves
@@ -74,12 +84,13 @@ export default async function CooperativeQuotePage({
   if (!quote) notFound();
   if (quote.status === "draft") notFound();
 
-  // Build crew members. Resolve users, derive tiers, layer in
-  // per-member relevance narrative.
+  // Build crew members. Resolve users, derive tiers, denormalize
+  // per-Builder pricing into a display quoteLine so the client
+  // component stays free of pricing-domain imports.
   const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
-  const crew: QuoteFlipReveaCrewMember[] = quote.proposedMemberIds
-    .map((memberId): QuoteFlipReveaCrewMember | null => {
-      const user = MOCK_USERS.find((u) => u.id === memberId);
+  const crew: QuoteFlipReveaCrewMember[] = quote.proposedBuilders
+    .map((b): QuoteFlipReveaCrewMember | null => {
+      const user = MOCK_USERS.find((u) => u.id === b.userId);
       if (!user) return null;
       const mvpSnapshot = mvpScoreForUser(user.id);
       const tier = deriveTradingCardTier({
@@ -99,9 +110,12 @@ export default async function CooperativeQuotePage({
           membershipTier: user.membershipTier,
         },
         tier,
-        relevance:
-          quote.memberRelevance[user.id] ??
-          "Proposed for this engagement based on skill match.",
+        relevance: b.relevance,
+        quoteLine: {
+          pricingHeadline: pricingHeadline(b.pricing),
+          pricingUnit: pricingUnitLabel(b.pricing),
+          timeline: b.timeline,
+        },
       };
     })
     .filter((c): c is QuoteFlipReveaCrewMember => c !== null);
@@ -122,8 +136,9 @@ export default async function CooperativeQuotePage({
         </h1>
         {!decided && (
           <p className="mt-4 max-w-2xl text-lg text-ink-muted">
-            We assembled a crew, wrote the scope, priced the engagement.
-            Reveal your team below to see who we&apos;re proposing.
+            We assembled a crew, wrote the scope, priced each Builder.
+            Reveal your team below to see who we&apos;re proposing and
+            what each one runs.
           </p>
         )}
       </div>
@@ -133,8 +148,8 @@ export default async function CooperativeQuotePage({
         <QuoteInteractiveSurface
           clientToken={quote.clientToken}
           scope={quote.scope}
-          pricing={quote.pricing}
           crew={crew}
+          proposedBuilders={quote.proposedBuilders}
         />
       )}
 
@@ -258,4 +273,3 @@ export default async function CooperativeQuotePage({
     </div>
   );
 }
-

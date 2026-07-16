@@ -5,8 +5,16 @@
  * Distinct from `MOCK_QUOTES` in `./quotes.ts` — that store holds
  * `QuoteSheet` entries, which are Members' bids on RFPs. This store
  * holds `CooperativeQuote` entries, which are the OUTBOUND proposals
- * FM sends to clients: proposed crew, scope, pricing, magic-link
- * gated at /quotes/[clientToken].
+ * FM sends to clients: proposed crew, per-Builder pricing, scope,
+ * magic-link gated at /quotes/[clientToken].
+ *
+ * Per-Builder pricing lands here (Tier 21). Each proposed Builder
+ * carries their own fixed / range / hourly pricing plus their own
+ * timeline and relevance pitch, matching Jamar's Google Doc format
+ * (Service Provider | Quote | Timeline). Strengths / weaknesses are
+ * substituted by the on-platform MVP OVR + sub-rating breakdown.
+ * Aggregate quote total is derived from the picked hand at approval
+ * time (see `quote-pricing.ts` deriveAggregatePricing).
  *
  * Sandbox seeds two quotes tied to existing MOCK_PROJECTS so the
  * flip-reveal + TalentHand surfaces have live data to render.
@@ -26,15 +34,52 @@ export const MOCK_COOPERATIVE_QUOTES: CooperativeQuote[] = [
     projectId: "p_001",
     clientDisplayName: "URL Media",
     // Order: recommended lead first. Client can choose otherwise.
-    proposedMemberIds: ["u_bbg", "u_sunny", "u_bayu"],
-    memberRelevance: {
-      u_bbg:
-        "BBG carries the FM voice through every read. The film needs a director whose creative read is on the exact tone URL Media has been building. That's him.",
-      u_sunny:
-        "Sunny's brand direction chops mean the film ships with a visual system, not just a piece. When URL Media wants to spin it into stills, cutdowns, and OOH, the assets are already coherent.",
-      u_bayu:
-        "Bayu handles the interactive companion, a landing microsite for the launch. His brand systems work translates the film's design language into an owned digital surface.",
-    },
+    // Each Builder carries their own quote line — same shape as the
+    // per-provider rows on the historical Google Doc quote sheet.
+    // Aggregate range for the whole engagement lands around $38K-$52K
+    // when all three are picked; multi-role selection lets the client
+    // trim the hand and reduce the total accordingly.
+    proposedBuilders: [
+      {
+        userId: "u_bbg",
+        pricing: {
+          type: "range",
+          baseAmountMin: 18000,
+          baseAmountMax: 24000,
+          talentSplit: 85,
+          operationsSplit: 15,
+        },
+        timeline: "6 weeks across pre-pro, production, and post",
+        relevance:
+          "BBG carries the FM voice through every read. The film needs a director whose creative read is on the exact tone URL Media has been building. That's him.",
+      },
+      {
+        userId: "u_sunny",
+        pricing: {
+          type: "range",
+          baseAmountMin: 12000,
+          baseAmountMax: 16000,
+          talentSplit: 85,
+          operationsSplit: 15,
+        },
+        timeline: "5 weeks brand direction + stills selection",
+        relevance:
+          "Sunny's brand direction chops mean the film ships with a visual system, not just a piece. When URL Media wants to spin it into stills, cutdowns, and OOH, the assets are already coherent.",
+      },
+      {
+        userId: "u_bayu",
+        pricing: {
+          type: "range",
+          baseAmountMin: 8000,
+          baseAmountMax: 12000,
+          talentSplit: 85,
+          operationsSplit: 15,
+        },
+        timeline: "3 weeks microsite build after film lock",
+        relevance:
+          "Bayu handles the interactive companion, a landing microsite for the launch. His brand systems work translates the film's design language into an owned digital surface.",
+      },
+    ],
     scope: {
       summary:
         "Three-minute hero film with Afrofuturist direction, plus social cutdowns and a launch microsite. Delivery in 8 weeks from kickoff.",
@@ -48,16 +93,6 @@ export const MOCK_COOPERATIVE_QUOTES: CooperativeQuote[] = [
       timeline:
         "8 weeks from kickoff. 2 weeks pre-production, 3 weeks production + shoot, 3 weeks post + microsite.",
     },
-    // Range pricing — exploratory total value with a bracket, most
-    // common quote shape for creative engagements where the final
-    // scope shakes out during pre-production.
-    pricing: {
-      type: "range",
-      baseAmountMin: 38000,
-      baseAmountMax: 52000,
-      talentSplit: 85,
-      operationsSplit: 15,
-    },
     status: "sent",
     sentAt: "2026-07-08T14:30:00Z",
     viewedAt: null,
@@ -67,19 +102,27 @@ export const MOCK_COOPERATIVE_QUOTES: CooperativeQuote[] = [
     selectedLeadUserId: null,
   },
   {
-    // Second seed illustrates the fixed-price mode. Different project
-    // (p_003 is the follow-on URL Media newsletter build per the
-    // active-projects memory) so each seeded quote uses a distinct
-    // project id.
+    // Second seed illustrates fixed-price per-Builder pricing on a
+    // single-Builder engagement. p_003 is the follow-on URL Media
+    // newsletter build per the active-projects memory.
     id: "quote_p003_urlmedia_newsletter",
     clientToken: "q_urlmedia_newsletter_platform",
     projectId: "p_003",
     clientDisplayName: "URL Media",
-    proposedMemberIds: ["u_tolgay"],
-    memberRelevance: {
-      u_tolgay:
-        "Tolgay wrote the ERC-6551 primitive that FM's own canonization system runs on. Your newsletter platform migration is exactly the kind of build he'd do for us internally, same rigor, zero context transfer.",
-    },
+    proposedBuilders: [
+      {
+        userId: "u_tolgay",
+        pricing: {
+          type: "fixed",
+          baseAmount: 32000,
+          talentSplit: 85,
+          operationsSplit: 15,
+        },
+        timeline: "6 weeks end-to-end",
+        relevance:
+          "Tolgay wrote the ERC-6551 primitive that FM's own canonization system runs on. Your newsletter platform migration is exactly the kind of build he'd do for us internally, same rigor, zero context transfer.",
+      },
+    ],
     scope: {
       summary:
         "Migrate the newsletter platform to a new stack, deliver an admin-authored editorial pipeline plus subscriber-facing surfaces. Fixed price on a well-scoped rewrite.",
@@ -92,12 +135,6 @@ export const MOCK_COOPERATIVE_QUOTES: CooperativeQuote[] = [
       ],
       timeline:
         "6 weeks from kickoff. 1 week migration mapping, 4 weeks build, 1 week cutover + hardening.",
-    },
-    pricing: {
-      type: "fixed",
-      baseAmount: 32000,
-      talentSplit: 85,
-      operationsSplit: 15,
     },
     status: "viewed",
     sentAt: "2026-07-02T10:00:00Z",

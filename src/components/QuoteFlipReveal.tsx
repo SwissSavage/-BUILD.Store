@@ -14,11 +14,13 @@
  *        - Click "Reveal all" to flip every remaining card at once
  *          (dramatic bulk reveal, same effect as the original design).
  *   4. Cards flip via CSS transform to reveal TradingCard3D fronts.
- *   5. Once every card is flipped, the layout transitions into
+ *   5. Per-card quote line (price + timeline) appears beneath each
+ *      flipped card — Jamar's Google Doc canonization made interactive.
+ *   6. Once every card is flipped, the layout transitions into
  *      TalentHand in selectable mode so the client can evaluate + pick
  *      their lead (Skip/Choose, non-destructive per Tier 13's
  *      reversibility).
- *   6. Parent surface (`/quotes/[token]`) reveals the Approve action
+ *   7. Parent surface (`/quotes/[token]`) reveals the Approve action
  *      once at least one builder is marked as chosen.
  *
  * The flip animation itself is driven by CSS `.fm-card-flipper--revealed`
@@ -54,6 +56,17 @@ export interface QuoteFlipReveaCrewMember {
   >;
   tier: TradingCardTier;
   relevance: string;
+  /**
+   * Per-Builder quote line — pricing headline (e.g. "$18,000 to
+   * $24,000"), pricing unit (e.g. "range"), and timeline (e.g. "6
+   * weeks"). Rendered under the card once flipped and inside the
+   * TalentHand entry after all cards are flipped.
+   */
+  quoteLine: {
+    pricingHeadline: string;
+    pricingUnit: string;
+    timeline: string;
+  };
 }
 
 interface QuoteFlipRevealProps {
@@ -100,55 +113,74 @@ export function QuoteFlipReveal({
     setFlippedIds(new Set(crew.map((c) => c.user.id)));
   }
 
-  // Build TalentHand entries once every card is flipped. Same shape as
-  // the /projects page uses; adds per-member relevance narrative.
+  // Build TalentHand entries once every card is flipped. Includes
+  // per-Builder quoteLine so the priced options render inside each
+  // card, matching what shows in the flipper grid.
   const talentHandEntries: TalentHandEntry[] = crew.map((c) => ({
     user: c.user,
     tier: c.tier,
     relevance: c.relevance,
+    quoteLine: c.quoteLine,
   }));
 
   return (
     <section>
-      {/* Reveal grid: face-down cards, flip individually or bulk. */}
+      {/* Reveal grid: face-down cards, flip individually or bulk.
+          Per-card quote line renders inline once a card is flipped
+          so a client browsing one at a time sees the priced context
+          without having to flip the whole hand first. */}
       {!allFlipped && (
         <div>
           <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
             {crew.map((member, idx) => {
               const isFlipped = flippedIds.has(member.user.id);
               return (
-                <button
-                  key={member.user.id}
-                  type="button"
-                  onClick={() => flipOne(member.user.id)}
-                  disabled={isFlipped}
-                  aria-label={
-                    isFlipped
-                      ? `${member.user.firstName} ${member.user.lastName} card revealed`
-                      : `Reveal card ${idx + 1} of ${crew.length}`
-                  }
-                  className={
-                    "fm-card-flipper block w-full cursor-pointer border-0 bg-transparent p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-magenta focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] disabled:cursor-default" +
-                    (isFlipped ? " fm-card-flipper--revealed" : "")
-                  }
-                  style={
-                    {
-                      "--flip-index": idx,
-                    } as React.CSSProperties
-                  }
-                >
-                  <div className="fm-card-flipper-inner aspect-[3/4]">
-                    <div className="fm-card-face fm-card-face--back">
-                      <CardBack tier={member.tier} />
+                <div key={member.user.id} className="flex flex-col">
+                  <button
+                    type="button"
+                    onClick={() => flipOne(member.user.id)}
+                    disabled={isFlipped}
+                    aria-label={
+                      isFlipped
+                        ? `${member.user.firstName} ${member.user.lastName} card revealed`
+                        : `Reveal card ${idx + 1} of ${crew.length}`
+                    }
+                    className={
+                      "fm-card-flipper block w-full cursor-pointer border-0 bg-transparent p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-magenta focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] disabled:cursor-default" +
+                      (isFlipped ? " fm-card-flipper--revealed" : "")
+                    }
+                    style={
+                      {
+                        "--flip-index": idx,
+                      } as React.CSSProperties
+                    }
+                  >
+                    <div className="fm-card-flipper-inner aspect-[3/4]">
+                      <div className="fm-card-face fm-card-face--back">
+                        <CardBack tier={member.tier} />
+                      </div>
+                      <div className="fm-card-face fm-card-face--front">
+                        <TradingCard3D
+                          user={member.user}
+                          tier={member.tier}
+                        />
+                      </div>
                     </div>
-                    <div className="fm-card-face fm-card-face--front">
-                      <TradingCard3D
-                        user={member.user}
-                        tier={member.tier}
-                      />
+                  </button>
+                  {/* Per-card quote line. Appears the moment the card
+                      flips so the price + timeline are tied to the
+                      face reveal. */}
+                  {isFlipped && (
+                    <div className="mt-3 rounded-xl border border-brand-magenta/30 bg-brand-magenta/5 px-3 py-2">
+                      <p className="font-display text-base font-semibold text-brand-magenta">
+                        {member.quoteLine.pricingHeadline}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-ink-muted">
+                        {member.quoteLine.pricingUnit} · {member.quoteLine.timeline}
+                      </p>
                     </div>
-                  </div>
-                </button>
+                  )}
+                </div>
               );
             })}
           </div>

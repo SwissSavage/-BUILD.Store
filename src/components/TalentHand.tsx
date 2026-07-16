@@ -66,6 +66,22 @@ export interface TalentHandEntry {
    */
   relevance?: string;
   /**
+   * Optional per-card quote line — Jamar's Google Doc canonization
+   * (Service Provider | Quote | Timeline per row). When present, the
+   * card renders a compact pricing + timeline block right under the
+   * portrait so the client evaluates each Builder priced-in. Passed
+   * as denormalized strings so TalentHand stays free of quote-domain
+   * imports.
+   */
+  quoteLine?: {
+    /** e.g. "$18,000 to $24,000" or "$150/hr". */
+    pricingHeadline: string;
+    /** e.g. "range" or "hourly, billed as delivered". */
+    pricingUnit: string;
+    /** e.g. "6 weeks" or "part-time across the engagement." */
+    timeline: string;
+  };
+  /**
    * Curated portfolio thumbnails / links. Rendered as small chips
    * under the card. Each item opens the source in a new tab or
    * routes to an in-app portfolio surface.
@@ -217,6 +233,17 @@ export function TalentHand({
                 <div className="mt-2">
                   <TierBadge tier={entry.user.membershipTier} />
                 </div>
+
+                {entry.quoteLine && (
+                  <div className="mt-3 rounded-xl border border-brand-magenta/30 bg-brand-magenta/5 px-3 py-2">
+                    <p className="font-display text-lg font-semibold text-brand-magenta">
+                      {entry.quoteLine.pricingHeadline}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-wider text-ink-muted">
+                      {entry.quoteLine.pricingUnit} · {entry.quoteLine.timeline}
+                    </p>
+                  </div>
+                )}
 
                 {entry.relevance && (
                   <p className="mt-3 border-l-2 border-brand-magenta/60 pl-3 text-[13px] italic text-ink-muted">

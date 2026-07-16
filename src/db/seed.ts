@@ -83,21 +83,42 @@ import { MOCK_INBOUND_SUBMISSIONS } from "../lib/mock-data/inbound-submissions";
 // populates them via the app's chat rail.
 
 /**
- * Generic bulk-insert helper. Handles zero-row arrays silently and
- * reports counts for each table so the seed output is legible.
+ * Row-by-row insert helper. Trades bulk-insert perf (fine at seed
+ * scale — small mock stores) for resilience: a single FK violation
+ * or shape mismatch on one row surfaces as a warning and gets
+ * skipped, rather than aborting the whole seed pipeline. That way
+ * one orphan reference doesn't block downstream tables from getting
+ * their data in.
  */
 async function seedTable<T>(name: string, table: any, rows: T[]) {
   if (!rows || rows.length === 0) {
     console.log(`  ${name}: (empty)`);
     return;
   }
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.insert(table).values(rows as any).onConflictDoNothing();
-    console.log(`  ${name}: ${rows.length} rows`);
-  } catch (err) {
-    console.error(`  ${name}: FAILED —`, (err as Error).message);
-    throw err;
+  let ok = 0;
+  const failures: string[] = [];
+  for (const row of rows) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await db.insert(table).values(row as any).onConflictDoNothing();
+      ok++;
+    } catch (err) {
+      const msg = (err as Error).message.split("\n")[0];
+      failures.push(msg);
+    }
+  }
+  if (failures.length === 0) {
+    console.log(`  ${name}: ${ok} rows`);
+  } else {
+    console.log(
+      `  ${name}: ${ok} rows, ${failures.length} skipped`,
+    );
+    // Report unique failure messages so the operator sees the shape
+    // of the issue without a wall of duplicates.
+    const unique = Array.from(new Set(failures)).slice(0, 3);
+    for (const f of unique) {
+      console.log(`    · ${f}`);
+    }
   }
 }
 

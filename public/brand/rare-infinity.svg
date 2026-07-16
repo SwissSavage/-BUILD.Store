@@ -1,0 +1,36 @@
+<svg viewBox="0 0 160 62" xmlns="http://www.w3.org/2000/svg" width="1600" height="620">
+  <defs>
+    <style type="text/css">
+      @import url('https://fonts.googleapis.com/css2?family=Abel&amp;display=swap');
+      .rare-text {
+        font-family: 'Abel', 'Helvetica Neue', Arial, sans-serif;
+        font-weight: 700;
+      }
+    </style>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#B8971E"/>
+      <stop offset="50%" stop-color="#F4CF57"/>
+      <stop offset="100%" stop-color="#B8971E"/>
+    </linearGradient>
+    <linearGradient id="spectrum" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D828A0"/>
+      <stop offset="55%" stop-color="#5070F0"/>
+      <stop offset="100%" stop-color="#007048"/>
+    </linearGradient>
+  </defs>
+  <text x="0" y="52"
+        class="rare-text"
+        font-size="60"
+        letter-spacing="-1.5"
+        fill="#FFFFFF"
+        stroke="url(#gold)"
+        stroke-width="1.5"
+        style="paint-order: stroke">Rare</text>
+  <text x="100" y="35"
+        class="rare-text"
+        font-size="54"
+        fill="url(#spectrum)"
+        stroke="url(#gold)"
+        stroke-width="1"
+        style="paint-order: stroke">∞</text>
+</svg>

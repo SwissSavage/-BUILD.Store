@@ -5,6 +5,21 @@
  * queue). This surface manages OUTBOUND proposals — the interactive
  * client-facing quotes that flip-reveal at /quotes/[clientToken].
  *
+ * Tier 21 composer shape:
+ *   - Pricing lives on each proposed Builder — matches Jamar's Google
+ *     Doc quote-sheet format (Service Provider | Quote | Timeline per
+ *     row). Aggregate engagement total is derived from the picked hand
+ *     on the client-facing surface.
+ *   - Admin composes the proposedBuilders array as a JSON block via
+ *     the textarea below. Each entry carries userId + pricing (fixed
+ *     / range / hourly) + per-Builder timeline + relevance narrative.
+ *     A full per-Builder subform UI (dynamic add / remove Builder
+ *     cards with radio + amount inputs) is queued as a follow-on
+ *     tier — JSON keeps the schema honest without dynamic-form-fields
+ *     scaffolding.
+ *   - Scope block (engagement summary, deliverables, timeline rhythm)
+ *     stays engagement-level, not per-Builder.
+ *
  * Same operational pattern as /admin/cohort (Tier 6) and
  * /admin/receipts (Tier 7). Every action writes to the immutable
  * audit trail via logAuditEvent().
@@ -21,12 +36,16 @@ import {
   removeCooperativeQuote,
 } from "@/lib/quote-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
-import { Avatar } from "@/components/Avatar";
+import {
+  aggregateHeadline,
+  aggregateUnitLabel,
+  deriveAggregatePricing,
+} from "@/lib/quote-pricing";
 
 /**
- * Candidate cooperators for proposal: Members + Partners. Sorted for
- * a predictable form. Admins can propose themselves — sometimes the
- * founder IS the lead on a founding-client engagement.
+ * Candidate builders for proposal: Members + Partners. Sorted for
+ * a predictable reference table. Admins can propose themselves —
+ * sometimes the founder IS the lead on a founding-client engagement.
  */
 function proposalCandidates() {
   return [...MOCK_USERS]
@@ -77,6 +96,33 @@ const STATUS_LABEL: Record<
   declined: "Declined",
 };
 
+/** JSON schema example — rendered as the composer placeholder. */
+const BUILDER_JSON_TEMPLATE = `[
+  {
+    "userId": "u_bbg",
+    "pricing": {
+      "type": "range",
+      "baseAmountMin": 18000,
+      "baseAmountMax": 24000,
+      "talentSplit": 85,
+      "operationsSplit": 15
+    },
+    "timeline": "6 weeks across pre-pro, production, and post",
+    "relevance": "BBG carries the FM voice through every read."
+  },
+  {
+    "userId": "u_sunny",
+    "pricing": {
+      "type": "fixed",
+      "baseAmount": 14000,
+      "talentSplit": 85,
+      "operationsSplit": 15
+    },
+    "timeline": "5 weeks brand direction",
+    "relevance": "Sunny's brand systems chops mean the film ships coherent."
+  }
+]`;
+
 export default async function AdminCooperativeQuotesPage() {
   const viewer = await getCurrentUser();
   if (!viewer || !viewer.isAdmin) {
@@ -101,8 +147,9 @@ export default async function AdminCooperativeQuotesPage() {
             Author the interactive quote a client receives after a
             consultation call. Client visits{" "}
             <code>/quotes/[clientToken]</code>, sees face-down cards,
-            reveals the proposed crew, picks their lead. Same URL
-            evolves into the project dashboard after approval.
+            reveals the proposed crew (each Builder carries their own
+            price + timeline right on the card), picks their lead. Same
+            URL evolves into the project dashboard after approval.
           </p>
         </div>
       </div>
@@ -172,63 +219,55 @@ export default async function AdminCooperativeQuotesPage() {
               </p>
             </div>
 
+            {/* Candidate reference table — read-only lookup of userIds
+                so the admin can copy them into the JSON below. Members
+                + Partners only. */}
             <div>
               <label className="block text-xs uppercase tracking-wider text-ink-muted">
-                Proposed cooperators (1-5)
+                Candidate builders (reference)
               </label>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <div className="mt-2 grid gap-1 text-[11px] sm:grid-cols-2">
                 {candidates.map((user) => (
-                  <label
+                  <div
                     key={user.id}
-                    className="flex items-center gap-2 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm hover:border-brand-magenta/50"
+                    className="flex items-center justify-between rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1"
                   >
-                    <input
-                      type="checkbox"
-                      name="proposedMemberIds"
-                      value={user.id}
-                      className="h-4 w-4"
-                    />
-                    <Avatar user={user} size="sm" />
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">
-                        {publicName(user)}
-                      </p>
-                      <p className="truncate text-[10px] text-ink-faint">
-                        {user.id}
-                      </p>
-                    </div>
-                  </label>
+                    <span className="truncate font-medium">
+                      {publicName(user)}
+                    </span>
+                    <code className="text-[10px] text-ink-faint">
+                      {user.id}
+                    </code>
+                  </div>
                 ))}
               </div>
               <p className="mt-1 text-[11px] text-ink-faint">
-                Order matters — the first checked cooperator is the
-                recommended lead. Copy user IDs into the relevance
-                textarea below.
+                Copy the userIds into the proposedBuilders JSON below.
+                Order matters — the first entry is the recommended lead.
               </p>
             </div>
 
             <div>
               <label
-                htmlFor="memberRelevance"
+                htmlFor="proposedBuildersJson"
                 className="block text-xs uppercase tracking-wider text-ink-muted"
               >
-                Per-member relevance narratives
+                Proposed builders (JSON, 1-5 entries)
               </label>
               <textarea
-                id="memberRelevance"
-                name="memberRelevance"
-                rows={6}
-                placeholder={
-                  "u_bbg: BBG carries the FM voice through every read. Right creative match for the tone URL Media has been building.\n" +
-                  "u_sunny: Sunny's brand systems chops mean the film ships with visual assets that carry into cutdowns + OOH.\n" +
-                  "u_bayu: Bayu handles the launch microsite — brand-systems work translates into the digital surface."
-                }
+                id="proposedBuildersJson"
+                name="proposedBuildersJson"
+                rows={16}
+                required
+                placeholder={BUILDER_JSON_TEMPLATE}
                 className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 font-mono text-xs"
               />
               <p className="mt-1 text-[11px] text-ink-faint">
-                One line per cooperator. Format:{" "}
-                <code>userId: narrative</code>. Lines without a colon
-                or with unknown userIds are silently skipped.
+                Each Builder carries per-Builder pricing (fixed / range
+                / hourly), timeline, and relevance line. Aggregate
+                engagement total derives from the sum of picked
+                Builders on the client surface. Full per-Builder subform
+                UI is queued for a follow-on tier.
               </p>
             </div>
 
@@ -263,9 +302,9 @@ export default async function AdminCooperativeQuotesPage() {
                 rows={5}
                 required
                 placeholder={
-                  "Hero film — 3 minutes, delivered in ProRes + H.264\n" +
-                  "Social cutdowns — 60s, 30s, 15s\n" +
-                  "Launch microsite — single-page interactive"
+                  "Hero film, 3 minutes, delivered in ProRes + H.264\n" +
+                  "Social cutdowns: 60s, 30s, 15s\n" +
+                  "Launch microsite, single-page interactive"
                 }
                 className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
               />
@@ -280,75 +319,21 @@ export default async function AdminCooperativeQuotesPage() {
                 htmlFor="timeline"
                 className="block text-xs uppercase tracking-wider text-ink-muted"
               >
-                Timeline
+                Engagement timeline rhythm
               </label>
               <input
                 id="timeline"
                 name="timeline"
                 type="text"
                 required
-                placeholder="8 weeks from kickoff — 2 pre-production, 3 production, 3 post."
+                placeholder="8 weeks from kickoff. 2 pre-production, 3 production, 3 post."
                 className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
               />
+              <p className="mt-1 text-[11px] text-ink-faint">
+                Engagement-level phase story. Per-Builder timelines
+                live on each entry in the JSON above.
+              </p>
             </div>
-
-            <div className="grid gap-5 sm:grid-cols-3">
-              <div>
-                <label
-                  htmlFor="baseAmount"
-                  className="block text-xs uppercase tracking-wider text-ink-muted"
-                >
-                  Base amount (USD)
-                </label>
-                <input
-                  id="baseAmount"
-                  name="baseAmount"
-                  type="number"
-                  required
-                  min={1}
-                  placeholder="45000"
-                  className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="talentSplit"
-                  className="block text-xs uppercase tracking-wider text-ink-muted"
-                >
-                  Talent split (%)
-                </label>
-                <input
-                  id="talentSplit"
-                  name="talentSplit"
-                  type="number"
-                  step={0.1}
-                  defaultValue={85}
-                  required
-                  className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="operationsSplit"
-                  className="block text-xs uppercase tracking-wider text-ink-muted"
-                >
-                  Ops split (%)
-                </label>
-                <input
-                  id="operationsSplit"
-                  name="operationsSplit"
-                  type="number"
-                  step={0.1}
-                  defaultValue={15}
-                  required
-                  className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-            <p className="text-[11px] text-ink-faint">
-              Splits must sum to 100. Baseline is 85/15 — override only
-              when the engagement diverged.
-            </p>
 
             <div className="flex justify-end">
               <button
@@ -379,6 +364,15 @@ export default async function AdminCooperativeQuotesPage() {
               const project = MOCK_PROJECTS.find(
                 (p) => p.id === quote.projectId,
               );
+              const aggregate = deriveAggregatePricing(
+                quote.proposedBuilders,
+              );
+              const aggregateLine =
+                `${aggregateHeadline(aggregate)}${
+                  aggregateUnitLabel(aggregate)
+                    ? ` ${aggregateUnitLabel(aggregate)}`
+                    : ""
+                }`;
 
               return (
                 <li key={quote.id}>
@@ -401,13 +395,11 @@ export default async function AdminCooperativeQuotesPage() {
                       </span>
                     </div>
                     <CardTitle className="mt-1 text-lg">
-                      ${quote.pricing.baseAmount.toLocaleString()} ·{" "}
-                      {quote.proposedMemberIds.length}{" "}
-                      {quote.proposedMemberIds.length === 1
-                        ? "cooperator"
-                        : "cooperators"}{" "}
-                      · {quote.pricing.talentSplit}/
-                      {quote.pricing.operationsSplit} split
+                      {aggregateLine} ·{" "}
+                      {quote.proposedBuilders.length}{" "}
+                      {quote.proposedBuilders.length === 1
+                        ? "builder"
+                        : "builders"}
                     </CardTitle>
                     <p className="mt-3 text-xs text-ink-muted">
                       Client magic-link (production dispatches to the

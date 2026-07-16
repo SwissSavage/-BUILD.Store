@@ -51,7 +51,7 @@ export function PeerReviewSection({
       </CardTitle>
       <p className="mt-2 text-sm text-ink-muted">
         Leave a short rating per teammate now that {project.title} is wrapped.
-        Reviews stay anonymous to the reviewee — only admin sees attribution
+        Reviews stay anonymous to the reviewee. Only admin sees attribution
         for calibration.
       </p>
 
@@ -146,7 +146,7 @@ function ReviewForm({
           required
           rows={3}
           minLength={20}
-          placeholder="Be specific — admin will use this to calibrate, and the aggregate rolls up to their profile."
+          placeholder="Be specific. Admin will use this to calibrate, and the aggregate rolls up to their profile."
           className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
         />
       </div>

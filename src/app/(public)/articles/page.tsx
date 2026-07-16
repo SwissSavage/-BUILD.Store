@@ -43,13 +43,13 @@ export const dynamic = "force-static";
 export const metadata: Metadata = {
   title: "Articles",
   description:
-    "Future Modern's writing corpus — release retrospectives, curatorial notes, and cooperative principles. Piped from paragraph.com/@future-modern, where the pieces live canonically.",
+    "Future Modern's writing corpus: release retrospectives, curatorial notes, and cooperative principles. Piped from paragraph.com/@future-modern, where the pieces live canonically.",
   alternates: {
     canonical: PARAGRAPH_BASE,
   },
   openGraph: {
     type: "website",
-    title: "Articles — Future Modern",
+    title: "Articles · Future Modern",
     description:
       "Release retrospectives, curatorial notes, and cooperative principles. From paragraph.com/@future-modern.",
     url: "/articles",
@@ -110,7 +110,7 @@ export default function ArticlesPage() {
         >
           paragraph.com/@future-modern
         </a>
-        {" "}— clicking a title opens the full piece there.
+        . Clicking a title opens the full piece there.
       </p>
 
       <div
@@ -121,7 +121,7 @@ export default function ArticlesPage() {
           Paragraph.com is Future Modern&apos;s Web3-native writing
           rail (formerly Mirror; the archive carried over after
           Paragraph acquired Mirror). We pipe the corpus here so it
-          surfaces alongside the rest of the cooperative — but the
+          surfaces alongside the rest of the cooperative. The
           canonical URL stays with Paragraph, which is where the
           words were minted.
         </p>

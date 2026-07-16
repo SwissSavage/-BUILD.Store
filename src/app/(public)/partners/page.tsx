@@ -22,7 +22,7 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 export const dynamic = "force-static";
 
 export const metadata = {
-  title: "Partners — $BUILD.Store",
+  title: "Partners · $BUILD.Store",
   description:
     "External service, ecosystem, and product partnerships of the Future Modern cooperative.",
 };

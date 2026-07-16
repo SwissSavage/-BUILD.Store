@@ -38,6 +38,7 @@ import {
   type WhitelistRail,
 } from "@/lib/types";
 import { previewDonationSplit } from "@/lib/whitelist-splits";
+import { createHubspotLead } from "@/lib/crm-stub";
 import { grossUpForCard } from "@/lib/payments-fees";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -105,21 +106,50 @@ async function submitConsultation(formData: FormData) {
   const scopeBuckets = SCOPE_ORDER.filter(
     (s) => formData.get(`scope_${s}`) === "on",
   );
+  const contactName = String(formData.get("contactName") ?? "");
+  const contactEmail = String(formData.get("contactEmail") ?? "");
+  const company = String(formData.get("company") ?? "").trim() || null;
+  const briefing = String(formData.get("briefing") ?? "");
+  const budgetHint = String(formData.get("budgetHint") ?? "").trim() || null;
   const request: ConsultationRequest = {
     id: `cr_${Date.now()}`,
     tierId: tier.id,
-    contactName: String(formData.get("contactName") ?? ""),
-    contactEmail: String(formData.get("contactEmail") ?? ""),
-    company: String(formData.get("company") ?? "").trim() || null,
+    contactName,
+    contactEmail,
+    company,
     scopeBuckets,
-    briefing: String(formData.get("briefing") ?? ""),
-    budgetHint: String(formData.get("budgetHint") ?? "").trim() || null,
+    briefing,
+    budgetHint,
     status: "new",
     assignedTo: null,
     adminNote: null,
     createdAt: new Date().toISOString(),
   };
   MOCK_CONSULTATION_REQUESTS.push(request);
+
+  // Land the scoping-call request in HubSpot too, same as the three
+  // signup-intent forms. A CRM hiccup shouldn't block the actual intake,
+  // the request is already recorded locally above regardless.
+  const [firstName, ...lastNameParts] = contactName.trim().split(/\s+/);
+  try {
+    await createHubspotLead({
+      email: contactEmail,
+      firstName: firstName || undefined,
+      lastName: lastNameParts.join(" ") || undefined,
+      company: company || undefined,
+      intent: "build_a_team",
+      source: "whitelist_consultation_request",
+      teamScope: briefing,
+      pillars: scopeBuckets,
+      opportunityBrief: budgetHint
+        ? `Budget hint: ${budgetHint}`
+        : undefined,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[whitelist] HubSpot sync failed for consultation request", err);
+  }
+
   revalidatePath("/whitelist");
   revalidatePath("/admin/whitelist");
   revalidatePath("/admin");
@@ -143,15 +173,15 @@ export default function WhitelistPage() {
           Access to the cooperative is earned, never bought.
         </h1>
         <p className="mt-4 max-w-3xl text-lg text-ink-muted">
-          Future Modern is a workers&apos; cooperative. Standing inside it —
-          Member, Partner, governance, the lot — exists for the people who
+          Future Modern is a workers&apos; cooperative. Standing inside it
+          (Member, Partner, governance, the lot) exists for the people who
           contribute to the work. There is no tier you can pay to skip into.
           That&apos;s not a marketing line. It&apos;s the rule.
         </p>
         <p className="mt-3 max-w-3xl text-sm text-ink-muted">
           We get asked, often, if there&apos;s a way to write a check and
           jump the line. There isn&apos;t. The exclusivity is part of the
-          value — for cooperators and for the clients who hire them.
+          value. For builders and for the clients who hire them.
         </p>
       </header>
 
@@ -196,10 +226,10 @@ export default function WhitelistPage() {
             >
               Path 1 · Invitation
             </div>
-            <CardTitle className="mt-3 text-2xl">Invited by a cooperator</CardTitle>
+            <CardTitle className="mt-3 text-2xl">Invited by a builder</CardTitle>
             <p className="mt-2 text-sm text-ink-muted">
               Someone already inside vouches for you. They take some
-              reputational skin in the game when they do — that&apos;s
+              reputational skin in the game when they do. That&apos;s
               the point. Quiet, reference-driven, no application form.
             </p>
             <p className="mt-3 text-xs text-ink-faint">
@@ -242,7 +272,7 @@ export default function WhitelistPage() {
               uses. Standing accrues from the ledger.
             </p>
             <p className="mt-2 text-xs text-ink-faint">
-              No account needed to offer help — pick a project and
+              No account needed to offer help. Pick a project and
               there&apos;s a public form on the project page. Admin
               follows up by email.
             </p>
@@ -270,7 +300,7 @@ export default function WhitelistPage() {
           </h2>
           <p className="mt-3 max-w-3xl text-sm text-ink-muted">
             Some folks have asked how to support the cooperative without
-            becoming part of it — running a co-op costs money, and that
+            becoming part of it. Running a co-op costs money, and that
             generosity is meaningful. So there&apos;s a path. Read the
             fine print first:
           </p>
@@ -288,7 +318,7 @@ export default function WhitelistPage() {
               <span>
                 100% routes 50/50 to the Treasury + the Liquidity Pool.
                 No individual payout. No ops cut. Every dollar compounds
-                into long-horizon capital — the cooperative covers
+                into long-horizon capital. The cooperative covers
                 today&apos;s ops out of contract revenue.
               </span>
             </li>
@@ -434,7 +464,7 @@ export default function WhitelistPage() {
                 </ul>
                 <p className="mt-4 text-xs text-ink-faint">
                   Scoping calls are free. You only pay after we agree on
-                  scope and you approve the quote sheet — same intake any
+                  scope and you approve the quote sheet. Same intake any
                   contract uses.
                 </p>
               </div>
@@ -489,7 +519,7 @@ export default function WhitelistPage() {
                 />
                 <input
                   name="budgetHint"
-                  placeholder="Budget range (optional — helps triage)"
+                  placeholder="Budget range (optional, helps triage)"
                   className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-xs"
                 />
                 <button
@@ -523,10 +553,10 @@ export default function WhitelistPage() {
             50% to the Treasury (long-horizon runway) and 50% to the
             Liquidity Pool (the LP deposit is what structurally
             manufactures $BUILD token value instead of leaving it to
-            market dynamics — non-negotiable). Zero to ops, zero to any
+            market dynamics, non-negotiable). Zero to ops, zero to any
             individual. While we&apos;re still pre-salary, the founder
             and core team eat ops out of contract revenue. Donations
-            are war-chest only — they should still be growing the
+            are war-chest only. They should still be growing the
             cooperative&apos;s capital base years from now.
           </p>
           <p>
@@ -541,7 +571,7 @@ export default function WhitelistPage() {
             no markup.
           </p>
           <p>
-            <strong className="text-ink">Can I refund?</strong> Yes —
+            <strong className="text-ink">Can I refund?</strong> Yes.
             14-day refund window, no reason required. Funds stay
             unallocated during the window so nothing&apos;s already been
             spent against your donation.

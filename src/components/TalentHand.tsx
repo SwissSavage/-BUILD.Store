@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * TalentHand — cooperators presented as a dealt hand of cards.
+ * TalentHand — builders presented as a dealt hand of cards.
  *
  * Every time the cooperative surfaces people to clients (RFP quote
  * responses, team selection options, "who was on this" retro views on
@@ -65,6 +65,22 @@ export interface TalentHandEntry {
    * without the sub-line.
    */
   relevance?: string;
+  /**
+   * Optional per-card quote line — Jamar's Google Doc canonization
+   * (Service Provider | Quote | Timeline per row). When present, the
+   * card renders a compact pricing + timeline block right under the
+   * portrait so the client evaluates each Builder priced-in. Passed
+   * as denormalized strings so TalentHand stays free of quote-domain
+   * imports.
+   */
+  quoteLine?: {
+    /** e.g. "$18,000 to $24,000" or "$150/hr". */
+    pricingHeadline: string;
+    /** e.g. "range" or "hourly, billed as delivered". */
+    pricingUnit: string;
+    /** e.g. "6 weeks" or "part-time across the engagement." */
+    timeline: string;
+  };
   /**
    * Curated portfolio thumbnails / links. Rendered as small chips
    * under the card. Each item opens the source in a new tab or
@@ -166,7 +182,7 @@ export function TalentHand({
           centered when the user swipes / arrow-keys through. */}
       <ol
         className="fm-hand-track flex snap-x snap-mandatory gap-6 overflow-x-auto pb-6 pt-2"
-        aria-label={contextLabel ?? "Cooperators presented as a hand of cards"}
+        aria-label={contextLabel ?? "Builders presented as a hand of cards"}
       >
         {entries.map((entry, idx) => {
           const decision = decisions[entry.user.id] ?? null;
@@ -217,6 +233,17 @@ export function TalentHand({
                 <div className="mt-2">
                   <TierBadge tier={entry.user.membershipTier} />
                 </div>
+
+                {entry.quoteLine && (
+                  <div className="mt-3 rounded-xl border border-brand-magenta/30 bg-brand-magenta/5 px-3 py-2">
+                    <p className="font-display text-lg font-semibold text-brand-magenta">
+                      {entry.quoteLine.pricingHeadline}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-wider text-ink-muted">
+                      {entry.quoteLine.pricingUnit} · {entry.quoteLine.timeline}
+                    </p>
+                  </div>
+                )}
 
                 {entry.relevance && (
                   <p className="mt-3 border-l-2 border-brand-magenta/60 pl-3 text-[13px] italic text-ink-muted">
@@ -296,7 +323,7 @@ export function TalentHand({
           on a mis-tap or after a change-of-mind conversation. */}
       {selectable && (
         <p className="mt-1 text-[11px] text-ink-faint">
-          Not final — click again to un-mark, or swap after we talk it through.
+          Not final. Click again to un-mark, or swap after we talk it through.
         </p>
       )}
     </section>

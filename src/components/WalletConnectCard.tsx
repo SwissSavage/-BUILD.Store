@@ -115,7 +115,7 @@ export function WalletConnectCard({
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-ink-muted">
             <span>
-              Provider: <strong className="capitalize">{connectedProvider ?? "—"}</strong>
+              Provider: <strong className="capitalize">{connectedProvider ?? "n/a"}</strong>
             </span>
             {connectedAt && (
               <span>
@@ -147,7 +147,7 @@ export function WalletConnectCard({
         <div className="mt-4 space-y-3 text-sm">
           <p className="text-ink-muted">
             Connect MetaMask, Coinbase Wallet, Rainbow, Brave, or any
-            injected EVM wallet. We persist the address only — production
+            injected EVM wallet. We persist the address only. Production
             swap upgrades this to a Sign-In With Ethereum (SIWE)
             signature round trip.
           </p>

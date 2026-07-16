@@ -69,11 +69,11 @@ export async function generateMetadata({
   if (!user) return { robots: { index: false, follow: false } };
   if (!profileShouldIndex(user)) {
     return {
-      title: `${publicName(user)} — Future Modern`,
+      title: `${publicName(user)} · Future Modern`,
       robots: { index: false, follow: false },
     };
   }
-  return { title: `${publicName(user)} — Future Modern` };
+  return { title: `${publicName(user)} · Future Modern` };
 }
 
 export default async function PublicProfilePage({
@@ -247,8 +247,8 @@ export default async function PublicProfilePage({
                   Send
                 </button>
                 <p className="text-[10px] text-ink-faint">
-                  Members and admins can DM any user. No reply thread yet
-                  — they&apos;ll respond from /notifications.
+                  Members and admins can DM any user. No reply thread yet.
+                  They&apos;ll respond from /notifications.
                 </p>
               </form>
             </details>
@@ -338,7 +338,7 @@ export default async function PublicProfilePage({
             </div>
             <p className="mt-1 text-sm text-ink-muted">
               Year-end cards minted as permanent on-chain artifacts.
-              Each card is also a wallet — holds {publicName(user)}&apos;s
+              Each card is also a wallet. Holds {publicName(user)}&apos;s
               $BUILD allocation, recognitions, and cooperative artifacts
               from that year.
             </p>
@@ -436,7 +436,7 @@ export default async function PublicProfilePage({
               </label>
               <label className="block md:col-span-2">
                 <span className="text-[11px] uppercase tracking-wider text-ink-muted">
-                  Brief (≥ 30 chars — scope, timeline, budget if known)
+                  Brief (≥ 30 chars: scope, timeline, budget if known)
                 </span>
                 <textarea
                   name="brief"
@@ -616,8 +616,8 @@ export default async function PublicProfilePage({
                     <Sub label="Reliability" value={aggregate.reliability} />
                   </div>
                   <p className="mt-4 text-[11px] text-ink-faint">
-                    Reviewers stay anonymous to {publicName(user)} —
-                    only admin sees attribution for calibration.
+                    Reviewers stay anonymous to {publicName(user)}.
+                    Only admin sees attribution for calibration.
                   </p>
                 </>
               ) : (
@@ -644,7 +644,7 @@ export default async function PublicProfilePage({
                     >
                       <p className="italic">&ldquo;{t.publishedQuote}&rdquo;</p>
                       <p className="mt-1 text-[11px] text-ink-faint">
-                        — {t.customerName} · {t.overallStars}★
+                        {t.customerName} · {t.overallStars}★
                       </p>
                     </li>
                   ))}
@@ -691,7 +691,7 @@ function EpkShell({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={epk.heroImageUrl}
-          alt={`${userName} — press image`}
+          alt={`${userName} press image`}
           className="w-full rounded-2xl object-cover"
           style={{ maxHeight: "60vh" }}
         />
@@ -812,7 +812,7 @@ function EpkShell({
                       )}
                       {w.context && (
                         <span className="ml-1 text-xs text-ink-faint">
-                          — {w.context}
+                          · {w.context}
                         </span>
                       )}
                     </li>
@@ -948,7 +948,7 @@ function PressCard({ clip }: { clip: PressClip }) {
     <>
       <p className="text-base italic">&ldquo;{clip.quote}&rdquo;</p>
       <p className="mt-2 text-xs text-ink-muted">
-        — <strong className="text-ink">{clip.outlet}</strong>
+        <strong className="text-ink">{clip.outlet}</strong>
         {clip.date && (
           <span className="ml-2 text-ink-faint">{clip.date}</span>
         )}

@@ -80,7 +80,7 @@ export async function handleSignup(formData: FormData) {
   pushInboundSubmission({
     kind: kindMap[intent],
     status: "new",
-    title: `${titlePrefix[intent]} — ${firstName} ${lastName}`.trim(),
+    title: `${titlePrefix[intent]} · ${firstName} ${lastName}`.trim(),
     submitter: `${firstName} ${lastName}`.trim() || email,
     submitterEmail: email || null,
     submitterCompany: company || null,

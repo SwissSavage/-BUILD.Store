@@ -70,8 +70,8 @@ export default function CovenantPolicy() {
           <p className="mt-2">
             Every Member has one voice in governance. Relationships
             inside project teams and client engagements are hierarchical
-            when the work requires it — someone owns delivery, someone
-            owns account, someone owns direction — but that hierarchy is
+            when the work requires it. Someone owns delivery, someone
+            owns account, someone owns direction. That hierarchy is
             confined to the engagement. Governance is not for sale, and
             leadership on one project confers no permanent authority
             over another.
@@ -92,7 +92,7 @@ export default function CovenantPolicy() {
               <strong className="text-ink">Communicate at least weekly.</strong>{" "}
               Silence is a signal, and the cooperative reads it. Say
               you&apos;re heads-down, say you&apos;re stuck, say you&apos;re
-              overextended — just say something.
+              overextended. Just say something.
             </li>
             <li>
               <strong className="text-ink">Route through the platform.</strong>{" "}
@@ -117,7 +117,7 @@ export default function CovenantPolicy() {
 
         <div>
           <h2 className="font-display text-2xl font-semibold text-ink">
-            MVP score — how standing is measured
+            MVP score. How standing is measured.
           </h2>
           <p className="mt-2">
             Every active Member carries an OVR (0-99) computed from
@@ -137,7 +137,7 @@ export default function CovenantPolicy() {
 
         <div>
           <h2 className="font-display text-2xl font-semibold text-ink">
-            Compliance ladder — the penalty mechanic
+            Compliance ladder. The penalty mechanic.
           </h2>
           <p className="mt-2">
             Covenant violations produce compliance penalties. Each
@@ -149,8 +149,8 @@ export default function CovenantPolicy() {
             of accumulated damage.
           </p>
           <p className="mt-2">
-            Penalties are admin-recorded with an arbitration record —
-            the reason text is preserved in the immutable audit log.
+            Penalties are admin-recorded with an arbitration record.
+            The reason text is preserved in the immutable audit log.
             Rescission by admin is possible and itself audit-logged. A
             Member facing a penalty they believe is mistaken can invoke
             the cooperative arbitration process; the formal Arbitration
@@ -162,30 +162,30 @@ export default function CovenantPolicy() {
 
         <div>
           <h2 className="font-display text-2xl font-semibold text-ink">
-            Recognition rails — how excellence is surfaced
+            Recognition rails. How excellence is surfaced.
           </h2>
           <ul className="mt-2 space-y-2 pl-6">
             <li>
               <strong className="text-ink">Future Modernist of the
-              Month</strong> — admin editorial pick while the cooperative
+              Month:</strong> admin editorial pick while the cooperative
               is small, Member vote once voting Membership is large
               enough to make the outcome meaningful. Open to Members and
               Partners; recognition unlocks a public-discovery window for
               Partners.
             </li>
             <li>
-              <strong className="text-ink">Constellation of [Year]</strong> —
+              <strong className="text-ink">Constellation of [Year]:</strong>{" "}
               annual cohort of Members who held Champion&apos;s Court
               standing during the year.
             </li>
             <li>
-              <strong className="text-ink">Champion&apos;s Court</strong> —
+              <strong className="text-ink">Champion&apos;s Court:</strong>{" "}
               standing tier for Members in the top 10% AND at OVR ≥ 90.
               Refreshes with each daily compute.
             </li>
             <li>
-              <strong className="text-ink">Annual canonization</strong> —
-              at the end of every calendar year, each active Member (and
+              <strong className="text-ink">Annual canonization:</strong> at
+              the end of every calendar year, each active Member (and
               any Partner who held a recognition during the year) mints
               an ERC-721 canonization card with ERC-6551 token-bound
               account. Tier locks to year-end rarity band.
@@ -199,8 +199,8 @@ export default function CovenantPolicy() {
           </h2>
           <p className="mt-2">
             The first canonization runs at the end of the cooperative&apos;s
-            first full calendar year of operation. No retroactive canon
-            — Members do not receive credit for pre-launch work through
+            first full calendar year of operation. No retroactive canon.
+            Members do not receive credit for pre-launch work through
             the cooperative record, because retroactive minting would
             invent standing that nobody earned through the system. This
             is the integrity floor.
@@ -227,7 +227,7 @@ export default function CovenantPolicy() {
           </h2>
           <p className="mt-2">
             Members can exit voluntarily at any time. Contribution
-            record + canonization cards remain — the cooperative record
+            record + canonization cards remain. The cooperative record
             does not retroactively erase what someone contributed. Data
             subject erasure is available at{" "}
             <Link

@@ -8,7 +8,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
+import { createHubspotLead } from "@/lib/crm-stub";
+import { INDUSTRY_LABELS, type Industry, type Project } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
 
 async function createRfp(formData: FormData) {
@@ -22,7 +23,36 @@ async function createRfp(formData: FormData) {
 
   if (!title || !description) throw new Error("Title and description required");
 
-  MOCK_PROJECTS.push({
+  // Land the RFP in HubSpot as a contact + deal before we persist the
+  // Project locally, so hubspotDealId is populated from creation instead
+  // of waiting on a follow-up sync. Client contact info comes from the
+  // signed-in User record (this form doesn't collect name/email — the
+  // submitter is already authenticated). A CRM hiccup shouldn't block the
+  // RFP itself from going into the intake queue, so this degrades to a
+  // null hubspotDealId (same as before) on failure rather than throwing.
+  const user = await getCurrentUser();
+  let hubspotDealId: string | null = null;
+  if (user) {
+    try {
+      const lead = await createHubspotLead({
+        email: user.email,
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined,
+        industry,
+        intent: "build_a_team",
+        source: "rfp_submission",
+        teamScope: description,
+        pillars: [industry],
+        opportunityBrief: `RFP: ${title}. Budget: ${budget || "not specified"}.`,
+      });
+      hubspotDealId = lead.dealId;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[contracts/new] HubSpot sync failed for RFP", err);
+    }
+  }
+
+  const project: Project = {
     id: `p_${Date.now()}`,
     title,
     description,
@@ -36,10 +66,10 @@ async function createRfp(formData: FormData) {
     isRfp: true,
     rfpApprovedAt: null, // pending admin vetting
     rfpAdminNote: null,
-    // HubSpot sync writes the deal stage on the way in (Phase 1.3); we
-    // mirror "discovery" as the default until the webhook fires.
+    // Mirrors HubSpot's real dealstage until the webhook (Phase 1.3)
+    // fires a change — see mapHubspotStageToAppStage in lib/crm-stub.ts.
     hubspotStage: "discovery",
-    hubspotDealId: null,
+    hubspotDealId,
     collectedRevenue: null,
     collectedAt: null,
     // Admin team gets assigned during RFP review.
@@ -54,7 +84,8 @@ async function createRfp(formData: FormData) {
     bonusDecidedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  });
+  };
+  MOCK_PROJECTS.push(project);
 
   revalidatePath("/contracts");
   revalidatePath("/dashboard");

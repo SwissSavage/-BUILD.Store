@@ -25,6 +25,7 @@ import {
   type User,
 } from "@/lib/types";
 import { StoreDropdown } from "@/components/StoreDropdown";
+import { MobileMenuApp } from "@/components/MobileMenuApp";
 
 const VIEW_AS_TIER_ORDER: MembershipTier[] = [
   "prospect",
@@ -62,7 +63,7 @@ export async function Nav() {
       <div className="mx-auto flex max-w-app items-center justify-between gap-4 px-6 py-4">
         <Link
           href="/"
-          aria-label="Future Modern — home"
+          aria-label="Future Modern home"
           className="flex items-center gap-2.5 font-display text-xl font-semibold tracking-tight transition-opacity hover:opacity-80"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -86,7 +87,10 @@ export async function Nav() {
           </div>
         </div>
 
-        <nav className="flex items-center gap-4 text-sm">
+        {/* Desktop nav — hidden on mobile so 10+ auth links don't wrap
+            into a mess. Mobile users get the MobileMenuApp drawer
+            rendered further down. */}
+        <nav className="hidden items-center gap-4 text-sm md:flex">
           {isLoggedIn ? (
             <>
               <Link href="/dashboard" className={navLink}>Dashboard</Link>
@@ -103,7 +107,7 @@ export async function Nav() {
                 className={cn(navLink, "relative inline-flex items-center")}
                 aria-label={
                   unread > 0
-                    ? `Notifications — ${unread} unread`
+                    ? `Notifications, ${unread} unread`
                     : "Notifications"
                 }
               >
@@ -163,6 +167,19 @@ export async function Nav() {
             </>
           )}
         </nav>
+
+        {/* Mobile hamburger — visible only on mobile. Opens a full-
+            screen drawer with the same links stacked vertically, plus
+            an Admin section (flattened, no view-as picker) when the
+            user is an admin. */}
+        <div className="md:hidden">
+          <MobileMenuApp
+            isLoggedIn={isLoggedIn}
+            isAdmin={!!user?.isAdmin}
+            isEpk={user?.profileMode === "epk"}
+            unread={unread}
+          />
+        </div>
       </div>
     </header>
   );
@@ -307,7 +324,7 @@ function AdminDropdown({ self }: { self: User }) {
             <ViewAsButton
               key={user.id}
               target={user.id}
-              label={`${adminName(user)} — ${TIER_LABELS[tier]}`}
+              label={`${adminName(user)} · ${TIER_LABELS[tier]}`}
             />
           ))}
           {otherAdmins.length > 0 && (
@@ -319,7 +336,7 @@ function AdminDropdown({ self }: { self: User }) {
                 <ViewAsButton
                   key={u.id}
                   target={u.id}
-                  label={`${adminName(u)} — Admin`}
+                  label={`${adminName(u)} · Admin`}
                 />
               ))}
             </>

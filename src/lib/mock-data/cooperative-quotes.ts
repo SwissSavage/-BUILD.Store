@@ -5,8 +5,16 @@
  * Distinct from `MOCK_QUOTES` in `./quotes.ts` — that store holds
  * `QuoteSheet` entries, which are Members' bids on RFPs. This store
  * holds `CooperativeQuote` entries, which are the OUTBOUND proposals
- * FM sends to clients: proposed crew, scope, pricing, magic-link
- * gated at /quotes/[clientToken].
+ * FM sends to clients: proposed crew, per-Builder pricing, scope,
+ * magic-link gated at /quotes/[clientToken].
+ *
+ * Per-Builder pricing lands here (Tier 21). Each proposed Builder
+ * carries their own fixed / range / hourly pricing plus their own
+ * timeline and relevance pitch, matching Jamar's Google Doc format
+ * (Service Provider | Quote | Timeline). Strengths / weaknesses are
+ * substituted by the on-platform MVP OVR + sub-rating breakdown.
+ * Aggregate quote total is derived from the picked hand at approval
+ * time (see `quote-pricing.ts` deriveAggregatePricing).
  *
  * Sandbox seeds two quotes tied to existing MOCK_PROJECTS so the
  * flip-reveal + TalentHand surfaces have live data to render.
@@ -26,32 +34,64 @@ export const MOCK_COOPERATIVE_QUOTES: CooperativeQuote[] = [
     projectId: "p_001",
     clientDisplayName: "URL Media",
     // Order: recommended lead first. Client can choose otherwise.
-    proposedMemberIds: ["u_bbg", "u_sunny", "u_bayu"],
-    memberRelevance: {
-      u_bbg:
-        "BBG carries the FM voice through every read. The film needs a director whose creative read is on the exact tone URL Media has been building — that's him.",
-      u_sunny:
-        "Sunny's brand direction chops mean the film ships with a visual system, not just a piece. When URL Media wants to spin it into stills, cutdowns, and OOH, the assets are already coherent.",
-      u_bayu:
-        "Bayu handles the interactive companion — landing microsite for the launch. His brand systems work translates the film's design language into an owned digital surface.",
-    },
+    // Each Builder carries their own quote line — same shape as the
+    // per-provider rows on the historical Google Doc quote sheet.
+    // Aggregate range for the whole engagement lands around $38K-$52K
+    // when all three are picked; multi-role selection lets the client
+    // trim the hand and reduce the total accordingly.
+    proposedBuilders: [
+      {
+        userId: "u_bbg",
+        pricing: {
+          type: "range",
+          baseAmountMin: 18000,
+          baseAmountMax: 24000,
+          talentSplit: 85,
+          operationsSplit: 15,
+        },
+        timeline: "6 weeks across pre-pro, production, and post",
+        relevance:
+          "BBG carries the FM voice through every read. The film needs a director whose creative read is on the exact tone URL Media has been building. That's him.",
+      },
+      {
+        userId: "u_sunny",
+        pricing: {
+          type: "range",
+          baseAmountMin: 12000,
+          baseAmountMax: 16000,
+          talentSplit: 85,
+          operationsSplit: 15,
+        },
+        timeline: "5 weeks brand direction + stills selection",
+        relevance:
+          "Sunny's brand direction chops mean the film ships with a visual system, not just a piece. When URL Media wants to spin it into stills, cutdowns, and OOH, the assets are already coherent.",
+      },
+      {
+        userId: "u_bayu",
+        pricing: {
+          type: "range",
+          baseAmountMin: 8000,
+          baseAmountMax: 12000,
+          talentSplit: 85,
+          operationsSplit: 15,
+        },
+        timeline: "3 weeks microsite build after film lock",
+        relevance:
+          "Bayu handles the interactive companion, a landing microsite for the launch. His brand systems work translates the film's design language into an owned digital surface.",
+      },
+    ],
     scope: {
       summary:
         "Three-minute hero film with Afrofuturist direction, plus social cutdowns and a launch microsite. Delivery in 8 weeks from kickoff.",
       deliverables: [
-        "Hero film — 3 minutes, delivered in ProRes + H.264 with subtitle track",
-        "Social cutdowns — 60s, 30s, 15s for Instagram + TikTok",
-        "Launch microsite — single-page interactive with the film + credits",
-        "Stills package — 20 high-res frames selected + color-graded from the shoot",
-        "Behind-the-scenes documentary — 8-minute companion piece for URL Media's own channels",
+        "Hero film, 3 minutes, delivered in ProRes + H.264 with subtitle track",
+        "Social cutdowns: 60s, 30s, 15s for Instagram + TikTok",
+        "Launch microsite: single-page interactive with the film + credits",
+        "Stills package: 20 high-res frames selected + color-graded from the shoot",
+        "Behind-the-scenes documentary, 8-minute companion piece for URL Media's own channels",
       ],
       timeline:
-        "8 weeks from kickoff — 2 weeks pre-production, 3 weeks production + shoot, 3 weeks post + microsite.",
-    },
-    pricing: {
-      baseAmount: 45000,
-      talentSplit: 85,
-      operationsSplit: 15,
+        "8 weeks from kickoff. 2 weeks pre-production, 3 weeks production + shoot, 3 weeks post + microsite.",
     },
     status: "sent",
     sentAt: "2026-07-08T14:30:00Z",
@@ -62,31 +102,39 @@ export const MOCK_COOPERATIVE_QUOTES: CooperativeQuote[] = [
     selectedLeadUserId: null,
   },
   {
-    id: "quote_p002_dcg",
-    clientToken: "q_dcg_erc6551_audit",
-    projectId: "p_002",
-    clientDisplayName: "Direct Connect Global",
-    proposedMemberIds: ["u_tolgay"],
-    memberRelevance: {
-      u_tolgay:
-        "Tolgay wrote the ERC-6551 primitive that FM's own canonization system runs on. Your vault migration is exactly the kind of audit he'd do for us internally — same rigor, zero context transfer.",
-    },
+    // Second seed illustrates fixed-price per-Builder pricing on a
+    // single-Builder engagement. p_003 is the follow-on URL Media
+    // newsletter build per the active-projects memory.
+    id: "quote_p003_urlmedia_newsletter",
+    clientToken: "q_urlmedia_newsletter_platform",
+    projectId: "p_003",
+    clientDisplayName: "URL Media",
+    proposedBuilders: [
+      {
+        userId: "u_tolgay",
+        pricing: {
+          type: "fixed",
+          baseAmount: 32000,
+          talentSplit: 85,
+          operationsSplit: 15,
+        },
+        timeline: "6 weeks end-to-end",
+        relevance:
+          "Tolgay wrote the ERC-6551 primitive that FM's own canonization system runs on. Your newsletter platform migration is exactly the kind of build he'd do for us internally, same rigor, zero context transfer.",
+      },
+    ],
     scope: {
       summary:
-        "Audit of existing ERC-6551 token-bound account implementation, propose a multisig-compatible migration path, deliver a written report + reference migration contracts.",
+        "Migrate the newsletter platform to a new stack, deliver an admin-authored editorial pipeline plus subscriber-facing surfaces. Fixed price on a well-scoped rewrite.",
       deliverables: [
-        "Written audit report — vulnerabilities, gas-optimization opportunities, upgrade paths",
-        "Reference migration contracts — Solidity implementing the recommended multisig-compatible approach",
-        "Test suite — Foundry-based, covering the migration path end-to-end",
-        "Deployment guide — step-by-step for your engineering team to execute the migration",
+        "Migration plan document, mapped module-by-module from the current stack",
+        "Editorial admin surface, authored + queued + scheduled posts",
+        "Subscriber-facing surfaces, list + issue + archive",
+        "Test suite covering the editorial workflow end-to-end",
+        "Deployment guide for the engineering team to run the cutover",
       ],
       timeline:
-        "4 weeks from kickoff — 2 weeks audit + report, 2 weeks migration contract + tests.",
-    },
-    pricing: {
-      baseAmount: 28000,
-      talentSplit: 85,
-      operationsSplit: 15,
+        "6 weeks from kickoff. 1 week migration mapping, 4 weeks build, 1 week cutover + hardening.",
     },
     status: "viewed",
     sentAt: "2026-07-02T10:00:00Z",

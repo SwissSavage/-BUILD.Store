@@ -61,8 +61,8 @@ export function OnChainBadge({
       className={`inline-flex items-center gap-1.5 rounded-full border border-brand-blue/40 bg-brand-blue/5 font-medium uppercase tracking-wider text-brand-blue ${sizeClass} ${className}`}
       aria-label={
         canonCount === 1
-          ? "On-chain — one canonization on record"
-          : `On-chain — ${canonCount} canonizations on record`
+          ? "On-chain, one canonization on record"
+          : `On-chain, ${canonCount} canonizations on record`
       }
       title={
         canonCount === 1

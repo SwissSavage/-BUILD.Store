@@ -31,7 +31,7 @@ export default function SignupChooserPage() {
       </h1>
       <p className="mt-3 max-w-2xl text-ink-muted">
         Pick the door that fits. Each path asks for a short, specific
-        brief so the right cooperators can pick it up. You can always
+        brief so the right builders can pick it up. You can always
         come back and take another path.
       </p>
 
@@ -70,7 +70,7 @@ export default function SignupChooserPage() {
 
       <p className="mt-12 text-xs text-ink-faint">
         Not sure which client path fits? Start with &ldquo;$BUILD a
-        team&rdquo; — it&apos;s the widest door and the cooperative
+        team.&rdquo; It&apos;s the widest door and the cooperative
         can re-route you from there.
       </p>
     </div>

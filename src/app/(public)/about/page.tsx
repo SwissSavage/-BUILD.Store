@@ -18,6 +18,7 @@ import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { TaglineRare } from "@/components/TaglineRare";
+import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
 
 /**
  * Static-rendered. No cookies, no headers, no dynamic search params —
@@ -28,26 +29,173 @@ export const dynamic = "force-static";
 export const metadata = {
   title: "About · $BUILD.Store",
   description:
-    "Future Modern Builderberg LLC is the radical curation network unifying art and technology to distribute equity. People-powered, exclusively. Access is earned — never sold.",
+    "The world's first Venture Labor Cooperative. Cash flows to the people who ship. Cooperatively owned, contribution-earned, member-governed. Future Modern.",
 };
 
 export default function AboutPage() {
   return (
     <>
       <Hero />
-      <PurposeVision />
+      <WhyWeBuiltThis />
       <PeoplePowered />
       <VentureLabor />
       <ConstellationSection />
       <CoreCompetencies />
       <Provenance />
       <Credentials />
+      <WhatWeSayNoTo />
       <WhatChanged />
       <Pillars />
       <RoadmapPeek />
       <FaqSection />
       <CTA />
     </>
+  );
+}
+
+/**
+ * Why we built this — founder's confession + numbered deal frame.
+ *
+ * The Challenger-Sale move: names the shape of the deal every worker
+ * already knows they'd stay for, walks the reader through the trade-
+ * off they've been forced to accept elsewhere (companies give you 1
+ * and 2; gig platforms give you 3 and 4), then reveals FM as the
+ * place that gives all four. Founder confession beat + low-friction
+ * close.
+ *
+ * Visual weight designed to make skimming impossible — big numeric
+ * marks in FM palette, gradient wash behind, comparison row with FM
+ * card standing out via full palette treatment.
+ */
+function WhyWeBuiltThis() {
+  const items = [
+    {
+      n: "1)",
+      color: "#D828A0",
+      text: "Real equity for the effort.",
+    },
+    {
+      n: "2)",
+      color: "#5070F0",
+      text: "Pay tied to what you deliver.",
+    },
+    {
+      n: "3)",
+      color: "#007048",
+      text: "Hours structured around the work, not the office.",
+    },
+    {
+      n: "4)",
+      color: "#D828A0",
+      text: "Recognition for what you shipped, not how you performed.",
+    },
+  ];
+
+  return (
+    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+      {/* Gradient wash — subtle radial from magenta to blue, echoes
+          the hero's own wash so the visual language stays consistent
+          while this block reads as its own moment. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.14]"
+        style={{
+          background:
+            "radial-gradient(65% 65% at 15% 20%, #D828A0 0%, transparent 60%), radial-gradient(50% 50% at 85% 85%, #5070F0 0%, transparent 60%)",
+        }}
+      />
+
+      <div className="relative mx-auto max-w-app px-6 py-24 md:py-32">
+        <div className="text-xs uppercase tracking-wider text-brand-magenta">
+          Why we built this
+        </div>
+        <h2 className="mt-3 max-w-3xl font-display text-3xl font-semibold leading-tight md:text-4xl">
+          Every worker knows the shape of the deal they&apos;d stay for.
+        </h2>
+
+        <ol className="mt-12 max-w-4xl space-y-6">
+          {items.map((item) => (
+            <li
+              key={item.n}
+              className="flex items-baseline gap-5 md:gap-8"
+            >
+              <span
+                className="shrink-0 font-display text-5xl font-bold leading-none md:text-6xl"
+                style={{ color: item.color }}
+                aria-hidden="true"
+              >
+                {item.n}
+              </span>
+              <p className="text-lg font-medium text-ink md:text-2xl md:font-semibold">
+                {item.text}
+              </p>
+            </li>
+          ))}
+        </ol>
+
+        {/* The reveal row — three cards showing the trade-off + FM's
+            answer. FM card gets the full palette treatment to make it
+            visually inevitable that this is the punchline. */}
+        <div className="mt-16 grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-6 py-6">
+            <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+              Companies give you
+            </p>
+            <p className="mt-2 font-display text-3xl font-bold">
+              <span style={{ color: "#D828A0" }}>1</span>
+              <span className="text-ink-muted"> &amp; </span>
+              <span style={{ color: "#5070F0" }}>2</span>
+            </p>
+            <p className="mt-2 text-xs text-ink-faint">
+              Equity + pay. Not the rest.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-6 py-6">
+            <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+              Gig platforms give you
+            </p>
+            <p className="mt-2 font-display text-3xl font-bold">
+              <span style={{ color: "#007048" }}>3</span>
+              <span className="text-ink-muted"> &amp; </span>
+              <span style={{ color: "#D828A0" }}>4</span>
+            </p>
+            <p className="mt-2 text-xs text-ink-faint">
+              Flexibility + results. Not the rest.
+            </p>
+          </div>
+
+          <div
+            className="rounded-2xl border border-brand-magenta bg-gradient-to-br from-brand-magenta/15 via-brand-blue/10 to-brand-green/10 px-6 py-6 shadow-lg shadow-brand-magenta/10"
+          >
+            <p className="text-[11px] uppercase tracking-wider text-brand-magenta">
+              We give you
+            </p>
+            <p className="mt-2 font-display text-3xl font-bold">
+              <span
+                className="bg-gradient-to-r from-brand-magenta via-brand-blue to-brand-green bg-clip-text text-transparent"
+              >
+                All four
+              </span>
+            </p>
+            <p className="mt-2 text-xs text-ink">
+              The whole deal, structurally.
+            </p>
+          </div>
+        </div>
+
+        {/* Founder confession + close */}
+        <div className="mt-16 max-w-2xl">
+          <p className="text-lg text-ink-muted md:text-xl">
+            We looked. We stopped looking. So we built it.
+          </p>
+          <p className="mt-4 text-lg font-medium text-ink md:text-xl">
+            If it&apos;s the deal you&apos;ve been waiting for, the door
+            is open.
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -61,17 +209,17 @@ function FaqSection() {
     {
       question: "What does \"cooperative\" mean for Future Modern in practice?",
       answer:
-        "Every Member has one voice in governance. Cash flow follows the work — the people doing the shipping keep the largest share of every engagement. Standing is earned through peer-reviewed contribution, not bought, gamed, or inherited.\n\nThe LLC (Future Modern Builderberg) is the legal wrapper. The cooperative is the operating agreement inside it. Both are documented — the Cooperative Covenant is the plain-English version, the operating agreement is the legal one.",
+        "Every Member has one voice in governance. Cash flow follows the work. The people doing the shipping keep the largest share of every engagement. Standing is earned through peer-reviewed contribution, not bought, gamed, or inherited.\n\nThe LLC is the legal wrapper. The cooperative is the operating agreement inside it. Both are documented. The Cooperative Covenant is the plain-English version. The operating agreement is the legal one.",
     },
     {
       question: "Who owns the platform?",
       answer:
-        "Members do. Governance weight tracks the annual canonization each Member mints — an ERC-721 with an ERC-6551 token-bound account that carries their standing for that year. Members vote on covenant changes, subprocessor decisions, and major direction shifts.\n\nFuture Modern Builderberg LLC is the operator. The cooperators are the owners.",
+        "Members do. Governance weight tracks the annual canonization each Member mints: an ERC-721 with an ERC-6551 token-bound account that carries their standing for that year. Members vote on covenant changes, subprocessor decisions, and major direction shifts.\n\nFuture Modern is the operator. The builders are the owners.",
     },
     {
       question: "How does someone become a Member?",
       answer:
-        "The default path is contribution first, membership later. Prospects show up on a project, ship the work, get peer-reviewed, and — if the standing is real — get invited into full Membership. Partners can join as co-delivery collaborators without full Membership if the fit is scoped that way.\n\nAll of it runs through the whitelist. Every addition is a considered choice, not an application-form gauntlet.",
+        "The default path is contribution first, membership later. Prospects show up on a project, ship the work, get peer-reviewed, and (if the standing is real) get invited into full Membership. Partners can join as co-delivery collaborators without full Membership if the fit is scoped that way.\n\nAll of it runs through the whitelist. Every addition is a considered choice, not an application-form gauntlet.",
     },
     {
       question: "What's the relationship to Web3?",
@@ -111,20 +259,21 @@ function Hero() {
           About Future Modern
         </div>
         <h1 className="font-display text-5xl font-bold leading-tight md:text-6xl">
-          The radical curation network unifying{" "}
+          The world&apos;s first{" "}
           <span className="bg-gradient-to-r from-brand-magenta to-brand-blue bg-clip-text text-transparent">
-            art and technology
-          </span>{" "}
-          to distribute equity.
+            Venture Labor Cooperative
+          </span>
+          .
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-ink-muted md:text-xl">
-          Future Modern Builderberg LLC is people-powered, exclusively. A
-          cooperative of creatives, professionals, scientists, and techies
-          who are already reputed in their fields — and who built this
-          because the economics owed to the people doing the work weren&apos;t
-          getting paid out anywhere else.
+          Curated crews. The people who ship keep 85%. That&apos;s what
+          gets the best in the room.
         </p>
-        <p className="mt-4 max-w-2xl text-base text-ink-faint italic">
+        <p className="mt-3 max-w-2xl text-base text-ink-muted">
+          Read on to see how we work with clients, and how members earn
+          theirs.
+        </p>
+        <p className="mt-6 max-w-2xl text-base text-ink-faint italic">
           We&apos;re not trying to be special. We are special. We don&apos;t
           care if anyone sees it.
         </p>
@@ -144,71 +293,14 @@ function Hero() {
   );
 }
 
-function PurposeVision() {
-  return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      <div className="mx-auto max-w-app px-6 py-20">
-        <div className="grid gap-10 md:grid-cols-2">
-          <div>
-            <div className="text-xs uppercase tracking-wider text-brand-magenta">
-              Purpose
-            </div>
-            <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
-              The wave others ride.
-            </h2>
-            <p className="mt-5 text-ink-muted">
-              We exist to acknowledge and compensate the expression of
-              original ideas and labor that move culture forward. Provenance
-              first — then everything else.
-            </p>
-            <p className="mt-4 text-ink-muted">
-              In one sentence: the radical curation network unifying art
-              and technology to distribute equity.
-            </p>
-          </div>
-
-          <div>
-            <div className="text-xs uppercase tracking-wider text-brand-blue">
-              Vision
-            </div>
-            <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
-              Capital, redistributed.
-            </h2>
-            <p className="mt-5 text-ink-muted">
-              To redistribute human and financial capital from concentrated
-              powers to dynamic grassroots communities. To construct a world
-              where community integrates with life, art, appreciation, and
-              passion.
-            </p>
-            <p className="mt-4 text-ink-muted">
-              Driven and debonair. Strong, aggressive, absurd, weird —
-              self-assured and dynamic, creative and perceptive. We tackle
-              missions with diligence, grit, and daring.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-12 flex flex-wrap items-center justify-between gap-6 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-8 py-8">
-          <div>
-            <div className="text-xs uppercase tracking-wider text-ink-muted">
-              Tagline
-            </div>
-            <div className="mt-2 max-w-[280px]">
-              <TaglineRare />
-            </div>
-          </div>
-          <p className="max-w-md text-sm text-ink-muted">
-            For savvy seekers and independent creators who share a deep
-            value for cultural contribution. We provide content, services,
-            and resources counter to those currently found in legacy media
-            and traditional industry, which fail to cater to their
-            appetites.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
+// PurposeVision removed 2026-07-10. The "The wave others ride" +
+// "Capital, redistributed" framing was internal-adjacent language —
+// abstract and closer to ideological signaling than to the mechanic-
+// driven customer-first posture. WhyWeBuiltThis (the numbered-deal
+// synthesis) now carries the purpose statement immediately after the
+// hero. If a Rare∞ tagline moment is wanted back on /about, it can
+// live as its own standalone Tagline section — direct me on
+// placement when that decision is made.
 
 function PeoplePowered() {
   return (
@@ -234,7 +326,7 @@ function PeoplePowered() {
               </p>
               <p>
                 We didn&apos;t stay long inside any of them. Top performance
-                wasn&apos;t the issue — fit was. The pattern was the same
+                wasn&apos;t the issue. Fit was. The pattern was the same
                 every time: vindication afterwards. The people who built
                 Future Modern are the ones who keep moving when the room
                 they&apos;re in stops being big enough for what they
@@ -244,7 +336,7 @@ function PeoplePowered() {
                 None of our clients came from freelance platforms. Anything
                 visible there is a testament to who we are, not a credential
                 we&apos;re trading on. Our work has always come through
-                relationships — through the people who&apos;ve seen us
+                relationships. Through the people who&apos;ve seen us
                 deliver and stayed in the room.
               </p>
               <p>
@@ -268,14 +360,14 @@ function PeoplePowered() {
               </li>
               <li>
                 <span className="text-ink">Admin-authored framing.</span>{" "}
-                Members submit objective fields — price, timeline, work
+                Members submit objective fields: price, timeline, work
                 samples. The cooperative authors the positioning so the work
                 speaks for itself, not the cold-pitch voice.
               </li>
               <li>
                 <span className="text-ink">85% to the people who shipped.</span>{" "}
-                One 15% house cut funds shared infrastructure. No agency
-                middleman, no platform tax stacked on top.
+                One 15% house cut funds infrastructure, commissions, and
+                operations.
               </li>
               <li>
                 <span className="text-ink">Attribution is permanent.</span>{" "}
@@ -344,6 +436,13 @@ function VentureLabor() {
             </p>
           </Card>
         </div>
+
+        {/* Constellation diagram — the visual system that the
+            Venture Labor concept above operates through. Exact port
+            of the settled reference framing; do not rework. */}
+        <div className="mt-16">
+          <VentureLaborConstellation />
+        </div>
       </div>
     </section>
   );
@@ -353,18 +452,23 @@ function WhatChanged() {
   const rows: { old: string; ours: string; accent: "magenta" | "blue" | "green" }[] = [
     {
       old: "Platform takes ~10–20%, agency takes a margin, contributor gets the residual.",
-      ours: "Contributors keep 85% of contract revenue. The 15% house cut funds shared infrastructure — not shareholders.",
+      ours: "Contributors keep 85% of contract revenue. The 15% house cut funds shared infrastructure. Not shareholders.",
       accent: "magenta",
     },
     {
-      old: "Direct contact info is a leak vector — clients and contributors both hide it to keep the door open for off-platform deals.",
-      ours: "Admins scrub direct-contact info on the way out so contributors get attribution without becoming a circumvention target. PII removal is never a rejection — admins just remove it inline.",
+      old: "Direct contact info is a leak vector. Clients and contributors both hide it to keep the door open for off-platform deals.",
+      ours: "Admins scrub direct-contact info on the way out so contributors get attribution without becoming a circumvention target. PII removal is never a rejection. Admins just remove it inline.",
       accent: "blue",
     },
     {
       old: "Each contributor pitches themselves cold. Quality of self-presentation drowns out quality of work.",
-      ours: "Members submit objective fields — price, timeline, work samples. Admins author the positioning narrative consistently across every quote sheet so nobody undersells or overclaims themselves.",
+      ours: "Members submit objective fields: price, timeline, work samples. Admins author the positioning narrative consistently across every quote sheet so nobody undersells or overclaims themselves.",
       accent: "green",
+    },
+    {
+      old: "Bidding platforms extract from both sides. Workers pay to be seen (bids, boosts, subscriptions, verifications). Clients wade through 50+ proposals per RFP to find the 3-5 qualified matches.",
+      ours: "No bidding. No pay for access. Ever. We do the vetting for you. The cooperative curates 3-5 qualified matches per skillset. Workers stay in delivery mode. Clients get the shortlist, not the slush pile.",
+      accent: "blue",
     },
     {
       old: "When the contract closes, the relationship resets to zero. No equity, no compounding ownership.",
@@ -387,7 +491,7 @@ function WhatChanged() {
         </h2>
         <p className="mt-2 max-w-2xl text-ink-muted">
           Concrete differences between the conventional freelance economy
-          and the cooperative we built. Not rhetoric — pricing, policy, and
+          and the cooperative we built. Not rhetoric. Pricing, policy, and
           plumbing.
         </p>
 
@@ -412,6 +516,81 @@ function WhatChanged() {
             </div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * What we say no to — the refusals as identity.
+ *
+ * Jamar's insight 2026-07-10: "realizing what we say no to is the real
+ * value here." FM's identity is built more on the discipline of refusal
+ * than on any positive value prop. The 85%, the curation, the token,
+ * the constellation are all consequences; the refusals are the cause.
+ * Steve Jobs' "focusing is about saying no" + Nassim Taleb's via
+ * negativa are the closest precedents. Locked as the meta-principle in
+ * `future-modern.md` → Brand voice → "The Refusals."
+ *
+ * Placed between Credentials and WhatChanged so the pattern is named
+ * before the concrete trade-off rows are shown. Reads harder than a
+ * positive value prop because every American operator has heard the
+ * yes-list before; almost none have heard the no-list said out loud
+ * with confidence.
+ *
+ * Pitch/close nuance preserved in the close line: FM does cold pitch
+ * (that's admin business development), never cold closes (there is
+ * always a curation layer before a contributor sees a client).
+ */
+function WhatWeSayNoTo() {
+  const refusals = [
+    "No bidding. No pay for access. Ever.",
+    "No paid tiers. No sponsored listings. No boosted profiles.",
+    "No cold closing. Every match is curated per skillset.",
+    "No exit strategy. No dilution of cooperative ownership.",
+    "No discounts. Rarity is the pricing model.",
+    "No opaque compensation. Talent sees the gate before it fires.",
+  ];
+
+  return (
+    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+      {/* Subtle magenta wash — this is the identity moment, so the
+          brand color shows up quietly behind the type. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.10]"
+        style={{
+          background:
+            "radial-gradient(60% 60% at 50% 30%, #D828A0 0%, transparent 65%)",
+        }}
+      />
+      <div className="relative mx-auto max-w-app px-6 py-20">
+        <p className="text-xs uppercase tracking-[0.18em] text-brand-magenta">
+          The discipline
+        </p>
+        <h2 className="mt-3 font-display text-3xl font-semibold md:text-4xl">
+          What we say no to.
+        </h2>
+        <p className="mt-4 max-w-2xl text-ink-muted">
+          Every refusal below is a discipline. The refusals produce the
+          outcomes. Take one away and the model breaks.
+        </p>
+
+        <ul className="mt-10 grid gap-4 md:grid-cols-2">
+          {refusals.map((r) => (
+            <li
+              key={r}
+              className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6"
+            >
+              <span className="text-lg font-medium text-ink">{r}</span>
+            </li>
+          ))}
+        </ul>
+
+        <p className="mt-8 max-w-2xl text-sm text-ink-muted">
+          We cold pitch to get in the door. We don&apos;t cold close.
+          That&apos;s the whole difference.
+        </p>
       </div>
     </section>
   );
@@ -524,19 +703,19 @@ function Provenance() {
     {
       title: "Provenance.",
       body:
-        "Resources and acknowledgement flow back to original ideas and the labor that moves culture forward. Attribution is permanent and the ledger is public to the contributors on each engagement — nobody chases anyone for credit, and contributions compound across years.",
+        "Resources and acknowledgement flow back to original ideas and the labor that moves culture forward. Attribution is permanent and the ledger is public to the contributors on each engagement. Nobody chases anyone for credit, and contributions compound across years.",
       accent: "magenta",
     },
     {
       title: "Discernment.",
       body:
-        "We curate. The cooperative isn’t a marketplace of disconnected skills — admins frame contributors consistently, vet incoming RFPs, and assemble cross-pillar teams the way a good agency partner would. We create the wave that others ride.",
+        "We curate. The cooperative isn’t a marketplace of disconnected skills. Admins frame contributors consistently, vet incoming RFPs, and assemble cross-pillar teams the way a good agency partner would. We create the wave that others ride.",
       accent: "blue",
     },
     {
       title: "Equity.",
       body:
-        "Eighty-five percent of contract revenue flows to the people who shipped. $BUILD tokens accrue with contribution. Membership tiers map to governance rights. The platform is owned by the people building it — by design, not as a marketing claim.",
+        "Eighty-five percent of contract revenue flows to the people who shipped. $BUILD tokens accrue with contribution. Membership tiers map to governance rights. The platform is owned by the people building it. By design, not as a marketing claim.",
       accent: "green",
     },
     {
@@ -548,13 +727,13 @@ function Provenance() {
     {
       title: "Tried and true × cutting edge.",
       body:
-        "We’re innovative in how we combine proven methods with new technology and strategy. We aren’t shipping a tech demo — we’re running an agency on top of a cooperative model and the engineering follows the operations, not the other way around.",
+        "We’re innovative in how we combine proven methods with new technology and strategy. We aren’t shipping a tech demo. We’re running an agency on top of a cooperative model and the engineering follows the operations, not the other way around.",
       accent: "blue",
     },
     {
       title: "Community as the operating system.",
       body:
-        "Our community originally came together at the cutting edge of music and online culture. We aim to create a world where community integrates with life, art, appreciation, and passion — and the platform’s economics are tilted accordingly.",
+        "Our community originally came together at the cutting edge of music and online culture. We aim to create a world where community integrates with life, art, appreciation, and passion. The platform’s economics are tilted accordingly.",
       accent: "green",
     },
   ] as const;
@@ -682,7 +861,7 @@ function Credentials() {
         <p className="mt-6 max-w-3xl text-xs text-ink-faint">
           Inclusion in this list reflects past and current affiliations of
           cooperative contributors. It is not an endorsement by any of these
-          organizations of Future Modern Builderberg LLC or $BUILD.Store.
+          organizations of Future Modern or $BUILD.Store.
         </p>
       </div>
     </section>
@@ -726,7 +905,7 @@ function Pillars() {
             The Future Modernist
           </p>
           <h3 className="mt-3 font-display text-2xl font-semibold md:text-3xl">
-            A creator at heart — artist, engineer, builder.
+            A creator at heart. Artist, engineer, builder.
           </h3>
           <p className="mt-4 max-w-3xl text-ink-muted">
             We have specialists, plenty of them. But the people who shape this
@@ -734,7 +913,7 @@ function Pillars() {
             shoot in the morning, shipping a smart contract in the afternoon,
             sitting in a policy room that night. We&apos;re bringing back the
             apprenticeship-to-mastery arc the modern career path quietly
-            killed — where a person isn&apos;t reduced to one job title, and
+            killed. Where a person isn&apos;t reduced to one job title, and
             depth in one craft sharpens the others.
           </p>
 
@@ -752,7 +931,7 @@ function Pillars() {
             <OriginNote
               eyebrow="Technology"
               color="#5070F0"
-              body="Cutting-edge tooling — blockchain, AI, on-chain attribution — is what grew the brand from a circle of practitioners into a platform."
+              body="Cutting-edge tooling (blockchain, AI, on-chain attribution) is what grew the brand from a circle of practitioners into a platform."
             />
           </div>
         </div>
@@ -846,8 +1025,8 @@ function RoadmapPeek() {
             </h2>
             <p className="mt-6 text-ink-muted">
               Access opens in three phases. The cooperative is
-              intentional about who joins when — earlier phases are
-              denser signal, later phases scale wider.
+              intentional about who joins when. Earlier phases are
+              denser signal. Later phases scale wider.
             </p>
             <p className="mt-4 text-ink-muted">
               Right now the whitelist is open. If you want a seat before
@@ -886,7 +1065,7 @@ function RoadmapPeek() {
                 phase="$BUILD.Store rollout"
                 status="On the horizon"
                 accent="#5070F0"
-                body="The full platform open to everyone who came in through the ladder — invited, applied, or contributed. The cooperative running at scale."
+                body="The full platform open to everyone who came in through the ladder. Invited, applied, or contributed. The cooperative running at scale."
               />
             </div>
           </div>
@@ -969,6 +1148,7 @@ function ConstellationSection() {
             Provenance, Discernment, Equity.
           </p>
         </div>
+
         <div className="mt-8 flex flex-wrap gap-3 text-sm">
           <Link
             href="/governance"
@@ -1003,7 +1183,7 @@ function CTA() {
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-ink-muted">
           Whether you&apos;re a contributor looking for a fairer model or a
-          client looking for a real team — start here.
+          client looking for a real team. Start here.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
@@ -1028,7 +1208,7 @@ function CTA() {
           </a>
         </div>
         <p className="mt-8 text-xs text-ink-faint">
-          Future Modern Builderberg LLC · A cooperative talent platform.
+          Future Modern · A cooperative talent platform.
         </p>
       </div>
     </section>

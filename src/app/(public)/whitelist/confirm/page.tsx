@@ -85,7 +85,7 @@ export default async function WhitelistConfirmPage({
               </span>
             </div>
             <p className="mt-2 text-[11px] text-ink-faint">
-              The markup keeps the cooperative whole — the full
+              The markup keeps the cooperative whole. The full
               ${Number(purchase.amountUsd).toLocaleString()} routes to the
               pools below after Stripe takes its cut.
             </p>
@@ -95,7 +95,7 @@ export default async function WhitelistConfirmPage({
         {purchase.rail === "cash" ? (
           <p className="mt-3 text-sm text-ink-muted">
             In production, you&apos;d be redirected to Stripe Checkout
-            here. Sandbox stops at <code>status=initiated</code> — admin
+            here. Sandbox stops at <code>status=initiated</code>. Admin
             can force <code>paid</code> from the admin console.
           </p>
         ) : (
@@ -125,10 +125,10 @@ export default async function WhitelistConfirmPage({
           The Treasury underwrites long-horizon runway; the Liquidity
           Pool slice structurally manufactures $BUILD token value. While
           the cooperative is still pre-salary, hosting + tooling + legal
-          come out of contract revenue, not your donation — every
+          come out of contract revenue, not your donation. Every
           donated dollar goes into the war chest instead of subsidizing
           today&apos;s ops bill. None of it pays an individual
-          contributor — that&apos;s the whole point of the &quot;not for
+          contributor. That&apos;s the whole point of the &quot;not for
           sale&quot; framing.
         </p>
       </Card>

@@ -214,8 +214,8 @@ export function ChatWidget() {
               <div className="text-[11px] text-ink-faint">
                 {state.phase === "active"
                   ? state.thread.status === "open"
-                    ? "Open — replies usually within a day"
-                    : "Closed — send a new message to reopen"
+                    ? "Open. Replies usually within a day."
+                    : "Closed. Send a new message to reopen."
                   : "Drop us a line, get a real reply"}
               </div>
             </div>
@@ -243,7 +243,7 @@ export function ChatWidget() {
             >
               <p className="text-xs text-ink-muted">
                 A real human reads every message. Tell us who you are and
-                what you&apos;re trying to land — we&apos;ll route it.
+                what you&apos;re trying to land. We&apos;ll route it.
               </p>
               <label className="flex flex-col gap-1 text-xs text-ink-muted">
                 Name

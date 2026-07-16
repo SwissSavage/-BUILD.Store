@@ -57,6 +57,8 @@ const KIND_ACCENT: Record<NotificationKind, string> = {
   milestone_overdue: "#D828A0",
   milestone_status_changed: "#5070F0",
   milestone_blocked: "#D828A0",
+  quote_approved: "#007048",
+  quote_declined: "#D828A0",
 };
 
 function formatTime(iso: string): string {

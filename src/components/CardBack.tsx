@@ -86,7 +86,7 @@ export function CardBack({
         className,
       )}
       style={{ borderColor: TIER_BORDER[tier] }}
-      aria-label="Cooperator card — face down"
+      aria-label="Cooperator card, face down"
     >
       {/* Tier-tinted backdrop. Same class family as TradingCard so
           the Champion tier picks up the animated holographic gradient

@@ -58,7 +58,7 @@ export default async function ShowcasePage({
       <h1 className="font-display text-4xl font-semibold">Showcase</h1>
       <p className="mt-2 text-ink-muted">
         {activePillar
-          ? `Work from the cooperative — ${INDUSTRY_LABELS[activePillar]}.`
+          ? `Work from the cooperative · ${INDUSTRY_LABELS[activePillar]}.`
           : "Work from the cooperative."}
       </p>
 

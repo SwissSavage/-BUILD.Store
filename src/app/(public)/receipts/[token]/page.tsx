@@ -7,13 +7,13 @@
  * /invoices/[token], /proposals/[token]).
  *
  * What the client sees:
- *   - Cash flow % to the cooperators who did the work.
+ *   - Cash flow % to the builders who did the work.
  *   - Time from RFP to matched crew.
  *   - Milestone hit rate on the engagement.
  *   - Aggregate peer-review OVR delta the crew earned during the
  *     project — signals how they held up under cooperative scrutiny.
  *   - "What the crew shipped after you" — subsequent engagements the
- *     same cooperators contributed to. Turns the receipt into an
+ *     same builders contributed to. Turns the receipt into an
  *     ongoing story: the client's project helped fund what came next.
  *   - Optional Collaborator Card claim (phase 3 mint, currently
  *     surfaced as coming-soon copy).
@@ -96,13 +96,13 @@ export default async function CooperativeReceiptPage({
           differentiated commitments. */}
       <div className="mt-12 grid gap-4 sm:grid-cols-2">
         <Card>
-          <CardEyebrow>Cash flow to cooperators</CardEyebrow>
+          <CardEyebrow>Cash flow to builders</CardEyebrow>
           <p className="mt-2 font-display text-4xl font-semibold text-brand-green">
             {receipt.cashFlowPct}
             <span className="text-2xl">%</span>
           </p>
           <p className="mt-2 text-sm text-ink-muted">
-            of contract value paid directly to the cooperators who
+            of contract value paid directly to the builders who
             shipped this project. The remaining 15% covers cooperative
             operations. No platform take-rate. No agency middleman.
           </p>
@@ -142,8 +142,8 @@ export default async function CooperativeReceiptPage({
             +{receipt.crewPeerReviewOvrDelta.toFixed(1)}
           </p>
           <p className="mt-2 text-sm text-ink-muted">
-            The cooperators on this project earned this OVR gain from
-            peer review after your engagement — quality validated by
+            The builders on this project earned this OVR gain from
+            peer review after your engagement. Quality validated by
             the people they ship alongside.
           </p>
         </Card>
@@ -157,12 +157,12 @@ export default async function CooperativeReceiptPage({
             Your engagement helped fund the next builds.
           </h2>
           <p className="mt-3 text-ink-muted">
-            The cooperators on your project didn&apos;t clock out. Since
+            The builders on your project didn&apos;t clock out. Since
             your engagement settled, they&apos;ve shipped{" "}
             {subsequentProjects.length}{" "}
             {subsequentProjects.length === 1 ? "engagement" : "engagements"}{" "}
-            through the cooperative. You didn&apos;t just close a contract
-            — you kept a team building.
+            through the cooperative. You didn&apos;t just close a contract.
+            You kept a team building.
           </p>
           <ul className="mt-6 space-y-3">
             {subsequentProjects.map((p) => (
@@ -187,7 +187,7 @@ export default async function CooperativeReceiptPage({
         </h2>
         <p className="mt-3 text-sm text-ink-muted">
           At mint launch, every client who ships through the cooperative
-          will be able to claim a Collaborator Card — a lightweight
+          will be able to claim a Collaborator Card. A lightweight
           ERC-721 tied to the engagement, held in your own wallet. Not
           a bill, not a receipt of payment; a durable record that you
           helped build a piece of the cooperative. When that rail opens,

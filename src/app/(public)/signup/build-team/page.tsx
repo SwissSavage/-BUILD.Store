@@ -46,7 +46,7 @@ export default function BuildTeamSignupPage() {
           </h2>
           <p className="text-xs text-ink-muted">
             What does the team need to deliver? A few sentences is
-            enough — we come back with a composition proposal.
+            enough. We come back with a composition proposal.
           </p>
           <textarea
             name="teamScope"

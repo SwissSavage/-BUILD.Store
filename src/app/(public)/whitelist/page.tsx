@@ -38,6 +38,7 @@ import {
   type WhitelistRail,
 } from "@/lib/types";
 import { previewDonationSplit } from "@/lib/whitelist-splits";
+import { createHubspotLead } from "@/lib/crm-stub";
 import { grossUpForCard } from "@/lib/payments-fees";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -105,21 +106,50 @@ async function submitConsultation(formData: FormData) {
   const scopeBuckets = SCOPE_ORDER.filter(
     (s) => formData.get(`scope_${s}`) === "on",
   );
+  const contactName = String(formData.get("contactName") ?? "");
+  const contactEmail = String(formData.get("contactEmail") ?? "");
+  const company = String(formData.get("company") ?? "").trim() || null;
+  const briefing = String(formData.get("briefing") ?? "");
+  const budgetHint = String(formData.get("budgetHint") ?? "").trim() || null;
   const request: ConsultationRequest = {
     id: `cr_${Date.now()}`,
     tierId: tier.id,
-    contactName: String(formData.get("contactName") ?? ""),
-    contactEmail: String(formData.get("contactEmail") ?? ""),
-    company: String(formData.get("company") ?? "").trim() || null,
+    contactName,
+    contactEmail,
+    company,
     scopeBuckets,
-    briefing: String(formData.get("briefing") ?? ""),
-    budgetHint: String(formData.get("budgetHint") ?? "").trim() || null,
+    briefing,
+    budgetHint,
     status: "new",
     assignedTo: null,
     adminNote: null,
     createdAt: new Date().toISOString(),
   };
   MOCK_CONSULTATION_REQUESTS.push(request);
+
+  // Land the scoping-call request in HubSpot too, same as the three
+  // signup-intent forms. A CRM hiccup shouldn't block the actual intake,
+  // the request is already recorded locally above regardless.
+  const [firstName, ...lastNameParts] = contactName.trim().split(/\s+/);
+  try {
+    await createHubspotLead({
+      email: contactEmail,
+      firstName: firstName || undefined,
+      lastName: lastNameParts.join(" ") || undefined,
+      company: company || undefined,
+      intent: "build_a_team",
+      source: "whitelist_consultation_request",
+      teamScope: briefing,
+      pillars: scopeBuckets,
+      opportunityBrief: budgetHint
+        ? `Budget hint: ${budgetHint}`
+        : undefined,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[whitelist] HubSpot sync failed for consultation request", err);
+  }
+
   revalidatePath("/whitelist");
   revalidatePath("/admin/whitelist");
   revalidatePath("/admin");

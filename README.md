@@ -121,9 +121,14 @@ The Drizzle schema in `Future Modern/buildstore-backend-Replit-replit-agent/shar
 - **Write side:** swap `distributeBuild()` for a Safe SDK `proposeTransaction()` call. The function signature stays the same so the admin UI doesn't change.
 - **Multisig migration:** the existing token-bound account scheme needs migration to a multisig arrangement; this is its own discrete piece of work.
 
-### 4. CRM (currently `lib/crm-stub.ts`)
+### 4. CRM (`lib/crm-stub.ts` — live as of 2026-07-16, filename kept for now)
 
-The legacy frontend at `Future Modern/build-store-frontend/src/app/api/crm/util.ts` already has the production HubSpot POST shape. Lift that over and set `HUBSPOT_ACCESS_TOKEN` in the deployment environment.
+No longer a stub. `createHubspotLead()` makes real HubSpot v3 calls (contact + deal + association) and is wired into all four lead-intake points: the three signup-intent forms, the whitelist consultation booking, the live-chat first-message flow, and RFP submission. Deal stages use this portal's real stock "Sales Pipeline" (not the legacy `HUBSPOT_DEAL_TYPE_ID_INITIAL_OUTREACH` constant, which doesn't match a real stage here) — `mapHubspotStageToAppStage()` translates HubSpot's stage names into the app's simplified 5-bucket `HubspotStage` enum for the contributor-facing badge.
+
+Two things still needed before this is production-safe:
+
+1. **Set `HUBSPOT_ACCESS_TOKEN`** in the deployment environment (a HubSpot Service Key / Private App token with Contacts + Companies + Deals + Line Items + Owners + Automation + Conversations + Communication-preferences scopes).
+2. **Provision a real HubSpot app + client secret** and set `HUBSPOT_APP_CLIENT_SECRET`, then subscribe the deployed app's public `/api/hooks/hubspot/stage` URL to the `deal.propertyChange` event in HubSpot. The inbound webhook route fails closed (503) without that secret — it will not accept unsigned stage-change requests, on purpose. No custom HubSpot properties exist in this portal yet either; extra signup/RFP/consultation detail (intent, pillars, talent info, budget hints) folds into the Deal description as structured text rather than real properties until/unless those get created.
 
 ## Hand-off checklist
 

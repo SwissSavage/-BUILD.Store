@@ -24,6 +24,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { requireAdmin } from "@/lib/auth-stub";
 import { emitChatEvent } from "@/lib/chat-events";
+import { createHubspotLead } from "@/lib/crm-stub";
 import {
   appendMessage,
   createThread,
@@ -81,9 +82,23 @@ export async function startVisitorThread(
     path: "/",
   });
 
-  // TODO (production swap, see launch-prep §6): POST to `/api/crm` so the
-  // new lead also lands in HubSpot as a contact + deal. Keep in sync with
-  // the existing contact-form pattern.
+  // Land the new lead in HubSpot too, same contact+deal pattern as the
+  // signup forms and the consultation intake. A CRM sync failure here
+  // shouldn't block the visitor's chat thread from actually starting,
+  // it's already created above regardless.
+  const [firstName, ...lastNameParts] = visitorName.split(/\s+/);
+  try {
+    await createHubspotLead({
+      email: visitorEmail,
+      firstName: firstName || undefined,
+      lastName: lastNameParts.join(" ") || undefined,
+      source: "live_chat_thread",
+      opportunityBrief: firstMessage,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[chat] HubSpot sync failed for new thread", err);
+  }
 
   emitChatEvent({ kind: "thread.created", thread: result.thread });
   emitChatEvent({

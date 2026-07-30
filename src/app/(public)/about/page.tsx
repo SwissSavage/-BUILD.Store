@@ -551,7 +551,7 @@ function WhatWeSayNoTo() {
   const refusals = [
     "No bidding. No pay for access. Ever.",
     "No paid tiers. No sponsored listings. No boosted profiles.",
-    "No sales theater. Sales without the games. Honest pricing, honest tracking, honest scope. Every time.",
+    "No sales theater. Honest pricing, honest tracking, honest scope. Every time.",
     "No exit strategy. No dilution of cooperative ownership.",
     "No discounts. Rarity is the pricing model.",
     "No opaque compensation. Talent sees the gate before it fires.",

@@ -3158,6 +3158,135 @@ export interface InviteLink {
 }
 
 // ──────────────────────────────────────────────────────────────────────
+//  $BUILD vouchers (off-chain claim mirror against the real token)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Total voucher supply cap — matches the real $BUILD token's fixed
+ * supply. Vouchers are the platform's off-chain accounting mirror
+ * of the token: every earning event that would issue $BUILD issues
+ * a voucher, and once the real token is under a multisig contract
+ * (or a fresh spin-up if the dispute resolves that way), vouchers
+ * batch-swap 1:1 into real $BUILD.
+ *
+ * The cap is enforced at issuance time — the sum of all
+ * non-forfeited vouchers can never exceed this number. Runs in the
+ * server action's supply guard (`supply-cap.ts`) so the cooperative
+ * cannot over-issue relative to the on-chain reality it will
+ * eventually settle into.
+ */
+export const BUILD_VOUCHER_SUPPLY_CAP = 10_000_000;
+
+/**
+ * What triggered the voucher issuance. Same coarse categories used
+ * on TokenTransaction so the two ledgers stay in sync — a voucher
+ * with sourceRefId pointing at a TokenTransaction should share the
+ * same sourceType label. Kept as a discrete enum (not free text) so
+ * the admin ledger can filter and aggregate cleanly.
+ *
+ * These are the ACTIVITY SOURCES that trigger issuance, not a
+ * fixed percentage split — the split follows collected revenue
+ * per the opportunities-page formula (see build-vision.md /
+ * "Contribution vectors" for the corrected framing).
+ */
+export type BuildVoucherSourceType =
+  | "project_completion"
+  | "referral"
+  | "collaboration"
+  | "governance"
+  | "admin_grant";
+
+export const BUILD_VOUCHER_SOURCE_TYPE_LABELS: Record<
+  BuildVoucherSourceType,
+  string
+> = {
+  project_completion: "Project completion",
+  referral: "Referral",
+  collaboration: "Collaboration",
+  governance: "Governance",
+  admin_grant: "Admin grant",
+};
+
+/**
+ * Lifecycle for a single voucher row.
+ *
+ *  - unswapped:    default state after issuance. Holder has the
+ *                  claim but no swap action has been initiated.
+ *  - pending_swap: holder (or admin on their behalf) has queued the
+ *                  voucher for the next batch-swap window. Real
+ *                  token transfer is expected but not yet executed.
+ *  - swapped:      batch executed. `swappedToTxHash` is populated
+ *                  with the on-chain transaction hash for
+ *                  round-tripping into a block explorer.
+ *  - forfeited:    admin reclaimed the voucher (covenant violation
+ *                  resolution, dispute outcome, etc.). Original
+ *                  TokenTransaction stays for the historical
+ *                  record; the voucher is no longer swappable and
+ *                  no longer counts against the supply cap.
+ */
+export type BuildVoucherSwapStatus =
+  | "unswapped"
+  | "pending_swap"
+  | "swapped"
+  | "forfeited";
+
+export const BUILD_VOUCHER_SWAP_STATUS_LABELS: Record<
+  BuildVoucherSwapStatus,
+  string
+> = {
+  unswapped: "Unswapped",
+  pending_swap: "Pending swap",
+  swapped: "Swapped",
+  forfeited: "Forfeited",
+};
+
+/**
+ * A single voucher row = an off-chain accounting mirror of one
+ * earning event's redeemable claim on real $BUILD.
+ *
+ * Relationship to TokenTransaction:
+ *   - TokenTransaction is the LOG of what was earned (activity,
+ *     project, comp stage, withhold reason).
+ *   - Voucher is the LEDGER of what is claimable (accounting for
+ *     the 10M supply cap, swap lifecycle, forfeiture).
+ *   - When issuance fires alongside a TokenTransaction, the voucher
+ *     carries that transaction's id in `sourceRefId` so admin can
+ *     round-trip between the two.
+ *   - Some TokenTransactions do NOT produce a voucher immediately
+ *     (bonus_withheld holds off issuance until the bonus is
+ *     released), and some voucher issuance has no upstream
+ *     TokenTransaction (admin_grant for OG backfill after the
+ *     unmatched-holder reconciliation).
+ *
+ * Amount is stored as string because Postgres numeric(18,8) round-
+ * trips through Drizzle as a string. Matches the TokenTransaction
+ * convention. Supply-cap arithmetic sums via Number() coercion; safe
+ * because the cap (10M with 8 decimals = 1e15) sits comfortably
+ * under Number.MAX_SAFE_INTEGER.
+ */
+export interface BuildVoucher {
+  id: string;
+  userId: string;
+  /** numeric(18,8) as string. */
+  amount: string;
+  sourceType: BuildVoucherSourceType;
+  /** TokenTransaction.id if this voucher mirrors a specific earning
+   *  event; null for admin_grant issuance and legacy backfill. */
+  sourceRefId: string | null;
+  swapStatus: BuildVoucherSwapStatus;
+  /** On-chain tx hash from the batch-swap that settled this
+   *  voucher. Null unless swapStatus === "swapped". */
+  swappedToTxHash: string | null;
+  swappedAt: string | null;
+  issuedAt: string;
+  notes: string | null;
+  /** Admin who issued (or system-initiated if null). */
+  issuedByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────
 //  Agreements (signed paperwork registry)
 // ──────────────────────────────────────────────────────────────────────
 
@@ -3375,6 +3504,11 @@ export type AuditLogAction =
   | "agreement.updated"
   | "agreement.removed"
   | "agreement.imported"
+  // $BUILD voucher ledger (off-chain claim mirror)
+  | "voucher.issued"
+  | "voucher.marked_pending_swap"
+  | "voucher.swapped"
+  | "voucher.forfeited"
   // Admin config
   | "config.setting_changed"
   | "config.access_reviewed";
@@ -3432,6 +3566,10 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "agreement.updated": "Signed agreement updated",
   "agreement.removed": "Signed agreement removed",
   "agreement.imported": "Signed agreement imported from provider",
+  "voucher.issued": "$BUILD voucher issued",
+  "voucher.marked_pending_swap": "$BUILD voucher marked pending swap",
+  "voucher.swapped": "$BUILD voucher swapped for real token",
+  "voucher.forfeited": "$BUILD voucher forfeited",
   "config.setting_changed": "Config setting changed",
   "config.access_reviewed": "Access review completed",
 };
@@ -3451,6 +3589,7 @@ export type AuditLogResourceKind =
   | "milestone"
   | "booking"
   | "agreement"
+  | "build_voucher"
   | "notification_rule"
   | "config";
 

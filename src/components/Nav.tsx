@@ -290,6 +290,12 @@ function AdminDropdown({ self }: { self: User }) {
           Signed agreements
         </Link>
         <Link
+          href="/admin/vouchers"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          $BUILD vouchers
+        </Link>
+        <Link
           href="/admin/feedback"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >

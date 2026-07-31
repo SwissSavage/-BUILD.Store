@@ -69,6 +69,7 @@ const adminLinks = [
   { href: "/admin/cooperative-quotes", label: "Cooperative quotes" },
   { href: "/admin/receipts", label: "Cooperative receipts" },
   { href: "/admin/agreements", label: "Signed agreements" },
+  { href: "/admin/vouchers", label: "$BUILD vouchers" },
   { href: "/admin/feedback", label: "Beta feedback" },
   { href: "/admin/testimonials", label: "Customer testimonials" },
   { href: "/admin/epk", label: "EPK approvals" },

@@ -1028,6 +1028,55 @@ export const inboundSubmissions = pgTable("inbound_submissions", {
 });
 
 // ──────────────────────────────────────────────────────────────────────
+//  $BUILD vouchers (off-chain claim mirror against the real token)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * One row per earning event's redeemable claim on real $BUILD.
+ * Coexists with token_transactions — that table logs what was
+ * earned (activity, project, comp stage); this table ledgers the
+ * settled claim + swap lifecycle. See the BuildVoucher docblock in
+ * src/lib/types.ts for the full rationale.
+ *
+ * source_ref_id is a soft pointer to token_transactions.id (not a
+ * hard FK) because admin_grant issuance may have no upstream
+ * transaction — enforcing the FK would block OG-holder backfill.
+ * Admin surface renders a warning when source_ref_id is set but
+ * no matching TokenTransaction exists.
+ *
+ * user_id cascades on user delete so hard-deletes purge the
+ * associated voucher ledger. Production should prefer soft-delete
+ * on users; hard-delete stays available for GDPR-style erasure.
+ */
+export const buildVouchers = pgTable("build_vouchers", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
+  sourceType: text("source_type", {
+    enum: [
+      "project_completion",
+      "referral",
+      "collaboration",
+      "governance",
+      "admin_grant",
+    ],
+  }).notNull(),
+  sourceRefId: text("source_ref_id"),
+  swapStatus: text("swap_status", {
+    enum: ["unswapped", "pending_swap", "swapped", "forfeited"],
+  }).notNull().default("unswapped"),
+  swappedToTxHash: text("swapped_to_tx_hash"),
+  swappedAt: timestamp("swapped_at", { mode: "string", withTimezone: true }),
+  issuedAt: timestamp("issued_at", { mode: "string", withTimezone: true }).notNull(),
+  notes: text("notes"),
+  issuedByUserId: text("issued_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+// ──────────────────────────────────────────────────────────────────────
 //  Agreements (signed paperwork registry)
 // ──────────────────────────────────────────────────────────────────────
 
@@ -1126,4 +1175,5 @@ export const schema = {
   feedbackEntries,
   inboundSubmissions,
   agreements,
+  buildVouchers,
 } as const;

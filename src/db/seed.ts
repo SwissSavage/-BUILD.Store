@@ -79,6 +79,7 @@ import {
 import { MOCK_FEEDBACK } from "../lib/mock-data/feedback";
 import { MOCK_INBOUND_SUBMISSIONS } from "../lib/mock-data/inbound-submissions";
 import { MOCK_AGREEMENTS } from "../lib/mock-data/agreements";
+import { MOCK_BUILD_VOUCHERS } from "../lib/mock-data/vouchers";
 // chat.ts uses an in-memory function-based store, no seed data to pull.
 // chat_threads + chat_messages tables stay empty until real traffic
 // populates them via the app's chat rail.
@@ -159,6 +160,7 @@ async function main() {
   await seedTable("calendar_blocks", schema.calendarBlocks, MOCK_BLOCKS);
   await seedTable("inbound_submissions", schema.inboundSubmissions, MOCK_INBOUND_SUBMISSIONS);
   await seedTable("agreements", schema.agreements, MOCK_AGREEMENTS);
+  await seedTable("build_vouchers", schema.buildVouchers, MOCK_BUILD_VOUCHERS);
 
   // Wave 3 — depend on users + projects
   console.log("\nWave 3 — project-dependent");

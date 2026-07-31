@@ -172,7 +172,13 @@ async function createDraft(formData: FormData) {
   const now = new Date().toISOString();
   MOCK_INVOICES.push({
     id,
+    direction: "coop_to_client",
+    documentKind: "invoice",
     contractId,
+    sourceRefId: null,
+    sourceInvoiceIds: null,
+    issuerId: admin.id,
+    recipientId: `client_${contractId}`,
     number: `FM-2026-DRAFT-${Math.floor(Math.random() * 9000) + 1000}`,
     clientToken: `tok_${id}`,
     status: "draft",
@@ -456,7 +462,10 @@ export default async function ContractLedgerPage({
             <CardTitle className="mt-1">
               ${Number(invoice.total).toLocaleString()}{" "}
               <span className="text-sm font-normal text-ink-muted">
-                · {PAYMENT_METHOD_LABELS[invoice.paymentMethod]}
+                ·{" "}
+                {invoice.paymentMethod
+                  ? PAYMENT_METHOD_LABELS[invoice.paymentMethod]
+                  : "internal"}
               </span>
             </CardTitle>
           </div>

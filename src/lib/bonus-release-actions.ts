@@ -30,6 +30,7 @@ import {
 import { evaluateBonusGate } from "@/lib/bonus-gate";
 import { distributeBuild } from "@/lib/wallet-stub";
 import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
+import { hasValidPayoutDocument } from "@/lib/payout-gate";
 
 function findProject(id: string) {
   const p = MOCK_PROJECTS.find((x) => x.id === id);
@@ -76,6 +77,14 @@ export async function executeBonusDecision(formData: FormData) {
   if (project.bonusDecision !== null && project.bonusDecision !== "pending") {
     throw new Error(
       `Bonus decision already recorded (${project.bonusDecision}). Cannot re-decide without an offsetting entry.`,
+    );
+  }
+  // Payout gate: bonus release rides on the same client payment that
+  // authorized the base contract settlement. If no external invoice
+  // (or retroactive receipt) exists on this project, block.
+  if (!hasValidPayoutDocument(projectId, "bonus_release")) {
+    throw new Error(
+      "Bonus release refused: no external invoice or retroactive receipt on this contract. Attach one before firing the bonus decision.",
     );
   }
 

@@ -966,39 +966,134 @@ export interface InvoiceLineItem {
 }
 
 /**
- * Client invoice. The AR side of the ledger.
+ * Direction of an Invoice/Receipt row. Discriminator that shapes
+ * which fields are populated + who the payout gate reads for.
  *
- * Mercury-default flow:
- *   1. Admin issues the invoice → `status="issued"`, `paymentMethod` is
- *      one of `ach_mercury` / `wire_mercury`. Magic-link `clientToken` is
- *      generated for the client view (mirrors ClientProposal).
- *   2. Client pays out-of-band; admin marks `paidAmount` + `paidAt` +
- *      `mercuryReference`. If `paidAmount === total`, `status` flips to
- *      `received`; if less, `partially_received`.
- *   3. Settle page (Phase 1.6) reads the received amount as the engine's
- *      revenue input.
+ *  - talent_to_coop:     internal — a contributor bills the coop for
+ *                        their work on a deal. Feeds the contributor
+ *                        pool at settlement. Multiple per contract
+ *                        (one per contributor, per billing cycle).
+ *  - coop_to_client:     external — the coop bills the client for the
+ *                        aggregated engagement. sourceInvoiceIds
+ *                        references the internal invoices it rolls
+ *                        up. This is the existing external-facing
+ *                        invoice shape (Mercury / Stripe / etc).
+ *  - marketplace_receipt: attached to a marketplace order — the
+ *                        receipt IS the transaction record. No
+ *                        separate invoice step (POS pattern).
+ *  - retroactive_receipt: attached after the fact to close an audit
+ *                        loop where the invoice process was skipped.
+ *                        Rare-path rectification escape hatch.
+ */
+export type InvoiceDirection =
+  | "talent_to_coop"
+  | "coop_to_client"
+  | "marketplace_receipt"
+  | "retroactive_receipt";
+
+export const INVOICE_DIRECTION_LABELS: Record<InvoiceDirection, string> = {
+  talent_to_coop: "Talent → Coop (internal)",
+  coop_to_client: "Coop → Client (external)",
+  marketplace_receipt: "Marketplace receipt",
+  retroactive_receipt: "Retroactive receipt",
+};
+
+export type InvoiceDocumentKind = "invoice" | "receipt";
+
+export const INVOICE_DOCUMENT_KIND_LABELS: Record<InvoiceDocumentKind, string> = {
+  invoice: "Invoice",
+  receipt: "Receipt",
+};
+
+/**
+ * Sentinel recipient id for internal invoices — talent invoicing
+ * "the cooperative" as a whole. Distinguishable from user ids
+ * because no user carries this string.
+ */
+export const COOP_RECIPIENT_ID = "coop_cooperative";
+
+/**
+ * Invoice/Receipt document. Single primitive covering four flows,
+ * discriminated by `direction`. The payout engine reads this to
+ * authorize settlements — no distribution fires without a linked
+ * invoice or receipt.
  *
- * CC-opt-in flow:
- *   - `acceptsCard=true`. The processing-fee calculator inserts a locked
- *     `isProcessingFee` line item that grosses up the subtotal so the
- *     cooperative nets the original amount. `paymentMethod` is `cc_stripe`.
- *   - On payment, Stripe webhook flips status; `mercuryReference` may be
- *     null and `stripePaymentIntentId` set instead.
+ * External flow (coop_to_client) — original shape:
+ *   1. Admin issues the external invoice by aggregating approved
+ *      internal invoices (sourceInvoiceIds). Total is grossed up
+ *      from the internal sum by / 0.85 so the 15% network fee
+ *      lands on top.
+ *   2. Client pays. Payment flips status → `received`.
+ *   3. Settlement engine fires the 85/12/1.5/1.5 split against the
+ *      received amount.
+ *
+ * Internal flow (talent_to_coop):
+ *   1. Contributor drafts against a project — line items, rate,
+ *      hours or deliverable-based amount. status = "draft".
+ *   2. Contributor submits → status = "issued". Coop admin reviews.
+ *   3. Admin approves → status = "received". The amount now feeds
+ *      the contributor pool at that project's settlement.
+ *   4. Approved internal invoices become sourceInvoiceIds when the
+ *      admin generates the external invoice.
+ *
+ * Receipt flows (marketplace_receipt, retroactive_receipt):
+ *   - Born already at status = "received". They document a completed
+ *     transaction rather than requesting one.
+ *   - Marketplace: sourceRefId = order id. Auto-generated on order
+ *     placement + payment.
+ *   - Retroactive: sourceRefId = project id. Admin-created to close
+ *     an audit gap when the invoice process was skipped.
+ *
+ * Field applicability by direction:
+ *   - clientToken, paymentMethod, acceptsCard, mercuryReference,
+ *     stripePaymentIntentId, processingFee — only populated on
+ *     coop_to_client (external). Null for internal / receipts.
+ *   - contractId — populated for talent_to_coop, coop_to_client, and
+ *     retroactive_receipt. Null for marketplace_receipt.
+ *   - sourceRefId — populated for marketplace_receipt (order id) and
+ *     retroactive_receipt (project id when applicable). Null otherwise.
+ *   - sourceInvoiceIds — only populated for coop_to_client (references
+ *     the talent_to_coop invoices it aggregates).
  */
 export interface Invoice {
   id: string;
-  contractId: string;
-  /** Friendly invoice number — e.g. "FM-2026-0042". */
+  /** Discriminator — see InvoiceDirection docblock. */
+  direction: InvoiceDirection;
+  /** "invoice" or "receipt". Derived from direction but stored
+   *  explicitly so filters + display can key off it without a
+   *  discriminator switch. */
+  documentKind: InvoiceDocumentKind;
+  /** Contract/project id. Null for marketplace_receipt only. */
+  contractId: string | null;
+  /** Opaque source id for receipt flows (order id or project id
+   *  when the invoice flow was skipped). Null otherwise. */
+  sourceRefId: string | null;
+  /** For coop_to_client external invoices: the talent_to_coop
+   *  invoice ids this external rolls up. Null for other directions. */
+  sourceInvoiceIds: string[] | null;
+  /** Who issued this document. Talent user id for talent_to_coop;
+   *  admin user id for coop_to_client / retroactive_receipt; the
+   *  seller user id for marketplace_receipt. */
+  issuerId: string;
+  /** Who it's addressed to. COOP_RECIPIENT_ID for talent_to_coop;
+   *  client synthetic id for coop_to_client (buyer or client
+   *  contact); the buyer user id for marketplace_receipt. */
+  recipientId: string;
+  /** Friendly document number — e.g. "FM-2026-0042" for external,
+   *  "FM-TALENT-2026-0042" for internal, "FM-RCPT-2026-0042" for
+   *  receipts. Unique across all directions. */
   number: string;
-  /** Magic-link token for the client-facing /invoices/[token] view. */
-  clientToken: string;
+  /** Magic-link token for coop_to_client client-facing view. Null
+   *  for other directions (internal + receipts don't need a
+   *  tokenized surface). */
+  clientToken: string | null;
   status: InvoiceStatus;
-  /** Default rail. CC switches when `acceptsCard` is true. */
-  paymentMethod: PaymentMethod;
+  /** Default rail for external invoices. Null for other directions. */
+  paymentMethod: PaymentMethod | null;
   /**
-   * True when the admin has opted this invoice into CC payment. Drives the
-   * processing-fee line item generator and unlocks the Stripe path on the
-   * magic-link view.
+   * External flow only — admin has opted this invoice into CC
+   * payment (drives the processing-fee gross-up). Null / false for
+   * internal + receipts.
    */
   acceptsCard: boolean;
   lineItems: InvoiceLineItem[];
@@ -1029,7 +1124,13 @@ export interface Invoice {
 export function clientInvoiceView(invoice: Invoice): Omit<Invoice, "notes"> {
   return {
     id: invoice.id,
+    direction: invoice.direction,
+    documentKind: invoice.documentKind,
     contractId: invoice.contractId,
+    sourceRefId: invoice.sourceRefId,
+    sourceInvoiceIds: invoice.sourceInvoiceIds,
+    issuerId: invoice.issuerId,
+    recipientId: invoice.recipientId,
     number: invoice.number,
     clientToken: invoice.clientToken,
     status: invoice.status,

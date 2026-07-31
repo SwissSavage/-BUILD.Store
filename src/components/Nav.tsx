@@ -302,6 +302,12 @@ function AdminDropdown({ self }: { self: User }) {
           Structural pools
         </Link>
         <Link
+          href="/admin/invoices"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Invoices + receipts
+        </Link>
+        <Link
           href="/admin/feedback"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >

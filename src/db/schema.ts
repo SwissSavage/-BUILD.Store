@@ -694,15 +694,30 @@ export const orders = pgTable("orders", {
 
 export const invoices = pgTable("invoices", {
   id: text("id").primaryKey(),
-  contractId: text("contract_id").notNull().references(() => projects.id),
+  direction: text("direction", {
+    enum: [
+      "talent_to_coop",
+      "coop_to_client",
+      "marketplace_receipt",
+      "retroactive_receipt",
+    ],
+  }).notNull().default("coop_to_client"),
+  documentKind: text("document_kind", {
+    enum: ["invoice", "receipt"],
+  }).notNull().default("invoice"),
+  contractId: text("contract_id"),
+  sourceRefId: text("source_ref_id"),
+  sourceInvoiceIds: jsonb("source_invoice_ids").$type<string[]>(),
+  issuerId: text("issuer_id").notNull(),
+  recipientId: text("recipient_id").notNull(),
   number: text("number").notNull().unique(),
-  clientToken: text("client_token").notNull().unique(),
+  clientToken: text("client_token").unique(),
   status: text("status", {
     enum: ["draft", "issued", "partially_received", "received", "void"],
   }).notNull(),
   paymentMethod: text("payment_method", {
     enum: ["ach_mercury", "wire_mercury", "cc_stripe", "check", "other"],
-  }).notNull(),
+  }),
   acceptsCard: boolean("accepts_card").notNull().default(false),
   lineItems: jsonb("line_items").notNull().default([]),
   subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),

@@ -42,6 +42,7 @@ import {
   TREASURY_PCT,
   writeStandardSettlementSplits,
 } from "@/lib/settlement-splits";
+import { hasValidPayoutDocument } from "@/lib/payout-gate";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   ATTRIBUTION_ROLE_LABELS,
@@ -89,6 +90,11 @@ async function settleContract(formData: FormData) {
   }
   if (MOCK_SPLITS.some((s) => s.contractId === contractId)) {
     throw new Error("Contract already settled.");
+  }
+  if (!hasValidPayoutDocument(contractId, "contract_settlement")) {
+    throw new Error(
+      "Settlement refused: no received external invoice or retroactive receipt on this contract. Generate + collect an external invoice (or attach a retroactive receipt) before settling.",
+    );
   }
 
   const collected = Number(project.collectedRevenue);

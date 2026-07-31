@@ -32,6 +32,12 @@ export const MOCK_INVOICES: Invoice[] = [
   // ──────────────────────────────────────────────────────────────────────
   {
     id: "inv_p004_001",
+    direction: "coop_to_client",
+    documentKind: "invoice",
+    sourceRefId: null,
+    sourceInvoiceIds: null,
+    issuerId: "u_jamar",
+    recipientId: "client_url_media",
     contractId: "p_004",
     number: "FM-2026-0042",
     clientToken: "tok_invoice_p004_demo",
@@ -70,6 +76,12 @@ export const MOCK_INVOICES: Invoice[] = [
   // ──────────────────────────────────────────────────────────────────────
   {
     id: "inv_p003_001",
+    direction: "coop_to_client",
+    documentKind: "invoice",
+    sourceRefId: null,
+    sourceInvoiceIds: null,
+    issuerId: "u_jamar",
+    recipientId: "client_dcg",
     contractId: "p_003",
     number: "FM-2026-0051",
     clientToken: "tok_invoice_p003_demo",
@@ -108,6 +120,12 @@ export const MOCK_INVOICES: Invoice[] = [
   // ──────────────────────────────────────────────────────────────────────
   {
     id: "inv_p002_001",
+    direction: "coop_to_client",
+    documentKind: "invoice",
+    sourceRefId: null,
+    sourceInvoiceIds: null,
+    issuerId: "u_jamar",
+    recipientId: "client_p002",
     contractId: "p_002",
     number: "FM-2026-0058",
     clientToken: "tok_invoice_p002_demo",
@@ -152,6 +170,12 @@ export const MOCK_INVOICES: Invoice[] = [
   // ──────────────────────────────────────────────────────────────────────
   {
     id: "inv_p001_001",
+    direction: "coop_to_client",
+    documentKind: "invoice",
+    sourceRefId: null,
+    sourceInvoiceIds: null,
+    issuerId: "u_jamar",
+    recipientId: "client_p001",
     contractId: "p_001",
     number: "FM-2026-DRAFT-0061",
     clientToken: "tok_invoice_p001_demo",
@@ -188,6 +212,161 @@ export const MOCK_INVOICES: Invoice[] = [
       "Holding pending proposal acceptance. Once URL Media counter-signs, issue 50% deposit invoice and re-baseline.",
     createdAt: "2026-04-18T00:00:00Z",
     updatedAt: "2026-04-18T00:00:00Z",
+  },
+
+  // ──────────────────────────────────────────────────────────────────────
+  //  Internal invoices — talent_to_coop
+  //  Contributors on p_003 (DCG GTM plan) billing the coop for their work.
+  //  Approved internals feed the contributor pool at settlement.
+  // ──────────────────────────────────────────────────────────────────────
+  {
+    id: "inv_int_p003_aliza_001",
+    direction: "talent_to_coop",
+    documentKind: "invoice",
+    contractId: "p_003",
+    sourceRefId: null,
+    sourceInvoiceIds: null,
+    issuerId: "u_aliza",
+    recipientId: "coop_cooperative",
+    number: "FM-TALENT-2026-0001",
+    clientToken: null,
+    status: "received",
+    paymentMethod: null,
+    acceptsCard: false,
+    lineItems: [
+      {
+        id: "li_int_p003_aliza_001",
+        description: "GTM plan lead — market selection memo, milestone 1",
+        amount: "4200.00",
+      },
+    ],
+    subtotal: "4200.00",
+    processingFee: "0.00",
+    total: "4200.00",
+    issuedAt: "2026-03-05T00:00:00Z",
+    dueAt: null,
+    paidAt: null,
+    paidAmount: "0.00",
+    mercuryReference: null,
+    stripePaymentIntentId: null,
+    notes:
+      "Approved by u_jamar 2026-03-06. Locks in Aliza's contributor-pool share when p_003 settles.",
+    createdAt: "2026-03-04T09:00:00Z",
+    updatedAt: "2026-03-06T14:00:00Z",
+  },
+  {
+    id: "inv_int_p003_michael_001",
+    direction: "talent_to_coop",
+    documentKind: "invoice",
+    contractId: "p_003",
+    sourceRefId: null,
+    sourceInvoiceIds: null,
+    issuerId: "u_michael",
+    recipientId: "coop_cooperative",
+    number: "FM-TALENT-2026-0002",
+    clientToken: null,
+    status: "issued",
+    paymentMethod: null,
+    acceptsCard: false,
+    lineItems: [
+      {
+        id: "li_int_p003_michael_001",
+        description: "Competitive landscape analysis — 12 hours × $175/hr",
+        amount: "2100.00",
+      },
+    ],
+    subtotal: "2100.00",
+    processingFee: "0.00",
+    total: "2100.00",
+    issuedAt: "2026-03-08T00:00:00Z",
+    dueAt: null,
+    paidAt: null,
+    paidAmount: "0.00",
+    mercuryReference: null,
+    stripePaymentIntentId: null,
+    notes: "Awaiting admin approval.",
+    createdAt: "2026-03-07T10:00:00Z",
+    updatedAt: "2026-03-08T00:00:00Z",
+  },
+
+  // ──────────────────────────────────────────────────────────────────────
+  //  Marketplace receipt — auto-generated on order fulfillment
+  //  Documents a completed transaction; no separate invoice step.
+  // ──────────────────────────────────────────────────────────────────────
+  {
+    id: "inv_rcpt_ord001",
+    direction: "marketplace_receipt",
+    documentKind: "receipt",
+    contractId: null,
+    sourceRefId: "ord_001",
+    sourceInvoiceIds: null,
+    issuerId: "u_bbg",
+    recipientId: "buyer_ord_001",
+    number: "FM-RCPT-2026-0001",
+    clientToken: null,
+    status: "received",
+    paymentMethod: "cc_stripe",
+    acceptsCard: true,
+    lineItems: [
+      {
+        id: "li_rcpt_ord001_001",
+        description: "Cooperative merch — hoodie + tee bundle",
+        amount: "180.00",
+      },
+    ],
+    subtotal: "180.00",
+    processingFee: "5.52",
+    total: "185.52",
+    issuedAt: "2026-06-15T14:00:00Z",
+    dueAt: null,
+    paidAt: "2026-06-15T14:00:00Z",
+    paidAmount: "185.52",
+    mercuryReference: null,
+    stripePaymentIntentId: "pi_mock_ord_001",
+    notes: "Auto-generated on order fulfillment.",
+    createdAt: "2026-06-15T14:00:00Z",
+    updatedAt: "2026-06-15T14:00:00Z",
+  },
+
+  // ──────────────────────────────────────────────────────────────────────
+  //  Retroactive receipt — closes an audit gap where the invoice flow
+  //  was skipped. Rare-path rectification.
+  // ──────────────────────────────────────────────────────────────────────
+  {
+    id: "inv_rcpt_retro_p001",
+    direction: "retroactive_receipt",
+    documentKind: "receipt",
+    contractId: "p_001",
+    sourceRefId: "p_001",
+    sourceInvoiceIds: null,
+    issuerId: "u_jamar",
+    recipientId: "coop_cooperative",
+    number: "FM-RCPT-RETRO-2026-0001",
+    clientToken: null,
+    status: "received",
+    paymentMethod: null,
+    acceptsCard: false,
+    lineItems: [
+      {
+        id: "li_rcpt_retro_p001_001",
+        description:
+          "Contributor payout retroactively documented — original invoice missing due to early-days process gap",
+        amount: "3500.00",
+      },
+    ],
+    subtotal: "3500.00",
+    processingFee: "0.00",
+    total: "3500.00",
+    issuedAt: "2026-07-25T00:00:00Z",
+    dueAt: null,
+    paidAt: "2026-07-25T00:00:00Z",
+    paidAmount: "3500.00",
+    mercuryReference: null,
+    stripePaymentIntentId: null,
+    notes:
+      "Audit rectification. Ties an already-completed payout back to a documented event so the split ledger reconciles cleanly.",
+    createdAt: "2026-07-25T00:00:00Z",
+    updatedAt: "2026-07-25T00:00:00Z",
   },
 ];
 

@@ -32,6 +32,8 @@ import {
 import { grossUpForCard } from "@/lib/payments-fees";
 import { distributeBuild } from "@/lib/wallet-stub";
 import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
+import { createMarketplaceReceiptInternal } from "@/lib/invoice-actions";
+import { hasValidPayoutDocument } from "@/lib/payout-gate";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   ORDER_NEXT_STATUSES,
@@ -192,6 +194,32 @@ export async function distributeOrderSplit(formData: FormData) {
   if (order.status !== "delivered") return;
   if (order.splitDistributedAt) return;
   const now = new Date().toISOString();
+
+  // Auto-generate the marketplace receipt (payout-authorizing
+  // document) before firing the split. Idempotent — creates once,
+  // returns existing on re-run. This is what satisfies the payout
+  // gate below.
+  createMarketplaceReceiptInternal({
+    orderId: order.id,
+    orderNumber: order.number,
+    sellerId: order.sellerId,
+    buyerId: order.buyerId,
+    subtotal: order.subtotal,
+    processingFee: order.processingFee,
+    total: order.total,
+    stripePaymentIntentId: order.stripePaymentIntentId,
+    itemDescription:
+      order.items.length === 1
+        ? order.items[0].titleSnapshot
+        : `${order.items.length} items on order ${order.number}`,
+  });
+
+  if (!hasValidPayoutDocument(order.id, "order_settlement")) {
+    throw new Error(
+      "Order settlement refused: no marketplace receipt attached. This should have been auto-generated — check /admin/invoices.",
+    );
+  }
+
   order.splitDistributedAt = now;
 
   // Write the full 85 / 12 / 1.5 / 1.5 split via the shared engine.

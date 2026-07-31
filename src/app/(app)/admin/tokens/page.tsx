@@ -21,16 +21,19 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 async function distribute(formData: FormData) {
   "use server";
+  const admin = await requireAdmin();
   distributeBuild({
     toUserId: String(formData.get("toUserId")),
     amount: String(formData.get("amount")),
     type: String(formData.get("type")) as TokenTransaction["type"],
     projectId: String(formData.get("projectId") ?? "") || null,
     description: String(formData.get("description") ?? "") || null,
+    initiatedByUserId: admin.id,
   });
   revalidatePath("/admin/tokens");
   revalidatePath("/admin");
   revalidatePath("/wallet");
+  revalidatePath("/admin/vouchers");
   revalidatePath("/dashboard");
 }
 

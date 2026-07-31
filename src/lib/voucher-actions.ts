@@ -42,6 +42,7 @@ import {
   logAuditEvent,
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
+import { issueVoucherInternal } from "@/lib/voucher-issuance";
 import {
   BUILD_VOUCHER_SUPPLY_CAP,
   type BuildVoucher,
@@ -58,12 +59,6 @@ const SOURCE_TYPES: readonly BuildVoucherSourceType[] = [
 
 function isSourceType(raw: string): raw is BuildVoucherSourceType {
   return (SOURCE_TYPES as readonly string[]).includes(raw);
-}
-
-function newVoucherId(): string {
-  return `voucher_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
 }
 
 /**
@@ -156,52 +151,19 @@ export async function issueVoucher(formData: FormData): Promise<void> {
   }
   const sourceType = sourceTypeRaw;
 
-  // Supply-cap guard — sum unforfeited issuance and refuse if the
-  // new voucher would push above the cap.
-  const currentSupply = await totalIssuedSupply();
-  const proposedTotal = currentSupply + Number(amount);
-  if (proposedTotal > BUILD_VOUCHER_SUPPLY_CAP) {
-    const headroom = BUILD_VOUCHER_SUPPLY_CAP - currentSupply;
-    throw new Error(
-      `Issuance would exceed the 10M supply cap. Current issuance: ${currentSupply.toLocaleString()}. ` +
-        `Requested: ${Number(amount).toLocaleString()}. Remaining headroom: ${headroom.toLocaleString()}.`,
-    );
-  }
-
-  const now = new Date().toISOString();
-  const row: BuildVoucher = {
-    id: newVoucherId(),
+  // Shared internal helper handles supply-cap guard + audit-log.
+  // This admin action just wraps it with requireAdmin + form-level
+  // validation. Automated earning-event handlers (bonus release,
+  // order split, etc.) call the same helper directly.
+  issueVoucherInternal({
     userId,
     amount,
     sourceType,
     sourceRefId,
-    swapStatus: "unswapped",
-    swappedToTxHash: null,
-    swappedAt: null,
-    issuedAt: now,
-    notes,
+    notes:
+      notes ??
+      `Admin-issued voucher for ${user.firstName} ${user.lastName ?? ""}`.trim(),
     issuedByUserId: admin.id,
-    createdAt: now,
-    updatedAt: now,
-  };
-  MOCK_BUILD_VOUCHERS.push(row);
-
-  logAuditEvent({
-    actorUserId: admin.id,
-    actorRoleSnapshot: snapshotActorRole(admin),
-    action: "voucher.issued",
-    resourceKind: "build_voucher",
-    resourceId: row.id,
-    before: null,
-    after: {
-      userId,
-      amount,
-      sourceType,
-      sourceRefId,
-      supplyBefore: currentSupply,
-      supplyAfter: proposedTotal,
-    },
-    reason: `Issued ${Number(amount).toLocaleString()} $BUILD voucher to ${user.firstName} ${user.lastName ?? ""}`.trim(),
   });
 
   revalidatePath("/admin/vouchers");

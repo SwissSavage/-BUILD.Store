@@ -28,6 +28,7 @@ import {
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
 import { evaluateBonusGate } from "@/lib/bonus-gate";
+import { distributeBuild } from "@/lib/wallet-stub";
 
 function findProject(id: string) {
   const p = MOCK_PROJECTS.find((x) => x.id === id);
@@ -92,9 +93,53 @@ export async function executeBonusDecision(formData: FormData) {
     creditPool(projectId, project.talentBonusAmount);
     project.bonusDecision = "reclaimed";
   } else {
-    // Release or release-by-default both pay talent.
-    // Sandbox marks the row; production fires the Stripe Connect transfer.
+    // Release or release-by-default both pay talent. In sandbox
+    // we also cascade a $BUILD distribution across the project's
+    // assigned members — equal shares of the bonus amount, sourced
+    // as project_completion. The cascade fires voucher issuance
+    // via the distributeBuild → issueVoucherInternal hook, so the
+    // off-chain voucher ledger stays in lockstep with the earning
+    // event.
+    //
+    // Equal shares is the intentionally naive MVP split — real
+    // per-member allocation logic (roles, seniority, contribution
+    // vectors) belongs in the split engine and is a follow-on. See
+    // task list for the pre-Beta refinement.
+    //
+    // Production: bonus dollars fire via Stripe Connect; the
+    // $BUILD side fires via the multisig propose flow. Both routes
+    // still call this same cascade so voucher accounting stays
+    // consistent.
     project.bonusDecision = "released";
+
+    const members = project.assignedMemberIds;
+    if (members.length > 0) {
+      const share = (Number(project.talentBonusAmount) / members.length).toFixed(8);
+      for (const memberId of members) {
+        try {
+          distributeBuild({
+            toUserId: memberId,
+            amount: share,
+            type: "project_completion",
+            projectId: project.id,
+            description: `Bonus release on ${project.title}`,
+            initiatedByUserId: admin.id,
+          });
+        } catch (err) {
+          // Never let a per-member distribution failure crater the
+          // whole bonus decision — the decision itself has already
+          // been recorded on the project row. Log and continue so
+          // remaining members still receive their share. The
+          // failing member surfaces in the /admin/vouchers ledger
+          // as a missing row that admin can reconcile manually.
+          // eslint-disable-next-line no-console
+          console.error(
+            `[bonus-release] distributeBuild failed for member ${memberId} on project ${project.id}:`,
+            err,
+          );
+        }
+      }
+    }
   }
   project.bonusDecidedAt = new Date().toISOString();
   project.updatedAt = new Date().toISOString();

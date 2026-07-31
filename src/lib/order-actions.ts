@@ -30,6 +30,7 @@ import {
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
 import { grossUpForCard } from "@/lib/payments-fees";
+import { distributeBuild } from "@/lib/wallet-stub";
 import {
   ORDER_NEXT_STATUSES,
   type Order,
@@ -190,6 +191,44 @@ export async function distributeOrderSplit(formData: FormData) {
   if (order.splitDistributedAt) return;
   const now = new Date().toISOString();
   order.splitDistributedAt = now;
+
+  // Cascade a $BUILD distribution to the seller for their share of
+  // the order. Seller share = subtotal - houseFee (the 15% platform
+  // cut). The cascade fires voucher issuance via the distributeBuild
+  // → issueVoucherInternal hook, so the off-chain voucher ledger
+  // stays in lockstep with marketplace earning events.
+  //
+  // MVP simplification: 1:1 USD → $BUILD voucher, seller only.
+  // Admin-pool distribution (12% of the split going to deal-owning
+  // admins) is a follow-on. Reserve pool (3%) never earns $BUILD
+  // by design — it's the cooperative's cut, not a member claim.
+  //
+  // Production: seller dollars fire via Stripe Connect transfer;
+  // the $BUILD side fires via the multisig propose flow. Both
+  // routes still call this same cascade so voucher accounting
+  // stays consistent.
+  const sellerShare = (Number(order.subtotal) - Number(order.houseFee)).toFixed(8);
+  if (Number(sellerShare) > 0) {
+    try {
+      distributeBuild({
+        toUserId: order.sellerId,
+        amount: sellerShare,
+        type: "project_completion",
+        projectId: null,
+        description: `Marketplace order ${order.id}`,
+        initiatedByUserId: admin.id,
+      });
+    } catch (err) {
+      // Do not crater the split-distribution decision — the row
+      // has already been marked. Log so the missing voucher can be
+      // reconciled from /admin/vouchers.
+      // eslint-disable-next-line no-console
+      console.error(
+        `[order-split] distributeBuild failed for seller ${order.sellerId} on order ${order.id}:`,
+        err,
+      );
+    }
+  }
 
   logAuditEvent({
     actorUserId: admin.id,

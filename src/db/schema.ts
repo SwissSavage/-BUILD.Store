@@ -1028,6 +1028,47 @@ export const inboundSubmissions = pgTable("inbound_submissions", {
 });
 
 // ──────────────────────────────────────────────────────────────────────
+//  Agreements (signed paperwork registry)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * One row per signature event. Types + provider are stored as string
+ * enums matching the AgreementType / AgreementProvider unions in
+ * src/lib/types.ts — Postgres validates the label, TypeScript
+ * validates the union at compile time.
+ *
+ * `user_id` cascades on user delete so admin-initiated hard-deletes
+ * of a user account also purge their paperwork. Production ops
+ * should prefer soft-delete of users; hard-delete stays available
+ * for GDPR-style erasure and cleanup.
+ */
+export const agreements = pgTable("agreements", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  agreementType: text("agreement_type", {
+    enum: [
+      "talent_data",
+      "membership_covenant",
+      "loi",
+      "seller_agreement",
+      "contributor_agreement",
+      "other",
+    ],
+  }).notNull(),
+  version: text("version").notNull(),
+  signedAt: timestamp("signed_at", { mode: "string", withTimezone: true }).notNull(),
+  provider: text("provider", {
+    enum: ["adobesign", "docusign", "manual", "in_app", "other"],
+  }).notNull(),
+  externalRef: text("external_ref"),
+  storageUrl: text("storage_url"),
+  notes: text("notes"),
+  createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+// ──────────────────────────────────────────────────────────────────────
 //  Full schema re-export bundle (drizzle-kit + client entry)
 // ──────────────────────────────────────────────────────────────────────
 
@@ -1084,4 +1125,5 @@ export const schema = {
   walkthroughProgress,
   feedbackEntries,
   inboundSubmissions,
+  agreements,
 } as const;

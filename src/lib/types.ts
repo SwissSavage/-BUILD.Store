@@ -3158,6 +3158,145 @@ export interface InviteLink {
 }
 
 // ──────────────────────────────────────────────────────────────────────
+//  Agreements (signed paperwork registry)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * The kinds of paper the cooperative tracks. Every signed document
+ * that meaningfully changes a person's relationship to Future Modern
+ * gets one of these types. Add new types cautiously — the point of
+ * the registry is to be the single source of truth for "what did this
+ * person actually agree to, in writing, and when." Deprecated types
+ * stay in the union so historical entries keep resolving.
+ *
+ *  - talent_data:         basic profile / talent-data release (opt-in
+ *                         to appear in the cooperative directory + be
+ *                         matched into RFP shortlists)
+ *  - membership_covenant: the cooperative covenant a Member signs on
+ *                         promotion from Partner (versioned)
+ *  - loi:                 letter of intent (pre-contract), typically
+ *                         issued during scoping conversations
+ *  - seller_agreement:    marketplace seller terms (governs a member
+ *                         listing products in the cooperative store)
+ *  - contributor_agreement: catch-all for contributor-side agreements
+ *                         that don't fit the more specific buckets
+ *  - other:               anything not yet enumerated; use `notes` to
+ *                         describe. Migrate to a proper type once a
+ *                         pattern emerges.
+ */
+export type AgreementType =
+  | "talent_data"
+  | "membership_covenant"
+  | "loi"
+  | "seller_agreement"
+  | "contributor_agreement"
+  | "other";
+
+export const AGREEMENT_TYPE_LABELS: Record<AgreementType, string> = {
+  talent_data: "Talent data release",
+  membership_covenant: "Membership covenant",
+  loi: "Letter of intent",
+  seller_agreement: "Seller agreement",
+  contributor_agreement: "Contributor agreement",
+  other: "Other",
+};
+
+/**
+ * How the agreement was signed. Tracked so admin can reconcile
+ * against the source of truth (an Adobe Sign envelope, a DocuSign
+ * envelope, a countersigned PDF stored in the repo, etc.) without
+ * guessing.
+ *
+ *  - adobesign / docusign: signed through the named e-sign provider;
+ *                          `externalRef` holds the envelope/agreement
+ *                          identifier for round-tripping.
+ *  - manual:               signed on paper or as a countersigned PDF
+ *                          filed manually. `storageUrl` points at
+ *                          the archived file.
+ *  - in_app:               signed in-product via a click-through
+ *                          modal (reserved — not built yet; will be
+ *                          used for the talent_data release at
+ *                          onboarding).
+ *  - other:                anything else; use `notes` to describe.
+ */
+export type AgreementProvider =
+  | "adobesign"
+  | "docusign"
+  | "manual"
+  | "in_app"
+  | "other";
+
+export const AGREEMENT_PROVIDER_LABELS: Record<AgreementProvider, string> = {
+  adobesign: "Adobe Sign",
+  docusign: "DocuSign",
+  manual: "Manual (paper / PDF)",
+  in_app: "In-app click-through",
+  other: "Other",
+};
+
+/**
+ * A single signed-agreement record. One row = one signature event
+ * for one user against one document version. If a Member signs a
+ * revised covenant, that is a NEW row (the prior row stays for the
+ * historical record). This is the primitive gates read against when
+ * they need to answer "does this member have a current, valid
+ * signature on `talent_data`?"
+ *
+ * Storage:
+ *  - The actual signed artifact lives outside the DB — either at
+ *    the provider (Adobe Sign / DocuSign) or in the repo under
+ *    `Future Modern/deliverables/legal/signed-agreements/` using
+ *    the ISO-date naming pattern established for Rob Turley's LOI.
+ *  - `storageUrl` is the pointer. For provider-hosted agreements,
+ *    it can be a deep link into the provider console; for filed
+ *    PDFs, it's the repo-relative path.
+ *  - `externalRef` is the provider-native identifier (envelope ID,
+ *    agreement ID) when applicable, otherwise null.
+ *
+ * OG onboarding path:
+ *  - An on-chain $BUILD holder MAY exist with no matching Agreement
+ *    row here. That is not a violation — it means an original
+ *    contributor from before the registry existed. The admin
+ *    Agreements surface flags these ("unmatched holder → OG
+ *    onboarding needed") so the cooperative can reach out, get them
+ *    caught up on current paperwork (talent_data + membership
+ *    covenant at minimum), and formalize the relationship. Do NOT
+ *    treat missing agreement as forfeited standing for pre-registry
+ *    holders — it's an onboarding backlog signal, not a compliance
+ *    failure.
+ */
+export interface Agreement {
+  id: string;
+  /** Who signed. */
+  userId: string;
+  agreementType: AgreementType;
+  /** Version string for the document itself — e.g. "1.0", "2026-04",
+   *  "v2-post-multisig". Lets the covenant evolve without losing the
+   *  historical trail. Providers rarely surface this cleanly; the
+   *  cooperative maintains it. */
+  version: string;
+  /** When the countersigned event actually happened (ISO). NOT when
+   *  the row was created in the registry. */
+  signedAt: string;
+  provider: AgreementProvider;
+  /** Provider-native identifier (Adobe Sign envelope ID, DocuSign
+   *  envelope ID, etc.). Null for manual / in_app entries. */
+  externalRef: string | null;
+  /** Repo-relative path or provider deep link. Null only for edge
+   *  cases where the signed artifact was destroyed / not archived —
+   *  those rows should be flagged in `notes`. */
+  storageUrl: string | null;
+  /** Free-form context — countersignature dates for asymmetric
+   *  signatures, cross-reference notes, redline commentary. */
+  notes: string | null;
+  /** Admin who logged the row into the registry (not necessarily
+   *  the signer). Null for system-initiated imports. */
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────
 //  Audit log (SOC 2 CC7.2 / ISO 27001 A.12.4 — Logging and Monitoring)
 // ──────────────────────────────────────────────────────────────────────
 
@@ -3231,6 +3370,11 @@ export type AuditLogAction =
   | "epk.revision_requested"
   | "testimonial.published"
   | "testimonial.unpublished"
+  // Signed-agreements registry
+  | "agreement.created"
+  | "agreement.updated"
+  | "agreement.removed"
+  | "agreement.imported"
   // Admin config
   | "config.setting_changed"
   | "config.access_reviewed";
@@ -3284,6 +3428,10 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "epk.revision_requested": "EPK revision requested",
   "testimonial.published": "Testimonial published",
   "testimonial.unpublished": "Testimonial unpublished",
+  "agreement.created": "Signed agreement logged",
+  "agreement.updated": "Signed agreement updated",
+  "agreement.removed": "Signed agreement removed",
+  "agreement.imported": "Signed agreement imported from provider",
   "config.setting_changed": "Config setting changed",
   "config.access_reviewed": "Access review completed",
 };
@@ -3302,6 +3450,7 @@ export type AuditLogResourceKind =
   | "project"
   | "milestone"
   | "booking"
+  | "agreement"
   | "notification_rule"
   | "config";
 

@@ -68,6 +68,7 @@ const adminLinks = [
   { href: "/admin/cohort", label: "Cohort spotlights" },
   { href: "/admin/cooperative-quotes", label: "Cooperative quotes" },
   { href: "/admin/receipts", label: "Cooperative receipts" },
+  { href: "/admin/agreements", label: "Signed agreements" },
   { href: "/admin/feedback", label: "Beta feedback" },
   { href: "/admin/testimonials", label: "Customer testimonials" },
   { href: "/admin/epk", label: "EPK approvals" },

@@ -284,6 +284,12 @@ function AdminDropdown({ self }: { self: User }) {
           Cooperative receipts
         </Link>
         <Link
+          href="/admin/agreements"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Signed agreements
+        </Link>
+        <Link
           href="/admin/feedback"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >

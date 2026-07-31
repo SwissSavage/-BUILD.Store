@@ -28,9 +28,9 @@ import {
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
 import { evaluateBonusGate } from "@/lib/bonus-gate";
-import { distributeBuild } from "@/lib/wallet-stub";
 import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
 import { hasValidPayoutDocument } from "@/lib/payout-gate";
+import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
 
 function findProject(id: string) {
   const p = MOCK_PROJECTS.find((x) => x.id === id);
@@ -156,32 +156,27 @@ export async function executeBonusDecision(formData: FormData) {
         );
       }
 
-      // Cascade $BUILD distribution per member (voucher fires
-      // via the distributeBuild → issueVoucherInternal hook).
-      // Equal-share MVP; per-member allocation refinement is
-      // follow-on #260.
-      const share = ((bonusAmount * 0.85) / members.length).toFixed(8);
-      for (const memberId of members) {
-        try {
-          distributeBuild({
-            toUserId: memberId,
-            amount: share,
-            type: "project_completion",
-            projectId: project.id,
-            description: `Bonus release on ${project.title}`,
-            initiatedByUserId: admin.id,
-          });
-        } catch (err) {
-          // Never let a per-member distribution failure crater the
-          // whole bonus decision — the decision itself has already
-          // been recorded on the project row. Log and continue so
-          // remaining members still receive their share.
-          // eslint-disable-next-line no-console
-          console.error(
-            `[bonus-release] distributeBuild failed for member ${memberId} on project ${project.id}:`,
-            err,
-          );
-        }
+      // $BUILD cascade — canonical 6.087× network fees formula on
+      // the bonus amount, split 80/16/2/2 across talent / admin
+      // pool / Treasury / LP. Follow-on #260 refines the talent
+      // share allocation from equal split to per-member weighting
+      // when internal invoices are attached to the bonus release.
+      try {
+        issueBuildFromSettlement({
+          gross: bonusAmount,
+          cashSourceKind: "bonus_release",
+          sourceId: project.id,
+          contributors: { userIds: members },
+          admins: { userIds: adminIds },
+          actorUserId: admin.id,
+          noteContext: `$BUILD generation — bonus release on ${project.title}`,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[bonus-release] issueBuildFromSettlement failed for project ${project.id}:`,
+          err,
+        );
       }
     }
   }

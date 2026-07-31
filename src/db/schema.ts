@@ -1093,7 +1093,10 @@ export const inboundSubmissions = pgTable("inbound_submissions", {
  */
 export const buildVouchers = pgTable("build_vouchers", {
   id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // NOT an FK — accepts sentinel ids for structural pool destinations
+  // (house_treasury, house_liquidity_pool) alongside real user ids.
+  // Mirrors the RevenueSplit.recipientId pattern.
+  userId: text("user_id").notNull(),
   amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
   sourceType: text("source_type", {
     enum: [

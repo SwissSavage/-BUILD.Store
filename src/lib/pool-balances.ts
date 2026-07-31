@@ -9,6 +9,7 @@
  * write inflows.
  */
 import { MOCK_SPLITS } from "@/lib/mock-data/splits";
+import { MOCK_BUILD_VOUCHERS } from "@/lib/mock-data/vouchers";
 import {
   HOUSE_LP_ID,
   HOUSE_TREASURY_ID,
@@ -91,4 +92,24 @@ export function splitsForSource(sourceId: string): RevenueSplit[] {
   return MOCK_SPLITS.filter((s) => s.sourceId === sourceId).sort((a, b) =>
     (a.decidedAt ?? "").localeCompare(b.decidedAt ?? ""),
   );
+}
+
+// ────────────────────────────────────────────────────────────────
+//  $BUILD-side pool balances (Treasury + LP sentinel holdings)
+// ────────────────────────────────────────────────────────────────
+
+function sumVouchersForSentinel(sentinelId: string): number {
+  return MOCK_BUILD_VOUCHERS.filter(
+    (v) => v.userId === sentinelId && v.swapStatus !== "forfeited",
+  ).reduce((sum, v) => sum + Number(v.amount), 0);
+}
+
+/** Total $BUILD sitting in the Treasury sentinel wallet. */
+export function treasuryBuildBalance(): number {
+  return sumVouchersForSentinel(HOUSE_TREASURY_ID);
+}
+
+/** Total $BUILD sitting in the LP sentinel wallet. */
+export function liquidityPoolBuildBalance(): number {
+  return sumVouchersForSentinel(HOUSE_LP_ID);
 }

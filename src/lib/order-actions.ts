@@ -30,10 +30,10 @@ import {
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
 import { grossUpForCard } from "@/lib/payments-fees";
-import { distributeBuild } from "@/lib/wallet-stub";
 import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
 import { createMarketplaceReceiptInternal } from "@/lib/invoice-actions";
 import { hasValidPayoutDocument } from "@/lib/payout-gate";
+import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   ORDER_NEXT_STATUSES,
@@ -273,32 +273,26 @@ export async function distributeOrderSplit(formData: FormData) {
     }
   }
 
-  // Cascade a $BUILD distribution to the seller for their share of
-  // the order. Voucher issuance fires via the distributeBuild →
-  // issueVoucherInternal hook so the off-chain voucher ledger stays
-  // in lockstep with marketplace earning events.
-  //
-  // MVP simplification: 1:1 USD → $BUILD voucher on the seller portion.
-  // Tier 28 replaces this with the 6.087× network-fees formula and
-  // the 80/16/2/2 split across talent/admin/treasury/LP.
-  const sellerShare = (Number(order.subtotal) - Number(order.houseFee)).toFixed(8);
-  if (Number(sellerShare) > 0) {
-    try {
-      distributeBuild({
-        toUserId: order.sellerId,
-        amount: sellerShare,
-        type: "project_completion",
-        projectId: null,
-        description: `Marketplace order ${order.id}`,
-        initiatedByUserId: admin.id,
-      });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(
-        `[order-split] distributeBuild failed for seller ${order.sellerId} on order ${order.id}:`,
-        err,
-      );
-    }
+  // $BUILD cascade — uses the canonical 6.087× network fees formula
+  // and the 80/16/2/2 split across seller / admin pool / Treasury /
+  // LP. Same shape as the cash split, different weights, different
+  // basis (network fees only, per the master spreadsheet).
+  try {
+    issueBuildFromSettlement({
+      gross: Number(order.subtotal),
+      cashSourceKind: "order_settlement",
+      sourceId: order.id,
+      contributors: { userIds: [order.sellerId] },
+      admins: { userIds: platformAdmins },
+      actorUserId: admin.id,
+      noteContext: `$BUILD generation — marketplace order ${order.number}`,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[order-split] issueBuildFromSettlement failed for order ${order.id}:`,
+      err,
+    );
   }
 
   revalidatePath("/orders");

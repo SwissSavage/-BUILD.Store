@@ -25,7 +25,9 @@ import {
   contributorPoolLifetimeTotal,
   inflowHistory,
   liquidityPoolBalance,
+  liquidityPoolBuildBalance,
   treasuryBalance,
+  treasuryBuildBalance,
 } from "@/lib/pool-balances";
 import {
   HOUSE_LP_ID,
@@ -49,6 +51,8 @@ export default async function AdminPoolsPage() {
 
   const treasury = treasuryBalance();
   const lp = liquidityPoolBalance();
+  const treasuryBuild = treasuryBuildBalance();
+  const lpBuild = liquidityPoolBuildBalance();
   const adminPool = adminPoolLifetimeTotal();
   const contribPool = contributorPoolLifetimeTotal();
 
@@ -81,30 +85,60 @@ export default async function AdminPoolsPage() {
         </Link>
       </div>
 
-      {/* Headline balances */}
+      {/* Headline balances — cash side */}
       <section className="mt-10">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <h2 className="font-display text-2xl font-semibold">Cash pools</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <BalanceCard
-            label="Treasury"
+            label="Treasury (cash)"
             value={treasury}
             note="Long-horizon runway"
+            format="usd"
           />
           <BalanceCard
-            label="Liquidity Pool"
+            label="Liquidity Pool (cash)"
             value={lp}
             note="Manufactures $BUILD value"
+            format="usd"
           />
           <BalanceCard
             label="Admin pool (lifetime)"
             value={adminPool}
             note="Distributed across admins"
             muted
+            format="usd"
           />
           <BalanceCard
             label="Contributor pool (lifetime)"
             value={contribPool}
             note="Paid to talent"
             muted
+            format="usd"
+          />
+        </div>
+      </section>
+
+      {/* Headline balances — $BUILD side */}
+      <section className="mt-10">
+        <h2 className="font-display text-2xl font-semibold">$BUILD pools</h2>
+        <p className="mt-2 text-sm text-ink-muted">
+          Non-forfeited voucher issuance accumulated in the structural
+          pool wallets. Sourced by the canonical formula: 6.087 $BUILD
+          per $1 of Network Fees, split 80/16/2/2 across talent /
+          admin / Treasury / LP on every settlement.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <BalanceCard
+            label="Treasury ($BUILD)"
+            value={treasuryBuild}
+            note="2% of every settlement's generated tokens"
+            format="build"
+          />
+          <BalanceCard
+            label="Liquidity Pool ($BUILD)"
+            value={lpBuild}
+            note="2% of every settlement's generated tokens"
+            format="build"
           />
         </div>
       </section>
@@ -166,17 +200,28 @@ export default async function AdminPoolsPage() {
   );
 }
 
+const BUILD_FMT = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 4,
+});
+
 function BalanceCard({
   label,
   value,
   note,
   muted,
+  format = "usd",
 }: {
   label: string;
   value: number;
   note: string;
   muted?: boolean;
+  format?: "usd" | "build";
 }) {
+  const display =
+    format === "build"
+      ? `${BUILD_FMT.format(value)} $BUILD`
+      : USD_FMT.format(value);
   return (
     <Card>
       <p className="text-[11px] uppercase tracking-wider text-ink-muted">
@@ -187,7 +232,7 @@ function BalanceCard({
           muted ? "text-ink-faint" : "text-ink"
         }`}
       >
-        {USD_FMT.format(value)}
+        {display}
       </p>
       <p className="mt-1 text-[11px] text-ink-faint">{note}</p>
     </Card>

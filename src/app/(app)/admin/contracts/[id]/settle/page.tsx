@@ -43,6 +43,7 @@ import {
   writeStandardSettlementSplits,
 } from "@/lib/settlement-splits";
 import { hasValidPayoutDocument } from "@/lib/payout-gate";
+import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   ATTRIBUTION_ROLE_LABELS,
@@ -151,6 +152,30 @@ async function settleContract(formData: FormData) {
     actorUserId: admin.id,
     noteContext: `Contract settlement — ${project.title}`,
   });
+
+  // $BUILD cascade — canonical 6.087× network fees formula with
+  // 80/16/2/2 split. Fires alongside the cash split so voucher
+  // accounting stays in lockstep.
+  try {
+    issueBuildFromSettlement({
+      gross: collected,
+      cashSourceKind: "contract_settlement",
+      sourceId: contractId,
+      contributors: {
+        userIds: contribRows.map((r) => r.id),
+        amounts: contribAmounts,
+      },
+      admins: { userIds: adminRows.map((r) => r.id) },
+      actorUserId: admin.id,
+      noteContext: `$BUILD generation — ${project.title} settlement`,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[contract-settle] issueBuildFromSettlement failed for ${contractId}:`,
+      err,
+    );
+  }
 
   // Dispatch transfers. Per-row try/catch so one KYC failure doesn't
   // block the rest — each row tracks its own status for retry.

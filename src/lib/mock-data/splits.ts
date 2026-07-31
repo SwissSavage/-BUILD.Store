@@ -45,6 +45,8 @@ export const MOCK_SPLITS: RevenueSplit[] = [
   {
     id: "split_001",
     contractId: "p_004",
+    sourceKind: "contract_settlement",
+    sourceId: "p_004",
     recipientId: "u_aliza",
     pool: "contributor",
     sharePct: "100.00",
@@ -62,6 +64,8 @@ export const MOCK_SPLITS: RevenueSplit[] = [
   {
     id: "split_002",
     contractId: "p_004",
+    sourceKind: "contract_settlement",
+    sourceId: "p_004",
     recipientId: "u_jamar",
     pool: "admin",
     sharePct: "100.00",
@@ -79,6 +83,8 @@ export const MOCK_SPLITS: RevenueSplit[] = [
   {
     id: "split_003",
     contractId: "p_004",
+    sourceKind: "contract_settlement",
+    sourceId: "p_004",
     recipientId: "house_treasury",
     pool: "reserve",
     sharePct: "50.00",
@@ -94,6 +100,8 @@ export const MOCK_SPLITS: RevenueSplit[] = [
   {
     id: "split_004",
     contractId: "p_004",
+    sourceKind: "contract_settlement",
+    sourceId: "p_004",
     recipientId: "house_liquidity_pool",
     pool: "reserve",
     sharePct: "50.00",

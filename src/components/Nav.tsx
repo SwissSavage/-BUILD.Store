@@ -296,6 +296,12 @@ function AdminDropdown({ self }: { self: User }) {
           $BUILD vouchers
         </Link>
         <Link
+          href="/admin/pools"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Structural pools
+        </Link>
+        <Link
           href="/admin/feedback"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >

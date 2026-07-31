@@ -513,9 +513,59 @@ export const PAYOUT_STATUS_LABELS: Record<PayoutStatus, string> = {
   failed: "Failed",
 };
 
+/**
+ * What kind of financial event produced this split row. Universal
+ * discriminator so `revenue_splits` acts as ONE ledger for every
+ * inflow that eventually needs to be paid out or accumulated into
+ * a structural pool (Treasury / LP / admin).
+ *
+ *  - contract_settlement: contract close, 85/12/1.5/1.5 against
+ *                         collected revenue. `sourceId` = project id.
+ *  - order_settlement:    marketplace order fulfilled + split
+ *                         dispatched. `sourceId` = order id.
+ *  - bonus_release:       reserved bonus pool released after the
+ *                         triangulated composite lands (see Contract
+ *                         Reserve Pool primitive). Same 85/12/1.5/1.5
+ *                         shape applied to the bonus amount only.
+ *                         `sourceId` = project id.
+ *  - donation:            whitelist donation completion. Splits
+ *                         50/50 Treasury/LP with NO contributor or
+ *                         admin cut (war-chest policy). `sourceId` =
+ *                         whitelist_purchase id.
+ */
+export type RevenueSplitSourceKind =
+  | "contract_settlement"
+  | "order_settlement"
+  | "bonus_release"
+  | "donation";
+
+export const REVENUE_SPLIT_SOURCE_KIND_LABELS: Record<
+  RevenueSplitSourceKind,
+  string
+> = {
+  contract_settlement: "Contract settlement",
+  order_settlement: "Order settlement",
+  bonus_release: "Bonus release",
+  donation: "Donation",
+};
+
 export interface RevenueSplit {
   id: string;
-  contractId: string;
+  /**
+   * DEPRECATED as a required FK — kept nullable for back-compat with
+   * older settlement rows. New callers should populate `sourceKind` +
+   * `sourceId` instead. When `sourceKind === "contract_settlement"`
+   * or `"bonus_release"`, this mirrors `sourceId` for legibility.
+   */
+  contractId: string | null;
+  /** What kind of event produced this row. */
+  sourceKind: RevenueSplitSourceKind;
+  /**
+   * Opaque source identifier. Not a hard FK because different kinds
+   * point to different tables (project / order / whitelist_purchase).
+   * The `sourceKind` discriminates which table to resolve against.
+   */
+  sourceId: string;
   recipientId: string;
   pool: SplitPool;
   /** Percentage of the pool this row receives. Stored as a string to mirror Drizzle numeric. */

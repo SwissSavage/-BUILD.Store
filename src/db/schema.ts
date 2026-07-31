@@ -211,10 +211,38 @@ export const attributionEntries = pgTable("attribution_entries", {
   loggedAt: timestamp("logged_at", { mode: "string", withTimezone: true }).notNull(),
 });
 
+/**
+ * Universal revenue-split ledger.
+ *
+ *   contractId — nullable; retained for back-compat where the source
+ *                is a project. New callers should use sourceKind +
+ *                sourceId instead.
+ *   sourceKind — discriminates what kind of financial event produced
+ *                this row (contract settlement / order settlement /
+ *                bonus release / donation).
+ *   sourceId   — opaque source identifier (project id / order id /
+ *                whitelist_purchase id). NOT a hard FK because the
+ *                target table depends on sourceKind.
+ *   recipientId — user id OR sentinel string ("house_treasury",
+ *                "house_liquidity_pool") for structural pools. FK
+ *                to users would break sentinels, so no FK here.
+ *
+ * Treasury / LP balances derive from SUM(amount WHERE recipientId =
+ * sentinel AND pool = 'reserve').
+ */
 export const revenueSplits = pgTable("revenue_splits", {
   id: text("id").primaryKey(),
-  contractId: text("contract_id").notNull().references(() => projects.id),
-  recipientId: text("recipient_id").notNull().references(() => users.id),
+  contractId: text("contract_id"),
+  sourceKind: text("source_kind", {
+    enum: [
+      "contract_settlement",
+      "order_settlement",
+      "bonus_release",
+      "donation",
+    ],
+  }).notNull().default("contract_settlement"),
+  sourceId: text("source_id").notNull(),
+  recipientId: text("recipient_id").notNull(),
   pool: text("pool", { enum: ["contributor", "admin", "reserve"] }).notNull(),
   sharePct: numeric("share_pct", { precision: 6, scale: 3 }).notNull(),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),

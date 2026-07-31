@@ -29,6 +29,7 @@ import {
 } from "@/lib/mock-data/audit-log";
 import { evaluateBonusGate } from "@/lib/bonus-gate";
 import { distributeBuild } from "@/lib/wallet-stub";
+import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
 
 function findProject(id: string) {
   const p = MOCK_PROJECTS.find((x) => x.id === id);
@@ -113,8 +114,44 @@ export async function executeBonusDecision(formData: FormData) {
     project.bonusDecision = "released";
 
     const members = project.assignedMemberIds;
-    if (members.length > 0) {
-      const share = (Number(project.talentBonusAmount) / members.length).toFixed(8);
+    const bonusAmount = Number(project.talentBonusAmount);
+    if (members.length > 0 && bonusAmount > 0) {
+      // Write the full 85/12/1.5/1.5 split against the bonus
+      // amount so admin/treasury/LP get their proportional cut
+      // alongside the talent bonus. Uses the same shared engine
+      // as contract + order settlement.
+      const adminIds =
+        project.adminUserIds.length > 0 ? project.adminUserIds : members;
+      const talentShare = (bonusAmount * 0.85) / members.length;
+      try {
+        writeStandardSettlementSplits({
+          gross: bonusAmount,
+          sourceKind: "bonus_release",
+          sourceId: project.id,
+          contractId: project.id,
+          contributors: {
+            userIds: members,
+            amounts: members.map(() => talentShare.toFixed(2)),
+          },
+          admins: {
+            userIds: adminIds,
+          },
+          actorUserId: admin.id,
+          noteContext: `Bonus release on ${project.title}`,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[bonus-release] writeStandardSettlementSplits failed for project ${project.id}:`,
+          err,
+        );
+      }
+
+      // Cascade $BUILD distribution per member (voucher fires
+      // via the distributeBuild → issueVoucherInternal hook).
+      // Equal-share MVP; per-member allocation refinement is
+      // follow-on #260.
+      const share = ((bonusAmount * 0.85) / members.length).toFixed(8);
       for (const memberId of members) {
         try {
           distributeBuild({
@@ -129,9 +166,7 @@ export async function executeBonusDecision(formData: FormData) {
           // Never let a per-member distribution failure crater the
           // whole bonus decision — the decision itself has already
           // been recorded on the project row. Log and continue so
-          // remaining members still receive their share. The
-          // failing member surfaces in the /admin/vouchers ledger
-          // as a missing row that admin can reconcile manually.
+          // remaining members still receive their share.
           // eslint-disable-next-line no-console
           console.error(
             `[bonus-release] distributeBuild failed for member ${memberId} on project ${project.id}:`,

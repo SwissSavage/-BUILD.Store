@@ -31,6 +31,8 @@ import {
 } from "@/lib/mock-data/audit-log";
 import { grossUpForCard } from "@/lib/payments-fees";
 import { distributeBuild } from "@/lib/wallet-stub";
+import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
+import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   ORDER_NEXT_STATUSES,
   type Order,
@@ -192,21 +194,65 @@ export async function distributeOrderSplit(formData: FormData) {
   const now = new Date().toISOString();
   order.splitDistributedAt = now;
 
+  // Write the full 85 / 12 / 1.5 / 1.5 split via the shared engine.
+  // Marketplace orders route the seller as the sole contributor and
+  // the admin pool distributes evenly across all platform admins for
+  // now (no per-order admin roster yet — every admin gets a slice as
+  // stewards of the marketplace surface).
+  //
+  // Follow-on task #261 refines this to distribute across the actual
+  // deal-owning admins once orders track an admin roster.
+  const platformAdmins = MOCK_USERS.filter(
+    (u) => u.isAdmin && u.suspendedAt === null,
+  ).map((u) => u.id);
+  if (platformAdmins.length === 0) {
+    // Fall back to the marking-only path so the order still closes
+    // even if the admin roster is empty — extreme edge case.
+    logAuditEvent({
+      actorUserId: admin.id,
+      actorRoleSnapshot: snapshotActorRole(admin),
+      action: "contract.revenue_split_recorded",
+      resourceKind: "project",
+      resourceId: order.id,
+      before: { splitDistributedAt: null },
+      after: {
+        splitDistributedAt: now,
+        note: "No platform admins available — split rows NOT written.",
+      },
+    });
+  } else {
+    try {
+      writeStandardSettlementSplits({
+        gross: Number(order.subtotal),
+        sourceKind: "order_settlement",
+        sourceId: order.id,
+        contractId: null,
+        contributors: {
+          userIds: [order.sellerId],
+        },
+        admins: {
+          userIds: platformAdmins,
+        },
+        actorUserId: admin.id,
+        noteContext: `Marketplace order ${order.number}`,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(
+        `[order-split] writeStandardSettlementSplits failed for order ${order.id}:`,
+        err,
+      );
+    }
+  }
+
   // Cascade a $BUILD distribution to the seller for their share of
-  // the order. Seller share = subtotal - houseFee (the 15% platform
-  // cut). The cascade fires voucher issuance via the distributeBuild
-  // → issueVoucherInternal hook, so the off-chain voucher ledger
-  // stays in lockstep with marketplace earning events.
+  // the order. Voucher issuance fires via the distributeBuild →
+  // issueVoucherInternal hook so the off-chain voucher ledger stays
+  // in lockstep with marketplace earning events.
   //
-  // MVP simplification: 1:1 USD → $BUILD voucher, seller only.
-  // Admin-pool distribution (12% of the split going to deal-owning
-  // admins) is a follow-on. Reserve pool (3%) never earns $BUILD
-  // by design — it's the cooperative's cut, not a member claim.
-  //
-  // Production: seller dollars fire via Stripe Connect transfer;
-  // the $BUILD side fires via the multisig propose flow. Both
-  // routes still call this same cascade so voucher accounting
-  // stays consistent.
+  // MVP simplification: 1:1 USD → $BUILD voucher on the seller portion.
+  // Tier 28 replaces this with the 6.087× network-fees formula and
+  // the 80/16/2/2 split across talent/admin/treasury/LP.
   const sellerShare = (Number(order.subtotal) - Number(order.houseFee)).toFixed(8);
   if (Number(sellerShare) > 0) {
     try {
@@ -219,9 +265,6 @@ export async function distributeOrderSplit(formData: FormData) {
         initiatedByUserId: admin.id,
       });
     } catch (err) {
-      // Do not crater the split-distribution decision — the row
-      // has already been marked. Log so the missing voucher can be
-      // reconciled from /admin/vouchers.
       // eslint-disable-next-line no-console
       console.error(
         `[order-split] distributeBuild failed for seller ${order.sellerId} on order ${order.id}:`,
@@ -229,21 +272,6 @@ export async function distributeOrderSplit(formData: FormData) {
       );
     }
   }
-
-  logAuditEvent({
-    actorUserId: admin.id,
-    actorRoleSnapshot: snapshotActorRole(admin),
-    action: "contract.revenue_split_recorded",
-    resourceKind: "project",
-    resourceId: order.id,
-    before: { splitDistributedAt: null },
-    after: {
-      splitDistributedAt: now,
-      sellerId: order.sellerId,
-      subtotal: order.subtotal,
-      houseFee: order.houseFee,
-    },
-  });
 
   revalidatePath("/orders");
   revalidatePath(`/orders/${order.id}`);

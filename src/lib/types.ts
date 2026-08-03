@@ -428,6 +428,167 @@ export interface EngagementRecoveryPool {
   closedAt: string | null;
 }
 
+// ──────────────────────────────────────────────────────────────────────
+//  Contract Reserve Pool + triangulated composite (Tier 27)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Canonical triangulation weights (locked 2026-07-30). Not tunable per
+ * contract — see build-vision.md governance section for the rationale.
+ * When client signal is absent, weights redistribute pro-rata across
+ * the remaining two signals (0.50 / 0.50).
+ */
+export const TRIANGULATION_WEIGHTS = {
+  admin: 0.40,
+  peer: 0.40,
+  client: 0.20,
+} as const;
+
+/**
+ * Peer-coverage bonus routing threshold. When a contributor's
+ * composite falls below release, their unreleased bonus routes to
+ * same-contract contributors whose composite cleared this bar
+ * (rewards actual carrying behavior). Contributors below the
+ * threshold don't earn peer-coverage; those at or above split it
+ * proportional to their internal invoice share of the contributor
+ * pool.
+ */
+export const PEER_COVERAGE_THRESHOLD = 4.5;
+
+/**
+ * Reason a debit was made against a contract's reserve pool. Powers
+ * the ledger audit trail + admin visibility on where reserve funds
+ * routed for each project.
+ *
+ *   - bonus_release:       original contributor's graduated bonus
+ *                          (composite / 5) paid out at close.
+ *   - replacement_payout:  replacement contractor invoice paid from
+ *                          the reserve (mid-project swap when the
+ *                          client requested a change).
+ *   - client_rebate:       admin-approved refund to client sized by
+ *                          triangulation math. Requires written
+ *                          rationale in the ledger entry.
+ *   - peer_coverage:       unreleased bonus from low-composite
+ *                          contributor routed to same-contract
+ *                          contributors above the coverage threshold.
+ *   - recovery_pool:       residual after all other debits, routed
+ *                          to the Engagement Recovery Pool at close.
+ */
+export type ReserveDebitReason =
+  | "bonus_release"
+  | "replacement_payout"
+  | "client_rebate"
+  | "peer_coverage"
+  | "recovery_pool";
+
+export const RESERVE_DEBIT_REASON_LABELS: Record<ReserveDebitReason, string> = {
+  bonus_release: "Bonus release",
+  replacement_payout: "Replacement contractor payout",
+  client_rebate: "Client rebate",
+  peer_coverage: "Peer-coverage bonus",
+  recovery_pool: "Routed to Engagement Recovery Pool",
+};
+
+/**
+ * Reason a credit was made against a contract's reserve pool.
+ *
+ *   - invoice_collection:  SUM(top_end − low_end) across contributors
+ *                          on the deal, credited when the external
+ *                          invoice is marked paid.
+ *   - unearned_base:       removed contributor's unearned base
+ *                          returned to reserve (expands the pool the
+ *                          replacement gets paid from).
+ *   - manual_adjustment:   admin-created credit (rare — for audit
+ *                          rectification or historical backfill).
+ */
+export type ReserveCreditReason =
+  | "invoice_collection"
+  | "unearned_base"
+  | "manual_adjustment";
+
+export const RESERVE_CREDIT_REASON_LABELS: Record<ReserveCreditReason, string> = {
+  invoice_collection: "Invoice collection (top − bottom delta)",
+  unearned_base: "Unearned base returned (contributor removed)",
+  manual_adjustment: "Manual adjustment",
+};
+
+/**
+ * A single credit or debit against a contract's reserve pool.
+ * Append-only ledger — corrections happen via offsetting entries,
+ * never edits. Sum of entries = current pool balance for that
+ * project.
+ *
+ * $BUILD parity: the same reason enums apply to $BUILD reserve
+ * movements (see Tier 28 formula for the 6.087× network fees rate).
+ * Tier 27 implements the CASH side; $BUILD-side reserve is a
+ * follow-on that reuses the same ledger shape.
+ */
+export interface ReservePoolLedgerEntry {
+  id: string;
+  projectId: string;
+  /**
+   * Positive USD amount for credits, negative USD amount for debits.
+   * Stored as string to match Drizzle numeric(12,2) serialization.
+   */
+  amount: string;
+  /** Discriminates credit vs debit reason. */
+  direction: "credit" | "debit";
+  creditReason: ReserveCreditReason | null;
+  debitReason: ReserveDebitReason | null;
+  /**
+   * Recipient for debit entries (user id for bonus/replacement/
+   * peer_coverage; "client" sentinel for client_rebate; null for
+   * recovery_pool routing). Null for credits.
+   */
+  recipientId: string | null;
+  /**
+   * Actor who made this entry. Null = system-initiated (e.g., an
+   * automatic invoice-collection credit).
+   */
+  actorUserId: string | null;
+  /**
+   * Written rationale — required for client_rebate debits (per the
+   * anti-abuse policy). Optional for other reasons but recommended.
+   */
+  rationale: string | null;
+  createdAt: string;
+}
+
+/**
+ * A contributor's triangulated composite for a specific contract at
+ * close time. Snapshotted so the historical decision doesn't shift
+ * if the underlying ratings change later. Feeds both the graduated
+ * bonus release AND the contributor's rolling MVP OVR (dual output
+ * from one input — see build-vision.md one-way flow section).
+ */
+export interface TriangulatedComposite {
+  id: string;
+  projectId: string;
+  contributorUserId: string;
+  /** Raw ratings (0–5) that fed the composite. Nullable if the
+   *  specific signal wasn't available. */
+  adminRating: number | null;
+  peerRating: number | null;
+  clientRating: number | null;
+  /**
+   * Effective weights applied. Usually canonical (0.40/0.40/0.20)
+   * but redistributes pro-rata when a signal is absent (0.50/0.50
+   * when no client, etc.). Snapshotted so the math is auditable
+   * later.
+   */
+  effectiveWeights: {
+    admin: number;
+    peer: number;
+    client: number;
+  };
+  /** Weighted composite score (0–5). */
+  weightedComposite: number;
+  /** bonus_released_pct = weightedComposite / 5 (0–1). Determines
+   *  how much of the contributor's bonus portion pays out at close. */
+  bonusReleaseFraction: number;
+  computedAt: string;
+}
+
 /**
  * One row in the attribution ledger for a given contract. Records WHO did
  * WHAT, so compensation can be computed (or recomputed) at any time without
@@ -3660,6 +3821,14 @@ export type AuditLogAction =
   | "voucher.marked_pending_swap"
   | "voucher.swapped"
   | "voucher.forfeited"
+  // Contract Reserve Pool (Tier 27)
+  | "reserve.credited"
+  | "reserve.bonus_released"
+  | "reserve.replacement_paid"
+  | "reserve.rebate_issued"
+  | "reserve.peer_coverage_distributed"
+  | "reserve.recovery_routed"
+  | "composite.computed"
   // Admin config
   | "config.setting_changed"
   | "config.access_reviewed";
@@ -3721,6 +3890,13 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "voucher.marked_pending_swap": "$BUILD voucher marked pending swap",
   "voucher.swapped": "$BUILD voucher swapped for real token",
   "voucher.forfeited": "$BUILD voucher forfeited",
+  "reserve.credited": "Contract reserve credited",
+  "reserve.bonus_released": "Reserve bonus released to contributor",
+  "reserve.replacement_paid": "Reserve paid replacement contractor",
+  "reserve.rebate_issued": "Reserve issued client rebate",
+  "reserve.peer_coverage_distributed": "Reserve peer-coverage distributed",
+  "reserve.recovery_routed": "Reserve residual routed to Engagement Recovery Pool",
+  "composite.computed": "Triangulated composite computed for contributor",
   "config.setting_changed": "Config setting changed",
   "config.access_reviewed": "Access review completed",
 };
@@ -3741,6 +3917,8 @@ export type AuditLogResourceKind =
   | "booking"
   | "agreement"
   | "build_voucher"
+  | "reserve_pool"
+  | "triangulated_composite"
   | "notification_rule"
   | "config";
 

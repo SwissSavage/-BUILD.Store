@@ -1123,6 +1123,70 @@ export const buildVouchers = pgTable("build_vouchers", {
 });
 
 // ──────────────────────────────────────────────────────────────────────
+//  Contract Reserve Pool + Triangulated Composite (Tier 27)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Append-only ledger of reserve pool credits + debits per contract.
+ * Balance = SUM(amount) for a given projectId. No separate "pool"
+ * table — the ledger IS the pool, same pattern as revenue_splits.
+ *
+ * Recipient not FK'd because it holds user ids OR sentinel strings
+ * ("client" for rebates, null for recovery_pool routing).
+ */
+export const reservePoolLedger = pgTable("reserve_pool_ledger", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, {
+    onDelete: "cascade",
+  }),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  direction: text("direction", { enum: ["credit", "debit"] }).notNull(),
+  creditReason: text("credit_reason", {
+    enum: ["invoice_collection", "unearned_base", "manual_adjustment"],
+  }),
+  debitReason: text("debit_reason", {
+    enum: [
+      "bonus_release",
+      "replacement_payout",
+      "client_rebate",
+      "peer_coverage",
+      "recovery_pool",
+    ],
+  }),
+  recipientId: text("recipient_id"),
+  actorUserId: text("actor_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  rationale: text("rationale"),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+/**
+ * Snapshotted composite per contributor per contract. Frozen at
+ * bonus-decision time so the historical decision stays auditable
+ * even if peer/client/admin ratings change later.
+ */
+export const triangulatedComposites = pgTable("triangulated_composites", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, {
+    onDelete: "cascade",
+  }),
+  contributorUserId: text("contributor_user_id").notNull().references(() => users.id),
+  adminRating: numeric("admin_rating", { precision: 3, scale: 2 }),
+  peerRating: numeric("peer_rating", { precision: 3, scale: 2 }),
+  clientRating: numeric("client_rating", { precision: 3, scale: 2 }),
+  effectiveWeights: jsonb("effective_weights")
+    .$type<{ admin: number; peer: number; client: number }>()
+    .notNull(),
+  weightedComposite: numeric("weighted_composite", { precision: 4, scale: 3 }).notNull(),
+  bonusReleaseFraction: numeric("bonus_release_fraction", {
+    precision: 4,
+    scale: 3,
+  }).notNull(),
+  computedAt: timestamp("computed_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+// ──────────────────────────────────────────────────────────────────────
 //  Agreements (signed paperwork registry)
 // ──────────────────────────────────────────────────────────────────────
 
@@ -1222,4 +1286,6 @@ export const schema = {
   inboundSubmissions,
   agreements,
   buildVouchers,
+  reservePoolLedger,
+  triangulatedComposites,
 } as const;

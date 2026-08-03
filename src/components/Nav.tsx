@@ -308,6 +308,12 @@ function AdminDropdown({ self }: { self: User }) {
           Invoices + receipts
         </Link>
         <Link
+          href="/admin/reserve"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Contract reserves
+        </Link>
+        <Link
           href="/admin/feedback"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >

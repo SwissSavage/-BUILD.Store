@@ -26,6 +26,7 @@ import { MOCK_INVOICES } from "@/lib/mock-data/invoices";
 import { MOCK_SPLITS } from "@/lib/mock-data/splits";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { RESERVE_RECIPIENTS } from "@/lib/mock-data/splits";
+import { creditReserveOnInvoiceCollection } from "@/lib/reserve-actions";
 import {
   INVOICE_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
@@ -120,6 +121,16 @@ async function markReceived(formData: FormData) {
     project.collectedRevenue = totalReceived.toFixed(2);
     project.collectedAt = now;
     project.updatedAt = now;
+
+    // Fund the Contract Reserve Pool with the top − bottom delta
+    // now that the invoice is fully paid. Idempotent — refuses to
+    // credit twice per project.
+    if (inv.contractId) {
+      await creditReserveOnInvoiceCollection({
+        projectId: inv.contractId,
+        actorUserId: admin.id,
+      });
+    }
   }
 
   revalidatePath(`/admin/contracts/${inv.contractId}/ledger`);

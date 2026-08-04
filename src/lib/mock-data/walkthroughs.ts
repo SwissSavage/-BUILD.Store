@@ -577,8 +577,26 @@ export const MOCK_WALKTHROUGH_STEPS: WalkthroughStep[] = [
       "What slice of the inbox is hardest to triage right now, and what filter or grouping would fix it?",
   },
   {
-    id: "wts_admin_outro",
+    id: "wts_admin_cx_discipline",
     order: 11,
+    tier: "admin",
+    pillar: null,
+    title: "CX discipline — record calls + log meeting minutes as standard practice",
+    blurb:
+      "Preferred path: the client fills out the feedback form themselves via the magic-link at /contracts/[id]/feedback. When they do, no meeting-minute attachment needed — the rating is self-submitted and the composite reads it directly. The discipline kicks in when the client DOESN'T self-submit and you capture their stated rating during a review call. Those admin-captured ratings will require linking a meeting_minute row (call recording + one-line summary) so the composite math has evidence, not just a claim. Now (at N=1) your integrity is the signal; at N=admins, structural discipline is what keeps the review process honest and bias-free at scale.",
+    surface: "/calendar",
+    surfaceLabel: "Open the cooperative calendar",
+    whatToTry: [
+      "Send the client-facing feedback magic-link IMMEDIATELY after the call while it's fresh — self-submission is always cleaner than admin-capture",
+      "When you do capture the rating live during a review call (client didn't fill the form), log the call as a meeting-minute row with recording link + one-line rating summary — that's the evidence linkage the admin-capture flow will require",
+      "Rating hygiene → accurate composites → reliable payouts + MVP OVR → sharper matching engine → better outcomes. Miss it and the whole downstream chain drifts.",
+    ],
+    feedbackPrompt:
+      "What piece of your CX call cadence would break first if you had 5+ other admins doing review calls, and what forcing function would keep the discipline honest?",
+  },
+  {
+    id: "wts_admin_outro",
+    order: 12,
     tier: "admin",
     pillar: null,
     title: "Operator wrap — anything missing from the admin surface?",

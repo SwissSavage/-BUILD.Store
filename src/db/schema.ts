@@ -839,6 +839,20 @@ export const customerFeedback = pgTable("customer_feedback", {
   publishedAt: timestamp("published_at", { mode: "string", withTimezone: true }),
   publishedQuote: text("published_quote"),
   publishedForUserId: text("published_for_user_id").references(() => users.id),
+  // Admin-capture provenance — set when admin captured this rating
+  // on the client's behalf during a CX call. Structural evidence
+  // requirement: capturedByAdminUserId + meetingMinuteId must be
+  // either both null (client self-submitted) or both non-null
+  // (admin captured with linked call record). Enforced in the
+  // server action, not at DB level for MVP flexibility.
+  capturedByAdminUserId: text("captured_by_admin_user_id").references(() => users.id),
+  captureContext: text("capture_context"),
+  meetingMinuteId: text("meeting_minute_id"),
+  clientConfirmationStatus: text("client_confirmation_status", {
+    enum: ["pending", "confirmed", "disputed"],
+  }),
+  clientConfirmationToken: text("client_confirmation_token").unique(),
+  clientConfirmedAt: timestamp("client_confirmed_at", { mode: "string", withTimezone: true }),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
 });
 

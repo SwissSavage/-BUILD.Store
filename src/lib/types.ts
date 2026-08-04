@@ -2250,6 +2250,38 @@ export interface CustomerFeedback {
    * until published.
    */
   publishedForUserId: string | null;
+  /**
+   * Admin who captured this rating on the client's behalf during a
+   * CX review call. Null when the client self-submitted via the
+   * magic-link questionnaire (the preferred path). When set, the
+   * `meetingMinuteId` field must also be set — admin cannot capture
+   * a rating in a vacuum, structural evidence is required.
+   */
+  capturedByAdminUserId: string | null;
+  /**
+   * Human-readable context for the admin-capture: "captured during
+   * Q3 review call 2026-08-04", "captured on quarterly touchpoint",
+   * etc. Null for client self-submitted rows.
+   */
+  captureContext: string | null;
+  /**
+   * meeting_minutes row id that documents the CX call this rating
+   * was captured on. Required for admin-captured rows; null for
+   * self-submitted. Provides the evidence audit-log to distinguish
+   * "admin proxied for real client statement" from "admin invented
+   * a rating."
+   */
+  meetingMinuteId: string | null;
+  /**
+   * Confirmation state for admin-captured rows. When admin captures,
+   * a magic-link email fires to the client asking them to confirm
+   * or dispute the captured value. Null for self-submitted rows.
+   */
+  clientConfirmationStatus: "pending" | "confirmed" | "disputed" | null;
+  /** Magic-link token for the client-facing confirmation view. */
+  clientConfirmationToken: string | null;
+  /** When the client confirmed or disputed. Null while pending. */
+  clientConfirmedAt: string | null;
   createdAt: string;
 }
 

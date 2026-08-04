@@ -26,6 +26,8 @@ import {
   executeGraduatedBonusRelease,
   issueClientRebate,
 } from "@/lib/reserve-actions";
+import { captureClientFeedbackDuringCall } from "@/lib/client-feedback-capture-actions";
+import { MOCK_MEETING_MINUTES } from "@/lib/mock-data/meeting-minutes";
 import {
   aggregatePeerCompositeForContributor,
   extractClientRatingForProject,
@@ -306,6 +308,120 @@ function ReserveCard({ project }: { project: Project }) {
                   ))}
                 </ul>
               </div>
+            )}
+
+            {/* Admin-capture flow for client rating — only if missing */}
+            {clientRating === null && (
+              <details className="mt-3 rounded-md border border-[var(--surface-border)] px-3 py-2">
+                <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-ink-muted">
+                  Admin-capture client rating (during CX call)
+                </summary>
+                <p className="mt-2 text-[11px] text-ink-faint">
+                  Preferred path is client self-submitting via the
+                  magic-link. Use this only when they gave the rating
+                  live on a call. Meeting-minute link required —
+                  structural evidence gate. Confirmation magic-link
+                  fires to the client after capture.
+                </p>
+                <form
+                  action={captureClientFeedbackDuringCall}
+                  className="mt-3 space-y-2"
+                >
+                  <input type="hidden" name="projectId" value={project.id} />
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <label className="text-[11px]">
+                      Client name
+                      <input
+                        name="clientName"
+                        type="text"
+                        required
+                        className="mt-1 w-full rounded border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-xs"
+                      />
+                    </label>
+                    <label className="text-[11px]">
+                      Client email (confirmation link fires here)
+                      <input
+                        name="clientEmail"
+                        type="email"
+                        required
+                        className="mt-1 w-full rounded border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-xs"
+                      />
+                    </label>
+                    <label className="text-[11px]">
+                      Overall rating (1–5)
+                      <input
+                        name="overallStars"
+                        type="number"
+                        step="1"
+                        min="1"
+                        max="5"
+                        required
+                        className="mt-1 w-full rounded border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-xs"
+                      />
+                    </label>
+                    <label className="text-[11px]">
+                      Would hire again?
+                      <select
+                        name="wouldHireAgain"
+                        required
+                        className="mt-1 w-full rounded border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-xs"
+                      >
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </label>
+                  </div>
+                  <label className="block text-[11px]">
+                    Meeting-minute id (required — from /calendar)
+                    <select
+                      name="meetingMinuteId"
+                      required
+                      className="mt-1 w-full rounded border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-xs"
+                    >
+                      <option value="">Pick a meeting-minute row</option>
+                      {MOCK_MEETING_MINUTES.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.id} · {(m.body ?? "").slice(0, 60) || m.format}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="mt-1 block text-[10px] text-ink-faint">
+                      No minutes yet? Log the call on{" "}
+                      <code className="rounded bg-[var(--surface-inset)] px-1 py-0.5">
+                        /calendar
+                      </code>{" "}
+                      first.
+                    </span>
+                  </label>
+                  <label className="block text-[11px]">
+                    Capture context
+                    <input
+                      name="captureContext"
+                      type="text"
+                      required
+                      placeholder="e.g. Q3 review call 2026-08-04"
+                      className="mt-1 w-full rounded border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-xs"
+                    />
+                  </label>
+                  <label className="block text-[11px]">
+                    Rating summary / prose (optional)
+                    <textarea
+                      name="prose"
+                      rows={2}
+                      placeholder="What the client said, verbatim if you can."
+                      className="mt-1 w-full rounded border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-xs"
+                    />
+                  </label>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="rounded-full bg-brand-magenta px-4 py-2 text-xs font-medium text-brand-white hover:bg-brand-magenta/90"
+                    >
+                      Capture + send confirmation link
+                    </button>
+                  </div>
+                </form>
+              </details>
             )}
 
             {/* Source ratings (read-only) */}

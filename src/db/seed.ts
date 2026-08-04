@@ -84,6 +84,7 @@ import {
   MOCK_RESERVE_POOL_LEDGER,
   MOCK_TRIANGULATED_COMPOSITES,
 } from "../lib/mock-data/reserve-pool";
+import { MOCK_PARTNER_REFERRALS } from "../lib/mock-data/partner-referrals";
 // chat.ts uses an in-memory function-based store, no seed data to pull.
 // chat_threads + chat_messages tables stay empty until real traffic
 // populates them via the app's chat rail.
@@ -174,6 +175,11 @@ async function main() {
     "triangulated_composites",
     schema.triangulatedComposites,
     MOCK_TRIANGULATED_COMPOSITES,
+  );
+  await seedTable(
+    "partner_referrals",
+    schema.partnerReferrals,
+    MOCK_PARTNER_REFERRALS,
   );
 
   // Wave 3 — depend on users + projects

@@ -1064,6 +1064,77 @@ export interface ProductAffiliate {
   affiliateUrl: string | null;
 }
 
+/**
+ * Referral attribution ledger for the /partners page relationships.
+ *
+ * When a cooperative member (or admin) refers an external lead to
+ * a SaaS Partner or Product Affiliate, this ledger tracks the
+ * referral through its lifecycle: pending → converted (with
+ * dollars) or declined (with reason). The referrer earns their
+ * kick when a partner-generated deal closes; that credit flows
+ * into the split engine as a contract_intake referral (see
+ * previewConsultationConversionSplit in contract-splits.ts).
+ *
+ * Provides two things:
+ *   1. Revenue attribution — the coop knows which partner
+ *      relationships actually produced revenue, so partnership
+ *      decisions can be data-driven not vibe-driven.
+ *   2. Referrer credit — the member who made the intro gets
+ *      structural credit (referral kick + $BUILD voucher) when
+ *      the deal closes.
+ */
+export type PartnerReferralKind = "saas_partner" | "product_affiliate";
+
+export const PARTNER_REFERRAL_KIND_LABELS: Record<PartnerReferralKind, string> = {
+  saas_partner: "SaaS Partner",
+  product_affiliate: "Product Affiliate",
+};
+
+export type PartnerReferralStatus =
+  | "pending"
+  | "converted"
+  | "declined"
+  | "expired";
+
+export const PARTNER_REFERRAL_STATUS_LABELS: Record<
+  PartnerReferralStatus,
+  string
+> = {
+  pending: "Pending — waiting on partner outcome",
+  converted: "Converted — deal closed, revshare due",
+  declined: "Declined — lead didn't convert",
+  expired: "Expired — followup window closed",
+};
+
+export interface PartnerReferral {
+  id: string;
+  /** ecosystemPartner.id or productAffiliate.id, depending on kind. */
+  partnerId: string;
+  partnerKind: PartnerReferralKind;
+  /** FM member (or admin) who made the referral. */
+  referrerUserId: string;
+  /** External lead contact — the person referred TO the partner. */
+  leadContactName: string;
+  leadContactEmail: string;
+  /** Optional company context on the lead. */
+  leadCompany: string | null;
+  /** Free-form context — what admin should know about the lead. */
+  notes: string | null;
+  status: PartnerReferralStatus;
+  /** Dollar amount attributed to this conversion by the partner.
+   *  Populated when status flips to "converted". Null otherwise. */
+  convertedAmountUsd: string | null;
+  /** Portion of the conversion that flows back to FM per the
+   *  partner's revshare agreement. Populated with converted. */
+  revshareEarnedUsd: string | null;
+  convertedAt: string | null;
+  /** Optional decline reason (partner-provided or admin-observed). */
+  declineReason: string | null;
+  declinedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ──────────────────────────────────────────────────────────────────────
 //  AR / AP layer (Phase 1.5 revised — Mercury-default, Stripe opt-in)
 // ──────────────────────────────────────────────────────────────────────
@@ -3869,6 +3940,10 @@ export type AuditLogAction =
   | "reserve.peer_coverage_distributed"
   | "reserve.recovery_routed"
   | "composite.computed"
+  // Partner referrals (#267)
+  | "partner_referral.logged"
+  | "partner_referral.converted"
+  | "partner_referral.declined"
   // Admin config
   | "config.setting_changed"
   | "config.access_reviewed";
@@ -3937,6 +4012,9 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "reserve.peer_coverage_distributed": "Reserve peer-coverage distributed",
   "reserve.recovery_routed": "Reserve residual routed to Engagement Recovery Pool",
   "composite.computed": "Triangulated composite computed for contributor",
+  "partner_referral.logged": "Partner referral logged",
+  "partner_referral.converted": "Partner referral converted (revshare due)",
+  "partner_referral.declined": "Partner referral declined",
   "config.setting_changed": "Config setting changed",
   "config.access_reviewed": "Access review completed",
 };
@@ -3959,6 +4037,7 @@ export type AuditLogResourceKind =
   | "build_voucher"
   | "reserve_pool"
   | "triangulated_composite"
+  | "partner_referral"
   | "notification_rule"
   | "config";
 

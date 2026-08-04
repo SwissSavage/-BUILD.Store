@@ -74,6 +74,7 @@ const adminLinks = [
   { href: "/admin/invoices", label: "Invoices + receipts" },
   { href: "/admin/reserve", label: "Contract reserves" },
   { href: "/admin/clients", label: "Client patterns" },
+  { href: "/admin/referrals", label: "Partner referrals" },
   { href: "/admin/feedback", label: "Beta feedback" },
   { href: "/admin/testimonials", label: "Customer testimonials" },
   { href: "/admin/epk", label: "EPK approvals" },

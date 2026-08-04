@@ -320,6 +320,12 @@ function AdminDropdown({ self }: { self: User }) {
           Client patterns
         </Link>
         <Link
+          href="/admin/referrals"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Partner referrals
+        </Link>
+        <Link
           href="/admin/feedback"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >

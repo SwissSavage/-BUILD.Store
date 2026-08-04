@@ -1138,6 +1138,33 @@ export const buildVouchers = pgTable("build_vouchers", {
 });
 
 // ──────────────────────────────────────────────────────────────────────
+//  Partner referrals (#267 — referral attribution for /partners page)
+// ──────────────────────────────────────────────────────────────────────
+
+export const partnerReferrals = pgTable("partner_referrals", {
+  id: text("id").primaryKey(),
+  partnerId: text("partner_id").notNull(),
+  partnerKind: text("partner_kind", {
+    enum: ["saas_partner", "product_affiliate"],
+  }).notNull(),
+  referrerUserId: text("referrer_user_id").notNull().references(() => users.id),
+  leadContactName: text("lead_contact_name").notNull(),
+  leadContactEmail: text("lead_contact_email").notNull(),
+  leadCompany: text("lead_company"),
+  notes: text("notes"),
+  status: text("status", {
+    enum: ["pending", "converted", "declined", "expired"],
+  }).notNull().default("pending"),
+  convertedAmountUsd: numeric("converted_amount_usd", { precision: 12, scale: 2 }),
+  revshareEarnedUsd: numeric("revshare_earned_usd", { precision: 12, scale: 2 }),
+  convertedAt: timestamp("converted_at", { mode: "string", withTimezone: true }),
+  declineReason: text("decline_reason"),
+  declinedAt: timestamp("declined_at", { mode: "string", withTimezone: true }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+// ──────────────────────────────────────────────────────────────────────
 //  Contract Reserve Pool + Triangulated Composite (Tier 27)
 // ──────────────────────────────────────────────────────────────────────
 
@@ -1303,4 +1330,5 @@ export const schema = {
   buildVouchers,
   reservePoolLedger,
   triangulatedComposites,
+  partnerReferrals,
 } as const;

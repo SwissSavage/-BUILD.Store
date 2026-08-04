@@ -27,6 +27,11 @@ import {
   issueClientRebate,
 } from "@/lib/reserve-actions";
 import { captureClientFeedbackDuringCall } from "@/lib/client-feedback-capture-actions";
+import {
+  remindClientForFeedback,
+  remindPeersForRating,
+  remindPmForRating,
+} from "@/lib/chase-actions";
 import { MOCK_MEETING_MINUTES } from "@/lib/mock-data/meeting-minutes";
 import {
   aggregatePeerCompositeForContributor,
@@ -255,16 +260,22 @@ function ReserveCard({ project }: { project: Project }) {
           feedback: MOCK_CUSTOMER_FEEDBACK,
           projectId: project.id,
         });
-        const missingChase: string[] = [];
+        type ChaseItem =
+          | { kind: "pm"; label: string }
+          | { kind: "client"; label: string }
+          | { kind: "peer"; label: string; contributorId: string };
+        const chaseItems: ChaseItem[] = [];
         if (adminRating === null) {
-          missingChase.push(
-            "PM engagement rating — capture on the settle page",
-          );
+          chaseItems.push({
+            kind: "pm",
+            label: "PM engagement rating not captured yet.",
+          });
         }
         if (clientRating === null) {
-          missingChase.push(
-            "Client rating — send them the /contracts/[id]/feedback magic-link",
-          );
+          chaseItems.push({
+            kind: "client",
+            label: "Client hasn't submitted feedback.",
+          });
         }
         const perContribData = contribs.map((u) => {
           const peer = aggregatePeerCompositeForContributor({
@@ -273,9 +284,11 @@ function ReserveCard({ project }: { project: Project }) {
             contributorUserId: u.id,
           });
           if (peer === null) {
-            missingChase.push(
-              `Peer reviews for ${publicName(u)} — ask fellow contributors to submit on /projects/${project.id}`,
-            );
+            chaseItems.push({
+              kind: "peer",
+              label: `Peer reviews for ${publicName(u)} not on file.`,
+              contributorId: u.id,
+            });
           }
           return { user: u, peer };
         });
@@ -296,15 +309,80 @@ function ReserveCard({ project }: { project: Project }) {
               weights pro-rata (but chase the raters when you can).
             </p>
 
-            {/* Who to chase */}
-            {missingChase.length > 0 && (
+            {/* Who to chase — with one-click reminder actions */}
+            {chaseItems.length > 0 && (
               <div className="mt-3 rounded-md border border-brand-magenta/30 bg-brand-magenta/5 p-3">
                 <p className="text-[11px] uppercase tracking-wider text-brand-magenta">
                   Chase list — missing ratings
                 </p>
-                <ul className="mt-2 list-disc space-y-0.5 pl-4 text-[11px] text-ink-muted">
-                  {missingChase.map((item) => (
-                    <li key={item}>{item}</li>
+                <ul className="mt-2 space-y-2">
+                  {chaseItems.map((item, i) => (
+                    <li
+                      key={i}
+                      className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-ink-muted"
+                    >
+                      <span>{item.label}</span>
+                      {item.kind === "pm" && (
+                        <form action={remindPmForRating}>
+                          <input
+                            type="hidden"
+                            name="projectId"
+                            value={project.id}
+                          />
+                          <button
+                            type="submit"
+                            className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[10px] font-medium text-brand-magenta hover:bg-brand-magenta/10"
+                          >
+                            Nudge PM
+                          </button>
+                        </form>
+                      )}
+                      {item.kind === "peer" && (
+                        <form action={remindPeersForRating}>
+                          <input
+                            type="hidden"
+                            name="projectId"
+                            value={project.id}
+                          />
+                          <input
+                            type="hidden"
+                            name="contributorId"
+                            value={item.contributorId}
+                          />
+                          <button
+                            type="submit"
+                            className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[10px] font-medium text-brand-magenta hover:bg-brand-magenta/10"
+                          >
+                            Nudge peers
+                          </button>
+                        </form>
+                      )}
+                      {item.kind === "client" && (
+                        <form
+                          action={remindClientForFeedback}
+                          className="flex items-center gap-1"
+                        >
+                          <input
+                            type="hidden"
+                            name="projectId"
+                            value={project.id}
+                          />
+                          <input
+                            name="clientEmail"
+                            type="email"
+                            placeholder="client@..."
+                            required
+                            className="w-32 rounded border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-[10px]"
+                          />
+                          <button
+                            type="submit"
+                            className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[10px] font-medium text-brand-magenta hover:bg-brand-magenta/10"
+                          >
+                            Send link
+                          </button>
+                        </form>
+                      )}
+                    </li>
                   ))}
                 </ul>
               </div>

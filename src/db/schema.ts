@@ -686,6 +686,7 @@ export const orders = pgTable("orders", {
   shippedAt: timestamp("shipped_at", { mode: "string", withTimezone: true }),
   deliveredAt: timestamp("delivered_at", { mode: "string", withTimezone: true }),
   splitDistributedAt: timestamp("split_distributed_at", { mode: "string", withTimezone: true }),
+  adminUserIds: jsonb("admin_user_ids").$type<string[]>().notNull().default([]),
 });
 
 // ──────────────────────────────────────────────────────────────────────

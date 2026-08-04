@@ -49,6 +49,7 @@ export const MOCK_ORDERS: Order[] = [
     shippedAt: null,
     deliveredAt: null,
     splitDistributedAt: null,
+    adminUserIds: ["u_jamar"],
   },
 
   // Chibu buys Aliza's zine — delivered, eligible for buyer feedback (Phase 2.7)
@@ -84,6 +85,7 @@ export const MOCK_ORDERS: Order[] = [
     shippedAt: "2026-04-17T00:00:00Z",
     deliveredAt: "2026-04-22T00:00:00Z",
     splitDistributedAt: "2026-04-23T09:00:00Z",
+    adminUserIds: ["u_jamar"],
   },
 
   // Guest buys Jamar's wordmark tee — delivered, split distributed
@@ -119,6 +121,7 @@ export const MOCK_ORDERS: Order[] = [
     shippedAt: "2026-04-03T00:00:00Z",
     deliveredAt: "2026-04-08T00:00:00Z",
     splitDistributedAt: "2026-04-09T09:00:00Z",
+    adminUserIds: ["u_jamar"],
   },
 
   // Aliza buys Michael's heat-pump scoping — placed, awaiting payment
@@ -153,6 +156,7 @@ export const MOCK_ORDERS: Order[] = [
     shippedAt: null,
     deliveredAt: null,
     splitDistributedAt: null,
+    adminUserIds: ["u_jamar"],
   },
 
   // Cancelled — buyer changed their mind pre-payment
@@ -187,5 +191,6 @@ export const MOCK_ORDERS: Order[] = [
     shippedAt: null,
     deliveredAt: null,
     splitDistributedAt: null,
+    adminUserIds: ["u_jamar"],
   },
 ];

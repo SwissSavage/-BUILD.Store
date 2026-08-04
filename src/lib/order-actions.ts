@@ -122,6 +122,12 @@ export async function placeOrder(formData: FormData) {
     shippedAt: null,
     deliveredAt: null,
     splitDistributedAt: null,
+    // Deal-owning admins default to empty — admin populates via the
+    // seller's onboarding admin OR the marketplace-category
+    // moderator OR a manual assignment. Empty falls back to
+    // even-split across platform admins at settlement so no order
+    // settles with an empty admin pool.
+    adminUserIds: [],
   };
 
   // Decrement inventory for inventoried products.
@@ -224,15 +230,21 @@ export async function distributeOrderSplit(formData: FormData) {
 
   // Write the full 85 / 12 / 1.5 / 1.5 split via the shared engine.
   // Marketplace orders route the seller as the sole contributor and
-  // the admin pool distributes evenly across all platform admins for
-  // now (no per-order admin roster yet — every admin gets a slice as
-  // stewards of the marketplace surface).
-  //
-  // Follow-on task #261 refines this to distribute across the actual
-  // deal-owning admins once orders track an admin roster.
-  const platformAdmins = MOCK_USERS.filter(
-    (u) => u.isAdmin && u.suspendedAt === null,
-  ).map((u) => u.id);
+  // the admin pool distributes to the deal-owning admins listed on
+  // order.adminUserIds. If empty (unseeded / legacy orders), falls
+  // back to distributing evenly across all active platform admins
+  // so no order settles with an empty admin pool.
+  const dealAdmins = order.adminUserIds.filter((id) =>
+    MOCK_USERS.some(
+      (u) => u.id === id && u.isAdmin && u.suspendedAt === null,
+    ),
+  );
+  const platformAdmins =
+    dealAdmins.length > 0
+      ? dealAdmins
+      : MOCK_USERS.filter((u) => u.isAdmin && u.suspendedAt === null).map(
+          (u) => u.id,
+        );
   if (platformAdmins.length === 0) {
     // Fall back to the marking-only path so the order still closes
     // even if the admin roster is empty — extreme edge case.

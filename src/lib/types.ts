@@ -1825,6 +1825,14 @@ export interface Order {
   deliveredAt: string | null;
   /** Set when the split engine has run against this order. */
   splitDistributedAt: string | null;
+  /**
+   * Deal-owning admin(s) for this order — receives the admin-pool
+   * split at settlement (12% of subtotal). Empty array falls back
+   * to distributing evenly across all platform admins so no order
+   * settles with nobody in the admin pool. Populate at fulfillment
+   * time (or seed from the seller's onboarding admin).
+   */
+  adminUserIds: string[];
 }
 
 // ──────────────────────────────────────────────────────────────────────

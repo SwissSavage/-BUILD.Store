@@ -230,18 +230,31 @@ export function aggregatePeerCompositeForContributor(input: {
 
 /**
  * Client rating for a project. Uses `overallStars` from the most
- * recent customer feedback entry on the project. Multiple entries
- * possible in edge cases (client re-submits via a fresh magic
- * link); most-recent wins so a corrected rating supersedes an
- * initial one. Returns null if no customer feedback on file — that
- * triggers pro-rata weight redistribution in the composite math.
+ * recent customer feedback entry on the project.
+ *
+ * Excludes disputed rows: when a client disputes an admin-captured
+ * rating via /feedback/confirm/[token], that row's confirmation
+ * status flips to "disputed" and the composite math must exclude
+ * it until admin resolves (re-captures with correct rating OR
+ * sends the self-submission magic-link). Preserving the disputed
+ * row in the ledger is important for audit, but it can't drive
+ * live payout math.
+ *
+ * Multiple non-disputed entries possible in edge cases (client
+ * re-submits via a fresh magic link); most-recent wins so a
+ * corrected rating supersedes an initial one. Returns null if no
+ * usable customer feedback on file — that triggers pro-rata
+ * weight redistribution in the composite math.
  */
 export function extractClientRatingForProject(input: {
   feedback: CustomerFeedback[];
   projectId: string;
 }): number | null {
   const applicable = input.feedback.filter(
-    (f) => f.contextKind === "contract" && f.contextId === input.projectId,
+    (f) =>
+      f.contextKind === "contract" &&
+      f.contextId === input.projectId &&
+      f.clientConfirmationStatus !== "disputed",
   );
   if (applicable.length === 0) return null;
   // Most recent wins.

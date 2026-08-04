@@ -25,7 +25,7 @@ export const MOCK_COHORT_SPOTLIGHTS: CohortSpotlight[] = [
     userIds: ["u_bayu"],
     headline: "Bayu joins the cooperative",
     narrative:
-      "Bayu comes in as a Member with a design practice that spans UI/UX, brand systems, and marketing funnel. He's been shaping the visual language of the cooperative's marketing surfaces from the outside for months — now he's inside. His arrival closes the loop between how the cooperative looks and how it operates.",
+      "Bayu joins as a Partner running Guramo System, his own software agency, with seven-plus years across TypeScript, React, Electron, Laravel, and AI integrations. He carries a full-stack engineering core with a real product-design lens on top, and prior CTO reps at Travelink Community Media. He has been shaping the front-end and marketing surfaces of the cooperative from the outside for months, and now he is inside. His arrival closes the loop between how the cooperative looks, how it operates, and how it ships product.",
     publishedAt: "2026-07-01T09:00:00Z",
     selectedByUserId: "u_jamar",
   },

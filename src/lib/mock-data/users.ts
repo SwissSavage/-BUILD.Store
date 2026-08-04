@@ -386,25 +386,52 @@ export const MOCK_USERS: User[] = [
   },
 
   // Bayu — Partner-tier (locked 2026-07-01 per Jamar). STEM pillar per
-  // beta cohort categorization. Active frontend design collaborator with
-  // Jamar as of 2026-07-01; lens expanded from beta-tester to design
-  // partner. Good standing MVP band (green card) — contributor in
-  // ramp-up. Signing status still to confirm.
+  // beta cohort categorization. Full-stack software engineer + agency
+  // founder (Guramo System). 7+ years across web apps, desktop software,
+  // SaaS, and AI-powered products. Frontend design lens is a secondary
+  // strength on top of the engineering core. Active collaborator with
+  // Jamar as of 2026-07-01. Good standing MVP band (green card) —
+  // contributor in ramp-up on cooperative deliveries. Profile enriched
+  // 2026-08-04 from resume upload (Yoga Bayu Savira).
   {
     id: "u_bayu",
     email: "bayu@example.com",
     handle: "bayu",
     firstName: "Bayu",
-    lastName: null,
+    lastName: "Savira",
     profileImageUrl: null,
     membershipTier: "partner",
     primaryIndustry: "stem",
     secondaryIndustries: ["creative-media"],
     dataParticipation: false,
-    skills: ["frontend", "product design", "ui engineering"],
-    discipline: "Frontend + Product Design",
+    skills: [
+      "typescript",
+      "react",
+      "electron",
+      "laravel",
+      "node.js",
+      "tailwind css",
+      "postgresql",
+      "mysql",
+      "docker",
+      "linux",
+      "supabase",
+      "cloudflare",
+      "llm integration",
+      "system prompt design",
+      "ai workflow automation",
+      "n8n",
+      "make.com",
+      "software architecture",
+      "product development",
+      "technical consulting",
+      "outbound sales",
+      "cold calling",
+      "client discovery",
+    ],
+    discipline: "Software Engineer + Product Builder",
     profileMode: "contributor",
-    bio: "guramo.com. Frontend + product design. Design collaborator on $BUILD.Store pre-launch.",
+    bio: "Full name Yoga Bayu Savira. Founder of Guramo System, a software agency delivering lead gen systems, websites, and custom business software. 7+ years across TypeScript, React, Electron, Laravel, and AI integrations. Prior CTO at Travelink Community Media and frontend rebuild lead at Yamaha Motor Sidoarjo. B.Sc. Computer Science, Universitas Brawijaya. Frontend + product design collaborator on $BUILD.Store pre-launch.",
     portfolioUrl: "https://guramo.com",
     buildTokenBalance: "600.00000000",
     isAdmin: false,

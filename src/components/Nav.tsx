@@ -314,6 +314,12 @@ function AdminDropdown({ self }: { self: User }) {
           Contract reserves
         </Link>
         <Link
+          href="/admin/clients"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Client patterns
+        </Link>
+        <Link
           href="/admin/feedback"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >

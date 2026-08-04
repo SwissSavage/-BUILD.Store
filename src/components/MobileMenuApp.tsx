@@ -73,6 +73,7 @@ const adminLinks = [
   { href: "/admin/pools", label: "Structural pools" },
   { href: "/admin/invoices", label: "Invoices + receipts" },
   { href: "/admin/reserve", label: "Contract reserves" },
+  { href: "/admin/clients", label: "Client patterns" },
   { href: "/admin/feedback", label: "Beta feedback" },
   { href: "/admin/testimonials", label: "Customer testimonials" },
   { href: "/admin/epk", label: "EPK approvals" },

@@ -10,6 +10,7 @@
  * Pure functions — no side effects. Server actions consume this
  * module to make decisions; this module never touches storage.
  */
+import type { CustomerFeedback, PeerReview } from "@/lib/types";
 import {
   PEER_COVERAGE_THRESHOLD,
   TRIANGULATION_WEIGHTS,
@@ -190,4 +191,62 @@ export function distributePeerCoverage(input: {
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+// ────────────────────────────────────────────────────────────────
+//  Source-of-truth rating aggregators
+// ────────────────────────────────────────────────────────────────
+//
+//  These pull each of the three triangulation signals from their
+//  respective source-of-truth tables. Nothing here accepts admin
+//  input — the whole point is that admins cannot override any
+//  rating. Only the original rater (client / peer / PM) can change
+//  their submission at the source.
+
+/**
+ * Peer composite for a specific contributor on a specific project.
+ * Averages the `stars` field across all peer reviews where this
+ * contributor is the reviewee. Returns null if no peer reviews are
+ * on file for this contributor on this project.
+ *
+ * Even weighting for MVP — no recency bias, no reviewer-tenure
+ * weighting. Refinement can add those later without changing the
+ * function signature.
+ */
+export function aggregatePeerCompositeForContributor(input: {
+  reviews: PeerReview[];
+  projectId: string;
+  contributorUserId: string;
+}): number | null {
+  const applicable = input.reviews.filter(
+    (r) =>
+      r.contextId === input.projectId &&
+      r.revieweeId === input.contributorUserId,
+  );
+  if (applicable.length === 0) return null;
+  const sum = applicable.reduce((s, r) => s + r.stars, 0);
+  return round2(sum / applicable.length);
+}
+
+/**
+ * Client rating for a project. Uses `overallStars` from the most
+ * recent customer feedback entry on the project. Multiple entries
+ * possible in edge cases (client re-submits via a fresh magic
+ * link); most-recent wins so a corrected rating supersedes an
+ * initial one. Returns null if no customer feedback on file — that
+ * triggers pro-rata weight redistribution in the composite math.
+ */
+export function extractClientRatingForProject(input: {
+  feedback: CustomerFeedback[];
+  projectId: string;
+}): number | null {
+  const applicable = input.feedback.filter(
+    (f) => f.contextKind === "contract" && f.contextId === input.projectId,
+  );
+  if (applicable.length === 0) return null;
+  // Most recent wins.
+  const sorted = [...applicable].sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  );
+  return sorted[0].overallStars;
 }

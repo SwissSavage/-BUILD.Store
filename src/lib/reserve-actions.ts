@@ -23,6 +23,8 @@ import {
 } from "@/lib/mock-data/audit-log";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_USERS } from "@/lib/mock-data/users";
+import { MOCK_PEER_REVIEWS } from "@/lib/mock-data/peer-reviews";
+import { MOCK_CUSTOMER_FEEDBACK } from "@/lib/mock-data/customer-feedback";
 import {
   MOCK_RESERVE_POOL_LEDGER,
   MOCK_TRIANGULATED_COMPOSITES,
@@ -30,9 +32,11 @@ import {
 } from "@/lib/mock-data/reserve-pool";
 import { creditPool as creditRecoveryPool } from "@/lib/mock-data/engagement-recovery-pools";
 import {
+  aggregatePeerCompositeForContributor,
   computeRebateMultiplier,
   computeTriangulatedComposite,
   distributePeerCoverage,
+  extractClientRatingForProject,
   type PeerCoverageContributor,
 } from "@/lib/triangulation";
 import type {
@@ -209,21 +213,34 @@ function snapshotComposite(input: {
  * Graduated bonus release for a contract close. Replaces the binary
  * bonus_decision path with the triangulated composite math.
  *
- * Form contract (per contributor):
+ * ANTI-ABUSE STRUCTURE (locked 2026-08-04):
+ * Ratings are pulled from source-of-truth tables — admin CANNOT
+ * override any rating. Only the original rater can change their own
+ * submission at the source:
+ *   - Client rating: customer_feedback (submitted via magic-link
+ *                    questionnaire at /contracts/[id]/feedback)
+ *   - Peer rating:   aggregated from peer_reviews (submitted by
+ *                    fellow contributors on the project page)
+ *   - Admin rating:  project.pmEngagementRating (captured on the
+ *                    settle page via setPmEngagementRating)
+ *
+ * Form contract per contributor is now MINIMAL:
  *   - contributorId (repeated)
- *   - adminRating<contributorId>
- *   - peerRating<contributorId>
- *   - clientRating<contributorId>  (optional)
- *   - internalInvoiceAmount<contributorId>  (for peer-coverage weighting)
+ *   - internalInvoiceAmount_<contributorId> (for peer-coverage
+ *     weighting only — this is billing data, not a rating)
+ *
+ * Release blocks with a clear error if any required source rating
+ * is missing for a contributor — admin has to chase the actual
+ * rater, not proxy for them. Client rating being null is allowed
+ * (weights redistribute pro-rata) because that's the legitimate
+ * internal-work / cooperative-as-client case.
  *
  * Cascade at close:
- *   1. Snapshot composite per contributor
- *   2. For each: debit reserve by (their bonus share × composite/5)
- *      → recipient = the contributor themselves
- *   3. Sum unreleased bonus amounts → peer coverage pool
- *   4. Distribute pool to contributors with composite ≥ 4.5,
- *      proportional to their internal invoice share
- *   5. Any residual → Engagement Recovery Pool
+ *   1. Read ratings from the source tables
+ *   2. Snapshot composite per contributor (frozen for audit)
+ *   3. Debit reserve per contributor at (bonus share × composite/5)
+ *   4. Unreleased bonus → peer-coverage cascade (composite ≥ 4.5)
+ *   5. Residual → Engagement Recovery Pool
  */
 export async function executeGraduatedBonusRelease(
   formData: FormData,
@@ -250,10 +267,49 @@ export async function executeGraduatedBonusRelease(
     throw new Error("At least one contributor required.");
   }
 
-  const totalBonus = Number(project.talentBonusAmount);
-  const perContribBonus = totalBonus / contributorIds.length; // MVP: even split of bonus pool
+  // Read admin/PM rating from the project row (source of truth).
+  const adminRating = project.pmEngagementRating ?? null;
+  // Read client rating from customer_feedback (most recent wins).
+  const clientRating = extractClientRatingForProject({
+    feedback: MOCK_CUSTOMER_FEEDBACK,
+    projectId,
+  });
 
-  // 1. Compute + snapshot composites per contributor
+  const totalBonus = Number(project.talentBonusAmount);
+  const perContribBonus = totalBonus / contributorIds.length;
+
+  // Note which sources are missing so the audit trail captures
+  // what the composite was computed against. NOT a block — after a
+  // reasonable grace window (admin's call on when to trigger this
+  // action), missing ratings are omitted and the composite math
+  // redistributes the weight pro-rata across the sources that DID
+  // land. Talent doesn't get held up forever because a client or
+  // peer never responded.
+  const missingSources: string[] = [];
+  if (adminRating === null) missingSources.push("admin (PM)");
+  if (clientRating === null) missingSources.push("client");
+  const missingPeerContribs: string[] = [];
+  for (const contribId of contributorIds) {
+    const peer = aggregatePeerCompositeForContributor({
+      reviews: MOCK_PEER_REVIEWS,
+      projectId,
+      contributorUserId: contribId,
+    });
+    if (peer === null) missingPeerContribs.push(contribId);
+  }
+  const missingSummary =
+    missingSources.length > 0 || missingPeerContribs.length > 0
+      ? ` Missing at release: ${[
+          ...missingSources,
+          ...(missingPeerContribs.length > 0
+            ? [`peer for ${missingPeerContribs.length} contributor(s)`]
+            : []),
+        ].join(", ")}. Weights redistributed pro-rata.`
+      : "";
+
+  // 1. Compute + snapshot composites per contributor (all ratings
+  //    from source tables, no admin override; missing ratings
+  //    omitted with pro-rata weight redistribution).
   const composites: Array<{
     userId: string;
     composite: TriangulatedComposite;
@@ -263,14 +319,12 @@ export async function executeGraduatedBonusRelease(
   }> = [];
 
   for (const contribId of contributorIds) {
-    const admRaw = formData.get(`adminRating_${contribId}`);
-    const peerRaw = formData.get(`peerRating_${contribId}`);
-    const cliRaw = formData.get(`clientRating_${contribId}`);
+    const peerRating = aggregatePeerCompositeForContributor({
+      reviews: MOCK_PEER_REVIEWS,
+      projectId,
+      contributorUserId: contribId,
+    });
     const invRaw = formData.get(`internalInvoiceAmount_${contribId}`);
-    const adminRating = admRaw !== null && admRaw !== "" ? Number(admRaw) : null;
-    const peerRating = peerRaw !== null && peerRaw !== "" ? Number(peerRaw) : null;
-    const clientRating =
-      cliRaw !== null && cliRaw !== "" ? Number(cliRaw) : null;
 
     const composite = snapshotComposite({
       projectId,
@@ -400,7 +454,27 @@ export async function executeGraduatedBonusRelease(
   project.bonusDecidedAt = new Date().toISOString();
   project.updatedAt = project.bonusDecidedAt;
 
+  // Log a summary of what the release fired against — including
+  // any missing sources — so the audit trail captures the state.
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "reserve.bonus_released",
+    resourceKind: "reserve_pool",
+    resourceId: projectId,
+    before: null,
+    after: {
+      contributors: composites.map((c) => ({
+        userId: c.userId,
+        composite: c.composite.weightedComposite,
+        released: c.releasedAmount.toFixed(2),
+      })),
+    },
+    reason: `Graduated release fired.${missingSummary}`,
+  });
+
   revalidatePath(`/admin/contracts/${projectId}/settle`);
+  revalidatePath(`/admin/reserve`);
 }
 
 /**

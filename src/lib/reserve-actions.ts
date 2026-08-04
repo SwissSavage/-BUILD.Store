@@ -276,7 +276,35 @@ export async function executeGraduatedBonusRelease(
   });
 
   const totalBonus = Number(project.talentBonusAmount);
-  const perContribBonus = totalBonus / contributorIds.length;
+
+  // Per-contributor bonus share = weighted by their internal invoice
+  // amount, NOT even split. This aligns the bonus math with the same
+  // per-Builder pricing pattern used at contract quote-time — each
+  // contributor's share of the bonus pool reflects the size of their
+  // contribution, not a naive 1/N split.
+  //
+  // If a contributor didn't provide an internal invoice amount (form
+  // input missing / not applicable), fall back to the even-split
+  // amount for that contributor so they aren't dropped. Mixed mode
+  // is discouraged — the surface warns admin to fill in invoices for
+  // everyone or none — but the math handles it safely.
+  const evenSplitFallback = totalBonus / contributorIds.length;
+  const invoiceAmounts = contributorIds.map((id) => {
+    const raw = formData.get(`internalInvoiceAmount_${id}`);
+    const num = raw !== null && raw !== "" ? Number(raw) : NaN;
+    return Number.isFinite(num) && num > 0 ? num : null;
+  });
+  const totalInvoices = invoiceAmounts.reduce<number>(
+    (sum, amt) => sum + (amt ?? 0),
+    0,
+  );
+  const perContribBonusByIdx: number[] = contributorIds.map((_, i) => {
+    const invoice = invoiceAmounts[i];
+    if (invoice === null || totalInvoices <= 0) {
+      return evenSplitFallback;
+    }
+    return totalBonus * (invoice / totalInvoices);
+  });
 
   // Note which sources are missing so the audit trail captures
   // what the composite was computed against. NOT a block — after a
@@ -318,13 +346,17 @@ export async function executeGraduatedBonusRelease(
     unreleasedAmount: number;
   }> = [];
 
-  for (const contribId of contributorIds) {
+  contributorIds.forEach((contribId, idx) => {
     const peerRating = aggregatePeerCompositeForContributor({
       reviews: MOCK_PEER_REVIEWS,
       projectId,
       contributorUserId: contribId,
     });
-    const invRaw = formData.get(`internalInvoiceAmount_${contribId}`);
+    const contribBonusShare = perContribBonusByIdx[idx];
+    const invoiceAmount =
+      invoiceAmounts[idx] !== null
+        ? String(invoiceAmounts[idx])
+        : contribBonusShare.toFixed(2);
 
     const composite = snapshotComposite({
       projectId,
@@ -335,21 +367,24 @@ export async function executeGraduatedBonusRelease(
       actorUserId: admin.id,
     });
 
-    const releasedAmount = perContribBonus * composite.bonusReleaseFraction;
-    const unreleasedAmount = perContribBonus - releasedAmount;
+    const releasedAmount = contribBonusShare * composite.bonusReleaseFraction;
+    const unreleasedAmount = contribBonusShare - releasedAmount;
 
     composites.push({
       userId: contribId,
       composite,
-      internalInvoiceAmount: String(invRaw ?? perContribBonus.toFixed(2)),
+      internalInvoiceAmount: invoiceAmount,
       releasedAmount,
       unreleasedAmount,
     });
-  }
+  });
 
   // 2. Debit reserve for each contributor's graduated release
+  //    (share weighted by their internal invoice amount, composite
+  //    fraction applied per contributor)
   for (const c of composites) {
     if (c.releasedAmount <= 0) continue;
+    const contribShare = c.releasedAmount + c.unreleasedAmount;
     appendReserveEntry({
       projectId,
       amount: c.releasedAmount,
@@ -358,7 +393,7 @@ export async function executeGraduatedBonusRelease(
       debitReason: "bonus_release",
       recipientId: c.userId,
       actorUserId: admin.id,
-      rationale: `Composite ${c.composite.weightedComposite}/5 → released ${(c.composite.bonusReleaseFraction * 100).toFixed(1)}% of ${perContribBonus.toFixed(2)} bonus share.`,
+      rationale: `Composite ${c.composite.weightedComposite}/5 → released ${(c.composite.bonusReleaseFraction * 100).toFixed(1)}% of ${contribShare.toFixed(2)} bonus share (weighted by ${c.internalInvoiceAmount} internal invoice).`,
     });
     logAuditEvent({
       actorUserId: admin.id,

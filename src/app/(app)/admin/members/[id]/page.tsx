@@ -31,7 +31,10 @@ import {
   toggleAdminFlag,
   toggleProfilePublic,
 } from "@/lib/member-management-actions";
+import { agreementsForUser } from "@/lib/mock-data/agreements";
 import {
+  AGREEMENT_PROVIDER_LABELS,
+  AGREEMENT_TYPE_LABELS,
   TIER_LABELS,
   adminName,
   publicName,
@@ -379,6 +382,82 @@ export default async function MemberDrillDown({
             </Card>
           )}
         </div>
+      </section>
+
+      {/* Signed agreements on file */}
+      <section className="mt-10">
+        <h2 className="font-display text-2xl font-semibold">
+          Signed agreements
+        </h2>
+        <p className="mt-2 text-sm text-ink-muted">
+          Every paperwork event on file for this user. Compose or
+          remove entries on{" "}
+          <Link
+            href="/admin/agreements"
+            className="text-brand-magenta hover:underline"
+          >
+            /admin/agreements
+          </Link>
+          .
+        </p>
+        {(() => {
+          const agreements = agreementsForUser(user.id);
+          if (agreements.length === 0) {
+            return (
+              <Card className="mt-4">
+                <p className="text-sm text-ink-muted">
+                  No agreements on file for this user yet.
+                </p>
+              </Card>
+            );
+          }
+          return (
+            <ol className="mt-4 space-y-2">
+              {agreements.map((a) => (
+                <li
+                  key={a.id}
+                  className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-4 py-3 text-xs"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm font-medium">
+                      {AGREEMENT_TYPE_LABELS[a.agreementType]}{" "}
+                      <span className="text-ink-faint">v{a.version}</span>
+                    </span>
+                    <span
+                      className="font-mono text-[10px] text-ink-faint"
+                      title={a.signedAt}
+                    >
+                      {a.signedAt.slice(0, 10)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-ink-faint">
+                    {AGREEMENT_PROVIDER_LABELS[a.provider]}
+                    {a.externalRef && (
+                      <>
+                        {" · "}Ref:{" "}
+                        <code className="rounded bg-[var(--surface-inset)] px-1 py-0.5">
+                          {a.externalRef}
+                        </code>
+                      </>
+                    )}
+                  </p>
+                  {a.storageUrl && (
+                    <p className="mt-1 break-all text-[11px] text-ink-faint">
+                      <code className="rounded bg-[var(--surface-inset)] px-1 py-0.5">
+                        {a.storageUrl}
+                      </code>
+                    </p>
+                  )}
+                  {a.notes && (
+                    <p className="mt-1 text-[11px] italic text-ink-muted">
+                      {a.notes}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ol>
+          );
+        })()}
       </section>
 
       {/* Recent audit entries */}

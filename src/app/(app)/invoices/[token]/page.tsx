@@ -208,7 +208,9 @@ export default async function ClientInvoicePage({
         <Card className="mt-6">
           <CardEyebrow>How to pay</CardEyebrow>
           <CardTitle className="mt-2">
-            {PAYMENT_METHOD_LABELS[invoice.paymentMethod]}
+            {invoice.paymentMethod
+              ? PAYMENT_METHOD_LABELS[invoice.paymentMethod]
+              : "Internal"}
           </CardTitle>
           {invoice.acceptsCard ? (
             <div className="mt-4 space-y-3 text-sm text-ink-muted">

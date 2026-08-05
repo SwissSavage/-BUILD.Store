@@ -428,6 +428,167 @@ export interface EngagementRecoveryPool {
   closedAt: string | null;
 }
 
+// ──────────────────────────────────────────────────────────────────────
+//  Contract Reserve Pool + triangulated composite (Tier 27)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Canonical triangulation weights (locked 2026-07-30). Not tunable per
+ * contract — see build-vision.md governance section for the rationale.
+ * When client signal is absent, weights redistribute pro-rata across
+ * the remaining two signals (0.50 / 0.50).
+ */
+export const TRIANGULATION_WEIGHTS = {
+  admin: 0.40,
+  peer: 0.40,
+  client: 0.20,
+} as const;
+
+/**
+ * Peer-coverage bonus routing threshold. When a contributor's
+ * composite falls below release, their unreleased bonus routes to
+ * same-contract contributors whose composite cleared this bar
+ * (rewards actual carrying behavior). Contributors below the
+ * threshold don't earn peer-coverage; those at or above split it
+ * proportional to their internal invoice share of the contributor
+ * pool.
+ */
+export const PEER_COVERAGE_THRESHOLD = 4.5;
+
+/**
+ * Reason a debit was made against a contract's reserve pool. Powers
+ * the ledger audit trail + admin visibility on where reserve funds
+ * routed for each project.
+ *
+ *   - bonus_release:       original contributor's graduated bonus
+ *                          (composite / 5) paid out at close.
+ *   - replacement_payout:  replacement contractor invoice paid from
+ *                          the reserve (mid-project swap when the
+ *                          client requested a change).
+ *   - client_rebate:       admin-approved refund to client sized by
+ *                          triangulation math. Requires written
+ *                          rationale in the ledger entry.
+ *   - peer_coverage:       unreleased bonus from low-composite
+ *                          contributor routed to same-contract
+ *                          contributors above the coverage threshold.
+ *   - recovery_pool:       residual after all other debits, routed
+ *                          to the Engagement Recovery Pool at close.
+ */
+export type ReserveDebitReason =
+  | "bonus_release"
+  | "replacement_payout"
+  | "client_rebate"
+  | "peer_coverage"
+  | "recovery_pool";
+
+export const RESERVE_DEBIT_REASON_LABELS: Record<ReserveDebitReason, string> = {
+  bonus_release: "Bonus release",
+  replacement_payout: "Replacement contractor payout",
+  client_rebate: "Client rebate",
+  peer_coverage: "Peer-coverage bonus",
+  recovery_pool: "Routed to Engagement Recovery Pool",
+};
+
+/**
+ * Reason a credit was made against a contract's reserve pool.
+ *
+ *   - invoice_collection:  SUM(top_end − low_end) across contributors
+ *                          on the deal, credited when the external
+ *                          invoice is marked paid.
+ *   - unearned_base:       removed contributor's unearned base
+ *                          returned to reserve (expands the pool the
+ *                          replacement gets paid from).
+ *   - manual_adjustment:   admin-created credit (rare — for audit
+ *                          rectification or historical backfill).
+ */
+export type ReserveCreditReason =
+  | "invoice_collection"
+  | "unearned_base"
+  | "manual_adjustment";
+
+export const RESERVE_CREDIT_REASON_LABELS: Record<ReserveCreditReason, string> = {
+  invoice_collection: "Invoice collection (top − bottom delta)",
+  unearned_base: "Unearned base returned (contributor removed)",
+  manual_adjustment: "Manual adjustment",
+};
+
+/**
+ * A single credit or debit against a contract's reserve pool.
+ * Append-only ledger — corrections happen via offsetting entries,
+ * never edits. Sum of entries = current pool balance for that
+ * project.
+ *
+ * $BUILD parity: the same reason enums apply to $BUILD reserve
+ * movements (see Tier 28 formula for the 6.087× network fees rate).
+ * Tier 27 implements the CASH side; $BUILD-side reserve is a
+ * follow-on that reuses the same ledger shape.
+ */
+export interface ReservePoolLedgerEntry {
+  id: string;
+  projectId: string;
+  /**
+   * Positive USD amount for credits, negative USD amount for debits.
+   * Stored as string to match Drizzle numeric(12,2) serialization.
+   */
+  amount: string;
+  /** Discriminates credit vs debit reason. */
+  direction: "credit" | "debit";
+  creditReason: ReserveCreditReason | null;
+  debitReason: ReserveDebitReason | null;
+  /**
+   * Recipient for debit entries (user id for bonus/replacement/
+   * peer_coverage; "client" sentinel for client_rebate; null for
+   * recovery_pool routing). Null for credits.
+   */
+  recipientId: string | null;
+  /**
+   * Actor who made this entry. Null = system-initiated (e.g., an
+   * automatic invoice-collection credit).
+   */
+  actorUserId: string | null;
+  /**
+   * Written rationale — required for client_rebate debits (per the
+   * anti-abuse policy). Optional for other reasons but recommended.
+   */
+  rationale: string | null;
+  createdAt: string;
+}
+
+/**
+ * A contributor's triangulated composite for a specific contract at
+ * close time. Snapshotted so the historical decision doesn't shift
+ * if the underlying ratings change later. Feeds both the graduated
+ * bonus release AND the contributor's rolling MVP OVR (dual output
+ * from one input — see build-vision.md one-way flow section).
+ */
+export interface TriangulatedComposite {
+  id: string;
+  projectId: string;
+  contributorUserId: string;
+  /** Raw ratings (0–5) that fed the composite. Nullable if the
+   *  specific signal wasn't available. */
+  adminRating: number | null;
+  peerRating: number | null;
+  clientRating: number | null;
+  /**
+   * Effective weights applied. Usually canonical (0.40/0.40/0.20)
+   * but redistributes pro-rata when a signal is absent (0.50/0.50
+   * when no client, etc.). Snapshotted so the math is auditable
+   * later.
+   */
+  effectiveWeights: {
+    admin: number;
+    peer: number;
+    client: number;
+  };
+  /** Weighted composite score (0–5). */
+  weightedComposite: number;
+  /** bonus_released_pct = weightedComposite / 5 (0–1). Determines
+   *  how much of the contributor's bonus portion pays out at close. */
+  bonusReleaseFraction: number;
+  computedAt: string;
+}
+
 /**
  * One row in the attribution ledger for a given contract. Records WHO did
  * WHAT, so compensation can be computed (or recomputed) at any time without
@@ -513,9 +674,59 @@ export const PAYOUT_STATUS_LABELS: Record<PayoutStatus, string> = {
   failed: "Failed",
 };
 
+/**
+ * What kind of financial event produced this split row. Universal
+ * discriminator so `revenue_splits` acts as ONE ledger for every
+ * inflow that eventually needs to be paid out or accumulated into
+ * a structural pool (Treasury / LP / admin).
+ *
+ *  - contract_settlement: contract close, 85/12/1.5/1.5 against
+ *                         collected revenue. `sourceId` = project id.
+ *  - order_settlement:    marketplace order fulfilled + split
+ *                         dispatched. `sourceId` = order id.
+ *  - bonus_release:       reserved bonus pool released after the
+ *                         triangulated composite lands (see Contract
+ *                         Reserve Pool primitive). Same 85/12/1.5/1.5
+ *                         shape applied to the bonus amount only.
+ *                         `sourceId` = project id.
+ *  - donation:            whitelist donation completion. Splits
+ *                         50/50 Treasury/LP with NO contributor or
+ *                         admin cut (war-chest policy). `sourceId` =
+ *                         whitelist_purchase id.
+ */
+export type RevenueSplitSourceKind =
+  | "contract_settlement"
+  | "order_settlement"
+  | "bonus_release"
+  | "donation";
+
+export const REVENUE_SPLIT_SOURCE_KIND_LABELS: Record<
+  RevenueSplitSourceKind,
+  string
+> = {
+  contract_settlement: "Contract settlement",
+  order_settlement: "Order settlement",
+  bonus_release: "Bonus release",
+  donation: "Donation",
+};
+
 export interface RevenueSplit {
   id: string;
-  contractId: string;
+  /**
+   * DEPRECATED as a required FK — kept nullable for back-compat with
+   * older settlement rows. New callers should populate `sourceKind` +
+   * `sourceId` instead. When `sourceKind === "contract_settlement"`
+   * or `"bonus_release"`, this mirrors `sourceId` for legibility.
+   */
+  contractId: string | null;
+  /** What kind of event produced this row. */
+  sourceKind: RevenueSplitSourceKind;
+  /**
+   * Opaque source identifier. Not a hard FK because different kinds
+   * point to different tables (project / order / whitelist_purchase).
+   * The `sourceKind` discriminates which table to resolve against.
+   */
+  sourceId: string;
   recipientId: string;
   pool: SplitPool;
   /** Percentage of the pool this row receives. Stored as a string to mirror Drizzle numeric. */
@@ -853,6 +1064,77 @@ export interface ProductAffiliate {
   affiliateUrl: string | null;
 }
 
+/**
+ * Referral attribution ledger for the /partners page relationships.
+ *
+ * When a cooperative member (or admin) refers an external lead to
+ * a SaaS Partner or Product Affiliate, this ledger tracks the
+ * referral through its lifecycle: pending → converted (with
+ * dollars) or declined (with reason). The referrer earns their
+ * kick when a partner-generated deal closes; that credit flows
+ * into the split engine as a contract_intake referral (see
+ * previewConsultationConversionSplit in contract-splits.ts).
+ *
+ * Provides two things:
+ *   1. Revenue attribution — the coop knows which partner
+ *      relationships actually produced revenue, so partnership
+ *      decisions can be data-driven not vibe-driven.
+ *   2. Referrer credit — the member who made the intro gets
+ *      structural credit (referral kick + $BUILD voucher) when
+ *      the deal closes.
+ */
+export type PartnerReferralKind = "saas_partner" | "product_affiliate";
+
+export const PARTNER_REFERRAL_KIND_LABELS: Record<PartnerReferralKind, string> = {
+  saas_partner: "SaaS Partner",
+  product_affiliate: "Product Affiliate",
+};
+
+export type PartnerReferralStatus =
+  | "pending"
+  | "converted"
+  | "declined"
+  | "expired";
+
+export const PARTNER_REFERRAL_STATUS_LABELS: Record<
+  PartnerReferralStatus,
+  string
+> = {
+  pending: "Pending — waiting on partner outcome",
+  converted: "Converted — deal closed, revshare due",
+  declined: "Declined — lead didn't convert",
+  expired: "Expired — followup window closed",
+};
+
+export interface PartnerReferral {
+  id: string;
+  /** ecosystemPartner.id or productAffiliate.id, depending on kind. */
+  partnerId: string;
+  partnerKind: PartnerReferralKind;
+  /** FM member (or admin) who made the referral. */
+  referrerUserId: string;
+  /** External lead contact — the person referred TO the partner. */
+  leadContactName: string;
+  leadContactEmail: string;
+  /** Optional company context on the lead. */
+  leadCompany: string | null;
+  /** Free-form context — what admin should know about the lead. */
+  notes: string | null;
+  status: PartnerReferralStatus;
+  /** Dollar amount attributed to this conversion by the partner.
+   *  Populated when status flips to "converted". Null otherwise. */
+  convertedAmountUsd: string | null;
+  /** Portion of the conversion that flows back to FM per the
+   *  partner's revshare agreement. Populated with converted. */
+  revshareEarnedUsd: string | null;
+  convertedAt: string | null;
+  /** Optional decline reason (partner-provided or admin-observed). */
+  declineReason: string | null;
+  declinedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ──────────────────────────────────────────────────────────────────────
 //  AR / AP layer (Phase 1.5 revised — Mercury-default, Stripe opt-in)
 // ──────────────────────────────────────────────────────────────────────
@@ -916,39 +1198,134 @@ export interface InvoiceLineItem {
 }
 
 /**
- * Client invoice. The AR side of the ledger.
+ * Direction of an Invoice/Receipt row. Discriminator that shapes
+ * which fields are populated + who the payout gate reads for.
  *
- * Mercury-default flow:
- *   1. Admin issues the invoice → `status="issued"`, `paymentMethod` is
- *      one of `ach_mercury` / `wire_mercury`. Magic-link `clientToken` is
- *      generated for the client view (mirrors ClientProposal).
- *   2. Client pays out-of-band; admin marks `paidAmount` + `paidAt` +
- *      `mercuryReference`. If `paidAmount === total`, `status` flips to
- *      `received`; if less, `partially_received`.
- *   3. Settle page (Phase 1.6) reads the received amount as the engine's
- *      revenue input.
+ *  - talent_to_coop:     internal — a contributor bills the coop for
+ *                        their work on a deal. Feeds the contributor
+ *                        pool at settlement. Multiple per contract
+ *                        (one per contributor, per billing cycle).
+ *  - coop_to_client:     external — the coop bills the client for the
+ *                        aggregated engagement. sourceInvoiceIds
+ *                        references the internal invoices it rolls
+ *                        up. This is the existing external-facing
+ *                        invoice shape (Mercury / Stripe / etc).
+ *  - marketplace_receipt: attached to a marketplace order — the
+ *                        receipt IS the transaction record. No
+ *                        separate invoice step (POS pattern).
+ *  - retroactive_receipt: attached after the fact to close an audit
+ *                        loop where the invoice process was skipped.
+ *                        Rare-path rectification escape hatch.
+ */
+export type InvoiceDirection =
+  | "talent_to_coop"
+  | "coop_to_client"
+  | "marketplace_receipt"
+  | "retroactive_receipt";
+
+export const INVOICE_DIRECTION_LABELS: Record<InvoiceDirection, string> = {
+  talent_to_coop: "Talent → Coop (internal)",
+  coop_to_client: "Coop → Client (external)",
+  marketplace_receipt: "Marketplace receipt",
+  retroactive_receipt: "Retroactive receipt",
+};
+
+export type InvoiceDocumentKind = "invoice" | "receipt";
+
+export const INVOICE_DOCUMENT_KIND_LABELS: Record<InvoiceDocumentKind, string> = {
+  invoice: "Invoice",
+  receipt: "Receipt",
+};
+
+/**
+ * Sentinel recipient id for internal invoices — talent invoicing
+ * "the cooperative" as a whole. Distinguishable from user ids
+ * because no user carries this string.
+ */
+export const COOP_RECIPIENT_ID = "coop_cooperative";
+
+/**
+ * Invoice/Receipt document. Single primitive covering four flows,
+ * discriminated by `direction`. The payout engine reads this to
+ * authorize settlements — no distribution fires without a linked
+ * invoice or receipt.
  *
- * CC-opt-in flow:
- *   - `acceptsCard=true`. The processing-fee calculator inserts a locked
- *     `isProcessingFee` line item that grosses up the subtotal so the
- *     cooperative nets the original amount. `paymentMethod` is `cc_stripe`.
- *   - On payment, Stripe webhook flips status; `mercuryReference` may be
- *     null and `stripePaymentIntentId` set instead.
+ * External flow (coop_to_client) — original shape:
+ *   1. Admin issues the external invoice by aggregating approved
+ *      internal invoices (sourceInvoiceIds). Total is grossed up
+ *      from the internal sum by / 0.85 so the 15% network fee
+ *      lands on top.
+ *   2. Client pays. Payment flips status → `received`.
+ *   3. Settlement engine fires the 85/12/1.5/1.5 split against the
+ *      received amount.
+ *
+ * Internal flow (talent_to_coop):
+ *   1. Contributor drafts against a project — line items, rate,
+ *      hours or deliverable-based amount. status = "draft".
+ *   2. Contributor submits → status = "issued". Coop admin reviews.
+ *   3. Admin approves → status = "received". The amount now feeds
+ *      the contributor pool at that project's settlement.
+ *   4. Approved internal invoices become sourceInvoiceIds when the
+ *      admin generates the external invoice.
+ *
+ * Receipt flows (marketplace_receipt, retroactive_receipt):
+ *   - Born already at status = "received". They document a completed
+ *     transaction rather than requesting one.
+ *   - Marketplace: sourceRefId = order id. Auto-generated on order
+ *     placement + payment.
+ *   - Retroactive: sourceRefId = project id. Admin-created to close
+ *     an audit gap when the invoice process was skipped.
+ *
+ * Field applicability by direction:
+ *   - clientToken, paymentMethod, acceptsCard, mercuryReference,
+ *     stripePaymentIntentId, processingFee — only populated on
+ *     coop_to_client (external). Null for internal / receipts.
+ *   - contractId — populated for talent_to_coop, coop_to_client, and
+ *     retroactive_receipt. Null for marketplace_receipt.
+ *   - sourceRefId — populated for marketplace_receipt (order id) and
+ *     retroactive_receipt (project id when applicable). Null otherwise.
+ *   - sourceInvoiceIds — only populated for coop_to_client (references
+ *     the talent_to_coop invoices it aggregates).
  */
 export interface Invoice {
   id: string;
-  contractId: string;
-  /** Friendly invoice number — e.g. "FM-2026-0042". */
+  /** Discriminator — see InvoiceDirection docblock. */
+  direction: InvoiceDirection;
+  /** "invoice" or "receipt". Derived from direction but stored
+   *  explicitly so filters + display can key off it without a
+   *  discriminator switch. */
+  documentKind: InvoiceDocumentKind;
+  /** Contract/project id. Null for marketplace_receipt only. */
+  contractId: string | null;
+  /** Opaque source id for receipt flows (order id or project id
+   *  when the invoice flow was skipped). Null otherwise. */
+  sourceRefId: string | null;
+  /** For coop_to_client external invoices: the talent_to_coop
+   *  invoice ids this external rolls up. Null for other directions. */
+  sourceInvoiceIds: string[] | null;
+  /** Who issued this document. Talent user id for talent_to_coop;
+   *  admin user id for coop_to_client / retroactive_receipt; the
+   *  seller user id for marketplace_receipt. */
+  issuerId: string;
+  /** Who it's addressed to. COOP_RECIPIENT_ID for talent_to_coop;
+   *  client synthetic id for coop_to_client (buyer or client
+   *  contact); the buyer user id for marketplace_receipt. */
+  recipientId: string;
+  /** Friendly document number — e.g. "FM-2026-0042" for external,
+   *  "FM-TALENT-2026-0042" for internal, "FM-RCPT-2026-0042" for
+   *  receipts. Unique across all directions. */
   number: string;
-  /** Magic-link token for the client-facing /invoices/[token] view. */
-  clientToken: string;
+  /** Magic-link token for coop_to_client client-facing view. Null
+   *  for other directions (internal + receipts don't need a
+   *  tokenized surface). */
+  clientToken: string | null;
   status: InvoiceStatus;
-  /** Default rail. CC switches when `acceptsCard` is true. */
-  paymentMethod: PaymentMethod;
+  /** Default rail for external invoices. Null for other directions. */
+  paymentMethod: PaymentMethod | null;
   /**
-   * True when the admin has opted this invoice into CC payment. Drives the
-   * processing-fee line item generator and unlocks the Stripe path on the
-   * magic-link view.
+   * External flow only — admin has opted this invoice into CC
+   * payment (drives the processing-fee gross-up). Null / false for
+   * internal + receipts.
    */
   acceptsCard: boolean;
   lineItems: InvoiceLineItem[];
@@ -979,7 +1356,13 @@ export interface Invoice {
 export function clientInvoiceView(invoice: Invoice): Omit<Invoice, "notes"> {
   return {
     id: invoice.id,
+    direction: invoice.direction,
+    documentKind: invoice.documentKind,
     contractId: invoice.contractId,
+    sourceRefId: invoice.sourceRefId,
+    sourceInvoiceIds: invoice.sourceInvoiceIds,
+    issuerId: invoice.issuerId,
+    recipientId: invoice.recipientId,
     number: invoice.number,
     clientToken: invoice.clientToken,
     status: invoice.status,
@@ -1513,6 +1896,14 @@ export interface Order {
   deliveredAt: string | null;
   /** Set when the split engine has run against this order. */
   splitDistributedAt: string | null;
+  /**
+   * Deal-owning admin(s) for this order — receives the admin-pool
+   * split at settlement (12% of subtotal). Empty array falls back
+   * to distributing evenly across all platform admins so no order
+   * settles with nobody in the admin pool. Populate at fulfillment
+   * time (or seed from the seller's onboarding admin).
+   */
+  adminUserIds: string[];
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -1938,6 +2329,38 @@ export interface CustomerFeedback {
    * until published.
    */
   publishedForUserId: string | null;
+  /**
+   * Admin who captured this rating on the client's behalf during a
+   * CX review call. Null when the client self-submitted via the
+   * magic-link questionnaire (the preferred path). When set, the
+   * `meetingMinuteId` field must also be set — admin cannot capture
+   * a rating in a vacuum, structural evidence is required.
+   */
+  capturedByAdminUserId: string | null;
+  /**
+   * Human-readable context for the admin-capture: "captured during
+   * Q3 review call 2026-08-04", "captured on quarterly touchpoint",
+   * etc. Null for client self-submitted rows.
+   */
+  captureContext: string | null;
+  /**
+   * meeting_minutes row id that documents the CX call this rating
+   * was captured on. Required for admin-captured rows; null for
+   * self-submitted. Provides the evidence audit-log to distinguish
+   * "admin proxied for real client statement" from "admin invented
+   * a rating."
+   */
+  meetingMinuteId: string | null;
+  /**
+   * Confirmation state for admin-captured rows. When admin captures,
+   * a magic-link email fires to the client asking them to confirm
+   * or dispute the captured value. Null for self-submitted rows.
+   */
+  clientConfirmationStatus: "pending" | "confirmed" | "disputed" | null;
+  /** Magic-link token for the client-facing confirmation view. */
+  clientConfirmationToken: string | null;
+  /** When the client confirmed or disputed. Null while pending. */
+  clientConfirmedAt: string | null;
   createdAt: string;
 }
 
@@ -3158,6 +3581,274 @@ export interface InviteLink {
 }
 
 // ──────────────────────────────────────────────────────────────────────
+//  $BUILD vouchers (off-chain claim mirror against the real token)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Total voucher supply cap — matches the real $BUILD token's fixed
+ * supply. Vouchers are the platform's off-chain accounting mirror
+ * of the token: every earning event that would issue $BUILD issues
+ * a voucher, and once the real token is under a multisig contract
+ * (or a fresh spin-up if the dispute resolves that way), vouchers
+ * batch-swap 1:1 into real $BUILD.
+ *
+ * The cap is enforced at issuance time — the sum of all
+ * non-forfeited vouchers can never exceed this number. Runs in the
+ * server action's supply guard (`supply-cap.ts`) so the cooperative
+ * cannot over-issue relative to the on-chain reality it will
+ * eventually settle into.
+ */
+export const BUILD_VOUCHER_SUPPLY_CAP = 10_000_000;
+
+/**
+ * What triggered the voucher issuance. Same coarse categories used
+ * on TokenTransaction so the two ledgers stay in sync — a voucher
+ * with sourceRefId pointing at a TokenTransaction should share the
+ * same sourceType label. Kept as a discrete enum (not free text) so
+ * the admin ledger can filter and aggregate cleanly.
+ *
+ * These are the ACTIVITY SOURCES that trigger issuance, not a
+ * fixed percentage split — the split follows collected revenue
+ * per the opportunities-page formula (see build-vision.md /
+ * "Contribution vectors" for the corrected framing).
+ */
+export type BuildVoucherSourceType =
+  | "project_completion"
+  | "referral"
+  | "collaboration"
+  | "governance"
+  | "admin_grant";
+
+export const BUILD_VOUCHER_SOURCE_TYPE_LABELS: Record<
+  BuildVoucherSourceType,
+  string
+> = {
+  project_completion: "Project completion",
+  referral: "Referral",
+  collaboration: "Collaboration",
+  governance: "Governance",
+  admin_grant: "Admin grant",
+};
+
+/**
+ * Lifecycle for a single voucher row.
+ *
+ *  - unswapped:    default state after issuance. Holder has the
+ *                  claim but no swap action has been initiated.
+ *  - pending_swap: holder (or admin on their behalf) has queued the
+ *                  voucher for the next batch-swap window. Real
+ *                  token transfer is expected but not yet executed.
+ *  - swapped:      batch executed. `swappedToTxHash` is populated
+ *                  with the on-chain transaction hash for
+ *                  round-tripping into a block explorer.
+ *  - forfeited:    admin reclaimed the voucher (covenant violation
+ *                  resolution, dispute outcome, etc.). Original
+ *                  TokenTransaction stays for the historical
+ *                  record; the voucher is no longer swappable and
+ *                  no longer counts against the supply cap.
+ */
+export type BuildVoucherSwapStatus =
+  | "unswapped"
+  | "pending_swap"
+  | "swapped"
+  | "forfeited";
+
+export const BUILD_VOUCHER_SWAP_STATUS_LABELS: Record<
+  BuildVoucherSwapStatus,
+  string
+> = {
+  unswapped: "Unswapped",
+  pending_swap: "Pending swap",
+  swapped: "Swapped",
+  forfeited: "Forfeited",
+};
+
+/**
+ * A single voucher row = an off-chain accounting mirror of one
+ * earning event's redeemable claim on real $BUILD.
+ *
+ * Relationship to TokenTransaction:
+ *   - TokenTransaction is the LOG of what was earned (activity,
+ *     project, comp stage, withhold reason).
+ *   - Voucher is the LEDGER of what is claimable (accounting for
+ *     the 10M supply cap, swap lifecycle, forfeiture).
+ *   - When issuance fires alongside a TokenTransaction, the voucher
+ *     carries that transaction's id in `sourceRefId` so admin can
+ *     round-trip between the two.
+ *   - Some TokenTransactions do NOT produce a voucher immediately
+ *     (bonus_withheld holds off issuance until the bonus is
+ *     released), and some voucher issuance has no upstream
+ *     TokenTransaction (admin_grant for OG backfill after the
+ *     unmatched-holder reconciliation).
+ *
+ * Amount is stored as string because Postgres numeric(18,8) round-
+ * trips through Drizzle as a string. Matches the TokenTransaction
+ * convention. Supply-cap arithmetic sums via Number() coercion; safe
+ * because the cap (10M with 8 decimals = 1e15) sits comfortably
+ * under Number.MAX_SAFE_INTEGER.
+ */
+export interface BuildVoucher {
+  id: string;
+  userId: string;
+  /** numeric(18,8) as string. */
+  amount: string;
+  sourceType: BuildVoucherSourceType;
+  /** TokenTransaction.id if this voucher mirrors a specific earning
+   *  event; null for admin_grant issuance and legacy backfill. */
+  sourceRefId: string | null;
+  swapStatus: BuildVoucherSwapStatus;
+  /** On-chain tx hash from the batch-swap that settled this
+   *  voucher. Null unless swapStatus === "swapped". */
+  swappedToTxHash: string | null;
+  swappedAt: string | null;
+  issuedAt: string;
+  notes: string | null;
+  /** Admin who issued (or system-initiated if null). */
+  issuedByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+//  Agreements (signed paperwork registry)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * The kinds of paper the cooperative tracks. Every signed document
+ * that meaningfully changes a person's relationship to Future Modern
+ * gets one of these types. Add new types cautiously — the point of
+ * the registry is to be the single source of truth for "what did this
+ * person actually agree to, in writing, and when." Deprecated types
+ * stay in the union so historical entries keep resolving.
+ *
+ *  - talent_data:         basic profile / talent-data release (opt-in
+ *                         to appear in the cooperative directory + be
+ *                         matched into RFP shortlists)
+ *  - membership_covenant: the cooperative covenant a Member signs on
+ *                         promotion from Partner (versioned)
+ *  - loi:                 letter of intent (pre-contract), typically
+ *                         issued during scoping conversations
+ *  - seller_agreement:    marketplace seller terms (governs a member
+ *                         listing products in the cooperative store)
+ *  - contributor_agreement: catch-all for contributor-side agreements
+ *                         that don't fit the more specific buckets
+ *  - other:               anything not yet enumerated; use `notes` to
+ *                         describe. Migrate to a proper type once a
+ *                         pattern emerges.
+ */
+export type AgreementType =
+  | "talent_data"
+  | "membership_covenant"
+  | "loi"
+  | "seller_agreement"
+  | "contributor_agreement"
+  | "other";
+
+export const AGREEMENT_TYPE_LABELS: Record<AgreementType, string> = {
+  talent_data: "Talent data release",
+  membership_covenant: "Membership covenant",
+  loi: "Letter of intent",
+  seller_agreement: "Seller agreement",
+  contributor_agreement: "Contributor agreement",
+  other: "Other",
+};
+
+/**
+ * How the agreement was signed. Tracked so admin can reconcile
+ * against the source of truth (an Adobe Sign envelope, a DocuSign
+ * envelope, a countersigned PDF stored in the repo, etc.) without
+ * guessing.
+ *
+ *  - adobesign / docusign: signed through the named e-sign provider;
+ *                          `externalRef` holds the envelope/agreement
+ *                          identifier for round-tripping.
+ *  - manual:               signed on paper or as a countersigned PDF
+ *                          filed manually. `storageUrl` points at
+ *                          the archived file.
+ *  - in_app:               signed in-product via a click-through
+ *                          modal (reserved — not built yet; will be
+ *                          used for the talent_data release at
+ *                          onboarding).
+ *  - other:                anything else; use `notes` to describe.
+ */
+export type AgreementProvider =
+  | "adobesign"
+  | "docusign"
+  | "manual"
+  | "in_app"
+  | "other";
+
+export const AGREEMENT_PROVIDER_LABELS: Record<AgreementProvider, string> = {
+  adobesign: "Adobe Sign",
+  docusign: "DocuSign",
+  manual: "Manual (paper / PDF)",
+  in_app: "In-app click-through",
+  other: "Other",
+};
+
+/**
+ * A single signed-agreement record. One row = one signature event
+ * for one user against one document version. If a Member signs a
+ * revised covenant, that is a NEW row (the prior row stays for the
+ * historical record). This is the primitive gates read against when
+ * they need to answer "does this member have a current, valid
+ * signature on `talent_data`?"
+ *
+ * Storage:
+ *  - The actual signed artifact lives outside the DB — either at
+ *    the provider (Adobe Sign / DocuSign) or in the repo under
+ *    `Future Modern/deliverables/legal/signed-agreements/` using
+ *    the ISO-date naming pattern established for Rob Turley's LOI.
+ *  - `storageUrl` is the pointer. For provider-hosted agreements,
+ *    it can be a deep link into the provider console; for filed
+ *    PDFs, it's the repo-relative path.
+ *  - `externalRef` is the provider-native identifier (envelope ID,
+ *    agreement ID) when applicable, otherwise null.
+ *
+ * OG onboarding path:
+ *  - An on-chain $BUILD holder MAY exist with no matching Agreement
+ *    row here. That is not a violation — it means an original
+ *    contributor from before the registry existed. The admin
+ *    Agreements surface flags these ("unmatched holder → OG
+ *    onboarding needed") so the cooperative can reach out, get them
+ *    caught up on current paperwork (talent_data + membership
+ *    covenant at minimum), and formalize the relationship. Do NOT
+ *    treat missing agreement as forfeited standing for pre-registry
+ *    holders — it's an onboarding backlog signal, not a compliance
+ *    failure.
+ */
+export interface Agreement {
+  id: string;
+  /** Who signed. */
+  userId: string;
+  agreementType: AgreementType;
+  /** Version string for the document itself — e.g. "1.0", "2026-04",
+   *  "v2-post-multisig". Lets the covenant evolve without losing the
+   *  historical trail. Providers rarely surface this cleanly; the
+   *  cooperative maintains it. */
+  version: string;
+  /** When the countersigned event actually happened (ISO). NOT when
+   *  the row was created in the registry. */
+  signedAt: string;
+  provider: AgreementProvider;
+  /** Provider-native identifier (Adobe Sign envelope ID, DocuSign
+   *  envelope ID, etc.). Null for manual / in_app entries. */
+  externalRef: string | null;
+  /** Repo-relative path or provider deep link. Null only for edge
+   *  cases where the signed artifact was destroyed / not archived —
+   *  those rows should be flagged in `notes`. */
+  storageUrl: string | null;
+  /** Free-form context — countersignature dates for asymmetric
+   *  signatures, cross-reference notes, redline commentary. */
+  notes: string | null;
+  /** Admin who logged the row into the registry (not necessarily
+   *  the signer). Null for system-initiated imports. */
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────
 //  Audit log (SOC 2 CC7.2 / ISO 27001 A.12.4 — Logging and Monitoring)
 // ──────────────────────────────────────────────────────────────────────
 
@@ -3231,6 +3922,28 @@ export type AuditLogAction =
   | "epk.revision_requested"
   | "testimonial.published"
   | "testimonial.unpublished"
+  // Signed-agreements registry
+  | "agreement.created"
+  | "agreement.updated"
+  | "agreement.removed"
+  | "agreement.imported"
+  // $BUILD voucher ledger (off-chain claim mirror)
+  | "voucher.issued"
+  | "voucher.marked_pending_swap"
+  | "voucher.swapped"
+  | "voucher.forfeited"
+  // Contract Reserve Pool (Tier 27)
+  | "reserve.credited"
+  | "reserve.bonus_released"
+  | "reserve.replacement_paid"
+  | "reserve.rebate_issued"
+  | "reserve.peer_coverage_distributed"
+  | "reserve.recovery_routed"
+  | "composite.computed"
+  // Partner referrals (#267)
+  | "partner_referral.logged"
+  | "partner_referral.converted"
+  | "partner_referral.declined"
   // Admin config
   | "config.setting_changed"
   | "config.access_reviewed";
@@ -3284,6 +3997,24 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "epk.revision_requested": "EPK revision requested",
   "testimonial.published": "Testimonial published",
   "testimonial.unpublished": "Testimonial unpublished",
+  "agreement.created": "Signed agreement logged",
+  "agreement.updated": "Signed agreement updated",
+  "agreement.removed": "Signed agreement removed",
+  "agreement.imported": "Signed agreement imported from provider",
+  "voucher.issued": "$BUILD voucher issued",
+  "voucher.marked_pending_swap": "$BUILD voucher marked pending swap",
+  "voucher.swapped": "$BUILD voucher swapped for real token",
+  "voucher.forfeited": "$BUILD voucher forfeited",
+  "reserve.credited": "Contract reserve credited",
+  "reserve.bonus_released": "Reserve bonus released to contributor",
+  "reserve.replacement_paid": "Reserve paid replacement contractor",
+  "reserve.rebate_issued": "Reserve issued client rebate",
+  "reserve.peer_coverage_distributed": "Reserve peer-coverage distributed",
+  "reserve.recovery_routed": "Reserve residual routed to Engagement Recovery Pool",
+  "composite.computed": "Triangulated composite computed for contributor",
+  "partner_referral.logged": "Partner referral logged",
+  "partner_referral.converted": "Partner referral converted (revshare due)",
+  "partner_referral.declined": "Partner referral declined",
   "config.setting_changed": "Config setting changed",
   "config.access_reviewed": "Access review completed",
 };
@@ -3302,6 +4033,11 @@ export type AuditLogResourceKind =
   | "project"
   | "milestone"
   | "booking"
+  | "agreement"
+  | "build_voucher"
+  | "reserve_pool"
+  | "triangulated_composite"
+  | "partner_referral"
   | "notification_rule"
   | "config";
 

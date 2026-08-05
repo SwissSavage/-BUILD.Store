@@ -29,8 +29,14 @@ import {
   rescanMyTalentTags,
 } from "@/lib/talent-tag-actions";
 import { mvpScoreForUser, MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
+import { agreementsForUser } from "@/lib/mock-data/agreements";
 import { championsCourtMembers } from "@/lib/mvp-score";
-import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
+import {
+  AGREEMENT_PROVIDER_LABELS,
+  AGREEMENT_TYPE_LABELS,
+  INDUSTRY_LABELS,
+  type Industry,
+} from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
 import { TierBadge } from "@/components/TierBadge";
 import { Avatar } from "@/components/Avatar";
@@ -303,6 +309,57 @@ export default async function ProfilePage() {
           this toggle.
         </p>
       </Card>
+
+      {(() => {
+        const myAgreements = agreementsForUser(user.id);
+        return (
+          <Card className="mt-6">
+            <CardEyebrow>Paperwork on file</CardEyebrow>
+            <h2 className="mt-1 font-display text-xl font-semibold">
+              Your signed agreements
+            </h2>
+            <p className="mt-2 max-w-prose text-sm text-ink-muted">
+              Everything you have signed with the cooperative. Every
+              row here is one signature event — if a covenant gets
+              revised and you re-sign, a new row appears while the
+              old one stays for the historical record. If something
+              looks wrong, message an admin.
+            </p>
+            {myAgreements.length === 0 ? (
+              <p className="mt-4 text-sm text-ink-faint">
+                Nothing on file yet.
+              </p>
+            ) : (
+              <ol className="mt-4 space-y-2">
+                {myAgreements.map((a) => (
+                  <li
+                    key={a.id}
+                    className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-4 py-3 text-xs"
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-medium">
+                        {AGREEMENT_TYPE_LABELS[a.agreementType]}{" "}
+                        <span className="text-ink-faint">
+                          v{a.version}
+                        </span>
+                      </span>
+                      <span
+                        className="font-mono text-[10px] text-ink-faint"
+                        title={a.signedAt}
+                      >
+                        {a.signedAt.slice(0, 10)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-ink-faint">
+                      {AGREEMENT_PROVIDER_LABELS[a.provider]}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Card>
+        );
+      })()}
 
       <Card className="mt-6 border-[#D828A0]/40">
         <CardEyebrow>Talent match tags</CardEyebrow>

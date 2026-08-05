@@ -538,15 +538,20 @@ function WhatChanged() {
  * yes-list before; almost none have heard the no-list said out loud
  * with confidence.
  *
- * Pitch/close nuance preserved in the close line: FM does cold pitch
- * (that's admin business development), never cold closes (there is
- * always a curation layer before a contributor sees a client).
+ * Sales-posture nuance (locked 2026-07-23): the sales-refusal card names
+ * deceptive tactics, not sales itself. Jamar's long-game is a serious
+ * sales org — positioning as anti-sales boxes that in. The card refuses
+ * fake urgency, bait-and-switch, opaque pricing. Not selling. Also swaps
+ * "honest timelines" for "honest tracking" — Builders own their delivery
+ * commitments in the cooperative model, FM manages the relationship and
+ * the transparent milestone tracker; promising delivery hits would
+ * overclaim structural control FM doesn't have.
  */
 function WhatWeSayNoTo() {
   const refusals = [
     "No bidding. No pay for access. Ever.",
     "No paid tiers. No sponsored listings. No boosted profiles.",
-    "No cold closing. Every match is curated per skillset.",
+    "No sales theater. Honest pricing, honest tracking, honest scope. Every time.",
     "No exit strategy. No dilution of cooperative ownership.",
     "No discounts. Rarity is the pricing model.",
     "No opaque compensation. Talent sees the gate before it fires.",

@@ -284,6 +284,48 @@ function AdminDropdown({ self }: { self: User }) {
           Cooperative receipts
         </Link>
         <Link
+          href="/admin/agreements"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Signed agreements
+        </Link>
+        <Link
+          href="/admin/vouchers"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          $BUILD vouchers
+        </Link>
+        <Link
+          href="/admin/pools"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Structural pools
+        </Link>
+        <Link
+          href="/admin/invoices"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Invoices + receipts
+        </Link>
+        <Link
+          href="/admin/reserve"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Contract reserves
+        </Link>
+        <Link
+          href="/admin/clients"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Client patterns
+        </Link>
+        <Link
+          href="/admin/referrals"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Partner referrals
+        </Link>
+        <Link
           href="/admin/feedback"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >

@@ -36,6 +36,14 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_ATTRIBUTION } from "@/lib/mock-data/attribution";
 import { MOCK_SPLITS, RESERVE_RECIPIENTS } from "@/lib/mock-data/splits";
+import {
+  ADMIN_PCT,
+  LP_PCT,
+  TREASURY_PCT,
+  writeStandardSettlementSplits,
+} from "@/lib/settlement-splits";
+import { hasValidPayoutDocument } from "@/lib/payout-gate";
+import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   ATTRIBUTION_ROLE_LABELS,
@@ -66,12 +74,10 @@ const PAYOUT_COLOR: Record<PayoutStatus, string> = {
   failed: "#E53E3E",
 };
 
-// Pool ratios. Held here so we can crank them when we scale without
-// hunting through the codebase.
+// Contributor pool ratio kept locally for the per-contributor amount
+// derivation from the form's percentage inputs. The full split
+// ratios live in `settlement-splits.ts` (single source of truth).
 const CONTRIBUTOR_POOL_PCT = 0.85;
-const COMMISSION_PCT = 0.15;
-const ADMIN_OF_COMMISSION_PCT = 0.80; // 80% of the 15% commission → admins
-const RESERVE_OF_COMMISSION_PCT = 0.20; // 20% of the 15% commission → reserve
 
 async function settleContract(formData: FormData) {
   "use server";
@@ -86,12 +92,13 @@ async function settleContract(formData: FormData) {
   if (MOCK_SPLITS.some((s) => s.contractId === contractId)) {
     throw new Error("Contract already settled.");
   }
+  if (!hasValidPayoutDocument(contractId, "contract_settlement")) {
+    throw new Error(
+      "Settlement refused: no received external invoice or retroactive receipt on this contract. Generate + collect an external invoice (or attach a retroactive receipt) before settling.",
+    );
+  }
 
   const collected = Number(project.collectedRevenue);
-  const contributorPool = collected * CONTRIBUTOR_POOL_PCT;
-  const commission = collected * COMMISSION_PCT;
-  const adminPool = commission * ADMIN_OF_COMMISSION_PCT;
-  const reservePool = commission * RESERVE_OF_COMMISSION_PCT;
 
   // Contributor rows.
   const contribIds = formData.getAll("contribId").map(String);
@@ -114,77 +121,60 @@ async function settleContract(formData: FormData) {
     .map((id, i) => ({ id, pct: adminPcts[i] ?? 0 }))
     .filter((r) => r.id && r.pct > 0);
 
-  if (adminRows.length === 0) {
-    throw new Error("At least one admin required for the commission pool.");
-  }
-  const adminTotal = adminRows.reduce((s, r) => s + r.pct, 0);
-  if (Math.abs(adminTotal - 100) > 0.01) {
-    throw new Error(
-      `Admin pool must sum to 100% — got ${adminTotal.toFixed(2)}%.`,
-    );
-  }
-
   const now = new Date().toISOString();
 
   // Persist the admin list back onto the project so the next settle
   // reflects who actually got paid.
   project.adminUserIds = adminRows.map((r) => r.id);
 
-  // Contributor pool rows.
-  for (const r of contribRows) {
-    MOCK_SPLITS.push({
-      id: `split_${Date.now()}_c_${r.id}`,
-      contractId,
-      recipientId: r.id,
-      pool: "contributor",
-      sharePct: r.pct.toFixed(2),
-      amount: ((contributorPool * r.pct) / 100).toFixed(2),
-      auto: false,
-      decidedBy: admin.id,
-      decidedAt: now,
-      payoutStatus: "queued",
-      payoutSentAt: null,
-      stripeTransferId: null,
-      notes: null,
-    });
-  }
+  // Compute contributor per-user amounts from percentages so the
+  // shared settlement engine can validate the sums.
+  const contributorPool = collected * CONTRIBUTOR_POOL_PCT;
+  const contribAmounts = contribRows.map((r) =>
+    ((contributorPool * r.pct) / 100).toFixed(2),
+  );
 
-  // Admin pool rows.
-  for (const r of adminRows) {
-    MOCK_SPLITS.push({
-      id: `split_${Date.now()}_a_${r.id}`,
-      contractId,
-      recipientId: r.id,
-      pool: "admin",
-      sharePct: r.pct.toFixed(2),
-      amount: ((adminPool * r.pct) / 100).toFixed(2),
-      auto: false,
-      decidedBy: admin.id,
-      decidedAt: now,
-      payoutStatus: "queued",
-      payoutSentAt: null,
-      stripeTransferId: null,
-      notes: null,
-    });
-  }
+  // Delegate to the shared settlement engine — handles pool math,
+  // reserve routing to Treasury/LP, and audit-log emission.
+  writeStandardSettlementSplits({
+    gross: collected,
+    sourceKind: "contract_settlement",
+    sourceId: contractId,
+    contractId,
+    contributors: {
+      userIds: contribRows.map((r) => r.id),
+      amounts: contribAmounts,
+    },
+    admins: {
+      userIds: adminRows.map((r) => r.id),
+      percentages: adminRows.map((r) => r.pct),
+    },
+    actorUserId: admin.id,
+    noteContext: `Contract settlement — ${project.title}`,
+  });
 
-  // Reserve pool rows — auto-routed, computed server-side, never editable.
-  for (const r of RESERVE_RECIPIENTS) {
-    MOCK_SPLITS.push({
-      id: `split_${Date.now()}_r_${r.id}`,
-      contractId,
-      recipientId: r.id,
-      pool: "reserve",
-      sharePct: r.reserveSharePct.toFixed(2),
-      amount: ((reservePool * r.reserveSharePct) / 100).toFixed(2),
-      auto: true,
-      decidedBy: null,
-      decidedAt: null,
-      payoutStatus: "queued",
-      payoutSentAt: null,
-      stripeTransferId: null,
-      notes: `Auto-routed: ${r.reserveSharePct}% of reserve to ${r.label}.`,
+  // $BUILD cascade — canonical 6.087× network fees formula with
+  // 80/16/2/2 split. Fires alongside the cash split so voucher
+  // accounting stays in lockstep.
+  try {
+    issueBuildFromSettlement({
+      gross: collected,
+      cashSourceKind: "contract_settlement",
+      sourceId: contractId,
+      contributors: {
+        userIds: contribRows.map((r) => r.id),
+        amounts: contribAmounts,
+      },
+      admins: { userIds: adminRows.map((r) => r.id) },
+      actorUserId: admin.id,
+      noteContext: `$BUILD generation — ${project.title} settlement`,
     });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[contract-settle] issueBuildFromSettlement failed for ${contractId}:`,
+      err,
+    );
   }
 
   // Dispatch transfers. Per-row try/catch so one KYC failure doesn't
@@ -248,9 +238,8 @@ export default async function SettlePage({
 
   const collected = Number(project.collectedRevenue);
   const contributorPool = collected * CONTRIBUTOR_POOL_PCT;
-  const commission = collected * COMMISSION_PCT;
-  const adminPool = commission * ADMIN_OF_COMMISSION_PCT;
-  const reservePool = commission * RESERVE_OF_COMMISSION_PCT;
+  const adminPool = collected * ADMIN_PCT;
+  const reservePool = collected * (TREASURY_PCT + LP_PCT);
 
   // Aggregate attribution → contributor pool (delivery_lead + contributor
   // only). Weights summed across roles per user, normalized to 100%.

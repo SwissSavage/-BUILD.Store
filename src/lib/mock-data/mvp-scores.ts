@@ -211,10 +211,10 @@ const SNAPSHOT_INPUTS: Array<{
     }),
   },
   {
-    // Bayu — Member-tier. Frontend + product design collaborator.
-    // Sub-ratings land in the good-standing band (green TradingCard).
-    // Contributor still ramping — outcomes weighted lighter until real
-    // engagements settle.
+    // Bayu — Partner-tier. Full-stack engineer + agency founder;
+    // frontend/product-design collaborator on FM. Sub-ratings land in
+    // the good-standing band (green TradingCard). Contributor still
+    // ramping — outcomes weighted lighter until real engagements settle.
     userId: "u_bayu",
     subRatings: subs({
       quality: 72,

@@ -211,10 +211,38 @@ export const attributionEntries = pgTable("attribution_entries", {
   loggedAt: timestamp("logged_at", { mode: "string", withTimezone: true }).notNull(),
 });
 
+/**
+ * Universal revenue-split ledger.
+ *
+ *   contractId — nullable; retained for back-compat where the source
+ *                is a project. New callers should use sourceKind +
+ *                sourceId instead.
+ *   sourceKind — discriminates what kind of financial event produced
+ *                this row (contract settlement / order settlement /
+ *                bonus release / donation).
+ *   sourceId   — opaque source identifier (project id / order id /
+ *                whitelist_purchase id). NOT a hard FK because the
+ *                target table depends on sourceKind.
+ *   recipientId — user id OR sentinel string ("house_treasury",
+ *                "house_liquidity_pool") for structural pools. FK
+ *                to users would break sentinels, so no FK here.
+ *
+ * Treasury / LP balances derive from SUM(amount WHERE recipientId =
+ * sentinel AND pool = 'reserve').
+ */
 export const revenueSplits = pgTable("revenue_splits", {
   id: text("id").primaryKey(),
-  contractId: text("contract_id").notNull().references(() => projects.id),
-  recipientId: text("recipient_id").notNull().references(() => users.id),
+  contractId: text("contract_id"),
+  sourceKind: text("source_kind", {
+    enum: [
+      "contract_settlement",
+      "order_settlement",
+      "bonus_release",
+      "donation",
+    ],
+  }).notNull().default("contract_settlement"),
+  sourceId: text("source_id").notNull(),
+  recipientId: text("recipient_id").notNull(),
   pool: text("pool", { enum: ["contributor", "admin", "reserve"] }).notNull(),
   sharePct: numeric("share_pct", { precision: 6, scale: 3 }).notNull(),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
@@ -658,6 +686,7 @@ export const orders = pgTable("orders", {
   shippedAt: timestamp("shipped_at", { mode: "string", withTimezone: true }),
   deliveredAt: timestamp("delivered_at", { mode: "string", withTimezone: true }),
   splitDistributedAt: timestamp("split_distributed_at", { mode: "string", withTimezone: true }),
+  adminUserIds: jsonb("admin_user_ids").$type<string[]>().notNull().default([]),
 });
 
 // ──────────────────────────────────────────────────────────────────────
@@ -666,15 +695,30 @@ export const orders = pgTable("orders", {
 
 export const invoices = pgTable("invoices", {
   id: text("id").primaryKey(),
-  contractId: text("contract_id").notNull().references(() => projects.id),
+  direction: text("direction", {
+    enum: [
+      "talent_to_coop",
+      "coop_to_client",
+      "marketplace_receipt",
+      "retroactive_receipt",
+    ],
+  }).notNull().default("coop_to_client"),
+  documentKind: text("document_kind", {
+    enum: ["invoice", "receipt"],
+  }).notNull().default("invoice"),
+  contractId: text("contract_id"),
+  sourceRefId: text("source_ref_id"),
+  sourceInvoiceIds: jsonb("source_invoice_ids").$type<string[]>(),
+  issuerId: text("issuer_id").notNull(),
+  recipientId: text("recipient_id").notNull(),
   number: text("number").notNull().unique(),
-  clientToken: text("client_token").notNull().unique(),
+  clientToken: text("client_token").unique(),
   status: text("status", {
     enum: ["draft", "issued", "partially_received", "received", "void"],
   }).notNull(),
   paymentMethod: text("payment_method", {
     enum: ["ach_mercury", "wire_mercury", "cc_stripe", "check", "other"],
-  }).notNull(),
+  }),
   acceptsCard: boolean("accepts_card").notNull().default(false),
   lineItems: jsonb("line_items").notNull().default([]),
   subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),
@@ -796,6 +840,20 @@ export const customerFeedback = pgTable("customer_feedback", {
   publishedAt: timestamp("published_at", { mode: "string", withTimezone: true }),
   publishedQuote: text("published_quote"),
   publishedForUserId: text("published_for_user_id").references(() => users.id),
+  // Admin-capture provenance — set when admin captured this rating
+  // on the client's behalf during a CX call. Structural evidence
+  // requirement: capturedByAdminUserId + meetingMinuteId must be
+  // either both null (client self-submitted) or both non-null
+  // (admin captured with linked call record). Enforced in the
+  // server action, not at DB level for MVP flexibility.
+  capturedByAdminUserId: text("captured_by_admin_user_id").references(() => users.id),
+  captureContext: text("capture_context"),
+  meetingMinuteId: text("meeting_minute_id"),
+  clientConfirmationStatus: text("client_confirmation_status", {
+    enum: ["pending", "confirmed", "disputed"],
+  }),
+  clientConfirmationToken: text("client_confirmation_token").unique(),
+  clientConfirmedAt: timestamp("client_confirmed_at", { mode: "string", withTimezone: true }),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
 });
 
@@ -1028,6 +1086,190 @@ export const inboundSubmissions = pgTable("inbound_submissions", {
 });
 
 // ──────────────────────────────────────────────────────────────────────
+//  $BUILD vouchers (off-chain claim mirror against the real token)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * One row per earning event's redeemable claim on real $BUILD.
+ * Coexists with token_transactions — that table logs what was
+ * earned (activity, project, comp stage); this table ledgers the
+ * settled claim + swap lifecycle. See the BuildVoucher docblock in
+ * src/lib/types.ts for the full rationale.
+ *
+ * source_ref_id is a soft pointer to token_transactions.id (not a
+ * hard FK) because admin_grant issuance may have no upstream
+ * transaction — enforcing the FK would block OG-holder backfill.
+ * Admin surface renders a warning when source_ref_id is set but
+ * no matching TokenTransaction exists.
+ *
+ * user_id cascades on user delete so hard-deletes purge the
+ * associated voucher ledger. Production should prefer soft-delete
+ * on users; hard-delete stays available for GDPR-style erasure.
+ */
+export const buildVouchers = pgTable("build_vouchers", {
+  id: text("id").primaryKey(),
+  // NOT an FK — accepts sentinel ids for structural pool destinations
+  // (house_treasury, house_liquidity_pool) alongside real user ids.
+  // Mirrors the RevenueSplit.recipientId pattern.
+  userId: text("user_id").notNull(),
+  amount: numeric("amount", { precision: 18, scale: 8 }).notNull(),
+  sourceType: text("source_type", {
+    enum: [
+      "project_completion",
+      "referral",
+      "collaboration",
+      "governance",
+      "admin_grant",
+    ],
+  }).notNull(),
+  sourceRefId: text("source_ref_id"),
+  swapStatus: text("swap_status", {
+    enum: ["unswapped", "pending_swap", "swapped", "forfeited"],
+  }).notNull().default("unswapped"),
+  swappedToTxHash: text("swapped_to_tx_hash"),
+  swappedAt: timestamp("swapped_at", { mode: "string", withTimezone: true }),
+  issuedAt: timestamp("issued_at", { mode: "string", withTimezone: true }).notNull(),
+  notes: text("notes"),
+  issuedByUserId: text("issued_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+// ──────────────────────────────────────────────────────────────────────
+//  Partner referrals (#267 — referral attribution for /partners page)
+// ──────────────────────────────────────────────────────────────────────
+
+export const partnerReferrals = pgTable("partner_referrals", {
+  id: text("id").primaryKey(),
+  partnerId: text("partner_id").notNull(),
+  partnerKind: text("partner_kind", {
+    enum: ["saas_partner", "product_affiliate"],
+  }).notNull(),
+  referrerUserId: text("referrer_user_id").notNull().references(() => users.id),
+  leadContactName: text("lead_contact_name").notNull(),
+  leadContactEmail: text("lead_contact_email").notNull(),
+  leadCompany: text("lead_company"),
+  notes: text("notes"),
+  status: text("status", {
+    enum: ["pending", "converted", "declined", "expired"],
+  }).notNull().default("pending"),
+  convertedAmountUsd: numeric("converted_amount_usd", { precision: 12, scale: 2 }),
+  revshareEarnedUsd: numeric("revshare_earned_usd", { precision: 12, scale: 2 }),
+  convertedAt: timestamp("converted_at", { mode: "string", withTimezone: true }),
+  declineReason: text("decline_reason"),
+  declinedAt: timestamp("declined_at", { mode: "string", withTimezone: true }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+// ──────────────────────────────────────────────────────────────────────
+//  Contract Reserve Pool + Triangulated Composite (Tier 27)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Append-only ledger of reserve pool credits + debits per contract.
+ * Balance = SUM(amount) for a given projectId. No separate "pool"
+ * table — the ledger IS the pool, same pattern as revenue_splits.
+ *
+ * Recipient not FK'd because it holds user ids OR sentinel strings
+ * ("client" for rebates, null for recovery_pool routing).
+ */
+export const reservePoolLedger = pgTable("reserve_pool_ledger", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, {
+    onDelete: "cascade",
+  }),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  direction: text("direction", { enum: ["credit", "debit"] }).notNull(),
+  creditReason: text("credit_reason", {
+    enum: ["invoice_collection", "unearned_base", "manual_adjustment"],
+  }),
+  debitReason: text("debit_reason", {
+    enum: [
+      "bonus_release",
+      "replacement_payout",
+      "client_rebate",
+      "peer_coverage",
+      "recovery_pool",
+    ],
+  }),
+  recipientId: text("recipient_id"),
+  actorUserId: text("actor_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  rationale: text("rationale"),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+/**
+ * Snapshotted composite per contributor per contract. Frozen at
+ * bonus-decision time so the historical decision stays auditable
+ * even if peer/client/admin ratings change later.
+ */
+export const triangulatedComposites = pgTable("triangulated_composites", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, {
+    onDelete: "cascade",
+  }),
+  contributorUserId: text("contributor_user_id").notNull().references(() => users.id),
+  adminRating: numeric("admin_rating", { precision: 3, scale: 2 }),
+  peerRating: numeric("peer_rating", { precision: 3, scale: 2 }),
+  clientRating: numeric("client_rating", { precision: 3, scale: 2 }),
+  effectiveWeights: jsonb("effective_weights")
+    .$type<{ admin: number; peer: number; client: number }>()
+    .notNull(),
+  weightedComposite: numeric("weighted_composite", { precision: 4, scale: 3 }).notNull(),
+  bonusReleaseFraction: numeric("bonus_release_fraction", {
+    precision: 4,
+    scale: 3,
+  }).notNull(),
+  computedAt: timestamp("computed_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+// ──────────────────────────────────────────────────────────────────────
+//  Agreements (signed paperwork registry)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * One row per signature event. Types + provider are stored as string
+ * enums matching the AgreementType / AgreementProvider unions in
+ * src/lib/types.ts — Postgres validates the label, TypeScript
+ * validates the union at compile time.
+ *
+ * `user_id` cascades on user delete so admin-initiated hard-deletes
+ * of a user account also purge their paperwork. Production ops
+ * should prefer soft-delete of users; hard-delete stays available
+ * for GDPR-style erasure and cleanup.
+ */
+export const agreements = pgTable("agreements", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  agreementType: text("agreement_type", {
+    enum: [
+      "talent_data",
+      "membership_covenant",
+      "loi",
+      "seller_agreement",
+      "contributor_agreement",
+      "other",
+    ],
+  }).notNull(),
+  version: text("version").notNull(),
+  signedAt: timestamp("signed_at", { mode: "string", withTimezone: true }).notNull(),
+  provider: text("provider", {
+    enum: ["adobesign", "docusign", "manual", "in_app", "other"],
+  }).notNull(),
+  externalRef: text("external_ref"),
+  storageUrl: text("storage_url"),
+  notes: text("notes"),
+  createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+// ──────────────────────────────────────────────────────────────────────
 //  Full schema re-export bundle (drizzle-kit + client entry)
 // ──────────────────────────────────────────────────────────────────────
 
@@ -1084,4 +1326,9 @@ export const schema = {
   walkthroughProgress,
   feedbackEntries,
   inboundSubmissions,
+  agreements,
+  buildVouchers,
+  reservePoolLedger,
+  triangulatedComposites,
+  partnerReferrals,
 } as const;

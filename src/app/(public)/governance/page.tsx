@@ -61,14 +61,18 @@ export default function GovernancePage() {
               </li>
               <li>
                 <strong className="text-ink">Partner:</strong> vetted
-                counterparty. Limited-scope EPK. Discovery-hidden by
-                default; recognition unlocks a discovery window.
+                counterparty and active revenue-sharing contributor.
+                Limited-scope EPK. Discovery-hidden by default;
+                recognition unlocks a discovery window. Votes in the
+                Partner body on operational governance.
               </li>
               <li>
                 <strong className="text-ink">Member:</strong> full
-                builder. Sees the internal directory, calendar,
-                activity feed. Full MVP score visibility. Co-brand
-                rights. Canonization at year end.
+                builder and cooperative steward. Sees the internal
+                directory, calendar, activity feed. Full MVP score
+                visibility. Co-brand rights. Canonization at year
+                end. Votes in both bodies; carries treasury, covenant,
+                and ratification voice on structural decisions.
               </li>
             </ul>
           </>
@@ -271,9 +275,11 @@ export default function GovernancePage() {
               Tier locks to the year-end rarity band (gray probation,
               green good standing, blue promotion eligible, magenta
               Future Modernist, gold-holographic Champion). The card
-              holds $BUILD allocated that year, wrapped recognition
-              NFTs, cooperative artifacts collected, and voting weight
-              from the cohort.
+              holds the $BUILD allocated that year, wrapped
+              recognition NFTs, and cooperative artifacts collected
+              from the cohort. On-chain provenance of a Member&apos;s
+              year — not a vote-weight multiplier. Governance stays
+              one-person-one-vote in each chamber.
             </p>
             <p className="mt-3 text-sm text-ink-muted">
               Phygital versions become a marketplace product class.
@@ -291,6 +297,41 @@ export default function GovernancePage() {
         ]}
       />
 
+      {/* Bicameral voting model */}
+      <Section
+        eyebrow="Voting"
+        id="voting"
+        title="Bicameral. One person, one vote per body."
+        body={
+          <>
+            <p>
+              Two chambers. Both one-person-one-vote in their own
+              body. Token holdings do not weight votes — anti-whale
+              at the governance layer.
+            </p>
+            <ul className="mt-3 space-y-2 pl-5 text-sm text-ink-muted list-disc">
+              <li>
+                <strong className="text-ink">Partner body</strong> —
+                operational governance. Matching policy, project
+                selection rules, admin approvals, RFP acceptance
+                criteria, moderator selection, cohort spotlights.
+                Working contributors get voice on how the work runs.
+              </li>
+              <li>
+                <strong className="text-ink">Member body</strong> —
+                existential governance. Treasury allocation, covenant
+                amendments, tier structure changes, Member admissions,
+                direction pivots. Also ratifies structural changes
+                sent up from the Partner body.
+              </li>
+            </ul>
+          </>
+        }
+        links={[
+          { label: "Compliance dashboard (admin)", href: "/admin/compliance" },
+        ]}
+      />
+
       {/* How the framework changes */}
       <Section
         eyebrow="Change process"
@@ -299,14 +340,17 @@ export default function GovernancePage() {
         body={
           <>
             <p>
-              Covenant, MVP mechanic, recognition rails, compensation,
-              revenue split. All change on Member vote. Posted 30 days
-              before.
+              Operational rules — matching, RFP flow, moderator
+              selection — change on Partner-body vote. Existential
+              rules — covenant, MVP mechanic, recognition rails,
+              compensation, revenue split — change on Member-body
+              vote. Proposals posted 30 days before either vote.
             </p>
             <p className="mt-3 text-sm text-ink-muted">
-              Governance weight: the token-weighted balance in each
-              Member&apos;s annual canonization TBA. Every change
-              audit-logged with proposal, vote results, effective date.
+              Every change audit-logged with proposal, vote results,
+              effective date. On-chain provenance from each Member&apos;s
+              canonization TBA gives transparency to contribution and
+              standing — it is not itself a vote-weight multiplier.
             </p>
           </>
         }
@@ -380,9 +424,14 @@ function FaqSection() {
         "At the end of each calendar year, every active Member (and any Partner who held a recognition during the year) mints an ERC-721 canonization card with an ERC-6551 token-bound account. Tier locks to their year-end rarity band.\n\nThe first canonization runs at the end of the cooperative's first full calendar year of operation. No retroactive canon. Members don't receive credit for pre-launch work through the cooperative record. Retroactive minting would invent standing nobody earned through the system. That's the integrity floor.",
     },
     {
+      question: "Do Partners and Members have the same voting rights?",
+      answer:
+        "Not exactly the same, but Partners do vote. Governance is bicameral: the Partner body votes on operational rules (matching, RFP flow, moderator selection, admin approvals, cohort spotlights) and the Member body votes on existential rules (treasury, covenant amendments, tier changes, direction pivots, admissions). Both bodies run one-person-one-vote inside their own chamber. Token holdings never weight the vote.\n\nThe rationale: contribution earns voice. A Partner is an active revenue-sharing contributor and deserves a say in how the work runs. But hard-to-reverse decisions need proven stewards — that is the Member body's job. This also gives progression from Partner to Member a real step-up in weight, not just a badge.",
+    },
+    {
       question: "Can the Covenant change?",
       answer:
-        "Yes, by Member vote. Proposed changes are posted at least 30 days before the vote so Members have time to read, discuss, and weigh in. Governance weight is the token-weighted balance held in each Member's annual canonization TBA.\n\nSandbox has admin-only proposal for testing. Production runs on the real vote.",
+        "Yes, by Member-body vote. The covenant is existential — hard to reverse, sets the terms everyone signs — so it routes through the Member body, not the Partner body. Proposed changes are posted at least 30 days before the vote so Members have time to read, discuss, and weigh in. Voting is one-person-one-vote; token holdings do not weight the vote.\n\nSandbox has admin-only proposal for testing. Production runs on the real vote.",
     },
   ];
 

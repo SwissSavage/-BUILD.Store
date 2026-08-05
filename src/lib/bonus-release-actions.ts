@@ -28,6 +28,9 @@ import {
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
 import { evaluateBonusGate } from "@/lib/bonus-gate";
+import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
+import { hasValidPayoutDocument } from "@/lib/payout-gate";
+import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
 
 function findProject(id: string) {
   const p = MOCK_PROJECTS.find((x) => x.id === id);
@@ -76,6 +79,14 @@ export async function executeBonusDecision(formData: FormData) {
       `Bonus decision already recorded (${project.bonusDecision}). Cannot re-decide without an offsetting entry.`,
     );
   }
+  // Payout gate: bonus release rides on the same client payment that
+  // authorized the base contract settlement. If no external invoice
+  // (or retroactive receipt) exists on this project, block.
+  if (!hasValidPayoutDocument(projectId, "bonus_release")) {
+    throw new Error(
+      "Bonus release refused: no external invoice or retroactive receipt on this contract. Attach one before firing the bonus decision.",
+    );
+  }
 
   const feedback = feedbackForContext(projectId)[0] ?? null;
   const peerReviews = MOCK_PEER_REVIEWS.filter(
@@ -92,9 +103,82 @@ export async function executeBonusDecision(formData: FormData) {
     creditPool(projectId, project.talentBonusAmount);
     project.bonusDecision = "reclaimed";
   } else {
-    // Release or release-by-default both pay talent.
-    // Sandbox marks the row; production fires the Stripe Connect transfer.
+    // Release or release-by-default both pay talent. In sandbox
+    // we also cascade a $BUILD distribution across the project's
+    // assigned members — equal shares of the bonus amount, sourced
+    // as project_completion. The cascade fires voucher issuance
+    // via the distributeBuild → issueVoucherInternal hook, so the
+    // off-chain voucher ledger stays in lockstep with the earning
+    // event.
+    //
+    // Equal shares is the intentionally naive MVP split — real
+    // per-member allocation logic (roles, seniority, contribution
+    // vectors) belongs in the split engine and is a follow-on. See
+    // task list for the pre-Beta refinement.
+    //
+    // Production: bonus dollars fire via Stripe Connect; the
+    // $BUILD side fires via the multisig propose flow. Both routes
+    // still call this same cascade so voucher accounting stays
+    // consistent.
     project.bonusDecision = "released";
+
+    const members = project.assignedMemberIds;
+    const bonusAmount = Number(project.talentBonusAmount);
+    if (members.length > 0 && bonusAmount > 0) {
+      // Write the full 85/12/1.5/1.5 split against the bonus
+      // amount so admin/treasury/LP get their proportional cut
+      // alongside the talent bonus. Uses the same shared engine
+      // as contract + order settlement.
+      const adminIds =
+        project.adminUserIds.length > 0 ? project.adminUserIds : members;
+      const talentShare = (bonusAmount * 0.85) / members.length;
+      try {
+        writeStandardSettlementSplits({
+          gross: bonusAmount,
+          sourceKind: "bonus_release",
+          sourceId: project.id,
+          contractId: project.id,
+          contributors: {
+            userIds: members,
+            amounts: members.map(() => talentShare.toFixed(2)),
+          },
+          admins: {
+            userIds: adminIds,
+          },
+          actorUserId: admin.id,
+          noteContext: `Bonus release on ${project.title}`,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[bonus-release] writeStandardSettlementSplits failed for project ${project.id}:`,
+          err,
+        );
+      }
+
+      // $BUILD cascade — canonical 6.087× network fees formula on
+      // the bonus amount, split 80/16/2/2 across talent / admin
+      // pool / Treasury / LP. Follow-on #260 refines the talent
+      // share allocation from equal split to per-member weighting
+      // when internal invoices are attached to the bonus release.
+      try {
+        issueBuildFromSettlement({
+          gross: bonusAmount,
+          cashSourceKind: "bonus_release",
+          sourceId: project.id,
+          contributors: { userIds: members },
+          admins: { userIds: adminIds },
+          actorUserId: admin.id,
+          noteContext: `$BUILD generation — bonus release on ${project.title}`,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[bonus-release] issueBuildFromSettlement failed for project ${project.id}:`,
+          err,
+        );
+      }
+    }
   }
   project.bonusDecidedAt = new Date().toISOString();
   project.updatedAt = new Date().toISOString();

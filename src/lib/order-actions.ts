@@ -30,6 +30,11 @@ import {
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
 import { grossUpForCard } from "@/lib/payments-fees";
+import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
+import { createMarketplaceReceiptInternal } from "@/lib/invoice-actions";
+import { hasValidPayoutDocument } from "@/lib/payout-gate";
+import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
+import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   ORDER_NEXT_STATUSES,
   type Order,
@@ -117,6 +122,12 @@ export async function placeOrder(formData: FormData) {
     shippedAt: null,
     deliveredAt: null,
     splitDistributedAt: null,
+    // Deal-owning admins default to empty — admin populates via the
+    // seller's onboarding admin OR the marketplace-category
+    // moderator OR a manual assignment. Empty falls back to
+    // even-split across platform admins at settlement so no order
+    // settles with an empty admin pool.
+    adminUserIds: [],
   };
 
   // Decrement inventory for inventoried products.
@@ -189,22 +200,112 @@ export async function distributeOrderSplit(formData: FormData) {
   if (order.status !== "delivered") return;
   if (order.splitDistributedAt) return;
   const now = new Date().toISOString();
+
+  // Auto-generate the marketplace receipt (payout-authorizing
+  // document) before firing the split. Idempotent — creates once,
+  // returns existing on re-run. This is what satisfies the payout
+  // gate below.
+  createMarketplaceReceiptInternal({
+    orderId: order.id,
+    orderNumber: order.number,
+    sellerId: order.sellerId,
+    buyerId: order.buyerId,
+    subtotal: order.subtotal,
+    processingFee: order.processingFee,
+    total: order.total,
+    stripePaymentIntentId: order.stripePaymentIntentId,
+    itemDescription:
+      order.items.length === 1
+        ? order.items[0].titleSnapshot
+        : `${order.items.length} items on order ${order.number}`,
+  });
+
+  if (!hasValidPayoutDocument(order.id, "order_settlement")) {
+    throw new Error(
+      "Order settlement refused: no marketplace receipt attached. This should have been auto-generated — check /admin/invoices.",
+    );
+  }
+
   order.splitDistributedAt = now;
 
-  logAuditEvent({
-    actorUserId: admin.id,
-    actorRoleSnapshot: snapshotActorRole(admin),
-    action: "contract.revenue_split_recorded",
-    resourceKind: "project",
-    resourceId: order.id,
-    before: { splitDistributedAt: null },
-    after: {
-      splitDistributedAt: now,
-      sellerId: order.sellerId,
-      subtotal: order.subtotal,
-      houseFee: order.houseFee,
-    },
-  });
+  // Write the full 85 / 12 / 1.5 / 1.5 split via the shared engine.
+  // Marketplace orders route the seller as the sole contributor and
+  // the admin pool distributes to the deal-owning admins listed on
+  // order.adminUserIds. If empty (unseeded / legacy orders), falls
+  // back to distributing evenly across all active platform admins
+  // so no order settles with an empty admin pool.
+  const dealAdmins = order.adminUserIds.filter((id) =>
+    MOCK_USERS.some(
+      (u) => u.id === id && u.isAdmin && u.suspendedAt === null,
+    ),
+  );
+  const platformAdmins =
+    dealAdmins.length > 0
+      ? dealAdmins
+      : MOCK_USERS.filter((u) => u.isAdmin && u.suspendedAt === null).map(
+          (u) => u.id,
+        );
+  if (platformAdmins.length === 0) {
+    // Fall back to the marking-only path so the order still closes
+    // even if the admin roster is empty — extreme edge case.
+    logAuditEvent({
+      actorUserId: admin.id,
+      actorRoleSnapshot: snapshotActorRole(admin),
+      action: "contract.revenue_split_recorded",
+      resourceKind: "project",
+      resourceId: order.id,
+      before: { splitDistributedAt: null },
+      after: {
+        splitDistributedAt: now,
+        note: "No platform admins available — split rows NOT written.",
+      },
+    });
+  } else {
+    try {
+      writeStandardSettlementSplits({
+        gross: Number(order.subtotal),
+        sourceKind: "order_settlement",
+        sourceId: order.id,
+        contractId: null,
+        contributors: {
+          userIds: [order.sellerId],
+        },
+        admins: {
+          userIds: platformAdmins,
+        },
+        actorUserId: admin.id,
+        noteContext: `Marketplace order ${order.number}`,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(
+        `[order-split] writeStandardSettlementSplits failed for order ${order.id}:`,
+        err,
+      );
+    }
+  }
+
+  // $BUILD cascade — uses the canonical 6.087× network fees formula
+  // and the 80/16/2/2 split across seller / admin pool / Treasury /
+  // LP. Same shape as the cash split, different weights, different
+  // basis (network fees only, per the master spreadsheet).
+  try {
+    issueBuildFromSettlement({
+      gross: Number(order.subtotal),
+      cashSourceKind: "order_settlement",
+      sourceId: order.id,
+      contributors: { userIds: [order.sellerId] },
+      admins: { userIds: platformAdmins },
+      actorUserId: admin.id,
+      noteContext: `$BUILD generation — marketplace order ${order.number}`,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[order-split] issueBuildFromSettlement failed for order ${order.id}:`,
+      err,
+    );
+  }
 
   revalidatePath("/orders");
   revalidatePath(`/orders/${order.id}`);

@@ -9,10 +9,20 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getBalance, getTransactions } from "@/lib/wallet-stub";
-import { COMP_STAGE_LABELS } from "@/lib/types";
+import { vouchersForUser } from "@/lib/mock-data/vouchers";
+import {
+  BUILD_VOUCHER_SOURCE_TYPE_LABELS,
+  BUILD_VOUCHER_SWAP_STATUS_LABELS,
+  COMP_STAGE_LABELS,
+} from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
 import { NotificationStrip } from "@/components/NotificationStrip";
 import { WalletConnectCard } from "@/components/WalletConnectCard";
+
+const NUMBER_FMT = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 8,
+});
 
 export default async function WalletPage() {
   const user = await getCurrentUser();
@@ -60,6 +70,116 @@ export default async function WalletPage() {
           connectedAt={user.walletConnectedAt}
         />
       </div>
+
+      {(() => {
+        const vouchers = vouchersForUser(user.id);
+        const unswapped = vouchers
+          .filter((v) => v.swapStatus === "unswapped")
+          .reduce((sum, v) => sum + Number(v.amount), 0);
+        const pending = vouchers
+          .filter((v) => v.swapStatus === "pending_swap")
+          .reduce((sum, v) => sum + Number(v.amount), 0);
+        const swapped = vouchers
+          .filter((v) => v.swapStatus === "swapped")
+          .reduce((sum, v) => sum + Number(v.amount), 0);
+        const forfeited = vouchers
+          .filter((v) => v.swapStatus === "forfeited")
+          .reduce((sum, v) => sum + Number(v.amount), 0);
+
+        return (
+          <section className="mt-12">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h2 className="font-display text-2xl font-semibold">
+                $BUILD vouchers
+              </h2>
+              <p className="text-[11px] text-ink-faint">
+                Off-chain claim on the real token
+              </p>
+            </div>
+            <Card className="mt-4">
+              <p className="text-sm text-ink-muted">
+                Vouchers are the cooperative&apos;s accounting mirror
+                of $BUILD. Once the real token is under a multisig
+                contract (or a fresh spin-up if the dispute resolves
+                that way), pending vouchers swap 1:1 into on-chain
+                $BUILD. Forfeited vouchers stay in the record but
+                no longer swap.
+              </p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-4">
+                <VoucherStatCell
+                  label="Unswapped"
+                  value={unswapped}
+                  accent="ink"
+                />
+                <VoucherStatCell
+                  label="Pending swap"
+                  value={pending}
+                  accent="ink"
+                />
+                <VoucherStatCell
+                  label="Swapped"
+                  value={swapped}
+                  accent="muted"
+                />
+                <VoucherStatCell
+                  label="Forfeited"
+                  value={forfeited}
+                  accent="muted"
+                />
+              </div>
+
+              {vouchers.length === 0 ? (
+                <p className="mt-6 text-sm text-ink-faint">
+                  No vouchers on file yet.
+                </p>
+              ) : (
+                <ul className="mt-6 divide-y divide-[var(--surface-border)]">
+                  {vouchers.map((v) => (
+                    <li key={v.id} className="py-3">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-medium">
+                            {NUMBER_FMT.format(Number(v.amount))}{" "}
+                            <span className="text-ink-faint">
+                              ·{" "}
+                              {
+                                BUILD_VOUCHER_SOURCE_TYPE_LABELS[
+                                  v.sourceType
+                                ]
+                              }
+                            </span>
+                          </p>
+                          <p className="text-[11px] text-ink-faint">
+                            <span className="uppercase tracking-wider">
+                              {BUILD_VOUCHER_SWAP_STATUS_LABELS[v.swapStatus]}
+                            </span>
+                            {" · issued "}
+                            <span title={v.issuedAt}>
+                              {v.issuedAt.slice(0, 10)}
+                            </span>
+                          </p>
+                        </div>
+                        {v.swappedToTxHash && (
+                          <p className="max-w-full break-all text-[10px] text-ink-faint">
+                            <code className="rounded bg-[var(--surface-inset)] px-1 py-0.5">
+                              {v.swappedToTxHash.slice(0, 24)}…
+                            </code>
+                          </p>
+                        )}
+                      </div>
+                      {v.notes && (
+                        <p className="mt-1 text-[11px] italic text-ink-muted">
+                          {v.notes}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </section>
+        );
+      })()}
 
       <section className="mt-12">
         <h2 className="font-display text-2xl font-semibold">Transaction history</h2>
@@ -153,6 +273,31 @@ export default async function WalletPage() {
           </p>
         </div>
       </section>
+    </div>
+  );
+}
+
+function VoucherStatCell({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number;
+  accent: "ink" | "muted";
+}) {
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+        {label}
+      </p>
+      <p
+        className={`mt-1 font-display text-xl font-semibold ${
+          accent === "muted" ? "text-ink-faint" : "text-ink"
+        }`}
+      >
+        {NUMBER_FMT.format(value)}
+      </p>
     </div>
   );
 }

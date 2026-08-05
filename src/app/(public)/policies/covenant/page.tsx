@@ -65,16 +65,26 @@ export default function CovenantPolicy() {
 
         <div>
           <h2 className="font-display text-2xl font-semibold text-ink">
-            Governance principle: flat governance, hierarchical relationships
+            Governance principle: bicameral, one voice per body
           </h2>
           <p className="mt-2">
-            Every Member has one voice in governance. Relationships
-            inside project teams and client engagements are hierarchical
-            when the work requires it. Someone owns delivery, someone
-            owns account, someone owns direction. That hierarchy is
-            confined to the engagement. Governance is not for sale, and
-            leadership on one project confers no permanent authority
-            over another.
+            Governance runs in two chambers, both one-person-one-vote
+            inside their own body. Token holdings never weight votes —
+            anti-whale at the governance layer. Partners vote in the
+            Partner body on operational rules (matching, RFP flow,
+            moderator selection, admin approvals, cohort spotlights).
+            Members vote in the Member body on existential rules
+            (treasury, covenant amendments, tier structure changes,
+            direction pivots, admissions) and ratify structural
+            proposals sent up from the Partner body.
+          </p>
+          <p className="mt-2">
+            Relationships inside project teams and client engagements
+            are hierarchical when the work requires it. Someone owns
+            delivery, someone owns account, someone owns direction.
+            That hierarchy is confined to the engagement. Governance
+            is not for sale, and leadership on one project confers no
+            permanent authority over another.
           </p>
         </div>
 
@@ -212,12 +222,14 @@ export default function CovenantPolicy() {
             How the Covenant changes
           </h2>
           <p className="mt-2">
-            Changes to the Covenant require Member vote. Proposed
-            changes are posted at least 30 days before the vote so
-            Members have time to read, discuss, and weigh in. Governance
-            weight is the token-weighted balance held in each Member&apos;s
-            annual canonization TBA (production; sandbox has admin-only
-            proposal for testing).
+            The Covenant is existential — hard to reverse, sets the
+            terms every Member signs — so amendments route through
+            the Member body, not the Partner body. Proposed changes
+            are posted at least 30 days before the vote so Members
+            have time to read, discuss, and weigh in. Voting is
+            one-person-one-vote; token holdings do not weight the
+            vote. Sandbox runs admin-only proposal for testing;
+            production runs the real vote.
           </p>
         </div>
 

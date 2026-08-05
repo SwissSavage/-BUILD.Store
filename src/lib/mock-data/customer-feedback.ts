@@ -38,6 +38,12 @@ export const MOCK_CUSTOMER_FEEDBACK: CustomerFeedback[] = [
     publishedQuote:
       "She found the throughline between the five subjects and defended the long-form structure when marketing pushed back. The strongest editorial we've published this year.",
     publishedForUserId: "u_aliza",
+    capturedByAdminUserId: null,
+    captureContext: null,
+    meetingMinuteId: null,
+    clientConfirmationStatus: null,
+    clientConfirmationToken: null,
+    clientConfirmedAt: null,
     createdAt: "2026-02-21T18:30:00Z",
   },
 
@@ -62,6 +68,12 @@ export const MOCK_CUSTOMER_FEEDBACK: CustomerFeedback[] = [
     publishedAt: null,
     publishedQuote: null,
     publishedForUserId: null,
+    capturedByAdminUserId: null,
+    captureContext: null,
+    meetingMinuteId: null,
+    clientConfirmationStatus: null,
+    clientConfirmationToken: null,
+    clientConfirmedAt: null,
     createdAt: "2026-04-22T16:15:00Z",
   },
 
@@ -86,6 +98,12 @@ export const MOCK_CUSTOMER_FEEDBACK: CustomerFeedback[] = [
     publishedAt: null,
     publishedQuote: null,
     publishedForUserId: null,
+    capturedByAdminUserId: null,
+    captureContext: null,
+    meetingMinuteId: null,
+    clientConfirmationStatus: null,
+    clientConfirmationToken: null,
+    clientConfirmedAt: null,
     createdAt: "2026-04-23T15:00:00Z",
   },
 ];

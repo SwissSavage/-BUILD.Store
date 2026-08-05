@@ -1,0 +1,282 @@
+/**
+ * Signed-agreements admin actions.
+ *
+ * Compose + edit + remove entries in the paperwork registry at
+ * /admin/agreements. Sandbox mutates MOCK_AGREEMENTS in memory;
+ * production persists to the Drizzle `agreements` table (see
+ * src/db/schema.ts).
+ *
+ * Design posture:
+ *   - One row = one signature event. Re-signing a revised covenant
+ *     creates a new row rather than overwriting — the old row is the
+ *     historical record.
+ *   - Every mutation writes to the audit log with an `agreement.*`
+ *     verb. Retention is at least 12 months and 7 years for the
+ *     financial-adjacent subset (LOI / seller_agreement) so the trail
+ *     survives audits.
+ *   - Storage URL is a pointer, not a blob. Actual artifacts live at
+ *     the provider (Adobe Sign / DocuSign) or under
+ *     `Future Modern/deliverables/legal/signed-agreements/` in the
+ *     repo. The registry answers "who signed what, when"; the
+ *     artifact resolves "what did they sign, exactly."
+ *   - Validation is defensive but not draconian — Adobe Sign
+ *     provider entries need an externalRef, manual entries need
+ *     either storageUrl or notes explaining why not, other
+ *     combinations are allowed with an informational message on the
+ *     admin surface (not a hard block).
+ */
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/auth-stub";
+import { MOCK_AGREEMENTS } from "@/lib/mock-data/agreements";
+import { MOCK_USERS } from "@/lib/mock-data/users";
+import {
+  logAuditEvent,
+  snapshotActorRole,
+} from "@/lib/mock-data/audit-log";
+import type { Agreement, AgreementProvider, AgreementType } from "@/lib/types";
+
+// Local guards mirror the union — allows the parser to fail loudly
+// on typos in FormData string values without pulling in a full zod
+// dependency for a handful of narrow enums.
+const AGREEMENT_TYPES: readonly AgreementType[] = [
+  "talent_data",
+  "membership_covenant",
+  "loi",
+  "seller_agreement",
+  "contributor_agreement",
+  "other",
+] as const;
+
+const AGREEMENT_PROVIDERS: readonly AgreementProvider[] = [
+  "adobesign",
+  "docusign",
+  "manual",
+  "in_app",
+  "other",
+] as const;
+
+function isAgreementType(raw: string): raw is AgreementType {
+  return (AGREEMENT_TYPES as readonly string[]).includes(raw);
+}
+
+function isAgreementProvider(raw: string): raw is AgreementProvider {
+  return (AGREEMENT_PROVIDERS as readonly string[]).includes(raw);
+}
+
+function newAgreementId(): string {
+  return `agreement_${Date.now().toString(36)}_${Math.random()
+    .toString(36)
+    .slice(2, 6)}`;
+}
+
+/**
+ * Parse an ISO date-time string; accept either a full ISO 8601 or a
+ * bare YYYY-MM-DD (interpreted as 00:00 UTC). Rejects anything else
+ * so the registry never accepts a garbage timestamp.
+ */
+function parseSignedAt(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) throw new Error("Signed-at date is required.");
+  // Bare YYYY-MM-DD → normalize to 00:00 UTC ISO.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return `${trimmed}T00:00:00Z`;
+  }
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(
+      "Signed-at must be a valid date (YYYY-MM-DD or ISO 8601 datetime).",
+    );
+  }
+  return parsed.toISOString();
+}
+
+/**
+ * Author a new agreement row. All fields except externalRef,
+ * storageUrl, and notes are required. Validates user + provider +
+ * type against the seeded roster and the AgreementType/Provider
+ * unions.
+ */
+export async function createAgreement(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+
+  const userId = String(formData.get("userId") ?? "").trim();
+  const agreementTypeRaw = String(formData.get("agreementType") ?? "").trim();
+  const version = String(formData.get("version") ?? "").trim();
+  const signedAtRaw = String(formData.get("signedAt") ?? "").trim();
+  const providerRaw = String(formData.get("provider") ?? "").trim();
+  const externalRef = String(formData.get("externalRef") ?? "").trim() || null;
+  const storageUrl = String(formData.get("storageUrl") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+
+  if (!userId) throw new Error("Pick a user for this agreement.");
+  const user = MOCK_USERS.find((u) => u.id === userId);
+  if (!user) throw new Error(`Unknown user: ${userId}`);
+
+  if (!isAgreementType(agreementTypeRaw)) {
+    throw new Error(
+      `Unknown agreement type "${agreementTypeRaw}". Allowed: ${AGREEMENT_TYPES.join(", ")}`,
+    );
+  }
+  const agreementType = agreementTypeRaw;
+
+  if (!version) throw new Error("Version is required (e.g. \"1.0\", \"2026-04\").");
+
+  const signedAt = parseSignedAt(signedAtRaw);
+
+  if (!isAgreementProvider(providerRaw)) {
+    throw new Error(
+      `Unknown provider "${providerRaw}". Allowed: ${AGREEMENT_PROVIDERS.join(", ")}`,
+    );
+  }
+  const provider = providerRaw;
+
+  // Soft validation: provider-native entries should carry an
+  // externalRef; manual entries should carry a storageUrl or a note.
+  // Neither is a hard block — historical entries may have gaps —
+  // but the admin surface should render an inline warning.
+  // (Warnings are surfaced by /admin/agreements, not thrown here.)
+
+  const now = new Date().toISOString();
+  const row: Agreement = {
+    id: newAgreementId(),
+    userId,
+    agreementType,
+    version,
+    signedAt,
+    provider,
+    externalRef,
+    storageUrl,
+    notes,
+    createdBy: admin.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+  MOCK_AGREEMENTS.push(row);
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "agreement.created",
+    resourceKind: "agreement",
+    resourceId: row.id,
+    before: null,
+    after: {
+      userId,
+      agreementType,
+      version,
+      signedAt,
+      provider,
+      externalRef,
+      storageUrl,
+    },
+    reason: `Logged ${agreementType} v${version} for ${user.firstName} ${user.lastName ?? ""}`.trim(),
+  });
+
+  revalidatePath("/admin/agreements");
+  revalidatePath(`/admin/members/${userId}`);
+}
+
+/**
+ * Update a subset of fields on an existing row. Intentionally
+ * narrow: userId, agreementType, and signedAt are IMMUTABLE — if
+ * any of those are wrong, remove the row and create a new one so
+ * the audit trail stays honest. Only version, provider, externalRef,
+ * storageUrl, and notes are editable.
+ */
+export async function updateAgreement(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Agreement id is required.");
+
+  const row = MOCK_AGREEMENTS.find((a) => a.id === id);
+  if (!row) throw new Error("Agreement not found.");
+
+  const before = {
+    version: row.version,
+    provider: row.provider,
+    externalRef: row.externalRef,
+    storageUrl: row.storageUrl,
+    notes: row.notes,
+  };
+
+  const version = String(formData.get("version") ?? row.version).trim();
+  const providerRaw = String(formData.get("provider") ?? row.provider).trim();
+  const externalRef = String(formData.get("externalRef") ?? "").trim() || null;
+  const storageUrl = String(formData.get("storageUrl") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+
+  if (!version) throw new Error("Version cannot be empty.");
+  if (!isAgreementProvider(providerRaw)) {
+    throw new Error(`Unknown provider "${providerRaw}".`);
+  }
+
+  row.version = version;
+  row.provider = providerRaw;
+  row.externalRef = externalRef;
+  row.storageUrl = storageUrl;
+  row.notes = notes;
+  row.updatedAt = new Date().toISOString();
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "agreement.updated",
+    resourceKind: "agreement",
+    resourceId: row.id,
+    before,
+    after: {
+      version: row.version,
+      provider: row.provider,
+      externalRef: row.externalRef,
+      storageUrl: row.storageUrl,
+      notes: row.notes,
+    },
+    reason: null,
+  });
+
+  revalidatePath("/admin/agreements");
+  revalidatePath(`/admin/members/${row.userId}`);
+}
+
+/**
+ * Remove a row. Sandbox splices the array; production should
+ * soft-delete instead so gate helpers can distinguish "was signed,
+ * then repudiated" from "never signed." That distinction matters
+ * for compliance disputes and OG-holder reconciliation.
+ */
+export async function removeAgreement(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+
+  const id = String(formData.get("id") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim() || null;
+  if (!id) throw new Error("Agreement id is required.");
+
+  const idx = MOCK_AGREEMENTS.findIndex((a) => a.id === id);
+  if (idx === -1) throw new Error("Agreement not found.");
+  const [removed] = MOCK_AGREEMENTS.splice(idx, 1);
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "agreement.removed",
+    resourceKind: "agreement",
+    resourceId: removed.id,
+    before: {
+      userId: removed.userId,
+      agreementType: removed.agreementType,
+      version: removed.version,
+      signedAt: removed.signedAt,
+      provider: removed.provider,
+      externalRef: removed.externalRef,
+      storageUrl: removed.storageUrl,
+    },
+    after: null,
+    reason,
+  });
+
+  revalidatePath("/admin/agreements");
+  revalidatePath(`/admin/members/${removed.userId}`);
+}

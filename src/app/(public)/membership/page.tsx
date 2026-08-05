@@ -17,8 +17,10 @@ const TIER_ORDER: MembershipTier[] = ["viewer", "prospect", "partner", "member"]
 const TIER_DESCRIPTIONS: Record<MembershipTier, string> = {
   viewer: "Public browsing. See showcase, partners, public content.",
   prospect: "Applied but not yet vetted. Can build a portfolio, see the landscape.",
-  partner: "Active revenue-sharing contributor. Project access, wallet, profile.",
-  member: "Full cooperative rights: governance, DAO autonomy on awarded projects.",
+  partner:
+    "Active revenue-sharing contributor. Project access, wallet, profile. Votes in the Partner body on operational governance.",
+  member:
+    "Full cooperative stewardship. Votes in both bodies (operational plus existential), holds treasury and covenant voice, ratifies structural changes, and holds DAO-style autonomy on awarded projects.",
 };
 
 async function applyForTier(formData: FormData) {

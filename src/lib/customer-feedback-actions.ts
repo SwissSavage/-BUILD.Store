@@ -204,6 +204,12 @@ export async function submitCustomerFeedbackByLink(formData: FormData) {
     publishedAt: null,
     publishedQuote: null,
     publishedForUserId: null,
+    capturedByAdminUserId: null,
+    captureContext: null,
+    meetingMinuteId: null,
+    clientConfirmationStatus: null,
+    clientConfirmationToken: null,
+    clientConfirmedAt: null,
     createdAt: new Date().toISOString(),
     ...parsed,
   };
@@ -300,6 +306,12 @@ export async function submitBuyerFeedback(formData: FormData) {
     publishedAt: null,
     publishedQuote: null,
     publishedForUserId: null,
+    capturedByAdminUserId: null,
+    captureContext: null,
+    meetingMinuteId: null,
+    clientConfirmationStatus: null,
+    clientConfirmationToken: null,
+    clientConfirmedAt: null,
     createdAt: new Date().toISOString(),
   };
   MOCK_CUSTOMER_FEEDBACK.push(row);

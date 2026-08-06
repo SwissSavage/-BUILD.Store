@@ -19,6 +19,11 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { TaglineRare } from "@/components/TaglineRare";
 import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
+import { DefinedTermSchema } from "@/components/DefinedTermSchema";
+import { getEntriesForPage } from "@/lib/glossary";
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";
 
 /**
  * Static-rendered. No cookies, no headers, no dynamic search params —
@@ -35,6 +40,14 @@ export const metadata = {
 export default function AboutPage() {
   return (
     <>
+      {/* DefinedTerm JSON-LD for every canonical term authoritatively
+          defined on this page. Powers AEO/GEO citation ownership — see
+          _memory/future-modern.md → SEO+AEO+GEO section and
+          production-swap-checklist.md §7n1. */}
+      <DefinedTermSchema
+        entries={getEntriesForPage("/about")}
+        pageUrl={`${SITE_URL}/about`}
+      />
       <Hero />
       <WhyWeBuiltThis />
       <PeoplePowered />

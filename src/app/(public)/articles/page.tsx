@@ -65,26 +65,76 @@ export default function ArticlesPage() {
   /**
    * ItemList JSON-LD — makes each Paragraph piece discoverable via
    * FM's domain even though the canonical URL stays on Paragraph.
-   * Each item is a CreativeWork with url + name + datePublished so
+   * Each item is an Article with url + name + datePublished so
    * Google can render carousel-style results when appropriate. Author
    * chain points back to the FM Organization node emitted at the
    * root layout, keeping the graph coherent.
+   *
+   * Individual Article schema (below) complements this — ItemList
+   * gives navigation-level discoverability, per-Article gives
+   * per-piece citation authority. LLM answer engines can retrieve
+   * either signal depending on the question shape.
    */
   const itemListJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
+    itemListOrder: "https://schema.org/ItemListOrderDescending",
+    numberOfItems: articles.length,
     itemListElement: articles.map((article, idx) => ({
       "@type": "ListItem",
       position: idx + 1,
+      url: paragraphUrl(article),
       item: {
-        "@type": "CreativeWork",
+        "@type": "Article",
+        headline: article.title,
         name: article.title,
         url: paragraphUrl(article),
         description: article.excerpt,
         datePublished: article.publishedAt,
+        dateModified: article.publishedAt,
         keywords: article.tags.join(", "),
+        articleSection: article.tags,
         author: { "@id": `${SITE_URL}#organization` },
         publisher: { "@id": `${SITE_URL}#organization` },
+        mainEntityOfPage: paragraphUrl(article),
+        isPartOf: {
+          "@type": "Blog",
+          "@id": `${SITE_URL}/articles#blog`,
+          name: "Future Modern archive",
+          url: `${SITE_URL}/articles`,
+          publisher: { "@id": `${SITE_URL}#organization` },
+        },
+      },
+    })),
+  };
+
+  /**
+   * Standalone Article schema per piece — allows an LLM to retrieve a
+   * specific article as a citation-worthy object rather than only via
+   * the ItemList. Each Article carries its own @id, headline, author
+   * chain, and publisher chain. Emitted alongside ItemList so answer
+   * engines picking up either signal find the piece.
+   */
+  const articleGraph = {
+    "@context": "https://schema.org",
+    "@graph": articles.map((article) => ({
+      "@type": "Article",
+      "@id": `${paragraphUrl(article)}#article`,
+      headline: article.title,
+      name: article.title,
+      url: paragraphUrl(article),
+      description: article.excerpt,
+      datePublished: article.publishedAt,
+      dateModified: article.publishedAt,
+      keywords: article.tags.join(", "),
+      articleSection: article.tags,
+      inLanguage: "en-US",
+      author: { "@id": `${SITE_URL}#organization` },
+      publisher: { "@id": `${SITE_URL}#organization` },
+      mainEntityOfPage: paragraphUrl(article),
+      isPartOf: {
+        "@type": "Blog",
+        "@id": `${SITE_URL}/articles#blog`,
       },
     })),
   };
@@ -94,6 +144,10 @@ export default function ArticlesPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleGraph) }}
       />
       <CardEyebrow>Articles</CardEyebrow>
       <h1 className="mt-2 font-display text-5xl font-semibold leading-tight">

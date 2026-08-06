@@ -691,7 +691,11 @@ function EpkShell({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={epk.heroImageUrl}
-          alt={`${userName} press image`}
+          alt={
+            epk.tagline
+              ? `${userName} press image. ${epk.tagline}`
+              : `${userName} press image. Future Modern cooperative Member.`
+          }
           className="w-full rounded-2xl object-cover"
           style={{ maxHeight: "60vh" }}
         />

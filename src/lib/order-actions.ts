@@ -205,7 +205,7 @@ export async function distributeOrderSplit(formData: FormData) {
   // document) before firing the split. Idempotent — creates once,
   // returns existing on re-run. This is what satisfies the payout
   // gate below.
-  createMarketplaceReceiptInternal({
+  await createMarketplaceReceiptInternal({
     orderId: order.id,
     orderNumber: order.number,
     sellerId: order.sellerId,

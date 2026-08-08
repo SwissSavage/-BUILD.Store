@@ -23,14 +23,21 @@
  * a project has at least one received coop_to_client invoice OR when
  * an order/project has an attached receipt. Settlement actions call
  * this before firing splits.
+ *
+ * SANDBOX→LIVE swap history:
+ *   - Pre-Beta cutover: read/write MOCK_INVOICES + MOCK_PROJECTS
+ *     in-memory arrays.
+ *   - Beta cutover (this file): reads/writes Drizzle invoices +
+ *     projects tables against live Postgres. createMarketplaceReceiptInternal
+ *     is now async (was sync) — see caller updates in order-actions.ts.
  */
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { invoices, projects } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
-import { MOCK_INVOICES } from "@/lib/mock-data/invoices";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   logAuditEvent,
   snapshotActorRole,
@@ -109,7 +116,11 @@ export async function createInternalInvoice(formData: FormData): Promise<void> {
 
   const projectId = String(formData.get("projectId") ?? "").trim();
   if (!projectId) throw new Error("Pick a project to invoice against.");
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
   if (!project) throw new Error("Project not found.");
 
   const notes = String(formData.get("notes") ?? "").trim() || null;
@@ -145,7 +156,7 @@ export async function createInternalInvoice(formData: FormData): Promise<void> {
     createdAt: now,
     updatedAt: now,
   };
-  MOCK_INVOICES.push(row);
+  await db.insert(invoices).values(row);
 
   logAuditEvent({
     actorUserId: user.id,
@@ -183,7 +194,11 @@ export async function approveInternalInvoice(formData: FormData): Promise<void> 
 
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("Invoice id is required.");
-  const row = MOCK_INVOICES.find((i) => i.id === id);
+  const [row] = await db
+    .select()
+    .from(invoices)
+    .where(eq(invoices.id, id))
+    .limit(1);
   if (!row) throw new Error("Invoice not found.");
   if (row.direction !== "talent_to_coop") {
     throw new Error("Only internal invoices are approved through this action.");
@@ -193,10 +208,16 @@ export async function approveInternalInvoice(formData: FormData): Promise<void> 
   }
 
   const before = { status: row.status };
-  row.status = "received";
-  row.paidAt = new Date().toISOString();
-  row.paidAmount = row.total;
-  row.updatedAt = row.paidAt;
+  const paidAt = new Date().toISOString();
+  await db
+    .update(invoices)
+    .set({
+      status: "received",
+      paidAt,
+      paidAmount: row.total,
+      updatedAt: paidAt,
+    })
+    .where(eq(invoices.id, id));
 
   logAuditEvent({
     actorUserId: admin.id,
@@ -205,7 +226,7 @@ export async function approveInternalInvoice(formData: FormData): Promise<void> 
     resourceKind: "cooperative_quote",
     resourceId: row.id,
     before,
-    after: { status: row.status, paidAt: row.paidAt },
+    after: { status: "received", paidAt },
     reason: `Admin approved internal invoice ${row.number}`,
   });
 
@@ -237,7 +258,11 @@ export async function generateExternalInvoice(
 
   const projectId = String(formData.get("projectId") ?? "").trim();
   if (!projectId) throw new Error("Project id is required.");
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
   if (!project) throw new Error("Project not found.");
 
   const clientRecipientId = String(
@@ -247,12 +272,16 @@ export async function generateExternalInvoice(
     throw new Error("Client recipient id/label is required.");
   }
 
-  const internals = MOCK_INVOICES.filter(
-    (i) =>
-      i.contractId === projectId &&
-      i.direction === "talent_to_coop" &&
-      i.status === "received",
-  );
+  const internals = await db
+    .select()
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.contractId, projectId),
+        eq(invoices.direction, "talent_to_coop"),
+        eq(invoices.status, "received"),
+      ),
+    );
   if (internals.length === 0) {
     throw new Error(
       "No approved internal invoices on this project. Approve at least one internal invoice before generating the external.",
@@ -310,7 +339,7 @@ export async function generateExternalInvoice(
     createdAt: now,
     updatedAt: now,
   };
-  MOCK_INVOICES.push(row);
+  await db.insert(invoices).values(row);
 
   logAuditEvent({
     actorUserId: admin.id,
@@ -344,8 +373,11 @@ export async function generateExternalInvoice(
  * from `distributeOrderSplit` (Tier 25) as the payout-authorizing
  * document. Idempotent — refuses to duplicate a receipt for the same
  * order id.
+ *
+ * NOTE: became async in the Beta cutover (was sync). Callers must
+ * now await.
  */
-export function createMarketplaceReceiptInternal(input: {
+export async function createMarketplaceReceiptInternal(input: {
   orderId: string;
   orderNumber: string;
   sellerId: string;
@@ -355,12 +387,18 @@ export function createMarketplaceReceiptInternal(input: {
   total: string;
   stripePaymentIntentId: string | null;
   itemDescription: string;
-}): Invoice | null {
-  const existing = MOCK_INVOICES.find(
-    (i) =>
-      i.direction === "marketplace_receipt" && i.sourceRefId === input.orderId,
-  );
-  if (existing) return existing;
+}): Promise<Invoice | null> {
+  const [existing] = await db
+    .select()
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.direction, "marketplace_receipt"),
+        eq(invoices.sourceRefId, input.orderId),
+      ),
+    )
+    .limit(1);
+  if (existing) return existing as Invoice;
 
   const now = new Date().toISOString();
   const row: Invoice = {
@@ -399,7 +437,7 @@ export function createMarketplaceReceiptInternal(input: {
     createdAt: now,
     updatedAt: now,
   };
-  MOCK_INVOICES.push(row);
+  await db.insert(invoices).values(row);
   return row;
 }
 
@@ -459,7 +497,7 @@ export async function createRetroactiveReceipt(
     createdAt: now,
     updatedAt: now,
   };
-  MOCK_INVOICES.push(row);
+  await db.insert(invoices).values(row);
 
   logAuditEvent({
     actorUserId: admin.id,

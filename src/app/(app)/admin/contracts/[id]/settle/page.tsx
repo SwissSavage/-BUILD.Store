@@ -92,7 +92,7 @@ async function settleContract(formData: FormData) {
   if (MOCK_SPLITS.some((s) => s.contractId === contractId)) {
     throw new Error("Contract already settled.");
   }
-  if (!hasValidPayoutDocument(contractId, "contract_settlement")) {
+  if (!(await hasValidPayoutDocument(contractId, "contract_settlement"))) {
     throw new Error(
       "Settlement refused: no received external invoice or retroactive receipt on this contract. Generate + collect an external invoice (or attach a retroactive receipt) before settling.",
     );

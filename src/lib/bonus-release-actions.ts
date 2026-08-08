@@ -133,7 +133,7 @@ export async function executeBonusDecision(formData: FormData) {
         project.adminUserIds.length > 0 ? project.adminUserIds : members;
       const talentShare = (bonusAmount * 0.85) / members.length;
       try {
-        writeStandardSettlementSplits({
+        await writeStandardSettlementSplits({
           gross: bonusAmount,
           sourceKind: "bonus_release",
           sourceId: project.id,

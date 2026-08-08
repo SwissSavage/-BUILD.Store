@@ -15,10 +15,9 @@
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { db } from "@/db/client";
+import { invoices, projects, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_INVOICES } from "@/lib/mock-data/invoices";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   approveInternalInvoice,
   generateExternalInvoice,
@@ -37,17 +36,6 @@ const USD_FMT = new Intl.NumberFormat("en-US", {
   currency: "USD",
 });
 
-function issuerLabel(id: string): string {
-  const u = MOCK_USERS.find((x) => x.id === id);
-  return u ? publicName(u) : id;
-}
-
-function projectLabel(id: string | null): string {
-  if (!id) return "(no project)";
-  const p = MOCK_PROJECTS.find((x) => x.id === id);
-  return p?.title ?? id;
-}
-
 function byIssuedAtDesc(a: Invoice, b: Invoice) {
   return (b.issuedAt ?? b.createdAt).localeCompare(a.issuedAt ?? a.createdAt);
 }
@@ -56,12 +44,36 @@ export default async function AdminInvoicesPage() {
   const viewer = await getCurrentUser();
   if (!viewer || !viewer.isAdmin) redirect("/signin?next=/admin/invoices");
 
-  const awaitingApproval = MOCK_INVOICES.filter(
-    (i) => i.direction === "talent_to_coop" && i.status === "issued",
-  ).sort(byIssuedAtDesc);
+  // Fetch everything up front, in parallel. Volume is small at Beta
+  // scale (dozens of invoices), so a single unfiltered read + in-memory
+  // filtering keeps this simple; add WHERE clauses if load ever grows.
+  const [allInvoices, allUsers, allProjects] = await Promise.all([
+    db.select().from(invoices),
+    db.select().from(users),
+    db.select().from(projects),
+  ]);
+
+  const userById = new Map(allUsers.map((u) => [u.id, u] as const));
+  const projectById = new Map(allProjects.map((p) => [p.id, p] as const));
+
+  const issuerLabel = (id: string): string => {
+    const u = userById.get(id);
+    return u ? publicName(u) : id;
+  };
+  const projectLabel = (id: string | null): string => {
+    if (!id) return "(no project)";
+    const p = projectById.get(id);
+    return p?.title ?? id;
+  };
+
+  const invoiceRows = allInvoices as unknown as Invoice[];
+
+  const awaitingApproval = invoiceRows
+    .filter((i) => i.direction === "talent_to_coop" && i.status === "issued")
+    .sort(byIssuedAtDesc);
 
   const approvedInternalByProject = new Map<string, Invoice[]>();
-  for (const inv of MOCK_INVOICES) {
+  for (const inv of invoiceRows) {
     if (
       inv.direction === "talent_to_coop" &&
       inv.status === "received" &&
@@ -75,7 +87,7 @@ export default async function AdminInvoicesPage() {
   // Only show projects whose internals haven't been rolled into an
   // external invoice yet. (Any external referencing them → hide.)
   const externallyCoveredInternalIds = new Set<string>();
-  for (const inv of MOCK_INVOICES) {
+  for (const inv of invoiceRows) {
     if (inv.direction === "coop_to_client" && inv.sourceInvoiceIds) {
       for (const id of inv.sourceInvoiceIds) externallyCoveredInternalIds.add(id);
     }
@@ -87,15 +99,17 @@ export default async function AdminInvoicesPage() {
     }))
     .filter((entry) => entry.internals.length > 0);
 
-  const externals = MOCK_INVOICES.filter(
-    (i) => i.direction === "coop_to_client",
-  ).sort(byIssuedAtDesc);
+  const externals = invoiceRows
+    .filter((i) => i.direction === "coop_to_client")
+    .sort(byIssuedAtDesc);
 
-  const receipts = MOCK_INVOICES.filter(
-    (i) =>
-      i.direction === "marketplace_receipt" ||
-      i.direction === "retroactive_receipt",
-  ).sort(byIssuedAtDesc);
+  const receipts = invoiceRows
+    .filter(
+      (i) =>
+        i.direction === "marketplace_receipt" ||
+        i.direction === "retroactive_receipt",
+    )
+    .sort(byIssuedAtDesc);
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -193,7 +207,7 @@ export default async function AdminInvoicesPage() {
         ) : (
           <ul className="mt-4 space-y-3">
             {readyToAggregate.map(({ projectId, internals }) => {
-              const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+              const project = projectById.get(projectId);
               const internalSum = internals.reduce(
                 (s, i) => s + Number(i.total),
                 0,
@@ -268,7 +282,11 @@ export default async function AdminInvoicesPage() {
           <ul className="mt-4 space-y-3">
             {externals.map((inv) => (
               <li key={inv.id}>
-                <InvoiceRow inv={inv} />
+                <InvoiceRow
+                  inv={inv}
+                  projectLabel={projectLabel(inv.contractId)}
+                  issuerLabelText={issuerLabel(inv.issuerId)}
+                />
               </li>
             ))}
           </ul>
@@ -291,7 +309,11 @@ export default async function AdminInvoicesPage() {
           <ul className="mt-4 space-y-3">
             {receipts.map((inv) => (
               <li key={inv.id}>
-                <InvoiceRow inv={inv} />
+                <InvoiceRow
+                  inv={inv}
+                  projectLabel={projectLabel(inv.contractId)}
+                  issuerLabelText={issuerLabel(inv.issuerId)}
+                />
               </li>
             ))}
           </ul>
@@ -402,7 +424,15 @@ export default async function AdminInvoicesPage() {
   );
 }
 
-function InvoiceRow({ inv }: { inv: Invoice }) {
+function InvoiceRow({
+  inv,
+  projectLabel,
+  issuerLabelText,
+}: {
+  inv: Invoice;
+  projectLabel: string;
+  issuerLabelText: string;
+}) {
   return (
     <Card>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -417,10 +447,10 @@ function InvoiceRow({ inv }: { inv: Invoice }) {
             {" · status "}
             {inv.status}
             {" · "}
-            {projectLabel(inv.contractId)}
+            {projectLabel}
           </p>
           <p className="mt-1 text-[11px] text-ink-faint">
-            Issuer: {issuerLabel(inv.issuerId)} · Recipient:{" "}
+            Issuer: {issuerLabelText} · Recipient:{" "}
             <code className="rounded bg-[var(--surface-inset)] px-1 py-0.5">
               {inv.recipientId}
             </code>

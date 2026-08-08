@@ -39,7 +39,7 @@ export async function distributeDonationSplit(formData: FormData): Promise<void>
     throw new Error("Donation amount is zero or negative — cannot settle.");
   }
 
-  writeDonationSplit({
+  await writeDonationSplit({
     gross,
     sourceId: purchase.id,
     actorUserId: admin.id,

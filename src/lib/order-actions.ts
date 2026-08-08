@@ -262,7 +262,7 @@ export async function distributeOrderSplit(formData: FormData) {
     });
   } else {
     try {
-      writeStandardSettlementSplits({
+      await writeStandardSettlementSplits({
         gross: Number(order.subtotal),
         sourceKind: "order_settlement",
         sourceId: order.id,

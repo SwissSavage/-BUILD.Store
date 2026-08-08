@@ -136,7 +136,7 @@ async function settleContract(formData: FormData) {
 
   // Delegate to the shared settlement engine — handles pool math,
   // reserve routing to Treasury/LP, and audit-log emission.
-  writeStandardSettlementSplits({
+  await writeStandardSettlementSplits({
     gross: collected,
     sourceKind: "contract_settlement",
     sourceId: contractId,

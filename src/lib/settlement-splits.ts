@@ -20,16 +20,22 @@
  *   - Treasury         = 50% of gross
  *   - LP               = 50% of gross
  *
- * Sandbox mutates MOCK_SPLITS in memory. Production writes to the
- * Drizzle `revenue_splits` table.
+ * SANDBOX→LIVE swap history:
+ *   - Pre-Beta cutover: MOCK_SPLITS.push mutation, no transactional
+ *     guarantee across the 4-6 rows.
+ *   - Beta cutover (this file): db.insert(revenueSplits) inside
+ *     db.transaction(). All-or-nothing atomic write; if any row
+ *     violates a constraint the whole settlement rolls back.
  *
  * NOTE: this module writes CASH splits only. $BUILD voucher issuance
- * for the same settlement event fires through
- * `distributeBuild()` → `issueVoucherInternal()`. Tier 28 will unify
- * the two so a single settlement call produces cash + voucher rows
- * atomically.
+ * for the same settlement event still fires through
+ * `distributeBuild()` → `issueVoucherInternal()` as a separate
+ * transaction until the wallet-stub Drizzle swap lands (next commit).
+ * Once that ships, cash + voucher rows will fire in a single
+ * db.transaction so the two settle atomically.
  */
-import { MOCK_SPLITS } from "@/lib/mock-data/splits";
+import { db } from "@/db/client";
+import { revenueSplits } from "@/db/schema";
 import {
   logAuditEvent,
   snapshotActorRole,
@@ -140,9 +146,9 @@ export interface WriteSplitsResult {
  *   - amounts don't sum to the contributor pool (within $0.01 tolerance)
  *   - percentages don't sum to 100 (within 0.01% tolerance)
  */
-export function writeStandardSettlementSplits(
+export async function writeStandardSettlementSplits(
   input: WriteStandardSplitsInput,
-): WriteSplitsResult {
+): Promise<WriteSplitsResult> {
   if (input.gross <= 0) {
     throw new Error(`Cannot settle non-positive gross amount: ${input.gross}`);
   }
@@ -249,9 +255,13 @@ export function writeStandardSettlementSplits(
     label: "$BUILD liquidity pool",
   }));
 
-  // Commit all rows atomically (sandbox: single splice). Fail-fast
-  // above means we never end up with partial writes.
-  MOCK_SPLITS.push(...rows);
+  // Commit all rows atomically inside a Postgres transaction. Fail-
+  // fast validation above means the transaction body only runs when
+  // the row shapes are already validated; any DB-level constraint
+  // violation still rolls the whole insert back cleanly.
+  await db.transaction(async (tx) => {
+    await tx.insert(revenueSplits).values(rows);
+  });
 
   logAuditEvent({
     actorUserId: input.actorUserId,
@@ -315,9 +325,9 @@ export interface WriteDonationSplitInput {
   noteContext?: string;
 }
 
-export function writeDonationSplit(
+export async function writeDonationSplit(
   input: WriteDonationSplitInput,
-): WriteSplitsResult {
+): Promise<WriteSplitsResult> {
   if (input.gross <= 0) {
     throw new Error(`Cannot settle non-positive donation: ${input.gross}`);
   }
@@ -364,7 +374,9 @@ export function writeDonationSplit(
       notes: input.noteContext ?? "War-chest donation: 50% to LP.",
     },
   ];
-  MOCK_SPLITS.push(...rows);
+  await db.transaction(async (tx) => {
+    await tx.insert(revenueSplits).values(rows);
+  });
 
   logAuditEvent({
     actorUserId: input.actorUserId,

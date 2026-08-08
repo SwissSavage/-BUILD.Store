@@ -12,6 +12,11 @@
  */
 import Link from "next/link";
 import { CardEyebrow } from "@/components/Card";
+import { DefinedTermSchema } from "@/components/DefinedTermSchema";
+import { getEntriesForPage } from "@/lib/glossary";
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";
 
 /** Static-rendered. Cooperative Covenant is a published document. */
 export const dynamic = "force-static";
@@ -19,6 +24,12 @@ export const dynamic = "force-static";
 export default function CovenantPolicy() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
+      {/* DefinedTerm JSON-LD for through-and-out + bicameral governance
+          which the covenant authoritatively anchors. */}
+      <DefinedTermSchema
+        entries={getEntriesForPage("/policies/covenant")}
+        pageUrl={`${SITE_URL}/policies/covenant`}
+      />
       <CardEyebrow>Policy</CardEyebrow>
       <h1 className="mt-2 font-display text-4xl font-semibold">
         Cooperative Covenant

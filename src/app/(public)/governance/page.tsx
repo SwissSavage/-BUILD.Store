@@ -15,6 +15,11 @@ import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
 import { Faq, type FaqItem } from "@/components/Faq";
+import { DefinedTermSchema } from "@/components/DefinedTermSchema";
+import { getEntriesForPage } from "@/lib/glossary";
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";
 
 /**
  * Static-rendered. Constellation is a client component that hydrates
@@ -25,6 +30,12 @@ export const dynamic = "force-static";
 export default function GovernancePage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
+      {/* DefinedTerm JSON-LD for every canonical term authoritatively
+          defined on this page. See /glossary for the full index. */}
+      <DefinedTermSchema
+        entries={getEntriesForPage("/governance")}
+        pageUrl={`${SITE_URL}/governance`}
+      />
       <CardEyebrow>Governance</CardEyebrow>
       <h1 className="mt-2 font-display text-4xl font-semibold">
         The Venture Labor OS

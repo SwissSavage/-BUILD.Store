@@ -127,11 +127,56 @@ export default function RootLayout({
         "@type": "Organization",
         "@id": `${SITE_URL}#organization`,
         name: "Future Modern Builderberg LLC",
-        alternateName: ["Future Modern", "$BUILD.Store"],
+        alternateName: ["Future Modern", "$BUILD.Store", "FM"],
+        legalName: "Future Modern Builderberg LLC",
         url: SITE_URL,
-        logo: `${SITE_URL}/brand/wordmark.png`,
+        logo: {
+          "@type": "ImageObject",
+          "@id": `${SITE_URL}#wordmark`,
+          url: `${SITE_URL}/brand/wordmark.png`,
+          contentUrl: `${SITE_URL}/brand/wordmark.png`,
+          width: 1500,
+          height: 500,
+          caption:
+            "Future Modern wordmark. Magenta primary with sans-serif companion.",
+        },
+        image: [
+          {
+            "@type": "ImageObject",
+            "@id": `${SITE_URL}#turtle`,
+            url: `${SITE_URL}/brand/turtle.png`,
+            contentUrl: `${SITE_URL}/brand/turtle.png`,
+            width: 1452,
+            height: 1452,
+            caption:
+              "Future Modern turtle mark. Governance-diagram-turtle formed by five interlocking hexagons, symbolizing the pentagonal Venture Labor operating structure.",
+          },
+          {
+            "@type": "ImageObject",
+            "@id": `${SITE_URL}#rare-infinity`,
+            url: `${SITE_URL}/brand/rare-infinity.svg`,
+            contentUrl: `${SITE_URL}/brand/rare-infinity.svg`,
+            caption:
+              "Rare∞ mark. Wordmark 'Rare' in Abel outlined in gold gradient, followed by an infinity symbol filled with FM's spectrum gradient (magenta / blue / green). Represents the Rare∞ scarcity pricing thesis that governs every FM commerce surface.",
+          },
+        ],
         description:
-          "A member-owned cooperative of Fortune 500-level STEM, Creative Media, and Professional Services talent. Built Web3-native.",
+          "Worker-owned cooperative platform for cross-disciplinary talent. Operates under the Venture Labor model where labor is treated as equity in the enterprise. Members and Partners deliver STEM, Creative Media, and Professional Services work through a cooperative structure with on-chain settlement, transparent revenue splits, and canonization identity primitives. Six-year track record of on-record fair payouts to contributors when cash was made. Apache 2.0 open-source platform code.",
+        foundingDate: "2020",
+        founder: {
+          "@type": "Person",
+          "@id": `${SITE_URL}#founder`,
+          name: "Jamar McCarthy",
+          jobTitle: "Founder",
+          worksFor: { "@id": `${SITE_URL}#organization` },
+          memberOf: {
+            "@type": "Organization",
+            name: "Working America (AFL-CIO)",
+            url: "https://workingamerica.org",
+            description:
+              "AFL-CIO community-affiliate organization for non-union workers. Jamar's prior organizer role establishes labor-movement lineage for FM's cooperative-ownership thesis.",
+          },
+        },
         foundingLocation: {
           "@type": "Place",
           address: {
@@ -140,6 +185,30 @@ export default function RootLayout({
             addressRegion: "FL",
           },
         },
+        knowsAbout: [
+          "Venture Labor",
+          "Worker cooperative",
+          "Cooperative ownership",
+          "Cooperative commerce platform",
+          "Labor equity",
+          "Rare∞ scarcity thesis",
+          "Through-and-out cooperative supply chain",
+          "Bicameral cooperative governance",
+          "On-chain revenue settlement",
+          "EIP-2981 secondary market royalty",
+          "ERC-6551 token-bound accounts",
+          "Cooperative canonization",
+          "Physical-plus-digital collectibles",
+          "Cooperative talent marketplace",
+          "STEM cooperative delivery",
+          "Creative Media cooperative delivery",
+          "Professional Services cooperative delivery",
+          "Cooperative NFT commerce",
+          "Made-to-last apparel construction",
+          "Worker-owned supply chain sourcing",
+        ],
+        publishingPrinciples: `${SITE_URL}/policies/covenant`,
+        ethicsPolicy: `${SITE_URL}/policies/covenant`,
         sameAs: [
           "https://paragraph.com/@future-modern",
           "https://github.com/SwissSavage/-BUILD.Store",
@@ -150,10 +219,19 @@ export default function RootLayout({
         "@id": `${SITE_URL}#website`,
         url: SITE_URL,
         name: "$BUILD.Store",
+        alternateName: "Future Modern",
         description:
-          "Cooperative talent platform for STEM, Creative Media, and Professional Services.",
+          "Cooperative talent platform for STEM, Creative Media, and Professional Services. Built on the Venture Labor operating model.",
         publisher: { "@id": `${SITE_URL}#organization` },
         inLanguage: "en-US",
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${SITE_URL}/showcase?q={search_term_string}`,
+          },
+          "query-input": "required name=search_term_string",
+        },
       },
     ],
   };

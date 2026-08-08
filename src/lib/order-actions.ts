@@ -220,7 +220,7 @@ export async function distributeOrderSplit(formData: FormData) {
         : `${order.items.length} items on order ${order.number}`,
   });
 
-  if (!hasValidPayoutDocument(order.id, "order_settlement")) {
+  if (!(await hasValidPayoutDocument(order.id, "order_settlement"))) {
     throw new Error(
       "Order settlement refused: no marketplace receipt attached. This should have been auto-generated — check /admin/invoices.",
     );

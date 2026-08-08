@@ -82,7 +82,7 @@ export async function executeBonusDecision(formData: FormData) {
   // Payout gate: bonus release rides on the same client payment that
   // authorized the base contract settlement. If no external invoice
   // (or retroactive receipt) exists on this project, block.
-  if (!hasValidPayoutDocument(projectId, "bonus_release")) {
+  if (!(await hasValidPayoutDocument(projectId, "bonus_release"))) {
     throw new Error(
       "Bonus release refused: no external invoice or retroactive receipt on this contract. Attach one before firing the bonus decision.",
     );

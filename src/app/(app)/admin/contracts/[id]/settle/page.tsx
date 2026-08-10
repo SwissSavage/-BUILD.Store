@@ -32,10 +32,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { projects, revenueSplits } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_ATTRIBUTION } from "@/lib/mock-data/attribution";
-import { MOCK_SPLITS, RESERVE_RECIPIENTS } from "@/lib/mock-data/splits";
+import { RESERVE_RECIPIENTS } from "@/lib/mock-data/splits";
 import {
   ADMIN_PCT,
   LP_PCT,
@@ -85,11 +87,20 @@ async function settleContract(formData: FormData) {
   if (!admin || !admin.isAdmin) throw new Error("Admin only");
 
   const contractId = String(formData.get("contractId") ?? "");
-  const project = MOCK_PROJECTS.find((p) => p.id === contractId);
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, contractId))
+    .limit(1);
   if (!project || !project.collectedRevenue) {
     throw new Error("Contract not eligible — no collected revenue.");
   }
-  if (MOCK_SPLITS.some((s) => s.contractId === contractId)) {
+  const existingSplitCheck = await db
+    .select({ id: revenueSplits.id })
+    .from(revenueSplits)
+    .where(eq(revenueSplits.contractId, contractId))
+    .limit(1);
+  if (existingSplitCheck.length > 0) {
     throw new Error("Contract already settled.");
   }
   if (!(await hasValidPayoutDocument(contractId, "contract_settlement"))) {
@@ -179,7 +190,10 @@ async function settleContract(formData: FormData) {
 
   // Dispatch transfers. Per-row try/catch so one KYC failure doesn't
   // block the rest — each row tracks its own status for retry.
-  const newRows = MOCK_SPLITS.filter((s) => s.contractId === contractId);
+  const newRows = await db
+    .select()
+    .from(revenueSplits)
+    .where(eq(revenueSplits.contractId, contractId));
   for (const row of newRows) {
     try {
       await dispatchTransfer(row.id);
@@ -188,8 +202,10 @@ async function settleContract(formData: FormData) {
     }
   }
 
-  project.status = "completed";
-  project.updatedAt = now;
+  await db
+    .update(projects)
+    .set({ status: "completed", updatedAt: now })
+    .where(eq(projects.id, contractId));
 
   revalidatePath(`/admin/contracts/${contractId}/settle`);
   revalidatePath("/admin/contracts");
@@ -205,10 +221,17 @@ export default async function SettlePage({
   if (!admin || !admin.isAdmin) redirect("/dashboard");
 
   const { id } = await params;
-  const project = MOCK_PROJECTS.find((p) => p.id === id);
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, id))
+    .limit(1);
   if (!project || project.kind !== "contract") notFound();
 
-  const existingSplits = MOCK_SPLITS.filter((s) => s.contractId === id);
+  const existingSplits = await db
+    .select()
+    .from(revenueSplits)
+    .where(eq(revenueSplits.contractId, id));
   if (existingSplits.length > 0) {
     return <SettledView project={project} splits={existingSplits} />;
   }
@@ -329,7 +352,7 @@ export default async function SettlePage({
         />
       </div>
 
-      <BonusReleasePanel project={project} />
+      <BonusReleasePanel project={project as unknown as Project} />
 
       {contributorRows.length === 0 && (
         <Card className="mt-6">
@@ -552,7 +575,7 @@ function SettledView({
   project,
   splits,
 }: {
-  project: typeof MOCK_PROJECTS[number];
+  project: typeof projects.$inferSelect;
   splits: RevenueSplit[];
 }) {
   const collected = Number(project.collectedRevenue ?? "0");

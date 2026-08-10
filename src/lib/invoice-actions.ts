@@ -364,6 +364,124 @@ export async function generateExternalInvoice(
   revalidatePath(`/admin/contracts/${projectId}/settle`);
 }
 
+/**
+ * Admin logs payment received on an external (coop_to_client) invoice.
+ * This is the moment the payout gate opens for settlement to fire —
+ * once a coop_to_client invoice is `received`, hasValidPayoutDocument()
+ * returns true and the settle page will accept a distribution.
+ *
+ * Supports partial payments: if paidAmount < total, status flips to
+ * `partially_received` and a subsequent log-payment call can top it up
+ * to full receipt.
+ *
+ * Idempotent-refusing: rejects if already `received` (use a new invoice
+ * for corrections rather than re-marking) or `void`.
+ */
+export async function markExternalInvoicePaid(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireAdmin();
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Invoice id is required.");
+
+  const [row] = await db
+    .select()
+    .from(invoices)
+    .where(eq(invoices.id, id))
+    .limit(1);
+  if (!row) throw new Error("Invoice not found.");
+  if (row.direction !== "coop_to_client") {
+    throw new Error(
+      "Only external (coop_to_client) invoices are marked paid through this action.",
+    );
+  }
+  if (row.status === "received") {
+    throw new Error("Invoice already fully received.");
+  }
+  if (row.status === "void") {
+    throw new Error("Invoice is void; cannot log payment against it.");
+  }
+
+  const rawAmount = String(formData.get("amount") ?? "").trim();
+  const total = Number(row.total);
+  const alreadyPaid = Number(row.paidAmount);
+  const remaining = Math.max(0, total - alreadyPaid);
+  const paymentAmount = rawAmount ? Number(rawAmount) : remaining;
+  if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+    throw new Error("Payment amount must be a positive number.");
+  }
+  if (paymentAmount > remaining + 0.01) {
+    throw new Error(
+      `Payment amount ${paymentAmount.toFixed(2)} exceeds remaining balance ${remaining.toFixed(2)}.`,
+    );
+  }
+
+  const newPaidAmount = alreadyPaid + paymentAmount;
+  const nowFullyPaid = Math.abs(newPaidAmount - total) < 0.01;
+  const newStatus = nowFullyPaid ? "received" : "partially_received";
+
+  const method = (String(formData.get("method") ?? "").trim() ||
+    null) as
+    | "ach_mercury"
+    | "wire_mercury"
+    | "cc_stripe"
+    | "check"
+    | "other"
+    | null;
+  const externalRef = String(formData.get("externalRef") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  const now = new Date().toISOString();
+  const paidAt = nowFullyPaid ? now : row.paidAt;
+
+  const notesAppendix = notes
+    ? `${row.notes ? row.notes + " · " : ""}Payment ${paymentAmount.toFixed(2)} on ${now.slice(0, 10)}: ${notes}`
+    : row.notes;
+
+  await db
+    .update(invoices)
+    .set({
+      status: newStatus,
+      paidAt,
+      paidAmount: newPaidAmount.toFixed(2),
+      paymentMethod: method ?? row.paymentMethod,
+      mercuryReference:
+        method === "ach_mercury" || method === "wire_mercury"
+          ? externalRef ?? row.mercuryReference
+          : row.mercuryReference,
+      stripePaymentIntentId:
+        method === "cc_stripe"
+          ? externalRef ?? row.stripePaymentIntentId
+          : row.stripePaymentIntentId,
+      notes: notesAppendix,
+      updatedAt: now,
+    })
+    .where(eq(invoices.id, id));
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "quote.approved",
+    resourceKind: "cooperative_quote",
+    resourceId: row.id,
+    before: { status: row.status, paidAmount: row.paidAmount },
+    after: {
+      status: newStatus,
+      paidAmount: newPaidAmount.toFixed(2),
+      paymentMethod: method ?? row.paymentMethod,
+      externalRef,
+    },
+    reason: `Admin logged payment ${paymentAmount.toFixed(2)} on external invoice ${row.number}${nowFullyPaid ? " (fully received; payout gate now open)" : " (partial receipt)"}`,
+  });
+
+  revalidatePath("/admin/invoices");
+  if (row.contractId) {
+    revalidatePath(`/admin/contracts/${row.contractId}/settle`);
+    revalidatePath(`/admin/contracts/${row.contractId}/ledger`);
+  }
+}
+
 // ────────────────────────────────────────────────────────────────
 //  Receipt flows
 // ────────────────────────────────────────────────────────────────

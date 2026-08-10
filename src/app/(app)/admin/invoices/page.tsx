@@ -22,6 +22,7 @@ import {
   approveInternalInvoice,
   generateExternalInvoice,
   createRetroactiveReceipt,
+  markExternalInvoicePaid,
 } from "@/lib/invoice-actions";
 import {
   INVOICE_DIRECTION_LABELS,
@@ -280,15 +281,92 @@ export default async function AdminInvoicesPage() {
           </Card>
         ) : (
           <ul className="mt-4 space-y-3">
-            {externals.map((inv) => (
-              <li key={inv.id}>
-                <InvoiceRow
-                  inv={inv}
-                  projectLabel={projectLabel(inv.contractId)}
-                  issuerLabelText={issuerLabel(inv.issuerId)}
-                />
-              </li>
-            ))}
+            {externals.map((inv) => {
+              const openForPayment =
+                inv.status === "issued" || inv.status === "partially_received";
+              const totalNum = Number(inv.total);
+              const paidNum = Number(inv.paidAmount);
+              const remaining = Math.max(0, totalNum - paidNum);
+              return (
+                <li key={inv.id} className="space-y-2">
+                  <InvoiceRow
+                    inv={inv}
+                    projectLabel={projectLabel(inv.contractId)}
+                    issuerLabelText={issuerLabel(inv.issuerId)}
+                  />
+                  {openForPayment && (
+                    <Card className="border border-brand-magenta/30">
+                      <CardEyebrow>Log payment received</CardEyebrow>
+                      <p className="mt-1 text-[11px] text-ink-faint">
+                        Remaining balance:{" "}
+                        <strong>{USD_FMT.format(remaining)}</strong>
+                        {paidNum > 0
+                          ? ` (partial receipts logged: ${USD_FMT.format(paidNum)})`
+                          : ""}
+                        . Marking fully paid opens the payout gate for
+                        settlement on this contract.
+                      </p>
+                      <form
+                        action={markExternalInvoicePaid}
+                        className="mt-3 flex flex-wrap items-end gap-2"
+                      >
+                        <input type="hidden" name="id" value={inv.id} />
+                        <label className="flex flex-col text-[10px] uppercase tracking-wider text-ink-faint">
+                          Amount ($)
+                          <input
+                            name="amount"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            defaultValue={remaining.toFixed(2)}
+                            className="mt-1 w-32 rounded border border-ink-muted/30 bg-transparent px-2 py-1 text-sm text-ink-dark"
+                            required
+                          />
+                        </label>
+                        <label className="flex flex-col text-[10px] uppercase tracking-wider text-ink-faint">
+                          Method
+                          <select
+                            name="method"
+                            defaultValue="ach_mercury"
+                            className="mt-1 rounded border border-ink-muted/30 bg-transparent px-2 py-1 text-sm text-ink-dark"
+                          >
+                            <option value="ach_mercury">ACH (Mercury)</option>
+                            <option value="wire_mercury">Wire (Mercury)</option>
+                            <option value="cc_stripe">Card (Stripe)</option>
+                            <option value="check">Check</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </label>
+                        <label className="flex flex-col text-[10px] uppercase tracking-wider text-ink-faint">
+                          External ref
+                          <input
+                            name="externalRef"
+                            type="text"
+                            placeholder="ACH id / check # / txn id"
+                            className="mt-1 w-56 rounded border border-ink-muted/30 bg-transparent px-2 py-1 text-sm text-ink-dark"
+                          />
+                        </label>
+                        <label className="flex flex-1 flex-col text-[10px] uppercase tracking-wider text-ink-faint">
+                          Notes
+                          <input
+                            name="notes"
+                            type="text"
+                            placeholder="Optional context (e.g., partial payment reason)"
+                            className="mt-1 rounded border border-ink-muted/30 bg-transparent px-2 py-1 text-sm text-ink-dark"
+                          />
+                        </label>
+                        <button
+                          type="submit"
+                          className="rounded-full bg-brand-magenta px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:opacity-90"
+                        >
+                          Log payment
+                        </button>
+                      </form>
+                    </Card>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

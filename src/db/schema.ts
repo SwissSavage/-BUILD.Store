@@ -731,6 +731,26 @@ export const invoices = pgTable("invoices", {
   mercuryReference: text("mercury_reference"),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   notes: text("notes"),
+  // ── Documenso signature tracking ──────────────────────────────────
+  // Populated when the doc is routed through Documenso for signature.
+  // Null means no signature required (most invoices don't need one —
+  // retroactive_receipt is the primary case). The envelope id is the
+  // canonical handle for follow-up calls against the Documenso API.
+  documensoEnvelopeId: text("documenso_envelope_id"),
+  signatureStatus: text("signature_status", {
+    enum: [
+      "pending",
+      "sent",
+      "viewed",
+      "completed",
+      "rejected",
+      "voided",
+    ],
+  }),
+  signatureCompletedAt: timestamp("signature_completed_at", {
+    mode: "string",
+    withTimezone: true,
+  }),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
   updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
 });
@@ -1259,11 +1279,37 @@ export const agreements = pgTable("agreements", {
   version: text("version").notNull(),
   signedAt: timestamp("signed_at", { mode: "string", withTimezone: true }).notNull(),
   provider: text("provider", {
-    enum: ["adobesign", "docusign", "manual", "in_app", "other"],
+    enum: [
+      "adobesign",
+      "docusign",
+      "documenso",
+      "manual",
+      "in_app",
+      "other",
+    ],
   }).notNull(),
   externalRef: text("external_ref"),
   storageUrl: text("storage_url"),
   notes: text("notes"),
+  // ── Documenso signature tracking ──────────────────────────────────
+  // When provider === "documenso" these carry the live envelope handle
+  // + state so the webhook state machine can advance the record without
+  // an out-of-band lookup. Null for non-Documenso providers.
+  documensoEnvelopeId: text("documenso_envelope_id"),
+  signatureStatus: text("signature_status", {
+    enum: [
+      "pending",
+      "sent",
+      "viewed",
+      "completed",
+      "rejected",
+      "voided",
+    ],
+  }),
+  signatureCompletedAt: timestamp("signature_completed_at", {
+    mode: "string",
+    withTimezone: true,
+  }),
   createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
   updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),

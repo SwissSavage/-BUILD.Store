@@ -35,7 +35,17 @@ import {
   logAuditEvent,
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
-import type { Agreement, AgreementProvider, AgreementType } from "@/lib/types";
+import {
+  publicName,
+  type Agreement,
+  type AgreementProvider,
+  type AgreementType,
+} from "@/lib/types";
+import {
+  DOCUMENSO_TEMPLATES,
+  DocumensoError,
+  inviteRecipientToTemplate,
+} from "@/lib/documenso";
 
 // Local guards mirror the union — allows the parser to fail loudly
 // on typos in FormData string values without pulling in a full zod
@@ -52,6 +62,7 @@ const AGREEMENT_TYPES: readonly AgreementType[] = [
 const AGREEMENT_PROVIDERS: readonly AgreementProvider[] = [
   "adobesign",
   "docusign",
+  "documenso",
   "manual",
   "in_app",
   "other",
@@ -149,6 +160,12 @@ export async function createAgreement(formData: FormData): Promise<void> {
     externalRef,
     storageUrl,
     notes,
+    // Manual createAgreement path doesn't touch Documenso — signature
+    // tracking columns stay null. Rows created via the Documenso
+    // webhook (task #19) will populate these.
+    documensoEnvelopeId: null,
+    signatureStatus: null,
+    signatureCompletedAt: null,
     createdBy: admin.id,
     createdAt: now,
     updatedAt: now,
@@ -279,4 +296,96 @@ export async function removeAgreement(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/agreements");
   revalidatePath(`/admin/members/${removed.userId}`);
+}
+
+// ────────────────────────────────────────────────────────────────
+//  Documenso — Send Talent Partner LOI for signature
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Dispatch the Talent Partner Letter of Intent through Documenso for
+ * signature. This does NOT create an Agreement row yet — the row is
+ * inserted by the webhook handler (task #19) on envelope.completed,
+ * with signedAt populated from the actual completion time.
+ *
+ * FormData:
+ *   - userId          FM user id of the invitee (required)
+ *   - recipientEmail  optional override — defaults to the user's
+ *                     account email
+ *
+ * Failure surfaces:
+ *   - Missing DOCUMENSO_TEMPLATE_TALENT_PARTNER_LOI env var → hard
+ *     error, admin should populate it in Dokploy.
+ *   - Documenso 4xx/5xx → surfaced verbatim so the admin can debug
+ *     on the sign.afuturemodern.com side.
+ */
+export async function sendLoiForSignature(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireAdmin();
+
+  const userId = String(formData.get("userId") ?? "").trim();
+  const overrideEmail =
+    String(formData.get("recipientEmail") ?? "").trim() || null;
+  if (!userId) throw new Error("Pick a user to send the LOI to.");
+
+  const user = MOCK_USERS.find((u) => u.id === userId);
+  if (!user) throw new Error(`Unknown user: ${userId}`);
+
+  const recipientEmail = overrideEmail ?? user.email;
+  if (!recipientEmail) {
+    throw new Error(
+      `No email on file for ${publicName(user)}. Supply recipientEmail on the form to route this envelope.`,
+    );
+  }
+  const recipientName = publicName(user);
+
+  let envelopeId: string;
+  try {
+    const envelope = await inviteRecipientToTemplate({
+      templateEnvelopeId: DOCUMENSO_TEMPLATES.TALENT_PARTNER_LOI,
+      recipient: {
+        email: recipientEmail,
+        name: recipientName,
+        role: "SIGNER",
+      },
+      title: `Talent Partner Letter of Intent — ${recipientName}`,
+      metadata: {
+        userId,
+        agreementType: "loi",
+      },
+    });
+    envelopeId = envelope.id;
+  } catch (err) {
+    if (err instanceof DocumensoError) {
+      throw new Error(
+        `Documenso rejected the envelope: ${err.message} (HTTP ${err.status}). ` +
+          `Check DOCUMENSO_TEMPLATE_TALENT_PARTNER_LOI is set and the template envelope exists on sign.afuturemodern.com.`,
+      );
+    }
+    throw err;
+  }
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "document.signature_requested",
+    resourceKind: "agreement",
+    // Envelope id doubles as the resource id until an Agreement row
+    // exists — the webhook handler stitches the two together when it
+    // creates the row on completion.
+    resourceId: envelopeId,
+    before: null,
+    after: {
+      documensoEnvelopeId: envelopeId,
+      signatureStatus: "sent",
+      agreementType: "loi",
+      userId,
+      recipientEmail,
+    },
+    reason: `Talent Partner LOI sent to ${recipientName} <${recipientEmail}> via Documenso.`,
+  });
+
+  revalidatePath("/admin/agreements");
+  revalidatePath(`/admin/members/${userId}`);
 }

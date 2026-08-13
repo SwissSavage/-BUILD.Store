@@ -1345,15 +1345,40 @@ export interface Invoice {
   /** Stripe Payment Intent ID once funds land via CC. Null on Mercury. */
   stripePaymentIntentId: string | null;
   notes: string | null;
+  /**
+   * Documenso envelope id if this document was routed through Documenso
+   * for signature capture. Retroactive receipts are the primary case;
+   * external client invoices could layer on later. Null when no
+   * signature workflow was ever started for this row.
+   */
+  documensoEnvelopeId: string | null;
+  /**
+   * Current signature-workflow state — null when no signature was ever
+   * requested. See SignatureStatus for the state machine. Populated by
+   * the send-for-signature action and advanced by the Documenso webhook.
+   */
+  signatureStatus: SignatureStatus | null;
+  /** ISO timestamp when signatureStatus first flipped to "completed". */
+  signatureCompletedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 /**
  * Returns the version of an Invoice safe to show on a client magic-link
- * view. Strips internal admin notes.
+ * view. Strips internal admin notes and Documenso envelope handles
+ * (the signing link is dispatched by Documenso itself; the FM client
+ * surface never surfaces the internal envelope id).
  */
-export function clientInvoiceView(invoice: Invoice): Omit<Invoice, "notes"> {
+export function clientInvoiceView(
+  invoice: Invoice,
+): Omit<
+  Invoice,
+  | "notes"
+  | "documensoEnvelopeId"
+  | "signatureStatus"
+  | "signatureCompletedAt"
+> {
   return {
     id: invoice.id,
     direction: invoice.direction,
@@ -3774,6 +3799,7 @@ export const AGREEMENT_TYPE_LABELS: Record<AgreementType, string> = {
 export type AgreementProvider =
   | "adobesign"
   | "docusign"
+  | "documenso"
   | "manual"
   | "in_app"
   | "other";
@@ -3781,9 +3807,38 @@ export type AgreementProvider =
 export const AGREEMENT_PROVIDER_LABELS: Record<AgreementProvider, string> = {
   adobesign: "Adobe Sign",
   docusign: "DocuSign",
+  documenso: "Documenso (self-hosted)",
   manual: "Manual (paper / PDF)",
   in_app: "In-app click-through",
   other: "Other",
+};
+
+/**
+ * State machine for a document routed through Documenso for signature.
+ * Mirrors the enum on both invoices.signatureStatus and
+ * agreements.signatureStatus in Postgres. Null means no signature was
+ * ever requested for this row.
+ *
+ * State transitions (canonical):
+ *   pending → sent → viewed → completed
+ *                  ↘ rejected
+ *   any → voided (sender cancels the envelope)
+ */
+export type SignatureStatus =
+  | "pending"
+  | "sent"
+  | "viewed"
+  | "completed"
+  | "rejected"
+  | "voided";
+
+export const SIGNATURE_STATUS_LABELS: Record<SignatureStatus, string> = {
+  pending: "Pending send",
+  sent: "Sent — awaiting signature",
+  viewed: "Viewed by signer",
+  completed: "Signed",
+  rejected: "Rejected by signer",
+  voided: "Voided",
 };
 
 /**
@@ -3841,6 +3896,21 @@ export interface Agreement {
   /** Free-form context — countersignature dates for asymmetric
    *  signatures, cross-reference notes, redline commentary. */
   notes: string | null;
+  /**
+   * Documenso envelope id when provider === "documenso". Null for
+   * other providers (their envelope handle lives in `externalRef`
+   * per pre-Documenso convention).
+   */
+  documensoEnvelopeId: string | null;
+  /**
+   * Current signature-workflow state — null when no signature was ever
+   * requested through Documenso for this row (legacy providers +
+   * manual entries). Populated by the send-for-signature action and
+   * advanced by the Documenso webhook.
+   */
+  signatureStatus: SignatureStatus | null;
+  /** ISO timestamp when signatureStatus first flipped to "completed". */
+  signatureCompletedAt: string | null;
   /** Admin who logged the row into the registry (not necessarily
    *  the signer). Null for system-initiated imports. */
   createdBy: string | null;
@@ -3927,6 +3997,13 @@ export type AuditLogAction =
   | "agreement.updated"
   | "agreement.removed"
   | "agreement.imported"
+  // Documenso signature workflow (resourceKind distinguishes agreement
+  // vs invoice; verbs are shared across both surfaces)
+  | "document.signature_requested"
+  | "document.signature_viewed"
+  | "document.signature_completed"
+  | "document.signature_rejected"
+  | "document.signature_voided"
   // $BUILD voucher ledger (off-chain claim mirror)
   | "voucher.issued"
   | "voucher.marked_pending_swap"
@@ -4001,6 +4078,11 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "agreement.updated": "Signed agreement updated",
   "agreement.removed": "Signed agreement removed",
   "agreement.imported": "Signed agreement imported from provider",
+  "document.signature_requested": "Signature envelope sent (Documenso)",
+  "document.signature_viewed": "Signer opened the envelope (Documenso)",
+  "document.signature_completed": "Signature completed (Documenso)",
+  "document.signature_rejected": "Signer rejected the envelope (Documenso)",
+  "document.signature_voided": "Signature envelope voided (Documenso)",
   "voucher.issued": "$BUILD voucher issued",
   "voucher.marked_pending_swap": "$BUILD voucher marked pending swap",
   "voucher.swapped": "$BUILD voucher swapped for real token",
@@ -4030,6 +4112,7 @@ export type AuditLogResourceKind =
   | "cohort_spotlight"
   | "cooperative_receipt"
   | "cooperative_quote"
+  | "invoice"
   | "project"
   | "milestone"
   | "booking"

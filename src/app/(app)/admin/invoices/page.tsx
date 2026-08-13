@@ -23,9 +23,11 @@ import {
   generateExternalInvoice,
   createRetroactiveReceipt,
   markExternalInvoicePaid,
+  sendInvoiceForSignature,
 } from "@/lib/invoice-actions";
 import {
   INVOICE_DIRECTION_LABELS,
+  SIGNATURE_STATUS_LABELS,
   publicName,
   type Invoice,
 } from "@/lib/types";
@@ -560,7 +562,95 @@ function InvoiceRow({
       {inv.notes && (
         <p className="mt-2 text-[11px] italic text-ink-muted">{inv.notes}</p>
       )}
+      {/*
+        Documenso signature workflow.
+
+        Retroactive receipts are the only invoice direction with a
+        wired Documenso template today (RETROACTIVE_RECEIPT). The row
+        surfaces:
+          - A "Send for signature" button when nothing is in flight, OR
+          - The current signatureStatus badge + envelope id when there is.
+      */}
+      {inv.direction === "retroactive_receipt" && (
+        <div className="mt-3 border-t border-[var(--surface-border)] pt-3">
+          {inv.signatureStatus ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span
+                className="rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-wider"
+                style={{
+                  color: signatureStatusColor(inv.signatureStatus),
+                  borderColor: signatureStatusColor(inv.signatureStatus),
+                }}
+              >
+                {SIGNATURE_STATUS_LABELS[inv.signatureStatus]}
+              </span>
+              {inv.documensoEnvelopeId && (
+                <code className="text-[10px] text-ink-faint">
+                  env {inv.documensoEnvelopeId}
+                </code>
+              )}
+              {inv.signatureCompletedAt && (
+                <span
+                  className="text-[10px] text-ink-faint"
+                  title={inv.signatureCompletedAt}
+                >
+                  Signed {inv.signatureCompletedAt.slice(0, 10)}
+                </span>
+              )}
+            </div>
+          ) : (
+            <form
+              action={sendInvoiceForSignature}
+              className="flex flex-wrap items-end gap-2"
+            >
+              <input type="hidden" name="id" value={inv.id} />
+              <div className="min-w-0 flex-1">
+                <label
+                  htmlFor={`sig-email-${inv.id}`}
+                  className="block text-[10px] uppercase tracking-wider text-ink-muted"
+                >
+                  Recipient email (required if recipient is not an FM user)
+                </label>
+                <input
+                  id={`sig-email-${inv.id}`}
+                  name="recipientEmail"
+                  type="email"
+                  placeholder="signer@example.com"
+                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
+                />
+              </div>
+              <button
+                type="submit"
+                className="rounded-full border border-brand-magenta px-3 py-1.5 text-[11px] font-medium text-brand-magenta hover:bg-brand-magenta hover:text-brand-white"
+              >
+                Send for signature
+              </button>
+            </form>
+          )}
+        </div>
+      )}
     </Card>
   );
+}
+
+/**
+ * Color-code the signature status badge to signal urgency at a glance.
+ * Green for completed, amber for in-flight, magenta for exceptional
+ * states (rejected/voided).
+ */
+function signatureStatusColor(status: string): string {
+  switch (status) {
+    case "completed":
+      return "#007048";
+    case "sent":
+    case "viewed":
+    case "pending":
+      return "#B58900";
+    case "rejected":
+    case "voided":
+      return "#E53E3E";
+    default:
+      return "#A3A3A3";
+  }
 }
 

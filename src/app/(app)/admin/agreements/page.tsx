@@ -34,6 +34,7 @@ import {
 import {
   createAgreement,
   removeAgreement,
+  sendLoiForSignature,
 } from "@/lib/agreement-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
@@ -141,6 +142,82 @@ export default async function AdminAgreementsPage() {
           )}
         </div>
       </div>
+
+      {/* Send Talent Partner LOI via Documenso */}
+      <section className="mt-10">
+        <h2 className="font-display text-2xl font-semibold">
+          Send Talent Partner LOI for signature
+        </h2>
+        <p className="mt-2 text-sm text-ink-muted">
+          Dispatches the FM-branded LOI template through Documenso
+          (self-hosted at sign.afuturemodern.com). The invitee receives
+          an email with the signing link. On completion, the webhook
+          handler auto-creates an Agreement row here with provider=
+          <code className="mx-1 rounded bg-[var(--surface-inset)] px-1 py-0.5 text-[11px]">
+            documenso
+          </code>
+          and signature status advanced to
+          <code className="mx-1 rounded bg-[var(--surface-inset)] px-1 py-0.5 text-[11px]">
+            completed
+          </code>
+          .
+        </p>
+
+        <form
+          action={sendLoiForSignature}
+          className="mt-6 space-y-4 rounded-2xl border border-brand-magenta/20 bg-brand-magenta/[0.03] p-6"
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="loi-userId"
+                className="block text-xs uppercase tracking-wider text-ink-muted"
+              >
+                Invitee
+              </label>
+              <select
+                id="loi-userId"
+                name="userId"
+                required
+                defaultValue=""
+                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+              >
+                <option value="" disabled>
+                  Pick a user
+                </option>
+                {candidates.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {publicName(u)} · {u.membershipTier}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="loi-email"
+                className="block text-xs uppercase tracking-wider text-ink-muted"
+              >
+                Recipient email (optional override)
+              </label>
+              <input
+                id="loi-email"
+                name="recipientEmail"
+                type="email"
+                placeholder="Defaults to the user's account email"
+                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+            >
+              Send LOI for signature
+            </button>
+          </div>
+        </form>
+      </section>
 
       {/* Author a new agreement */}
       <section className="mt-10">

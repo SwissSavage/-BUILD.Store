@@ -36,7 +36,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { invoices, projects } from "@/db/schema";
+import { invoices, projects, users } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import {
   logAuditEvent,
@@ -44,9 +44,15 @@ import {
 } from "@/lib/mock-data/audit-log";
 import {
   COOP_RECIPIENT_ID,
+  publicName,
   type Invoice,
   type InvoiceLineItem,
 } from "@/lib/types";
+import {
+  DOCUMENSO_TEMPLATES,
+  DocumensoError,
+  inviteRecipientToTemplate,
+} from "@/lib/documenso";
 
 // ────────────────────────────────────────────────────────────────
 //  Helpers
@@ -153,6 +159,10 @@ export async function createInternalInvoice(formData: FormData): Promise<void> {
     mercuryReference: null,
     stripePaymentIntentId: null,
     notes,
+    // Signature workflow is not initiated for internal invoices.
+    documensoEnvelopeId: null,
+    signatureStatus: null,
+    signatureCompletedAt: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -336,6 +346,11 @@ export async function generateExternalInvoice(
     notes: `Aggregates ${internals.length} approved internal invoice${
       internals.length === 1 ? "" : "s"
     }.`,
+    // External client invoices don't currently route through Documenso —
+    // that layers on when we add a client-signature template.
+    documensoEnvelopeId: null,
+    signatureStatus: null,
+    signatureCompletedAt: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -552,6 +567,11 @@ export async function createMarketplaceReceiptInternal(input: {
     mercuryReference: null,
     stripePaymentIntentId: input.stripePaymentIntentId,
     notes: `Auto-generated receipt for order ${input.orderNumber}.`,
+    // Marketplace receipts fire on Stripe-completed orders — no
+    // signature workflow layers on this path.
+    documensoEnvelopeId: null,
+    signatureStatus: null,
+    signatureCompletedAt: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -612,6 +632,12 @@ export async function createRetroactiveReceipt(
     mercuryReference: null,
     stripePaymentIntentId: null,
     notes: `Retroactive rectification: ${rationale}`,
+    // Signature workflow is not initiated at creation. Admin sends it
+    // through Documenso separately via sendInvoiceForSignature() when
+    // ready; these stay null until then.
+    documensoEnvelopeId: null,
+    signatureStatus: null,
+    signatureCompletedAt: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -631,6 +657,152 @@ export async function createRetroactiveReceipt(
       recipientId,
     },
     reason: `Retroactive receipt: ${rationale}`,
+  });
+
+  revalidatePath("/admin/invoices");
+}
+
+// ────────────────────────────────────────────────────────────────
+//  Documenso — Send for signature (retroactive receipts)
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Send a retroactive-receipt invoice through Documenso for signature
+ * capture. Guarded to retroactive_receipt direction only — the other
+ * invoice flows don't yet have Documenso templates wired.
+ *
+ * FormData:
+ *   - id            invoice id (required)
+ *   - recipientEmail  email to invite (required if the recipientId
+ *                   isn't a resolvable FM user, i.e. anonymous client
+ *                   labels)
+ *
+ * Flow:
+ *   1. Load the invoice row + validate direction is retroactive_receipt
+ *      and no active envelope is already in flight.
+ *   2. Resolve recipient name + email — prefer the FM user record if
+ *      recipientId matches; fall back to formData.recipientEmail for
+ *      anonymous client labels.
+ *   3. Call Documenso's inviteRecipientToTemplate to create + distribute
+ *      the envelope in one shot.
+ *   4. Persist envelope id + signatureStatus="sent" on the invoice row.
+ *   5. Audit log the send.
+ *
+ * The webhook handler (task #19) advances signatureStatus on
+ * envelope.viewed / envelope.signed / envelope.completed /
+ * envelope.rejected and populates signatureCompletedAt.
+ */
+export async function sendInvoiceForSignature(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireAdmin();
+
+  const id = String(formData.get("id") ?? "").trim();
+  const overrideEmail = String(formData.get("recipientEmail") ?? "").trim();
+  if (!id) throw new Error("Invoice id is required.");
+
+  const [row] = await db
+    .select()
+    .from(invoices)
+    .where(eq(invoices.id, id))
+    .limit(1);
+  if (!row) throw new Error("Invoice not found.");
+
+  if (row.direction !== "retroactive_receipt") {
+    throw new Error(
+      `Only retroactive receipts can be routed through Documenso from this action (this row is ${row.direction}). ` +
+        `Other invoice directions will layer on templates in a follow-up.`,
+    );
+  }
+
+  // Idempotency guard — don't re-send an envelope that's already live.
+  // "voided" and "rejected" and null are re-sendable; "sent" / "viewed"
+  // / "completed" are not. Admin should void the existing envelope in
+  // Documenso first if they need to re-issue.
+  const activeStates = new Set(["sent", "viewed", "completed"]);
+  if (row.signatureStatus && activeStates.has(row.signatureStatus)) {
+    throw new Error(
+      `This invoice already has a live signature envelope (${row.signatureStatus}). Void it in Documenso before re-sending.`,
+    );
+  }
+
+  // Resolve recipient. FM users win; otherwise fall back to the
+  // manually-supplied email + the raw recipientId as display name.
+  const [recipientUser] = await db
+    .select({
+      id: users.id,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      handle: users.handle,
+      email: users.email,
+    })
+    .from(users)
+    .where(eq(users.id, row.recipientId))
+    .limit(1);
+
+  const recipientEmail =
+    recipientUser?.email || overrideEmail || null;
+  if (!recipientEmail) {
+    throw new Error(
+      `No email on file for recipient "${row.recipientId}". Supply recipientEmail on the form to route this envelope.`,
+    );
+  }
+  const recipientName = recipientUser
+    ? publicName(recipientUser)
+    : row.recipientId;
+
+  let envelopeId: string;
+  try {
+    const envelope = await inviteRecipientToTemplate({
+      templateEnvelopeId: DOCUMENSO_TEMPLATES.RETROACTIVE_RECEIPT,
+      recipient: {
+        email: recipientEmail,
+        name: recipientName,
+        role: "SIGNER",
+      },
+      title: `${row.number} — Retroactive Receipt`,
+      metadata: {
+        invoiceId: row.id,
+        invoiceNumber: row.number,
+        recipientId: row.recipientId,
+      },
+    });
+    envelopeId = envelope.id;
+  } catch (err) {
+    if (err instanceof DocumensoError) {
+      throw new Error(
+        `Documenso rejected the envelope: ${err.message} (HTTP ${err.status}). ` +
+          `Check DOCUMENSO_TEMPLATE_RETROACTIVE_RECEIPT is set and the template envelope exists on sign.afuturemodern.com.`,
+      );
+    }
+    throw err;
+  }
+
+  const now = new Date().toISOString();
+  await db
+    .update(invoices)
+    .set({
+      documensoEnvelopeId: envelopeId,
+      signatureStatus: "sent",
+      updatedAt: now,
+    })
+    .where(eq(invoices.id, row.id));
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "document.signature_requested",
+    resourceKind: "invoice",
+    resourceId: row.id,
+    before: {
+      documensoEnvelopeId: row.documensoEnvelopeId,
+      signatureStatus: row.signatureStatus,
+    },
+    after: {
+      documensoEnvelopeId: envelopeId,
+      signatureStatus: "sent",
+    },
+    reason: `Retroactive receipt ${row.number} sent to ${recipientName} <${recipientEmail}> via Documenso.`,
   });
 
   revalidatePath("/admin/invoices");

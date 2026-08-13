@@ -212,6 +212,9 @@ async function createDraft(formData: FormData) {
     mercuryReference: null,
     stripePaymentIntentId: null,
     notes: null,
+    documensoEnvelopeId: null,
+    signatureStatus: null,
+    signatureCompletedAt: null,
     createdAt: now,
     updatedAt: now,
   });

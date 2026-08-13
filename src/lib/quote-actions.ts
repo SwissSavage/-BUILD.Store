@@ -29,10 +29,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { cooperativeQuotes, projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_COOPERATIVE_QUOTES } from "@/lib/mock-data/cooperative-quotes";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import {
   logAuditEvent,
@@ -63,13 +64,20 @@ function newClientToken(projectId: string): string {
  * pool knows to move on kickoff logistics (or on iterating the pitch).
  * Same pattern as booking / DM / customer-feedback notifications.
  */
-function notifyAdminsOnQuoteDecision(
-  quote: CooperativeQuote,
+async function notifyAdminsOnQuoteDecision(
+  // Narrowed to just the fields this helper reads so callers can pass
+  // the raw Drizzle row without casting the jsonb columns (proposedBuilders,
+  // scope) to their canonical types just to satisfy CooperativeQuote.
+  quote: Pick<CooperativeQuote, "id" | "projectId" | "createdByUserId">,
   kind: NotificationKind,
   title: string,
   body: string,
-): void {
-  const project = MOCK_PROJECTS.find((p) => p.id === quote.projectId);
+): Promise<void> {
+  const [project] = await db
+    .select({ adminUserIds: projects.adminUserIds })
+    .from(projects)
+    .where(eq(projects.id, quote.projectId))
+    .limit(1);
   const adminUserIds = project?.adminUserIds ?? [];
   if (adminUserIds.length === 0) {
     // Fall back to notifying the quote's creator so it doesn't get
@@ -282,10 +290,19 @@ export async function createCooperativeQuote(formData: FormData) {
   const timeline = String(formData.get("timeline") ?? "").trim();
 
   if (!projectId) throw new Error("Pick a project for this quote.");
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
   if (!project) throw new Error("Project not found.");
 
-  if (MOCK_COOPERATIVE_QUOTES.some((q) => q.projectId === projectId)) {
+  const existingQuote = await db
+    .select({ id: cooperativeQuotes.id })
+    .from(cooperativeQuotes)
+    .where(eq(cooperativeQuotes.projectId, projectId))
+    .limit(1);
+  if (existingQuote.length > 0) {
     throw new Error(
       "A quote already exists for this project. Remove the existing one before authoring a new quote.",
     );
@@ -337,7 +354,7 @@ export async function createCooperativeQuote(formData: FormData) {
     createdByUserId: admin.id,
     selectedLeadUserId: null,
   };
-  MOCK_COOPERATIVE_QUOTES.push(row);
+  await db.insert(cooperativeQuotes).values(row);
 
   logAuditEvent({
     actorUserId: admin.id,
@@ -370,10 +387,14 @@ export async function removeCooperativeQuote(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("Quote id is required.");
 
-  const idx = MOCK_COOPERATIVE_QUOTES.findIndex((q) => q.id === id);
-  if (idx === -1) throw new Error("Quote not found.");
+  const [removed] = await db
+    .select()
+    .from(cooperativeQuotes)
+    .where(eq(cooperativeQuotes.id, id))
+    .limit(1);
+  if (!removed) throw new Error("Quote not found.");
 
-  const [removed] = MOCK_COOPERATIVE_QUOTES.splice(idx, 1);
+  await db.delete(cooperativeQuotes).where(eq(cooperativeQuotes.id, id));
 
   logAuditEvent({
     actorUserId: admin.id,
@@ -421,7 +442,11 @@ export async function approveCooperativeQuote(formData: FormData) {
     throw new Error("Select a lead builder before approving.");
   }
 
-  const quote = MOCK_COOPERATIVE_QUOTES.find((q) => q.clientToken === token);
+  const [quote] = await db
+    .select()
+    .from(cooperativeQuotes)
+    .where(eq(cooperativeQuotes.clientToken, token))
+    .limit(1);
   if (!quote) throw new Error("Quote not found.");
   if (quote.status === "approved" || quote.status === "declined") {
     throw new Error(
@@ -431,9 +456,8 @@ export async function approveCooperativeQuote(formData: FormData) {
   if (quote.status === "draft") {
     throw new Error("This quote hasn't been sent yet.");
   }
-  if (
-    !quote.proposedBuilders.some((b) => b.userId === selectedLeadUserId)
-  ) {
+  const proposedBuilders = (quote.proposedBuilders ?? []) as ProposedBuilder[];
+  if (!proposedBuilders.some((b) => b.userId === selectedLeadUserId)) {
     throw new Error(
       "Selected lead is not among the proposed builders for this quote.",
     );
@@ -441,6 +465,15 @@ export async function approveCooperativeQuote(formData: FormData) {
 
   const previousStatus = quote.status;
   const now = new Date().toISOString();
+  await db
+    .update(cooperativeQuotes)
+    .set({
+      status: "approved",
+      decidedAt: now,
+      selectedLeadUserId,
+    })
+    .where(eq(cooperativeQuotes.id, quote.id));
+  // Reflect changes in the in-memory object for notification helper.
   quote.status = "approved";
   quote.decidedAt = now;
   quote.selectedLeadUserId = selectedLeadUserId;
@@ -449,7 +482,11 @@ export async function approveCooperativeQuote(formData: FormData) {
   const leadName = leadUser
     ? `${leadUser.firstName} ${leadUser.lastName}`.trim()
     : selectedLeadUserId;
-  const project = MOCK_PROJECTS.find((p) => p.id === quote.projectId);
+  const [project] = await db
+    .select({ title: projects.title })
+    .from(projects)
+    .where(eq(projects.id, quote.projectId))
+    .limit(1);
   const projectTitle = project?.title ?? quote.projectId;
 
   logAuditEvent({
@@ -471,7 +508,7 @@ export async function approveCooperativeQuote(formData: FormData) {
     reason: `Client ${quote.clientDisplayName} approved the quote and selected ${leadName} as lead.`,
   });
 
-  notifyAdminsOnQuoteDecision(
+  await notifyAdminsOnQuoteDecision(
     quote,
     "quote_approved",
     `${quote.clientDisplayName} approved: ${projectTitle}`,
@@ -493,7 +530,11 @@ export async function declineCooperativeQuote(formData: FormData) {
   const reason = String(formData.get("reason") ?? "").trim();
   if (!token) throw new Error("Quote token is required.");
 
-  const quote = MOCK_COOPERATIVE_QUOTES.find((q) => q.clientToken === token);
+  const [quote] = await db
+    .select()
+    .from(cooperativeQuotes)
+    .where(eq(cooperativeQuotes.clientToken, token))
+    .limit(1);
   if (!quote) throw new Error("Quote not found.");
   if (quote.status === "approved" || quote.status === "declined") {
     throw new Error(
@@ -506,6 +547,10 @@ export async function declineCooperativeQuote(formData: FormData) {
 
   const previousStatus = quote.status;
   const now = new Date().toISOString();
+  await db
+    .update(cooperativeQuotes)
+    .set({ status: "declined", decidedAt: now })
+    .where(eq(cooperativeQuotes.id, quote.id));
   quote.status = "declined";
   quote.decidedAt = now;
   // Preserve selectedLeadUserId if it was chosen before the decline —
@@ -514,7 +559,11 @@ export async function declineCooperativeQuote(formData: FormData) {
   // selected."
   // (In practice most declines will null out selectedLeadUserId.)
 
-  const project = MOCK_PROJECTS.find((p) => p.id === quote.projectId);
+  const [project] = await db
+    .select({ title: projects.title })
+    .from(projects)
+    .where(eq(projects.id, quote.projectId))
+    .limit(1);
   const projectTitle = project?.title ?? quote.projectId;
 
   logAuditEvent({
@@ -541,7 +590,7 @@ export async function declineCooperativeQuote(formData: FormData) {
     ? `Reason: ${reason}`
     : `No reason provided. Follow up to iterate on crew, scope, or price.`;
 
-  notifyAdminsOnQuoteDecision(
+  await notifyAdminsOnQuoteDecision(
     quote,
     "quote_declined",
     `${quote.clientDisplayName} declined: ${projectTitle}`,
@@ -571,7 +620,11 @@ export async function undoCooperativeQuoteDecision(formData: FormData) {
   const token = String(formData.get("token") ?? "").trim();
   if (!token) throw new Error("Quote token is required.");
 
-  const quote = MOCK_COOPERATIVE_QUOTES.find((q) => q.clientToken === token);
+  const [quote] = await db
+    .select()
+    .from(cooperativeQuotes)
+    .where(eq(cooperativeQuotes.clientToken, token))
+    .limit(1);
   if (!quote) throw new Error("Quote not found.");
   if (quote.status !== "approved" && quote.status !== "declined") {
     throw new Error(
@@ -582,11 +635,23 @@ export async function undoCooperativeQuoteDecision(formData: FormData) {
   const previousStatus = quote.status;
   const previousLead = quote.selectedLeadUserId;
   const previousDecidedAt = quote.decidedAt;
+  await db
+    .update(cooperativeQuotes)
+    .set({
+      status: "viewed",
+      decidedAt: null,
+      selectedLeadUserId: null,
+    })
+    .where(eq(cooperativeQuotes.id, quote.id));
   quote.status = "viewed";
   quote.decidedAt = null;
   quote.selectedLeadUserId = null;
 
-  const project = MOCK_PROJECTS.find((p) => p.id === quote.projectId);
+  const [project] = await db
+    .select({ title: projects.title })
+    .from(projects)
+    .where(eq(projects.id, quote.projectId))
+    .limit(1);
   const projectTitle = project?.title ?? quote.projectId;
 
   logAuditEvent({
@@ -611,7 +676,7 @@ export async function undoCooperativeQuoteDecision(formData: FormData) {
     reason: `Client ${quote.clientDisplayName} reopened the quote after ${previousStatus}. Selection cleared.`,
   });
 
-  notifyAdminsOnQuoteDecision(
+  await notifyAdminsOnQuoteDecision(
     quote,
     "quote_declined",
     `${quote.clientDisplayName} reopened: ${projectTitle}`,

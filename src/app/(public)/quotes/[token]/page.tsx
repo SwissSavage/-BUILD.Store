@@ -27,10 +27,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import {
-  MOCK_COOPERATIVE_QUOTES,
-  findCooperativeQuote,
-} from "@/lib/mock-data/cooperative-quotes";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { cooperativeQuotes as cooperativeQuotesTable } from "@/db/schema";
+import type { ProposedBuilder, CooperativeQuote } from "@/lib/types";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_MVP_SCORES, mvpScoreForUser } from "@/lib/mock-data/mvp-scores";
 import { championsCourtMembers } from "@/lib/mvp-score";
@@ -59,11 +59,19 @@ export const dynamic = "force-dynamic";
 /**
  * Pre-generate one page per known quote token at build time. Even
  * with force-dynamic, generateStaticParams provides build-time
- * indexability. Production swaps to a Drizzle query on
- * `cooperative_quotes.client_token`.
+ * indexability.
+ *
+ * SANDBOX→LIVE swap history:
+ *   - Pre-Beta cutover: mapped over MOCK_COOPERATIVE_QUOTES.
+ *   - Beta cutover (this file, 2026-08-13): reads client tokens from
+ *     Drizzle. Static rendering is still bypassed at runtime by
+ *     force-dynamic above; this is purely build-time indexability.
  */
-export function generateStaticParams() {
-  return MOCK_COOPERATIVE_QUOTES.map((q) => ({ token: q.clientToken }));
+export async function generateStaticParams() {
+  const rows = await db
+    .select({ token: cooperativeQuotesTable.clientToken })
+    .from(cooperativeQuotesTable);
+  return rows;
 }
 
 export const metadata: Metadata = {
@@ -80,9 +88,40 @@ export default async function CooperativeQuotePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const quote = findCooperativeQuote(token);
-  if (!quote) notFound();
-  if (quote.status === "draft") notFound();
+  // SANDBOX→LIVE swap history:
+  //   - Pre-Beta cutover: findCooperativeQuote() lookup against
+  //     MOCK_COOPERATIVE_QUOTES.
+  //   - Beta cutover (this file, 2026-08-13): reads the row from
+  //     Drizzle by client_token. proposedBuilders + scope are jsonb —
+  //     cast through the canonical types so downstream code stays
+  //     typed. MOCK_USERS lookup for builder identity/tier stays put
+  //     for now (users table read-path swap is a separate concern —
+  //     the mock is seeded to Postgres at bootstrap so the two agree).
+  const [row] = await db
+    .select()
+    .from(cooperativeQuotesTable)
+    .where(eq(cooperativeQuotesTable.clientToken, token))
+    .limit(1);
+  if (!row) notFound();
+  if (row.status === "draft") notFound();
+
+  // Cast jsonb → canonical types. The DB column is typed unknown by
+  // Drizzle; the runtime shape is enforced by the authoring flow.
+  const quote: CooperativeQuote = {
+    id: row.id,
+    clientToken: row.clientToken,
+    projectId: row.projectId,
+    clientDisplayName: row.clientDisplayName,
+    proposedBuilders: row.proposedBuilders as ProposedBuilder[],
+    scope: row.scope as CooperativeQuote["scope"],
+    status: row.status as CooperativeQuote["status"],
+    sentAt: row.sentAt,
+    viewedAt: row.viewedAt,
+    decidedAt: row.decidedAt,
+    createdAt: row.createdAt,
+    createdByUserId: row.createdByUserId,
+    selectedLeadUserId: row.selectedLeadUserId,
+  };
 
   // Build crew members. Resolve users, derive tiers, denormalize
   // per-Builder pricing into a display quoteLine so the client

@@ -8,6 +8,13 @@
       "when": 1786192721330,
       "tag": "0000_big_skin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786663655821,
+      "tag": "0001_signature_tracking",
+      "breakpoints": true
     }
   ]
 }

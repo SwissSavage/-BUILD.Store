@@ -142,6 +142,15 @@ export interface DocumensoEnvelope {
   title?: string;
   createdAt?: string;
   updatedAt?: string;
+  /**
+   * Free-form key-value metadata persisted with the envelope at
+   * creation. FM writes `{ userId, agreementType }` for LOI envelopes
+   * so the webhook handler can attach the resulting Agreement row to
+   * the right user, and `{ invoiceId, ... }` for retroactive receipts
+   * so we can look up the invoice by envelope id + double-check.
+   * Documenso passes it through verbatim on webhook payloads.
+   */
+  metadata?: Record<string, string>;
   recipients?: Array<{
     id: string;
     email: string;

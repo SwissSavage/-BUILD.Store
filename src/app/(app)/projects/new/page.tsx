@@ -1,15 +1,19 @@
 /**
  * Propose an internal initiative (cooperative contribution).
- * Sandbox: appends to MOCK_PROJECTS in memory with kind="internal".
  *
- * REPLACE WITH: Drizzle insert, admin-approval queue, Slack/Discord ping.
- * Internal initiatives don't carry a client budget — compensation is
- * $BUILD token distribution determined by admins once delivered.
+ * SANDBOX→LIVE swap history:
+ *   - Pre-Beta cutover: MOCK_PROJECTS.push mutation, no persistence.
+ *   - Beta cutover (this file, 2026-08-13): db.insert(projects) against
+ *     live Postgres. Internal initiatives are admin-proposed so they're
+ *     implicitly approved (rfpApprovedAt set at creation, no intake-queue
+ *     gate). No HubSpot deal, no client budget — compensation is $BUILD
+ *     token distribution determined by admins on delivery.
  */
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { db } from "@/db/client";
+import { projects } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
 
@@ -23,21 +27,27 @@ async function createInitiative(formData: FormData) {
 
   if (!title || !description) throw new Error("Title and description required");
 
-  MOCK_PROJECTS.push({
+  const now = new Date().toISOString();
+
+  await db.insert(projects).values({
     id: `p_${Date.now()}`,
     title,
     description,
     industry,
-    skillsRequired: skillsRaw.split(",").map((s) => s.trim()).filter(Boolean),
+    skillsRequired: skillsRaw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
     budget: "0.00",
     status: "open",
     clientId: owner || "internal_buildstore",
     assignedMemberIds: [],
     kind: "internal",
     isRfp: true,
-    // Internal initiatives are admin-proposed, so they're implicitly approved
-    // — they show up in /projects immediately, no intake-queue gate.
-    rfpApprovedAt: new Date().toISOString(),
+    // Internal initiatives are admin-proposed, so they're implicitly
+    // approved — they show up in /projects immediately, no intake-queue
+    // gate.
+    rfpApprovedAt: now,
     rfpAdminNote: null,
     // Internal projects don't get a HubSpot deal — there's no client.
     hubspotStage: null,
@@ -53,8 +63,8 @@ async function createInitiative(formData: FormData) {
     pmEngagementRating: null,
     bonusDecision: null,
     bonusDecidedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   });
 
   revalidatePath("/projects");

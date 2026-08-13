@@ -1,15 +1,19 @@
 /**
  * Submit a contract RFP (external client work).
- * Sandbox: appends to MOCK_PROJECTS in memory.
- * REPLACE WITH: Drizzle insert into `projects` table, PII vetting queue,
- * email notification to the client for review.
+ *
+ * SANDBOX→LIVE swap history:
+ *   - Pre-Beta cutover: MOCK_PROJECTS.push mutation, no DB persistence.
+ *   - Beta cutover (this file, 2026-08-13): db.insert(projects) against
+ *     live Postgres. RFP lands in the intake queue with isRfp=true +
+ *     rfpApprovedAt=null. Admin scrubs + approves via /admin/rfps.
  */
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { db } from "@/db/client";
+import { projects } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { createHubspotLead } from "@/lib/crm-stub";
-import { INDUSTRY_LABELS, type Industry, type Project } from "@/lib/types";
+import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
 
 async function createRfp(formData: FormData) {
@@ -52,13 +56,23 @@ async function createRfp(formData: FormData) {
     }
   }
 
-  const project: Project = {
+  const now = new Date().toISOString();
+  // Budget field defaults to "0" when the submitter leaves it blank —
+  // consistent with FM's canonical no-budget-on-RFPs principle (talent
+  // sets pricing, not the client). Schema still requires the column;
+  // migration to nullable is queued as a follow-up.
+  const budgetValue = budget || "0";
+
+  await db.insert(projects).values({
     id: `p_${Date.now()}`,
     title,
     description,
     industry,
-    skillsRequired: skillsRaw.split(",").map((s) => s.trim()).filter(Boolean),
-    budget,
+    skillsRequired: skillsRaw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    budget: budgetValue,
     status: "open",
     clientId,
     assignedMemberIds: [],
@@ -74,18 +88,17 @@ async function createRfp(formData: FormData) {
     collectedAt: null,
     // Admin team gets assigned during RFP review.
     adminUserIds: [],
-    // Comp structure assigned during quote-sheet approval. Sandbox leaves
-    // these null until a follow-up wires the base/bonus split into intake.
+    // Comp structure assigned during quote-sheet approval. Left null
+    // until a follow-up wires the base/bonus split into intake.
     talentBaseAmount: null,
     talentBonusAmount: null,
     bonusGate: null,
     pmEngagementRating: null,
     bonusDecision: null,
     bonusDecidedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  MOCK_PROJECTS.push(project);
+    createdAt: now,
+    updatedAt: now,
+  });
 
   revalidatePath("/contracts");
   revalidatePath("/dashboard");

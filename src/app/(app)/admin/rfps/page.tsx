@@ -6,13 +6,17 @@
  * title/description if needed, and approves — at which point the RFP
  * becomes visible on /contracts and members can submit quote sheets.
  *
- * Sandbox: mutates MOCK_PROJECTS in memory.
- * REPLACE WITH: Drizzle update + attribution-ledger insert on approval +
- * notification broadcast to eligible members.
+ * SANDBOX→LIVE swap history:
+ *   - Pre-Beta cutover: mutated MOCK_PROJECTS in memory.
+ *   - Beta cutover (this file, 2026-08-13): swapped to Drizzle. Queue
+ *     read via db.select with WHERE conditions; approve + reject use
+ *     db.update against the projects table.
  */
 import { requireAdmin } from "@/lib/auth-stub";
 import { revalidatePath } from "next/cache";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { and, desc, eq, isNull, ne } from "drizzle-orm";
+import { db } from "@/db/client";
+import { projects } from "@/db/schema";
 import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -29,16 +33,20 @@ async function approveRfp(formData: FormData) {
   const industry = String(formData.get("industry") ?? "") as Industry;
   const adminNote = String(formData.get("adminNote") ?? "").trim() || null;
 
-  const p = MOCK_PROJECTS.find((x) => x.id === id);
-  if (!p) return;
+  if (!id) return;
 
-  if (title) p.title = title;
-  if (description) p.description = description;
-  if (budget) p.budget = budget;
-  if (ALL_INDUSTRIES.includes(industry)) p.industry = industry;
-  p.rfpAdminNote = adminNote;
-  p.rfpApprovedAt = new Date().toISOString();
-  p.updatedAt = new Date().toISOString();
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = {
+    rfpAdminNote: adminNote,
+    rfpApprovedAt: now,
+    updatedAt: now,
+  };
+  if (title) patch.title = title;
+  if (description) patch.description = description;
+  if (budget) patch.budget = budget;
+  if (ALL_INDUSTRIES.includes(industry)) patch.industry = industry;
+
+  await db.update(projects).set(patch).where(eq(projects.id, id));
 
   revalidatePath("/admin/rfps");
   revalidatePath("/contracts");
@@ -51,13 +59,16 @@ async function rejectRfp(formData: FormData) {
 
   const id = String(formData.get("id") ?? "");
   const note = String(formData.get("adminNote") ?? "").trim() || "Declined.";
+  if (!id) return;
 
-  const p = MOCK_PROJECTS.find((x) => x.id === id);
-  if (!p) return;
-
-  p.status = "cancelled";
-  p.rfpAdminNote = note;
-  p.updatedAt = new Date().toISOString();
+  await db
+    .update(projects)
+    .set({
+      status: "cancelled",
+      rfpAdminNote: note,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(projects.id, id));
 
   revalidatePath("/admin/rfps");
 }
@@ -65,13 +76,18 @@ async function rejectRfp(formData: FormData) {
 export default async function AdminRfpQueuePage() {
   await requireAdmin();
 
-  const queue = MOCK_PROJECTS.filter(
-    (p) =>
-      p.kind === "contract" &&
-      p.isRfp &&
-      !p.rfpApprovedAt &&
-      p.status !== "cancelled",
-  ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const queue = await db
+    .select()
+    .from(projects)
+    .where(
+      and(
+        eq(projects.kind, "contract"),
+        eq(projects.isRfp, true),
+        isNull(projects.rfpApprovedAt),
+        ne(projects.status, "cancelled"),
+      ),
+    )
+    .orderBy(desc(projects.createdAt));
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">

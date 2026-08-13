@@ -26,11 +26,15 @@
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { notInArray, desc, eq, and, inArray } from "drizzle-orm";
+import { db } from "@/db/client";
+import {
+  cooperativeQuotes as cooperativeQuotesTable,
+  projects as projectsTable,
+} from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_COOPERATIVE_QUOTES } from "@/lib/mock-data/cooperative-quotes";
-import { publicName } from "@/lib/types";
+import { publicName, type ProposedBuilder } from "@/lib/types";
 import {
   createCooperativeQuote,
   removeCooperativeQuote,
@@ -46,6 +50,11 @@ import {
  * Candidate builders for proposal: Members + Partners. Sorted for
  * a predictable reference table. Admins can propose themselves —
  * sometimes the founder IS the lead on a founding-client engagement.
+ *
+ * Reads from seeded MOCK_USERS (which was mirrored into Postgres at
+ * seed time). Full Drizzle swap of the users table read path is a
+ * separate concern; this stays as mock read for now since seed keeps
+ * both in sync.
  */
 function proposalCandidates() {
   return [...MOCK_USERS]
@@ -62,22 +71,33 @@ function proposalCandidates() {
 
 /**
  * Eligible projects for quoting — contracts (not RFPs) that don't
- * already have a quote authored. Excludes ones with existing quotes
- * so the admin can't double-book. Remove the existing quote first
- * if the plan changes.
+ * already have a quote authored. Fetches from Postgres, excludes
+ * projects with existing quotes via a NOT IN subquery so the admin
+ * can't double-book. Remove the existing quote first if the plan
+ * changes.
  */
-function eligibleProjects() {
-  return MOCK_PROJECTS.filter(
-    (p) =>
-      p.kind === "contract" &&
-      !MOCK_COOPERATIVE_QUOTES.some((q) => q.projectId === p.id),
-  );
+async function eligibleProjects() {
+  const alreadyQuoted = await db
+    .select({ projectId: cooperativeQuotesTable.projectId })
+    .from(cooperativeQuotesTable);
+  const takenIds = alreadyQuoted.map((q) => q.projectId);
+
+  return await db
+    .select()
+    .from(projectsTable)
+    .where(
+      takenIds.length > 0
+        ? and(
+            eq(projectsTable.kind, "contract"),
+            notInArray(projectsTable.id, takenIds),
+          )
+        : eq(projectsTable.kind, "contract"),
+    );
 }
 
-const STATUS_COLOR: Record<
-  (typeof MOCK_COOPERATIVE_QUOTES)[number]["status"],
-  string
-> = {
+type QuoteStatus = "draft" | "sent" | "viewed" | "approved" | "declined";
+
+const STATUS_COLOR: Record<QuoteStatus, string> = {
   draft: "#A3A3A3",
   sent: "#5070F0",
   viewed: "#D828A0",
@@ -85,10 +105,7 @@ const STATUS_COLOR: Record<
   declined: "#E53E3E",
 };
 
-const STATUS_LABEL: Record<
-  (typeof MOCK_COOPERATIVE_QUOTES)[number]["status"],
-  string
-> = {
+const STATUS_LABEL: Record<QuoteStatus, string> = {
   draft: "Draft",
   sent: "Sent",
   viewed: "Viewed",
@@ -129,11 +146,31 @@ export default async function AdminCooperativeQuotesPage() {
     redirect("/signin?next=/admin/cooperative-quotes");
   }
 
-  const quotes = [...MOCK_COOPERATIVE_QUOTES].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt),
-  );
+  const quotes = await db
+    .select()
+    .from(cooperativeQuotesTable)
+    .orderBy(desc(cooperativeQuotesTable.createdAt));
   const candidates = proposalCandidates();
-  const projects = eligibleProjects();
+  const projects = await eligibleProjects();
+
+  // Batch-load the projects referenced by existing quotes so the list
+  // renderer below can label each quote with its project title without
+  // an N+1 lookup. Post-Beta-cutover swap of the old MOCK_PROJECTS.find
+  // per-row pattern.
+  const quoteProjectIds = quotes.map((q) => q.projectId);
+  const quoteProjects =
+    quoteProjectIds.length > 0
+      ? await db
+          .select({
+            id: projectsTable.id,
+            title: projectsTable.title,
+          })
+          .from(projectsTable)
+          .where(inArray(projectsTable.id, quoteProjectIds))
+      : [];
+  const quoteProjectById = new Map(
+    quoteProjects.map((p) => [p.id, p]),
+  );
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
@@ -361,12 +398,13 @@ export default async function AdminCooperativeQuotesPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {quotes.map((quote) => {
-              const project = MOCK_PROJECTS.find(
-                (p) => p.id === quote.projectId,
-              );
-              const aggregate = deriveAggregatePricing(
-                quote.proposedBuilders,
-              );
+              const project = quoteProjectById.get(quote.projectId);
+              // proposedBuilders is jsonb → typed unknown by Drizzle.
+              // Cast to the canonical shape; the authoring flow
+              // enforces it at insert time.
+              const proposedBuilders =
+                quote.proposedBuilders as ProposedBuilder[];
+              const aggregate = deriveAggregatePricing(proposedBuilders);
               const aggregateLine =
                 `${aggregateHeadline(aggregate)}${
                   aggregateUnitLabel(aggregate)
@@ -396,8 +434,8 @@ export default async function AdminCooperativeQuotesPage() {
                     </div>
                     <CardTitle className="mt-1 text-lg">
                       {aggregateLine} ·{" "}
-                      {quote.proposedBuilders.length}{" "}
-                      {quote.proposedBuilders.length === 1
+                      {proposedBuilders.length}{" "}
+                      {proposedBuilders.length === 1
                         ? "builder"
                         : "builders"}
                     </CardTitle>

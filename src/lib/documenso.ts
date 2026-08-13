@@ -265,7 +265,23 @@ export async function verifyWebhookSignature(
 //  Webhook event types
 // ────────────────────────────────────────────────────────────────
 
+/**
+ * Documenso emits events under two naming conventions depending on
+ * instance version:
+ *
+ *   - Legacy (Documents API): document.created, document.sent, etc.
+ *     Still in use by self-hosted instances that haven't migrated to
+ *     the Envelopes API. Documenso plans to remove these on 1 March 2027.
+ *
+ *   - Current (Envelopes API): envelope.created, envelope.sent, etc.
+ *     The replacement, unified system for documents + templates.
+ *
+ * FM's self-hosted sign.afuturemodern.com is currently emitting the
+ * legacy `document.*` names as of 2026-08-13. Handler accepts both
+ * so we don't need code changes when Documenso migrates the naming.
+ */
 export type DocumensoWebhookEventType =
+  // Envelopes API (current)
   | "envelope.created"
   | "envelope.sent"
   | "envelope.opened"
@@ -274,11 +290,27 @@ export type DocumensoWebhookEventType =
   | "envelope.completed"
   | "envelope.rejected"
   | "envelope.cancelled"
-  | "recipient.completed";
+  | "recipient.completed"
+  // Documents API (legacy — self-hosted deployments still emit these)
+  | "document.created"
+  | "document.sent"
+  | "document.opened"
+  | "document.viewed"
+  | "document.signed"
+  | "document.completed"
+  | "document.rejected"
+  | "document.cancelled";
 
+/**
+ * Webhook payload. Documenso's document.* events carry a `document`
+ * field; envelope.* events carry an `envelope` field. Both refer to
+ * the same underlying construct, so we accept either — consumers
+ * read whichever is present.
+ */
 export interface DocumensoWebhookPayload {
   event: DocumensoWebhookEventType;
-  envelope: DocumensoEnvelope;
+  envelope?: DocumensoEnvelope;
+  document?: DocumensoEnvelope;
   recipient?: {
     id: string;
     email: string;
@@ -287,6 +319,17 @@ export interface DocumensoWebhookPayload {
   };
   occurredAt: string;
   [key: string]: unknown;
+}
+
+/**
+ * Normalize a webhook payload: returns the envelope/document object
+ * regardless of which field name Documenso used, so consumers can
+ * write `getPayloadTarget(payload).id` without branching per naming.
+ */
+export function getPayloadTarget(
+  payload: DocumensoWebhookPayload,
+): DocumensoEnvelope | undefined {
+  return payload.envelope ?? payload.document;
 }
 
 // Re-export DocumensoError for typed catch handling upstream.

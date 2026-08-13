@@ -26,6 +26,7 @@
 import { NextResponse } from "next/server";
 import {
   verifyWebhookSignature,
+  getPayloadTarget,
   type DocumensoWebhookPayload,
   type DocumensoWebhookEventType,
 } from "@/lib/documenso";
@@ -35,13 +36,24 @@ const DOCUMENSO_WEBHOOK_SECRET = process.env.DOCUMENSO_WEBHOOK_SECRET;
 /**
  * Events that trigger downstream state changes in FM. Everything
  * else is logged for audit but doesn't route to a handler yet.
+ *
+ * Includes both document.* (legacy Documents API, still emitted by
+ * self-hosted Documenso as of 2026-08-13) and envelope.* (current
+ * Envelopes API, migration target) naming so the handler works
+ * without a code change when Documenso migrates event names.
  */
 const HANDLED_EVENTS = new Set<DocumensoWebhookEventType>([
+  // Envelopes API (current)
   "envelope.completed",
   "envelope.signed",
   "envelope.rejected",
   "envelope.cancelled",
   "recipient.completed",
+  // Documents API (legacy)
+  "document.completed",
+  "document.signed",
+  "document.rejected",
+  "document.cancelled",
 ]);
 
 export async function POST(request: Request) {
@@ -78,13 +90,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { event, envelope, recipient } = payload;
+  const { event, recipient } = payload;
+  const target = getPayloadTarget(payload);
 
   // Always log — every event is worth an audit trail entry, even
   // ones we don't route yet.
   // eslint-disable-next-line no-console
   console.log(
-    `[documenso webhook] ${event} envelopeId=${envelope?.id} recipient=${recipient?.email ?? "n/a"}`,
+    `[documenso webhook] ${event} targetId=${target?.id ?? "n/a"} recipient=${recipient?.email ?? "n/a"}`,
   );
 
   if (!HANDLED_EVENTS.has(event)) {
@@ -93,11 +106,11 @@ export async function POST(request: Request) {
   }
 
   // TODO (care package flow — task #6): route the event to the invitee
-  // onboarding state machine. On envelope.completed, advance the
-  // invitee from `signature_sent` to `signed`. On envelope.rejected
-  // or envelope.cancelled, mark the invitation as declined and
-  // notify the sending admin. For now the handler acknowledges +
-  // logs so Documenso doesn't retry-storm the endpoint.
+  // onboarding state machine. On document.completed / envelope.completed,
+  // advance the invitee from `signature_sent` to `signed`. On rejected
+  // or cancelled, mark the invitation as declined and notify the sending
+  // admin. For now the handler acknowledges + logs so Documenso doesn't
+  // retry-storm the endpoint.
   //
   // Also TODO: write to audit_log_entries once the audit-log Drizzle
   // swap ships (currently mock).
@@ -106,6 +119,6 @@ export async function POST(request: Request) {
     received: true,
     handled: true,
     event,
-    envelopeId: envelope?.id ?? null,
+    targetId: target?.id ?? null,
   });
 }

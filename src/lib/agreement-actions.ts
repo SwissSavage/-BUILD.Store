@@ -45,6 +45,7 @@ import {
   DOCUMENSO_TEMPLATES,
   DocumensoError,
   inviteRecipientToTemplate,
+inviteRecipientToTemplate,
   inviteRecipientsToTemplate,
   type DocumensoRecipient,
 } from "@/lib/documenso";

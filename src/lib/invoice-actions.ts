@@ -753,6 +753,10 @@ export async function sendInvoiceForSignature(
 
   let envelopeId: string;
   try {
+    // externalId format: invoice:<invoice.id>. Webhook parses this to
+    // update the invoice's signatureStatus/signatureCompletedAt on the
+    // right row without needing a metadata pass-through (Documenso's
+    // /api/v2/template/use doesn't support arbitrary metadata).
     const envelope = await inviteRecipientToTemplate({
       templateEnvelopeId: DOCUMENSO_TEMPLATES.RETROACTIVE_RECEIPT,
       recipient: {
@@ -761,18 +765,14 @@ export async function sendInvoiceForSignature(
         role: "SIGNER",
       },
       title: `${row.number} — Retroactive Receipt`,
-      metadata: {
-        invoiceId: row.id,
-        invoiceNumber: row.number,
-        recipientId: row.recipientId,
-      },
+      externalId: `invoice:${row.id}`,
     });
-    envelopeId = envelope.id;
+    envelopeId = String(envelope.id);
   } catch (err) {
     if (err instanceof DocumensoError) {
       throw new Error(
         `Documenso rejected the envelope: ${err.message} (HTTP ${err.status}). ` +
-          `Check DOCUMENSO_TEMPLATE_RETROACTIVE_RECEIPT is set and the template envelope exists on sign.afuturemodern.com.`,
+          `Check DOCUMENSO_TEMPLATE_RETROACTIVE_RECEIPT is set and the template exists on sign.afuturemodern.com.`,
       );
     }
     throw err;

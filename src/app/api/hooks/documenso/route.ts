@@ -165,7 +165,9 @@ export async function POST(request: Request) {
 
   const { event, recipient } = payload;
   const target = getPayloadTarget(payload);
-  const envelopeId = target?.id ?? null;
+  // Documenso ids are numeric on v2 documents; we store as string in
+  // Postgres for consistency with the rest of the FM domain model.
+  const envelopeId = target?.id != null ? String(target.id) : null;
 
   // Always log for the audit trail — even events we don't route.
   // eslint-disable-next-line no-console
@@ -305,33 +307,68 @@ export async function POST(request: Request) {
     });
   }
 
-  const metadata = target?.metadata ?? {};
-  const metaUserId = String(metadata.userId ?? "").trim();
-  const metaAgreementType = String(metadata.agreementType ?? "").trim() as AgreementType;
-  if (!metaUserId || !metaAgreementType) {
+  // externalId is the correlation string we set at send time. Format:
+  //   "agreement:<agreementType>:<userId>"   for LOI sends
+  //   "agreement:ncnda:<variant>"            for NCNDA sends (no user)
+  //   "invoice:<invoice.id>"                 for retroactive receipts
+  // We parse the prefix to decide what to do on completion. Retroactive
+  // receipts landed via the invoice-row lookup path above, so if we're
+  // here we're either an LOI (auto-create Agreement row) or an NCNDA
+  // whose Agreement row is created inline against the primary signer.
+  const externalId = String(target?.externalId ?? "").trim();
+  if (!externalId) {
     // eslint-disable-next-line no-console
     console.warn(
-      `[documenso webhook] completed envelope ${envelopeId} has no userId/agreementType metadata — cannot auto-create Agreement row.`,
+      `[documenso webhook] completed document ${envelopeId} has no externalId. Cannot auto-create the FM-side row. Log manually via /admin/agreements.`,
     );
     return NextResponse.json({
       received: true,
       handled: false,
-      reason: "missing envelope metadata",
+      reason: "missing externalId on document",
     });
   }
+  const parts = externalId.split(":");
+  const kind = parts[0]; // "agreement" or "invoice"
+  if (kind !== "agreement") {
+    // "invoice:<id>" completions should have already been handled by the
+    // invoice-lookup path above (updates row.signatureStatus). If we're
+    // here, the invoice row was deleted between send and completion.
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[documenso webhook] completed document ${envelopeId} with externalId=${externalId} but no matching FM row was found. Log manually if needed.`,
+    );
+    return NextResponse.json({
+      received: true,
+      handled: false,
+      reason: `no matching FM row for externalId ${externalId}`,
+    });
+  }
+  const agreementType = parts[1] as AgreementType | "ncnda";
+  // For LOI: parts = ["agreement", "loi", "<userId>"]
+  // For NCNDA: parts = ["agreement", "ncnda", "<variant>"]
+  // NCNDA counterparties are typically prospects, not FM users, so we
+  // don't have a userId on hand. Store the primary recipient email as
+  // the identifying string in externalRef and leave userId null-ish.
+  const isNcnda = agreementType === "ncnda";
+  const persistedAgreementType: AgreementType = isNcnda ? "other" : agreementType;
+  const userIdOrLabel = isNcnda
+    ? `ncnda:${target?.recipients?.[0]?.email ?? "unknown"}`
+    : parts[2] ?? "unknown";
 
   const agreementRow: Agreement = {
     id: `agreement_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-    userId: metaUserId,
-    agreementType: metaAgreementType,
-    // Version defaults to the envelope's creation date so re-issuing
+    userId: userIdOrLabel,
+    agreementType: persistedAgreementType,
+    // Version defaults to the document's creation date so re-issuing
     // the template with a revised version bump doesn't collide.
     version: (target?.createdAt ?? now).slice(0, 10),
     signedAt: now,
     provider: "documenso",
     externalRef: envelopeId,
     storageUrl: null,
-    notes: `Auto-created from Documenso ${event} at ${now}.`,
+    notes: isNcnda
+      ? `Auto-created NCNDA (variant ${parts[2] ?? "bilateral"}) from Documenso ${event} at ${now}. Recipient: ${target?.recipients?.[0]?.email ?? "unknown"}.`
+      : `Auto-created from Documenso ${event} at ${now}.`,
     documensoEnvelopeId: envelopeId,
     signatureStatus: "completed",
     signatureCompletedAt: now,
@@ -352,10 +389,11 @@ export async function POST(request: Request) {
       signatureStatus: "completed",
       signatureCompletedAt: now,
       documensoEnvelopeId: envelopeId,
-      userId: metaUserId,
-      agreementType: metaAgreementType,
+      externalId,
+      agreementType: persistedAgreementType,
+      userIdOrLabel,
     },
-    reason: `Documenso ${event} — auto-created ${metaAgreementType} agreement for user ${metaUserId} from envelope ${envelopeId}.`,
+    reason: `Documenso ${event}. Auto-created ${persistedAgreementType} agreement from externalId=${externalId}, document=${envelopeId}.`,
   });
 
   return NextResponse.json({

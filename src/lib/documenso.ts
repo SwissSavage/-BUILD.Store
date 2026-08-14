@@ -141,24 +141,28 @@ export interface DocumensoRecipient {
   role?: "SIGNER" | "APPROVER" | "VIEWER" | "CC";
 }
 
+/**
+ * Union payload type used by the webhook path. Documenso passes back
+ * a document-shaped object on document.* events and an envelope-shaped
+ * object on envelope.* events, but both carry the fields FM cares about
+ * (id, status, externalId, recipients). Keeping one type keeps the
+ * webhook branching simple.
+ */
 export interface DocumensoEnvelope {
-  id: string;
-  type: "DOCUMENT" | "TEMPLATE";
-  status: "DRAFT" | "PENDING" | "COMPLETED" | "REJECTED" | "CANCELLED";
+  id: string | number;
+  type?: "DOCUMENT" | "TEMPLATE";
+  status?: string;
   title?: string;
   createdAt?: string;
   updatedAt?: string;
   /**
-   * Free-form key-value metadata persisted with the envelope at
-   * creation. FM writes `{ userId, agreementType }` for LOI envelopes
-   * so the webhook handler can attach the resulting Agreement row to
-   * the right user, and `{ invoiceId, ... }` for retroactive receipts
-   * so we can look up the invoice by envelope id + double-check.
-   * Documenso passes it through verbatim on webhook payloads.
+   * FM-side correlation string set at send time via the /api/v2/template/use
+   * endpoint. Format: "agreement:<type>:<userId>" or "invoice:<id>" or
+   * "agreement:ncnda:<variant>". See webhook route for the parse.
    */
-  metadata?: Record<string, string>;
+  externalId?: string | null;
   recipients?: Array<{
-    id: string;
+    id: string | number;
     email: string;
     name?: string;
     status?: string;
@@ -167,135 +171,263 @@ export interface DocumensoEnvelope {
 }
 
 /**
- * Spawn a signing envelope from an existing template envelope.
- * The template must already exist in the Documenso instance;
- * see DOCUMENSO_TEMPLATES for canonical FM template references.
- *
- * Returns the newly-created DOCUMENT envelope in DRAFT status.
- * Call distributeEnvelope() to send it out for signing.
+ * Documenso v2 template shape (subset). A template has an id (numeric)
+ * and a list of placeholder recipients each with their own numeric id.
+ * When we call POST /api/v2/template/use we pass those placeholder ids
+ * back so Documenso knows which slot our real recipient fills.
  */
-export async function createEnvelopeFromTemplate(input: {
-  templateEnvelopeId: string;
-  recipient: DocumensoRecipient;
-  /** Optional title override; defaults to the template title. */
+export interface DocumensoTemplate {
+  id: number;
   title?: string;
-  /** Optional metadata payload persisted with the envelope. */
-  metadata?: Record<string, string>;
-}): Promise<DocumensoEnvelope> {
-  if (!input.templateEnvelopeId) {
+  recipients?: Array<{
+    id: number;
+    email: string;
+    name?: string;
+    role?: string;
+  }>;
+}
+
+/**
+ * Documenso v2 document shape (subset). Returned by POST /api/v2/template/use.
+ * The document's id becomes our internal `documensoEnvelopeId` handle —
+ * naming lag from the earlier envelope-API assumption, not a real mismatch.
+ */
+export interface DocumensoDocument {
+  id: number;
+  title?: string;
+  status?: string;
+  externalId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  recipients?: Array<{
+    id: number;
+    email: string;
+    name?: string;
+    status?: string;
+    signingUrl?: string;
+  }>;
+}
+
+/**
+ * Coerce a template ID env var (string like "5" or a numeric) into the
+ * number the Documenso v2 API requires.
+ */
+function toTemplateIdNumber(raw: string | number): number {
+  if (typeof raw === "number") return raw;
+  const n = parseInt(String(raw).trim(), 10);
+  if (!Number.isFinite(n)) {
     throw new DocumensoError(
-      "createEnvelopeFromTemplate called with empty templateEnvelopeId. " +
-        "Populate the template ID in src/lib/documenso.ts DOCUMENSO_TEMPLATES or the corresponding env var.",
+      `Template id "${raw}" is not a valid number. Documenso v2 expects numeric template ids. Check the DOCUMENSO_TEMPLATE_* env var value.`,
       400,
       null,
     );
   }
-  return documensoFetch<DocumensoEnvelope>("/api/v2/envelope/use", {
-    method: "POST",
-    body: JSON.stringify({
-      envelopeId: input.templateEnvelopeId,
-      recipients: [
-        {
-          email: input.recipient.email,
-          name: input.recipient.name,
-          role: input.recipient.role ?? "SIGNER",
-        },
-      ],
-      title: input.title,
-      metadata: input.metadata,
-    }),
-  });
+  return n;
 }
 
 /**
- * Send an envelope out for signing. After distribution the
- * recipient receives an email from Documenso with the signing link.
+ * Fetch a template's shape so we can map real recipients onto its
+ * placeholder recipient slots. Required before POST /template/use because
+ * that endpoint expects `recipients: [{ id, email, name }]` where `id`
+ * is the placeholder recipient id from the template, not an arbitrary id.
  */
-export async function distributeEnvelope(
-  envelopeId: string,
-): Promise<DocumensoEnvelope> {
-  return documensoFetch<DocumensoEnvelope>("/api/v2/envelope/distribute", {
-    method: "POST",
-    body: JSON.stringify({ envelopeId }),
-  });
-}
-
-/** Get the current state of an envelope + its recipients. */
-export async function getEnvelope(
-  envelopeId: string,
-): Promise<DocumensoEnvelope> {
-  return documensoFetch<DocumensoEnvelope>(
-    `/api/v2/envelope/${envelopeId}`,
+export async function getTemplate(
+  templateId: string | number,
+): Promise<DocumensoTemplate> {
+  const id = toTemplateIdNumber(templateId);
+  return documensoFetch<DocumensoTemplate>(
+    `/api/v2/template/${id}`,
     { method: "GET" },
   );
 }
 
 /**
- * Convenience combining create + distribute for the common case
- * where you just want to invite someone to sign a template right now.
- * Returns the distributed envelope.
+ * Low-level: use a template to spawn a new document, optionally
+ * distributing it in the same call. Wraps POST /api/v2/template/use.
+ *
+ * Callers should generally use inviteRecipientToTemplate /
+ * inviteRecipientsToTemplate which handle the template lookup +
+ * placeholder mapping automatically.
+ */
+export async function useTemplate(input: {
+  templateId: string | number;
+  recipients: Array<{ id: number; email: string; name: string }>;
+  distributeDocument?: boolean;
+  /** Compact FM-side correlation string (see webhook route for the parse). */
+  externalId?: string;
+}): Promise<DocumensoDocument> {
+  if (input.recipients.length === 0) {
+    throw new DocumensoError(
+      "useTemplate requires at least one recipient.",
+      400,
+      null,
+    );
+  }
+  return documensoFetch<DocumensoDocument>("/api/v2/template/use", {
+    method: "POST",
+    body: JSON.stringify({
+      templateId: toTemplateIdNumber(input.templateId),
+      recipients: input.recipients,
+      distributeDocument: input.distributeDocument ?? true,
+      externalId: input.externalId,
+    }),
+  });
+}
+
+/**
+ * Fetch the current state of a document. Used by the webhook path
+ * as a fallback when the payload doesn't carry the fields we need.
+ */
+export async function getDocument(
+  documentId: string | number,
+): Promise<DocumensoDocument> {
+  return documensoFetch<DocumensoDocument>(
+    `/api/v2/document/${documentId}`,
+    { method: "GET" },
+  );
+}
+
+/**
+ * Convenience: fetch the template, map our single recipient onto the
+ * first placeholder slot, use-template with distribute=true. One admin
+ * click → one email dispatched to the signer.
+ *
+ * `templateEnvelopeId` is the legacy parameter name kept for caller
+ * compatibility; the value should be the numeric template id (either
+ * as a number or a numeric string).
  */
 export async function inviteRecipientToTemplate(input: {
   templateEnvelopeId: string;
   recipient: DocumensoRecipient;
   title?: string;
+  externalId?: string;
+  /**
+   * Legacy metadata field. Ignored by /api/v2/template/use — pass the
+   * correlation info through `externalId` instead. Kept in the signature
+   * so existing callers compile; drop when call sites migrate.
+   */
   metadata?: Record<string, string>;
-}): Promise<DocumensoEnvelope> {
-  const envelope = await createEnvelopeFromTemplate(input);
-  return distributeEnvelope(envelope.id);
+}): Promise<DocumensoDocument> {
+  if (!input.templateEnvelopeId) {
+    throw new DocumensoError(
+      "inviteRecipientToTemplate called with empty templateEnvelopeId. " +
+        "Populate the corresponding DOCUMENSO_TEMPLATE_* env var with the numeric template id from Documenso.",
+      400,
+      null,
+    );
+  }
+  const template = await getTemplate(input.templateEnvelopeId);
+  const placeholder = template.recipients?.[0];
+  if (!placeholder) {
+    throw new DocumensoError(
+      `Template ${input.templateEnvelopeId} has no placeholder recipient. Open the template in Documenso and add at least one recipient with signature/date/name fields.`,
+      400,
+      null,
+    );
+  }
+  return useTemplate({
+    templateId: input.templateEnvelopeId,
+    recipients: [
+      {
+        id: placeholder.id,
+        email: input.recipient.email,
+        name: input.recipient.name,
+      },
+    ],
+    distributeDocument: true,
+    externalId: input.externalId,
+  });
 }
 
 /**
- * Multi-recipient variant of createEnvelopeFromTemplate. Used for
- * NCNDAs and similar documents that route to N counterparties at once
- * (e.g., the multi-party NCNDA template supports up to 3 Counterparties
- * signing alongside Future Modern).
+ * Multi-recipient variant. Fetches the template, verifies it has at
+ * least as many placeholder recipients as we want to fill, maps ours
+ * onto its slots in order, use-template with distribute=true.
  */
-export async function createEnvelopeFromTemplateMulti(input: {
+export async function inviteRecipientsToTemplate(input: {
   templateEnvelopeId: string;
   recipients: DocumensoRecipient[];
   title?: string;
+  externalId?: string;
   metadata?: Record<string, string>;
-}): Promise<DocumensoEnvelope> {
+}): Promise<DocumensoDocument> {
   if (!input.templateEnvelopeId) {
     throw new DocumensoError(
-      "createEnvelopeFromTemplateMulti called with empty templateEnvelopeId. " +
-        "Populate the template ID in src/lib/documenso.ts DOCUMENSO_TEMPLATES or the corresponding env var.",
+      "inviteRecipientsToTemplate called with empty templateEnvelopeId. " +
+        "Populate the corresponding DOCUMENSO_TEMPLATE_* env var with the numeric template id from Documenso.",
       400,
       null,
     );
   }
   if (input.recipients.length === 0) {
     throw new DocumensoError(
-      "createEnvelopeFromTemplateMulti requires at least one recipient.",
+      "inviteRecipientsToTemplate requires at least one recipient.",
       400,
       null,
     );
   }
-  return documensoFetch<DocumensoEnvelope>("/api/v2/envelope/use", {
-    method: "POST",
-    body: JSON.stringify({
-      envelopeId: input.templateEnvelopeId,
-      recipients: input.recipients.map((r) => ({
-        email: r.email,
-        name: r.name,
-        role: r.role ?? "SIGNER",
-      })),
-      title: input.title,
-      metadata: input.metadata,
-    }),
+  const template = await getTemplate(input.templateEnvelopeId);
+  const placeholders = template.recipients ?? [];
+  if (placeholders.length < input.recipients.length) {
+    throw new DocumensoError(
+      `Template ${input.templateEnvelopeId} has ${placeholders.length} placeholder recipient(s) but ${input.recipients.length} were requested. Add more placeholder recipients in Documenso before sending to multiple counterparties.`,
+      400,
+      null,
+    );
+  }
+  return useTemplate({
+    templateId: input.templateEnvelopeId,
+    recipients: input.recipients.map((r, i) => ({
+      id: placeholders[i].id,
+      email: r.email,
+      name: r.name,
+    })),
+    distributeDocument: true,
+    externalId: input.externalId,
   });
 }
 
-/** Multi-recipient equivalent of inviteRecipientToTemplate (create + distribute). */
-export async function inviteRecipientsToTemplate(input: {
+// ────────────────────────────────────────────────────────────────
+//  Legacy compatibility shims
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * @deprecated Kept for backwards compatibility with earlier envelope-API
+ * assumptions. Delegates to the correct template-API path. Callers should
+ * migrate to useTemplate / inviteRecipientToTemplate directly.
+ */
+export async function createEnvelopeFromTemplate(input: {
   templateEnvelopeId: string;
-  recipients: DocumensoRecipient[];
+  recipient: DocumensoRecipient;
   title?: string;
   metadata?: Record<string, string>;
-}): Promise<DocumensoEnvelope> {
-  const envelope = await createEnvelopeFromTemplateMulti(input);
-  return distributeEnvelope(envelope.id);
+}): Promise<DocumensoDocument> {
+  return inviteRecipientToTemplate({
+    ...input,
+    externalId: input.metadata?.externalId,
+  });
+}
+
+/**
+ * @deprecated The template-use endpoint distributes in one call when
+ * `distributeDocument: true`, so a separate distribute call is no longer
+ * needed. Left as a no-op shim so any lingering caller compiles.
+ */
+export async function distributeEnvelope(
+  envelopeId: string,
+): Promise<{ id: string }> {
+  return { id: envelopeId };
+}
+
+/**
+ * @deprecated Replaced by getDocument. Kept as a thin shim so the
+ * webhook code that reads target envelope state compiles during the
+ * migration.
+ */
+export async function getEnvelope(
+  envelopeId: string,
+): Promise<DocumensoDocument> {
+  return getDocument(envelopeId);
 }
 
 // ────────────────────────────────────────────────────────────────

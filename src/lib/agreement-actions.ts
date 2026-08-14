@@ -338,6 +338,12 @@ export async function sendLoiForSignature(
 
   let envelopeId: string;
   try {
+    // externalId is the correlation string the webhook route parses to
+    // route the completion event back to the right FM resource. Format:
+    //   agreement:<agreementType>:<userId>
+    // The webhook handler splits on ":" to recreate the auto-Agreement
+    // insert path that previously depended on Documenso passing metadata
+    // through (which /api/v2/template/use doesn't support).
     const envelope = await inviteRecipientToTemplate({
       templateEnvelopeId: DOCUMENSO_TEMPLATES.TALENT_PARTNER_LOI,
       recipient: {
@@ -346,17 +352,14 @@ export async function sendLoiForSignature(
         role: "SIGNER",
       },
       title: `Talent Partner Letter of Intent — ${recipientName}`,
-      metadata: {
-        userId,
-        agreementType: "loi",
-      },
+      externalId: `agreement:loi:${userId}`,
     });
-    envelopeId = envelope.id;
+    envelopeId = String(envelope.id);
   } catch (err) {
     if (err instanceof DocumensoError) {
       throw new Error(
         `Documenso rejected the envelope: ${err.message} (HTTP ${err.status}). ` +
-          `Check DOCUMENSO_TEMPLATE_TALENT_PARTNER_LOI is set and the template envelope exists on sign.afuturemodern.com.`,
+          `Check DOCUMENSO_TEMPLATE_TALENT_PARTNER_LOI is set and the template exists on sign.afuturemodern.com.`,
       );
     }
     throw err;
@@ -467,33 +470,28 @@ export async function sendNcndaForSignature(
 
   let envelopeId: string;
   try {
-    // Bilateral uses the single-recipient helper; multi uses the
-    // multi-recipient variant. Both hit /envelope/use; the wrapper
-    // picks the right array shape.
+    // externalId format: agreement:ncnda:<variant>. Webhook parses this
+    // to know we've sent an NCNDA and which template variant it was.
+    // For NCNDAs the FM-side Agreement row (if any) is created against
+    // the primary counterparty on completion; multi-party variants log
+    // one Agreement per completed signer per Documenso's per-recipient
+    // completion events. See webhook route.
+    const externalId = `agreement:ncnda:${variant}`;
     const envelope =
       variant === "bilateral"
         ? await inviteRecipientToTemplate({
             templateEnvelopeId: templateId,
             recipient: recipients[0],
             title,
-            metadata: {
-              variant,
-              agreementType: "other",
-              purpose: "ncnda",
-            },
+            externalId,
           })
         : await inviteRecipientsToTemplate({
             templateEnvelopeId: templateId,
             recipients,
             title,
-            metadata: {
-              variant,
-              agreementType: "other",
-              purpose: "ncnda",
-              recipientCount: String(recipients.length),
-            },
+            externalId,
           });
-    envelopeId = envelope.id;
+    envelopeId = String(envelope.id);
   } catch (err) {
     if (err instanceof DocumensoError) {
       throw new Error(

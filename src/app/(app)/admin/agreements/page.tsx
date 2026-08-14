@@ -35,6 +35,9 @@ import {
   createAgreement,
   removeAgreement,
   sendLoiForSignature,
+sendLoiForSignature,
+  sendNcndaForSignature,
+} from "@/lib/agreement-actions";
 } from "@/lib/agreement-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
@@ -214,6 +217,163 @@ export default async function AdminAgreementsPage() {
               className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
             >
               Send LOI for signature
+            </button>
+          </div>
+        </form>
+      </section>
+
+
+      {/* Send Mutual NCNDA via Documenso — bilateral variant */}
+      <section className="mt-10">
+        <h2 className="font-display text-2xl font-semibold">
+          Send Mutual NCNDA for signature
+        </h2>
+        <p className="mt-2 text-sm text-ink-muted">
+          Client outreach paperwork. Bilateral for one counterparty,
+          multi-party (up to three) when the deal involves multiple
+          entities. Signer accounts are not required on Documenso; the
+          counterparty just clicks the link in the email. Retroactive
+          receipt-style account-required assurance is not enabled for
+          NCNDAs — signature is via email link only.
+        </p>
+
+        {/* Bilateral variant */}
+        <form
+          action={sendNcndaForSignature}
+          className="mt-6 space-y-4 rounded-2xl border border-brand-magenta/20 bg-brand-magenta/[0.03] p-6"
+        >
+          <input type="hidden" name="variant" value="bilateral" />
+          <div>
+            <CardEyebrow>Bilateral · FM + 1 counterparty</CardEyebrow>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label
+                htmlFor="ncnda-1-name"
+                className="block text-xs uppercase tracking-wider text-ink-muted"
+              >
+                Counterparty name
+              </label>
+              <input
+                id="ncnda-1-name"
+                name="name_1"
+                type="text"
+                required
+                placeholder="Jane Doe"
+                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="ncnda-1-email"
+                className="block text-xs uppercase tracking-wider text-ink-muted"
+              >
+                Email
+              </label>
+              <input
+                id="ncnda-1-email"
+                name="email_1"
+                type="email"
+                required
+                placeholder="jane@example.com"
+                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="ncnda-1-company"
+                className="block text-xs uppercase tracking-wider text-ink-muted"
+              >
+                Company (optional)
+              </label>
+              <input
+                id="ncnda-1-company"
+                name="company_1"
+                type="text"
+                placeholder="Acme Ventures"
+                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+            >
+              Send bilateral NCNDA
+            </button>
+          </div>
+        </form>
+
+        {/* Multi-party variant */}
+        <form
+          action={sendNcndaForSignature}
+          className="mt-4 space-y-4 rounded-2xl border border-brand-blue/20 bg-brand-blue/[0.03] p-6"
+        >
+          <input type="hidden" name="variant" value="multi" />
+          <div>
+            <CardEyebrow>Multi-party · FM + up to 3 counterparties</CardEyebrow>
+            <p className="mt-1 text-[11px] text-ink-faint">
+              Counterparty 1 is required. 2 and 3 are optional; leave
+              blank if unused.
+            </p>
+          </div>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label
+                  htmlFor={`ncnda-m${i}-name`}
+                  className="block text-xs uppercase tracking-wider text-ink-muted"
+                >
+                  {i === 1 ? "Counterparty 1 name" : `Counterparty ${i} name (optional)`}
+                </label>
+                <input
+                  id={`ncnda-m${i}-name`}
+                  name={`name_${i}`}
+                  type="text"
+                  required={i === 1}
+                  placeholder={i === 1 ? "Jane Doe" : ""}
+                  className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor={`ncnda-m${i}-email`}
+                  className="block text-xs uppercase tracking-wider text-ink-muted"
+                >
+                  Email
+                </label>
+                <input
+                  id={`ncnda-m${i}-email`}
+                  name={`email_${i}`}
+                  type="email"
+                  required={i === 1}
+                  placeholder={i === 1 ? "jane@example.com" : ""}
+                  className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor={`ncnda-m${i}-company`}
+                  className="block text-xs uppercase tracking-wider text-ink-muted"
+                >
+                  Company (optional)
+                </label>
+                <input
+                  id={`ncnda-m${i}-company`}
+                  name={`company_${i}`}
+                  type="text"
+                  className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+          ))}
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="rounded-full bg-brand-blue px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-blue/20 transition-colors hover:bg-brand-blue/90"
+            >
+              Send multi-party NCNDA
             </button>
           </div>
         </form>

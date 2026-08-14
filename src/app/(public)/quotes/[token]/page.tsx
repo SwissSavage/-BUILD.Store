@@ -57,21 +57,19 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * Pre-generate one page per known quote token at build time. Even
- * with force-dynamic, generateStaticParams provides build-time
- * indexability.
+ * generateStaticParams intentionally returns an empty array.
  *
- * SANDBOX→LIVE swap history:
- *   - Pre-Beta cutover: mapped over MOCK_COOPERATIVE_QUOTES.
- *   - Beta cutover (this file, 2026-08-13): reads client tokens from
- *     Drizzle. Static rendering is still bypassed at runtime by
- *     force-dynamic above; this is purely build-time indexability.
+ * Since `dynamic = "force-dynamic"` above forces every request to
+ * re-render on the server (necessary because Approve/Decline mutations
+ * must reflect immediately), there's no benefit to prebuilding param
+ * pages at `next build` time. Previous versions read tokens from
+ * Drizzle here for build-time indexability, but that required the DB
+ * to be reachable from the build container — which it isn't in
+ * Dokploy's isolated build stage. Returning [] keeps builds hermetic.
+ * Runtime params still resolve normally via the dynamic segment.
  */
-export async function generateStaticParams() {
-  const rows = await db
-    .select({ token: cooperativeQuotesTable.clientToken })
-    .from(cooperativeQuotesTable);
-  return rows;
+export function generateStaticParams() {
+  return [];
 }
 
 export const metadata: Metadata = {

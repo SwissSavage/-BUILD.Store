@@ -41,14 +41,7 @@ import {
   type AgreementProvider,
   type AgreementType,
 } from "@/lib/types";
-import {
-  DOCUMENSO_TEMPLATES,
-  DocumensoError,
-  inviteRecipientToTemplate,
-inviteRecipientToTemplate,
-  inviteRecipientsToTemplate,
-  type DocumensoRecipient,
-} from "@/lib/documenso";
+import { DOCUMENSO_TEMPLATES, DocumensoError, inviteRecipientToTemplate, inviteRecipientsToTemplate, type DocumensoRecipient } from "@/lib/documenso";
 
 // Local guards mirror the union — allows the parser to fail loudly
 // on typos in FormData string values without pulling in a full zod

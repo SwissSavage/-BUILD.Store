@@ -45,6 +45,8 @@ import {
   DOCUMENSO_TEMPLATES,
   DocumensoError,
   inviteRecipientToTemplate,
+  inviteRecipientsToTemplate,
+  type DocumensoRecipient,
 } from "@/lib/documenso";
 
 // Local guards mirror the union — allows the parser to fail loudly
@@ -388,4 +390,143 @@ export async function sendLoiForSignature(
 
   revalidatePath("/admin/agreements");
   revalidatePath(`/admin/members/${userId}`);
+}
+
+// ────────────────────────────────────────────────────────────────
+//  Documenso — Send Mutual NCNDA for signature
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Dispatch the FM Mutual NCNDA (bilateral or multi-party variant)
+ * through Documenso for signature.
+ *
+ * Unlike sendLoiForSignature, NCNDAs typically go to prospects/clients
+ * who are NOT yet FM users, so this action takes raw name + email +
+ * company fields per counterparty rather than resolving against
+ * MOCK_USERS.
+ *
+ * FormData:
+ *   - variant             "bilateral" or "multi" (required)
+ *   - name_1 / email_1    counterparty 1 (required)
+ *   - company_1           counterparty 1 company (optional, appended to name)
+ *   - name_2 / email_2    counterparty 2 (multi only, optional)
+ *   - name_3 / email_3    counterparty 3 (multi only, optional)
+ *
+ * Bilateral routes to DOCUMENSO_TEMPLATE_MUTUAL_NCNDA; multi routes
+ * to DOCUMENSO_TEMPLATE_MUTUAL_NCNDA_MULTI. No Agreement row is created
+ * at send time; the webhook handler (task #19) creates one on completion.
+ */
+export async function sendNcndaForSignature(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireAdmin();
+
+  const variantRaw = String(formData.get("variant") ?? "").trim();
+  if (variantRaw !== "bilateral" && variantRaw !== "multi") {
+    throw new Error(
+      `Unknown NCNDA variant "${variantRaw}". Use "bilateral" or "multi".`,
+    );
+  }
+  const variant = variantRaw as "bilateral" | "multi";
+  const templateId =
+    variant === "bilateral"
+      ? DOCUMENSO_TEMPLATES.MUTUAL_NCNDA
+      : DOCUMENSO_TEMPLATES.MUTUAL_NCNDA_MULTI;
+  const envVarName =
+    variant === "bilateral"
+      ? "DOCUMENSO_TEMPLATE_MUTUAL_NCNDA"
+      : "DOCUMENSO_TEMPLATE_MUTUAL_NCNDA_MULTI";
+
+  // Collect up to 3 recipients from the form. Counterparty 1 is
+  // required in both variants; counterparties 2 and 3 are additional
+  // slots that only apply to the multi variant.
+  type RawCounterparty = { name: string; email: string; company: string };
+  const raw: RawCounterparty[] = [];
+  const maxSlots = variant === "bilateral" ? 1 : 3;
+  for (let i = 1; i <= maxSlots; i++) {
+    const name = String(formData.get(`name_${i}`) ?? "").trim();
+    const email = String(formData.get(`email_${i}`) ?? "").trim();
+    const company = String(formData.get(`company_${i}`) ?? "").trim();
+    if (!name && !email && !company) continue;
+    if (!name || !email) {
+      throw new Error(
+        `Counterparty ${i} needs both name and email (or leave all three fields blank).`,
+      );
+    }
+    raw.push({ name, email, company });
+  }
+  if (raw.length === 0) {
+    throw new Error("Add at least one counterparty before sending.");
+  }
+
+  const recipients: DocumensoRecipient[] = raw.map((r) => ({
+    name: r.company ? `${r.name} (${r.company})` : r.name,
+    email: r.email,
+    role: "SIGNER",
+  }));
+
+  const titleSuffix =
+    raw.length === 1
+      ? raw[0].company || raw[0].name
+      : raw.map((r) => r.company || r.name).join(" / ");
+  const title = `FM Mutual NCNDA — ${titleSuffix}`;
+
+  let envelopeId: string;
+  try {
+    // Bilateral uses the single-recipient helper; multi uses the
+    // multi-recipient variant. Both hit /envelope/use; the wrapper
+    // picks the right array shape.
+    const envelope =
+      variant === "bilateral"
+        ? await inviteRecipientToTemplate({
+            templateEnvelopeId: templateId,
+            recipient: recipients[0],
+            title,
+            metadata: {
+              variant,
+              agreementType: "other",
+              purpose: "ncnda",
+            },
+          })
+        : await inviteRecipientsToTemplate({
+            templateEnvelopeId: templateId,
+            recipients,
+            title,
+            metadata: {
+              variant,
+              agreementType: "other",
+              purpose: "ncnda",
+              recipientCount: String(recipients.length),
+            },
+          });
+    envelopeId = envelope.id;
+  } catch (err) {
+    if (err instanceof DocumensoError) {
+      throw new Error(
+        `Documenso rejected the NCNDA envelope: ${err.message} (HTTP ${err.status}). ` +
+          `Check ${envVarName} is set and the template exists on sign.afuturemodern.com.`,
+      );
+    }
+    throw err;
+  }
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "document.signature_requested",
+    resourceKind: "agreement",
+    resourceId: envelopeId,
+    before: null,
+    after: {
+      documensoEnvelopeId: envelopeId,
+      signatureStatus: "sent",
+      agreementType: "other",
+      purpose: "ncnda",
+      variant,
+      recipients: recipients.map((r) => ({ name: r.name, email: r.email })),
+    },
+    reason: `Mutual NCNDA (${variant}) sent to ${recipients.map((r) => `${r.name} <${r.email}>`).join(", ")} via Documenso.`,
+  });
+
+  revalidatePath("/admin/agreements");
 }

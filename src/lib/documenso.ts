@@ -53,6 +53,12 @@ export const DOCUMENSO_TEMPLATES = {
   /** Retroactive Receipt requiring signed rationale. */
   RETROACTIVE_RECEIPT:
     process.env.DOCUMENSO_TEMPLATE_RETROACTIVE_RECEIPT ?? "",
+  /** Mutual NCNDA — bilateral (FM + 1 counterparty). */
+  MUTUAL_NCNDA:
+    process.env.DOCUMENSO_TEMPLATE_MUTUAL_NCNDA ?? "",
+  /** Mutual NCNDA — multi-party (FM + up to 3 counterparties). */
+  MUTUAL_NCNDA_MULTI:
+    process.env.DOCUMENSO_TEMPLATE_MUTUAL_NCNDA_MULTI ?? "",
 } as const;
 
 // ────────────────────────────────────────────────────────────────
@@ -236,6 +242,59 @@ export async function inviteRecipientToTemplate(input: {
   metadata?: Record<string, string>;
 }): Promise<DocumensoEnvelope> {
   const envelope = await createEnvelopeFromTemplate(input);
+  return distributeEnvelope(envelope.id);
+}
+
+/**
+ * Multi-recipient variant of createEnvelopeFromTemplate. Used for
+ * NCNDAs and similar documents that route to N counterparties at once
+ * (e.g., the multi-party NCNDA template supports up to 3 Counterparties
+ * signing alongside Future Modern).
+ */
+export async function createEnvelopeFromTemplateMulti(input: {
+  templateEnvelopeId: string;
+  recipients: DocumensoRecipient[];
+  title?: string;
+  metadata?: Record<string, string>;
+}): Promise<DocumensoEnvelope> {
+  if (!input.templateEnvelopeId) {
+    throw new DocumensoError(
+      "createEnvelopeFromTemplateMulti called with empty templateEnvelopeId. " +
+        "Populate the template ID in src/lib/documenso.ts DOCUMENSO_TEMPLATES or the corresponding env var.",
+      400,
+      null,
+    );
+  }
+  if (input.recipients.length === 0) {
+    throw new DocumensoError(
+      "createEnvelopeFromTemplateMulti requires at least one recipient.",
+      400,
+      null,
+    );
+  }
+  return documensoFetch<DocumensoEnvelope>("/api/v2/envelope/use", {
+    method: "POST",
+    body: JSON.stringify({
+      envelopeId: input.templateEnvelopeId,
+      recipients: input.recipients.map((r) => ({
+        email: r.email,
+        name: r.name,
+        role: r.role ?? "SIGNER",
+      })),
+      title: input.title,
+      metadata: input.metadata,
+    }),
+  });
+}
+
+/** Multi-recipient equivalent of inviteRecipientToTemplate (create + distribute). */
+export async function inviteRecipientsToTemplate(input: {
+  templateEnvelopeId: string;
+  recipients: DocumensoRecipient[];
+  title?: string;
+  metadata?: Record<string, string>;
+}): Promise<DocumensoEnvelope> {
+  const envelope = await createEnvelopeFromTemplateMulti(input);
   return distributeEnvelope(envelope.id);
 }
 

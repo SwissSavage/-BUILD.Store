@@ -38,7 +38,7 @@ import {
 sendLoiForSignature,
   sendNcndaForSignature,
 } from "@/lib/agreement-actions";
-} from "@/lib/agreement-actions";
+
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
 

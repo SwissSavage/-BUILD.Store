@@ -31,13 +31,7 @@ import {
   AGREEMENT_PROVIDER_LABELS,
   AGREEMENT_TYPE_LABELS,
 } from "@/lib/types";
-import {
-  createAgreement,
-  removeAgreement,
-  sendLoiForSignature,
-sendLoiForSignature,
-  sendNcndaForSignature,
-} from "@/lib/agreement-actions";
+import { createAgreement, removeAgreement, sendLoiForSignature, sendNcndaForSignature } from "@/lib/agreement-actions";
 
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";

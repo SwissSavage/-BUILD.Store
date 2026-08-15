@@ -127,11 +127,14 @@ export default async function InviteCodePage({
         padding: "3rem 1.5rem",
       }}
     >
+
       {isMember ? <CodexArtifact /> : <PartnerHeader />}
+
       <ActivationForm code={code} />
     </div>
   );
 }
+
 
 /**
  * Partner variant of the /code header — no illuminated codex reveal,

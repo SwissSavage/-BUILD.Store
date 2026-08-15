@@ -159,7 +159,7 @@ export const MOCK_USERS: User[] = [
     firstName: "Trevor",
     lastName: "—",
     profileImageUrl: null,
-    membershipTier: "prospect",
+    membershipTier: "viewer",
     primaryIndustry: "stem",
     secondaryIndustries: [],
     dataParticipation: false,

@@ -301,7 +301,7 @@ export default async function SettlePage({
   // Candidates list for the AdminAllocator dropdown — anyone who could
   // plausibly be added (members + partners + admins).
   const adminCandidates = MOCK_USERS.filter(
-    (u) => u.membershipTier !== "viewer" && u.membershipTier !== "prospect",
+    (u) => u.membershipTier !== "viewer",
   ).map((u) => ({
     id: u.id,
     name: adminName(u),

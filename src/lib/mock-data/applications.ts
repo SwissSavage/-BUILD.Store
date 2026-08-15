@@ -11,7 +11,7 @@ export const MOCK_APPLICATIONS: MembershipApplication[] = [
     id: "app_001",
     userId: "u_trevor",
     requestedTier: "partner",
-    currentTier: "prospect",
+    currentTier: "viewer",
     status: "pending",
     applicationData: {
       sample_work: "https://example.com/trevor-data-portfolio",

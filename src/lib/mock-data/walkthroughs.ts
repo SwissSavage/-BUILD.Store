@@ -20,108 +20,6 @@ import type { WalkthroughProgress, WalkthroughStep } from "@/lib/types";
  * Naming convention: `wts_<tier>_<short-id>`.
  */
 export const MOCK_WALKTHROUGH_STEPS: WalkthroughStep[] = [
-  // ── Prospect tier — onlooker, not yet a member ──────────────────────
-  {
-    id: "wts_prospect_intro",
-    order: 1,
-    tier: "prospect",
-    pillar: null,
-    title: "Welcome — what to expect this week",
-    blurb:
-      "You're in the beta as a prospect. We'll walk you through what the cooperative looks like before you decide whether to apply for membership.",
-    surface: "/dashboard",
-    surfaceLabel: "Open your dashboard",
-    whatToTry: [
-      "Glance at the open RFPs we're routing right now",
-      "Check the recent activity feed",
-    ],
-    feedbackPrompt: null,
-  },
-  {
-    id: "wts_prospect_showcase",
-    order: 2,
-    tier: "prospect",
-    pillar: null,
-    title: "See the work members are putting up",
-    blurb:
-      "The Showcase is what an outside client sees when they evaluate the cooperative. This is the bar.",
-    surface: "/showcase",
-    surfaceLabel: "Browse the Showcase",
-    whatToTry: [
-      "Pick a piece you'd like to be next to",
-      "Notice we don't publish last names or external links by default",
-    ],
-    feedbackPrompt:
-      "Does the work in the showcase look like company you'd want to keep?",
-  },
-  {
-    id: "wts_prospect_store",
-    order: 3,
-    tier: "prospect",
-    pillar: null,
-    title: "Marketplace — vetted goods, services, SaaS",
-    blurb:
-      "Members list product across five categories. Subdomains (men., saas., energy., studio., wear.) are filtered views of the same store.",
-    surface: "/store",
-    surfaceLabel: "Browse the Store",
-    whatToTry: [
-      "Filter by a category that matches your work",
-      "Imagine your own listing — what would it sell?",
-    ],
-    feedbackPrompt: "What's the first product you'd want to list here?",
-  },
-  {
-    id: "wts_prospect_locker",
-    order: 4,
-    tier: "prospect",
-    pillar: null,
-    title: "Content locker — members-only artist drops",
-    blurb:
-      "Mux-hosted video and audio from cooperative artists. Streams stay inside the platform; nothing click-offs to YouTube or Spotify. Browse what's open to your tier.",
-    surface: "/locker",
-    surfaceLabel: "Open the Content Locker",
-    whatToTry: [
-      "Filter by artist or pillar",
-      "Try a piece that's gated above your tier — note the upgrade prompt",
-    ],
-    feedbackPrompt:
-      "Did the locker feel like a reason to upgrade — or just another list?",
-  },
-  {
-    id: "wts_prospect_whitelist",
-    order: 5,
-    tier: "prospect",
-    pillar: null,
-    title: "Whitelist — earned access, not for sale",
-    blurb:
-      "Three earned paths in: invitation, application + vetting, or contribution. The donation lane is optional and explicitly does not grant access. Read the framing before you apply for membership.",
-    surface: "/whitelist",
-    surfaceLabel: "See how access works",
-    whatToTry: [
-      "Read the 'Not for sale' framing under the hero",
-      "Open the donation section — note the split routing (50% Treasury / 50% LP, $0 to ops, $0 to anyone individual — war-chest mode until salaries start)",
-    ],
-    feedbackPrompt:
-      "Does 'access is earned, not sold' read clearly here, or does it still feel like a paywall in disguise?",
-  },
-  {
-    id: "wts_prospect_apply",
-    order: 6,
-    tier: "prospect",
-    pillar: null,
-    title: "Apply for membership when you're ready",
-    blurb:
-      "Membership unlocks the wallet, the contracts surface, and the 85% contributor split. We vet for fit, not credentials.",
-    surface: "/membership",
-    surfaceLabel: "Open membership upgrade",
-    whatToTry: [
-      "Read the partner vs member tier difference",
-      "If you're sure, hit Apply — we'll route to admin review",
-    ],
-    feedbackPrompt:
-      "Is anything stopping you from applying right now? (No wrong answer.)",
-  },
-
   // ── Partner tier — committed but still earning into membership ─────
   {
     id: "wts_partner_intro",
@@ -342,7 +240,7 @@ export const MOCK_WALKTHROUGH_STEPS: WalkthroughStep[] = [
     surfaceLabel: "Open the Content Locker",
     whatToTry: [
       "Find the contributor upload path",
-      "Note how tier-gating works on each piece (prospect/partner/member/admin-only)",
+      "Note how tier-gating works on each piece (viewer/partner/member/admin-only)",
     ],
     feedbackPrompt:
       "Do the gating tiers feel right for an artist's catalog — or too coarse?",
@@ -420,7 +318,7 @@ export const MOCK_WALKTHROUGH_STEPS: WalkthroughStep[] = [
     pillar: null,
     title: "View site as — see what each tier sees",
     blurb:
-      "The Admin dropdown has a 'View site as' picker that swaps the session cookie to a viewer, a prospect, a partner, a member, or another admin. A pink banner stays at the top until you flip back so you can't forget you're impersonating.",
+      "The Admin dropdown has a 'View site as' picker that swaps the session cookie to a viewer, a partner, a member, or another admin. A pink banner stays at the top until you flip back so you can't forget you're impersonating.",
     surface: "/admin",
     surfaceLabel: "Open admin home",
     whatToTry: [

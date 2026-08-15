@@ -29,7 +29,11 @@ import {
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
-const TIERS: MembershipTier[] = ["viewer", "prospect", "partner", "member"];
+// Invite form is restricted to Partner + Member. Anyone else gets a
+// public signup link. Viewer isn't invitable because it's the default
+// state for any signed-up account and doesn't merit the ceremonial
+// invite ritual. Only vouched-in tiers earn the invite artifact.
+const INVITABLE_TIERS: Exclude<MembershipTier, "viewer">[] = ["partner", "member"];
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -111,15 +115,18 @@ export default async function InviteMemberPage() {
               <select
                 name="targetTier"
                 required
-                defaultValue="prospect"
+                defaultValue="partner"
                 className="mt-1 block w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink"
               >
-                {TIERS.map((t) => (
+                {INVITABLE_TIERS.map((t) => (
                   <option key={t} value={t}>
                     {TIER_LABELS[t]}
                   </option>
                 ))}
               </select>
+              <span className="mt-1 block text-[10px] text-ink-faint">
+                Member gets the full care package. Partner gets the LOI plus platform terms.
+              </span>
             </label>
           </div>
           <label className="text-xs text-ink-muted block">

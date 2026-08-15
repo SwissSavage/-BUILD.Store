@@ -68,8 +68,7 @@ function issuanceCandidates() {
     .filter(
       (u) =>
         (u.membershipTier === "member" ||
-          u.membershipTier === "partner" ||
-          u.membershipTier === "prospect") &&
+          u.membershipTier === "partner") &&
         u.suspendedAt === null,
     )
     .sort((a, b) =>

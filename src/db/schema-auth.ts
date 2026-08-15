@@ -53,7 +53,7 @@
 //   lastName: text("lastName"),
 //   profileImageUrl: text("profileImageUrl"),
 //   membershipTier: text("membershipTier", {
-//     enum: ["viewer", "prospect", "partner", "member"],
+//     enum: ["viewer", "partner", "member"],
 //   }).notNull().default("viewer"),
 //   isAdmin: boolean("isAdmin").notNull().default(false),
 //   profilePublic: boolean("profilePublic").notNull().default(true),

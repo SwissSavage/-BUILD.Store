@@ -22,10 +22,7 @@ import {
 import type { MembershipTier } from "@/lib/types";
 
 const VALID_TIERS: MembershipTier[] = [
-  "viewer",
-  "prospect",
-  "partner",
-  "member",
+  "viewer", "partner", "member",
 ];
 
 function revalidateMemberPaths(handle?: string) {

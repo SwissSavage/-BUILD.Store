@@ -20,13 +20,13 @@ const PILLAR_OPTIONS: Industry[] = [
   "creative-media",
   "professional-services",
 ];
-const GATE_OPTIONS: MembershipTier[] = ["viewer", "prospect", "partner", "member"];
+const GATE_OPTIONS: MembershipTier[] = ["viewer", "partner", "member"];
 
 export default async function LockerUploadPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
-  // Prospects can't upload — the locker is a member/partner contribution surface.
-  if (user.membershipTier === "viewer" || user.membershipTier === "prospect") {
+  // Viewers can't upload — the locker is a member/partner contribution surface.
+  if (user.membershipTier === "viewer") {
     redirect("/locker");
   }
 

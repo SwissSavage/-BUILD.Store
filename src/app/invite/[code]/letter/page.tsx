@@ -17,7 +17,7 @@
  *
  * Server-rendered — no client JS needed on this page.
  */
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { eq } from "drizzle-orm";
@@ -53,6 +53,11 @@ export default async function InviteLetterPage({
   const { code } = await params;
   const invite = await loadInvite(code);
   if (!invite) notFound();
+  // The Letter is Member-only. Partners land straight on /sign because
+  // their flow is LOI + T&C without the Letter or Code ceremony.
+  if (invite.targetTier !== "member") {
+    redirect(`/invite/${code}/sign`);
+  }
 
   return (
     <div

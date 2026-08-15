@@ -28,9 +28,7 @@ import { StoreDropdown } from "@/components/StoreDropdown";
 import { MobileMenuApp } from "@/components/MobileMenuApp";
 
 const VIEW_AS_TIER_ORDER: MembershipTier[] = [
-  "prospect",
-  "partner",
-  "member",
+  "partner", "member",
 ];
 
 /**

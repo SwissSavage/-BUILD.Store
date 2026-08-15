@@ -58,10 +58,7 @@ export default async function AdminFeedbackPage({
     "resolved",
   ]) as FeedbackStatus | null;
   const tierFilter = parseEnum(params.tier, [
-    "viewer",
-    "prospect",
-    "partner",
-    "member",
+    "viewer", "partner", "member",
   ]) as MembershipTier | null;
   const pillarFilter = parseEnum(params.pillar, [
     "stem",
@@ -285,7 +282,7 @@ function FilterBar({
         defaultValue={params.tier ?? ""}
         options={[
           ["", "All"],
-          ["prospect", TIER_LABELS.prospect],
+          ["viewer", TIER_LABELS.viewer],
           ["partner", TIER_LABELS.partner],
           ["member", TIER_LABELS.member],
         ]}

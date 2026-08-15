@@ -38,7 +38,6 @@ interface TourSection {
 const SECTIONS_TOC = [
   { id: "landing-copy", label: "Landing / copy audit (Bayu)" },
   { id: "viewer", label: "Tour as Viewer" },
-  { id: "prospect", label: "Tour as Prospect" },
   { id: "partner", label: "Tour as Partner" },
   { id: "member", label: "Tour as Member" },
   { id: "admin", label: "Tour as Admin (your own session)" },
@@ -55,9 +54,6 @@ export default async function WalkthroughPage() {
     predicate: (u: (typeof MOCK_USERS)[number]) => boolean,
   ) => MOCK_USERS.find(predicate);
 
-  const prospectUser =
-    findFirst((u) => u.membershipTier === "prospect" && !u.isAdmin) ??
-    null;
   const partnerUser =
     findFirst(
       (u) => u.membershipTier === "partner" && !u.isAdmin && u.firstName === "Rob",
@@ -132,59 +128,8 @@ export default async function WalkthroughPage() {
     },
 
     {
-      id: "prospect",
-      eyebrow: "Step 2",
-      title: "Tour as Prospect",
-      intro: prospectUser
-        ? `You're ${publicName(prospectUser)}, a Prospect-tier user. Signed up but not yet Partner or Member. Walk their surfaces — what unlocks vs. what's still gated.`
-        : "You're a Prospect-tier user. Sandbox doesn't have one seeded — sign up as a fresh user or promote a Viewer to Prospect first.",
-      viewAsTarget: prospectUser?.id ?? "",
-      viewAsLabel: prospectUser
-        ? `View as ${publicName(prospectUser)} (Prospect)`
-        : "No Prospect seeded — skip or seed one",
-      steps: [
-        {
-          action: "Go to /profile.",
-          observe:
-            "Own profile visible. Tier-2 Data Participation toggle should be present. Data rights card links to /profile/data-rights.",
-          href: "/profile",
-        },
-        {
-          action: "Try /team.",
-          observe:
-            "Member-only gate. You should see a copy explanation, not the directory. If the grid renders, that's a visibility-matrix bug.",
-          href: "/team",
-        },
-        {
-          action: "Try /calendar.",
-          observe:
-            "Member-only gate. Should not see shared availability.",
-          href: "/calendar",
-        },
-        {
-          action: "Try /activity.",
-          observe:
-            "Member-only gate. Should not see the cooperative event timeline.",
-          href: "/activity",
-        },
-        {
-          action: "Open /notifications.",
-          observe:
-            "Inbox surface. Should render but likely empty for a fresh Prospect. Mark-all-read button hides when unread count is 0.",
-          href: "/notifications",
-        },
-        {
-          action: "Visit /profile/data-rights.",
-          observe:
-            "Export + erasure forms visible. Submit an export request — verify audit entry fires in /admin/audit-log (return to admin first to check).",
-          href: "/profile/data-rights",
-        },
-      ],
-    },
-
-    {
       id: "partner",
-      eyebrow: "Step 3",
+      eyebrow: "Step 2",
       title: "Tour as Partner",
       intro: partnerUser
         ? `You're ${publicName(partnerUser)}, a Partner-tier counterparty. Structurally present, discovery-hidden by default. Walk the limited-mode surfaces.`
@@ -220,7 +165,7 @@ export default async function WalkthroughPage() {
         {
           action: "Visit /profile/data-rights.",
           observe:
-            "Same self-service export + erasure as Prospect + Member. Verify accessible.",
+            "Same self-service export + erasure as Viewer + Member. Verify accessible.",
           href: "/profile/data-rights",
         },
       ],
@@ -228,7 +173,7 @@ export default async function WalkthroughPage() {
 
     {
       id: "member",
-      eyebrow: "Step 4",
+      eyebrow: "Step 3",
       title: "Tour as Member",
       intro: memberUser
         ? `You're ${publicName(memberUser)}, a Member. Full cooperative-internal access. Walk every surface a Member sees.`
@@ -302,7 +247,7 @@ export default async function WalkthroughPage() {
 
     {
       id: "admin",
-      eyebrow: "Step 5",
+      eyebrow: "Step 4",
       title: "Tour as Admin (your own session — return first)",
       intro:
         "Return to your admin session. This is the ops console you own daily. Walk every admin surface and observe that the action interfaces work + write audit entries.",
@@ -324,7 +269,7 @@ export default async function WalkthroughPage() {
         {
           action: "Open /admin/members.",
           observe:
-            "List with view switcher (all / by pillar / by tier / admins / sellers / prospect). Quick-links at top: Invite new member, Access review, User audit log.",
+            "List with view switcher (all / by pillar / by tier / admins / sellers). Quick-links at top: Invite new member, Access review, User audit log.",
           href: "/admin/members",
         },
         {

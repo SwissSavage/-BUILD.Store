@@ -280,6 +280,24 @@ export async function generateDocumentFromTemplate(input: {
   recipients: Array<{ id: number; email: string; name?: string }>;
   title?: string;
   externalId?: string;
+  /**
+   * Meta config Documenso applies to the generated document. Most
+   * commonly used to set `redirectUrl` so signers land back on an FM
+   * route after completing the signature (e.g., the care package flow
+   * routes back to /invite/[code]/code). Verified against
+   * ZGenerateDocumentFromTemplateMutationSchema in the v1 contract.
+   */
+  meta?: {
+    subject?: string;
+    message?: string;
+    timezone?: string;
+    dateFormat?: string;
+    redirectUrl?: string;
+    language?: string;
+    typedSignatureEnabled?: boolean;
+    uploadSignatureEnabled?: boolean;
+    drawSignatureEnabled?: boolean;
+  };
 }): Promise<DocumensoDocument> {
   if (input.recipients.length === 0) {
     throw new DocumensoError(
@@ -297,6 +315,7 @@ export async function generateDocumentFromTemplate(input: {
         title: input.title,
         externalId: input.externalId,
         recipients: input.recipients,
+        meta: input.meta,
       }),
     },
   );

@@ -1,53 +1,82 @@
 /**
- * Sandbox sign-in. Pick a mock user; get a session cookie.
+ * Sign-in page — email magic-link entry.
  *
- * REPLACE WITH: real auth provider sign-in page (Clerk/Auth.js/etc.).
+ * Real Auth.js flow: user enters email, we call `signIn("nodemailer",
+ * { email, redirectTo })`, Auth.js writes a verification token, hands
+ * off to Nodemailer to send the magic link via Resend SMTP, then
+ * 302s the user to /signin/verify. When they click the email link
+ * they land back on the callback URL which resolves the token, creates
+ * the session, and redirects to `redirectTo`.
+ *
+ * Suspension refusal happens in the signIn callback in `auth.ts`; a
+ * suspended account gets bounced back to /signin/error.
+ *
+ * A sandbox-mode banner reminds admins the mock-user picker is gone.
  */
-import { signIn } from "@/lib/auth-actions";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { TIER_LABELS, publicName } from "@/lib/types";
+import { signIn } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-export default function SignInPage() {
+export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "Sign in — Future Modern",
+};
+
+async function sendMagicLink(formData: FormData) {
+  "use server";
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const next = String(formData.get("next") ?? "/dashboard").trim() || "/dashboard";
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    redirect(`/signin/error?reason=invalid_email`);
+  }
+  await signIn("nodemailer", {
+    email,
+    redirectTo: next,
+  });
+}
+
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+
   return (
     <div className="mx-auto max-w-md px-6 py-20">
       <h1 className="font-display text-4xl font-semibold">Sign in</h1>
       <p className="mt-3 text-ink-muted">
-        Sandbox only. Pick a user to preview the member experience.
+        Enter your email. We&apos;ll send you a magic link — no password
+        required.
       </p>
 
-      <form action={signIn} className="mt-8 space-y-3">
-        {MOCK_USERS.map((u) => (
-          <label
-            key={u.id}
-            className="flex cursor-pointer items-center justify-between rounded-xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-4 transition-colors hover:border-brand-magenta"
-          >
-            <div>
-              <div className="font-medium">{publicName(u)}</div>
-              <div className="text-xs text-ink-muted">
-                {TIER_LABELS[u.membershipTier]}
-                {u.isAdmin && " · Admin"}
-              </div>
-            </div>
-            <input
-              type="radio"
-              name="uid"
-              value={u.id}
-              defaultChecked={u.id === "u_jamar"}
-              className="h-4 w-4 accent-brand-magenta"
-            />
-          </label>
-        ))}
+      <form action={sendMagicLink} className="mt-8 space-y-4">
+        <input type="hidden" name="next" value={next ?? "/dashboard"} />
+        <label className="block">
+          <span className="text-xs uppercase tracking-wider text-ink-muted">
+            Email
+          </span>
+          <input
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            placeholder="you@example.com"
+            className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-3 text-base"
+          />
+        </label>
         <button
           type="submit"
-          className="mt-6 w-full rounded-full bg-ink py-3 font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-brand-white"
+          className="w-full rounded-full bg-brand-magenta py-3 text-base font-medium text-brand-white transition-colors hover:bg-brand-magenta/90"
         >
-          Continue
+          Send magic link
         </button>
       </form>
 
-      <p className="mt-6 text-xs text-ink-faint">
-        This is a stubbed sign-in. In production, a real auth provider (Clerk,
-        Auth.js, or equivalent) replaces this page.
+      <p className="mt-8 text-xs text-ink-faint">
+        Only invited members and partners can sign in. If you don&apos;t
+        have an account yet, reach out to the person who introduced you
+        to Future Modern.
       </p>
     </div>
   );

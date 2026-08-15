@@ -354,7 +354,17 @@ export async function sendLoiForSignature(
       title: `Talent Partner Letter of Intent — ${recipientName}`,
       externalId: `agreement:loi:${userId}`,
     });
-    envelopeId = String(envelope.id);
+    // v1 responses return `documentId` from generate-document; the shim
+    // exposes both `documentId` and `id` on DocumensoDocument. Prefer
+    // documentId; fall back to id for any legacy path.
+    envelopeId = String(envelope.documentId ?? envelope.id ?? "");
+    if (!envelopeId) {
+      throw new DocumensoError(
+        "Documenso returned no document id from generate-document. The send may not have completed.",
+        500,
+        null,
+      );
+    }
   } catch (err) {
     if (err instanceof DocumensoError) {
       throw new Error(
@@ -491,7 +501,17 @@ export async function sendNcndaForSignature(
             title,
             externalId,
           });
-    envelopeId = String(envelope.id);
+    // v1 responses return `documentId` from generate-document; the shim
+    // exposes both `documentId` and `id` on DocumensoDocument. Prefer
+    // documentId; fall back to id for any legacy path.
+    envelopeId = String(envelope.documentId ?? envelope.id ?? "");
+    if (!envelopeId) {
+      throw new DocumensoError(
+        "Documenso returned no document id from generate-document. The send may not have completed.",
+        500,
+        null,
+      );
+    }
   } catch (err) {
     if (err instanceof DocumensoError) {
       throw new Error(

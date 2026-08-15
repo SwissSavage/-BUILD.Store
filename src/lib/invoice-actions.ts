@@ -767,7 +767,14 @@ export async function sendInvoiceForSignature(
       title: `${row.number} — Retroactive Receipt`,
       externalId: `invoice:${row.id}`,
     });
-    envelopeId = String(envelope.id);
+    envelopeId = String(envelope.documentId ?? envelope.id ?? "");
+    if (!envelopeId) {
+      throw new DocumensoError(
+        "Documenso returned no document id from generate-document. The send may not have completed.",
+        500,
+        null,
+      );
+    }
   } catch (err) {
     if (err instanceof DocumensoError) {
       throw new Error(

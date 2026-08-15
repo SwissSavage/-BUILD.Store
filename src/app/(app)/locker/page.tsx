@@ -89,8 +89,8 @@ export default async function LockerPage({
         <Card className="mt-8">
           <CardTitle>Nothing matches those filters yet.</CardTitle>
           <p className="mt-2 text-sm text-ink-muted">
-            {user.membershipTier === "prospect"
-              ? "Most drops require Partner tier or higher. Apply for membership to unlock."
+            {user.membershipTier === "viewer"
+              ? "Most drops require Partner tier or higher. Reach out to a Member for a proper invite."
               : "Check back — new drops land daily during early access."}
           </p>
         </Card>

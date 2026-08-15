@@ -84,7 +84,9 @@ export default async function InviteSignPage({
             marginBottom: "1rem",
           }}
         >
-          The covenant awaits.
+          {invite.targetTier === "member"
+            ? "The covenant awaits."
+            : "Your Letter of Intent is ready."}
         </p>
         <p
           style={{
@@ -94,9 +96,9 @@ export default async function InviteSignPage({
             marginBottom: "2rem",
           }}
         >
-          You will be carried to the signing surface. Read the Letter of
-          Intent, sign, and you will be returned here to receive the
-          Code.
+          {invite.targetTier === "member"
+            ? "You will be carried to the signing surface. Read the Letter of Intent, sign, and you will be returned here to receive the Code."
+            : "You will be carried to the signing surface. Read the Letter of Intent, sign, and you will be returned to complete your account."}
         </p>
         <form action={proceed}>
           <button

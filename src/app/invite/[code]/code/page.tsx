@@ -116,6 +116,8 @@ export default async function InviteCodePage({
   }
   if (new Date(invite.expiresAt) < new Date()) notFound();
 
+  const isMember = invite.targetTier === "member";
+
   return (
     <div
       style={{
@@ -125,8 +127,60 @@ export default async function InviteCodePage({
         padding: "3rem 1.5rem",
       }}
     >
-      <CodexArtifact />
+
+      {isMember ? <CodexArtifact /> : <PartnerHeader />}
+
       <ActivationForm code={code} />
+    </div>
+  );
+}
+
+
+/**
+ * Partner variant of the /code header — no illuminated codex reveal,
+ * just a compact "your LOI is signed, complete your account" acknowledgment
+ * over the same dark background so the surface still feels coherent
+ * with the rest of the invite flow.
+ */
+function PartnerHeader() {
+  return (
+    <div
+      style={{
+        maxWidth: "640px",
+        margin: "0 auto",
+        padding: "3rem 2rem",
+        textAlign: "center",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "'Tangerine', cursive",
+          fontSize: "56px",
+          lineHeight: 1,
+          background:
+            "linear-gradient(180deg, #f5d16b 0%, #d4a752 50%, #8a5d15 100%)",
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          color: "transparent",
+          marginBottom: "1.25rem",
+        }}
+      >
+        The covenant is signed.
+      </div>
+      <p
+        style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: "18px",
+          lineHeight: 1.7,
+          color: "#ecdcb5",
+          maxWidth: "480px",
+          margin: "0 auto",
+        }}
+      >
+        Complete your account below and we&apos;ll be in touch about the
+        engagement that brought you here.
+      </p>
     </div>
   );
 }

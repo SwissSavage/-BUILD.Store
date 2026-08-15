@@ -59,7 +59,7 @@ export const users = pgTable("users", {
   profileImageUrl: text("profile_image_url"),
   avatarPortraitUrl: text("avatar_portrait_url"),
   membershipTier: text("membership_tier", {
-    enum: ["viewer", "prospect", "partner", "member"],
+    enum: ["viewer", "partner", "member"],
   }).notNull().default("viewer"),
   primaryIndustry: text("primary_industry", {
     enum: ["stem", "creative-media", "professional-services"],
@@ -420,10 +420,10 @@ export const membershipApplications = pgTable("membership_applications", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id),
   requestedTier: text("requested_tier", {
-    enum: ["prospect", "partner", "member"],
+    enum: ["partner", "member"],
   }).notNull(),
   currentTier: text("current_tier", {
-    enum: ["viewer", "prospect", "partner", "member"],
+    enum: ["viewer", "partner", "member"],
   }).notNull(),
   status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull(),
   applicationData: jsonb("application_data").notNull().default({}),
@@ -437,7 +437,7 @@ export const inviteLinks = pgTable("invite_links", {
   code: text("code").notNull().unique(),
   targetEmail: text("target_email").notNull(),
   targetTier: text("target_tier", {
-    enum: ["viewer", "prospect", "partner", "member"],
+    enum: ["partner", "member"],
   }).notNull(),
   targetName: text("target_name"),
   note: text("note"),
@@ -486,7 +486,7 @@ export const auditLogEntries = pgTable("audit_log_entries", {
   id: text("id").primaryKey(),
   actorUserId: text("actor_user_id"),
   actorRoleSnapshot: text("actor_role_snapshot", {
-    enum: ["member", "partner", "prospect", "viewer", "admin", "system"],
+    enum: ["member", "partner", "viewer", "admin", "system"],
   }).notNull(),
   action: text("action").notNull(),
   resourceKind: text("resource_kind").notNull(),
@@ -592,7 +592,7 @@ export const mediaAssets = pgTable("media_assets", {
     enum: ["stem", "creative-media", "professional-services"],
   }).notNull(),
   tierGate: text("tier_gate", {
-    enum: ["viewer", "prospect", "partner", "member"],
+    enum: ["viewer", "partner", "member"],
   }).notNull(),
   playbackUrl: text("playback_url").notNull(),
   posterUrl: text("poster_url"),
@@ -1037,7 +1037,7 @@ export const walkthroughSteps = pgTable("walkthrough_steps", {
   id: text("id").primaryKey(),
   order: integer("order").notNull(),
   tier: text("tier", {
-    enum: ["prospect", "partner", "member", "admin"],
+    enum: ["partner", "member", "admin"],
   }).notNull(),
   pillar: text("pillar", {
     enum: ["stem", "creative-media", "professional-services"],
@@ -1071,7 +1071,7 @@ export const feedbackEntries = pgTable("feedback_entries", {
     enum: ["stem", "creative-media", "professional-services"],
   }),
   tier: text("tier", {
-    enum: ["viewer", "prospect", "partner", "member"],
+    enum: ["viewer", "partner", "member"],
   }).notNull(),
   status: text("status", {
     enum: ["new", "triaged", "resolved"],

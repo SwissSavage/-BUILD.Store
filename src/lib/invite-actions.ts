@@ -47,9 +47,11 @@ import {
 //  Admin: generate + revoke invite links
 // ────────────────────────────────────────────────────────────────
 
-const VALID_TIERS: MembershipTier[] = [
-  "viewer",
-  "prospect",
+// Only Partner and Member can be invited via this flow. Viewer is the
+// default state for any signed-up account and doesn't merit the
+// ceremonial invite; if someone should just have public site access,
+// send them the site URL, not an invite link.
+const VALID_TIERS: Exclude<MembershipTier, "viewer">[] = [
   "partner",
   "member",
 ];
@@ -68,8 +70,10 @@ export async function generateInviteLink(formData: FormData) {
   if (!targetEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(targetEmail)) {
     throw new Error("A valid target email is required.");
   }
-  if (!targetTier || !VALID_TIERS.includes(targetTier as MembershipTier)) {
-    throw new Error("Pick a target tier.");
+  if (!targetTier || !VALID_TIERS.includes(targetTier as Exclude<MembershipTier, "viewer">)) {
+    throw new Error(
+      "Pick a target tier. Invites are for Partner or Member only. Send viewers the public site link instead.",
+    );
   }
 
   const invite = createInviteLinkRecord({

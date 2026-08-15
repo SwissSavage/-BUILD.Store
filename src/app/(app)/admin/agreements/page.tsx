@@ -48,8 +48,7 @@ function agreementCandidates() {
     .filter(
       (u) =>
         u.membershipTier === "member" ||
-        u.membershipTier === "partner" ||
-        u.membershipTier === "prospect",
+        u.membershipTier === "partner",
     )
     .sort((a, b) =>
       publicName(a).localeCompare(publicName(b), "en", { sensitivity: "base" }),

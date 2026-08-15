@@ -44,7 +44,7 @@ import { Avatar } from "@/components/Avatar";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { TierBadge } from "@/components/TierBadge";
 
-const TIERS: MembershipTier[] = ["viewer", "prospect", "partner", "member"];
+const TIERS: MembershipTier[] = ["viewer", "partner", "member"];
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";

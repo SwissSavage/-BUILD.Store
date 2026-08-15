@@ -7,7 +7,6 @@
  *   - tier     → grouped by membership tier (viewer → member)
  *   - admins   → admins only, compact
  *   - sellers  → members approved to sell on the marketplace
- *   - prospect → prospect tier only (pipeline view)
  *
  * Sandbox mutates MOCK_USERS in-memory; REPLACE WITH Drizzle UPDATE.
  */
@@ -32,9 +31,9 @@ import {
   toggleAdminFlag,
 } from "@/lib/member-management-actions";
 
-const TIERS: MembershipTier[] = ["viewer", "prospect", "partner", "member"];
+const TIERS: MembershipTier[] = ["viewer", "partner", "member"];
 
-type ViewMode = "table" | "pillar" | "tier" | "admins" | "sellers" | "prospect";
+type ViewMode = "table" | "pillar" | "tier" | "admins" | "sellers";
 
 const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
   { value: "table", label: "All members — flat table" },
@@ -42,7 +41,6 @@ const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
   { value: "tier", label: "Group by membership tier" },
   { value: "admins", label: "Admins only" },
   { value: "sellers", label: "Approved marketplace sellers" },
-  { value: "prospect", label: "Prospects (pipeline)" },
 ];
 
 function normalizeView(value: string | undefined): ViewMode {
@@ -52,7 +50,6 @@ function normalizeView(value: string | undefined): ViewMode {
     "tier",
     "admins",
     "sellers",
-    "prospect",
   ];
   return (allowed as string[]).includes(value ?? "")
     ? (value as ViewMode)
@@ -79,7 +76,6 @@ export default async function AdminMembersPage({
   let rows: User[] = MOCK_USERS;
   if (view === "admins") rows = rows.filter((u) => u.isAdmin);
   if (view === "sellers") rows = rows.filter((u) => approvedSellerIds.has(u.id));
-  if (view === "prospect") rows = rows.filter((u) => u.membershipTier === "prospect");
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -337,7 +333,7 @@ function FlatTable({
 }
 
 /**
- * Inline DM composer. Recipients can be any tier — viewers, prospects,
+ * Inline DM composer. Recipients can be any tier — viewers,
  * partners, members, or other admins all receive the message in their
  * /notifications inbox. Send-side gating lives on the action itself
  * (`canSendDirectMessage` in lib/types.ts) — admins always pass that

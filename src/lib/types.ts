@@ -17,11 +17,10 @@ export const INDUSTRY_LABELS: Record<Industry, string> = {
   "professional-services": "Professional Services",
 };
 
-export type MembershipTier = "viewer" | "prospect" | "partner" | "member";
+export type MembershipTier = "viewer" | "partner" | "member";
 
 export const TIER_LABELS: Record<MembershipTier, string> = {
   viewer: "Viewer",
-  prospect: "Prospect",
   partner: "Partner",
   member: "Member",
 };
@@ -1825,7 +1824,7 @@ export function canViewMediaAsset(
   viewerTier: MembershipTier,
   gate: MediaTierGate,
 ): boolean {
-  const order: MembershipTier[] = ["viewer", "prospect", "partner", "member"];
+  const order: MembershipTier[] = ["viewer", "partner", "member"];
   return order.indexOf(viewerTier) >= order.indexOf(gate);
 }
 
@@ -4145,7 +4144,7 @@ export interface AuditLogEntry {
   /** Actor role at the moment of the action — snapshot, not FK, so
    *  historical entries stay meaningful even if the actor's role
    *  changes later. */
-  actorRoleSnapshot: "member" | "partner" | "prospect" | "viewer" | "admin" | "system";
+  actorRoleSnapshot: "member" | "partner" | "viewer" | "admin" | "system";
   action: AuditLogAction;
   resourceKind: AuditLogResourceKind;
   resourceId: string;

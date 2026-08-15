@@ -23,10 +23,7 @@ const VALID_INDUSTRIES: Industry[] = [
   "professional-services",
 ];
 const VALID_GATES: MembershipTier[] = [
-  "viewer",
-  "prospect",
-  "partner",
-  "member",
+  "viewer", "partner", "member",
 ];
 const VALID_STATUSES: MediaAssetStatus[] = [
   "draft",

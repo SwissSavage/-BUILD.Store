@@ -79,7 +79,7 @@ const baseAdapter = DrizzleAdapter(
  * catch block; production hardening can move to a nextval-style
  * sequence if the race matters).
  */
-function handleFromEmail(email: string): string {
+export function handleFromEmail(email: string): string {
   const local = email.split("@")[0] ?? email;
   const cleaned = local
     .toLowerCase()
@@ -90,8 +90,124 @@ function handleFromEmail(email: string): string {
   return cleaned || "user";
 }
 
-function newUserId(): string {
+export function newUserId(): string {
   return `u_${randomBytes(6).toString("hex")}`;
+}
+
+// Session lifetime should match authConfig.session.maxAge below so
+// direct-provisioned sessions (invite completion) and Auth.js-issued
+// sessions age out on the same clock.
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+
+/**
+ * Whether to use the __Secure- cookie prefix. Matches Auth.js's own
+ * heuristic: HTTPS = secure prefix. Middleware already checks both
+ * cookie names, but the setter has to pick one.
+ */
+function useSecureCookie(): boolean {
+  const url = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "";
+  return url.startsWith("https://") || process.env.NODE_ENV === "production";
+}
+
+/**
+ * Insert a session row for `userId` and set the Auth.js session cookie
+ * on the current response. Used by the invite-completion flow so the
+ * new user lands on /welcome already signed in — no round-trip through
+ * the magic-link email.
+ *
+ * Cookie name/attributes mirror what Auth.js's Nodemailer callback
+ * would set, so getCurrentUser / auth() picks it up on the next
+ * request just like any other session.
+ */
+export async function createDirectSession(userId: string): Promise<void> {
+  const { cookies } = await import("next/headers");
+  const sessionToken = randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
+  await db.insert(sessions).values({
+    sessionToken,
+    userId,
+    expires: expiresAt.toISOString(),
+  });
+  const secure = useSecureCookie();
+  const cookieName = secure
+    ? "__Secure-authjs.session-token"
+    : "authjs.session-token";
+  const jar = await cookies();
+  jar.set(cookieName, sessionToken, {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/",
+    expires: expiresAt,
+  });
+}
+
+/**
+ * Create an FM users row with all not-null-without-default columns
+ * filled. Reused by (a) the Auth.js DrizzleAdapter createUser wrapper
+ * and (b) the invite-completion flow, so both paths produce identical
+ * user shapes.
+ *
+ * Returns the created user's id. Retries once with a random suffix on
+ * handle collision (handle is unique-indexed).
+ */
+export async function createFmUser(input: {
+  email: string;
+  name?: string | null;
+  image?: string | null;
+  membershipTier?: string;
+  emailVerified?: Date | string | null;
+}): Promise<string> {
+  const id = newUserId();
+  const baseHandle = handleFromEmail(input.email);
+  const attempts = [baseHandle, `${baseHandle}-${randomBytes(2).toString("hex")}`];
+  let lastError: unknown = null;
+  for (const handle of attempts) {
+    try {
+      await db.insert(users).values({
+        id,
+        email: input.email,
+        emailVerified: input.emailVerified
+          ? new Date(input.emailVerified).toISOString()
+          : null,
+        name: input.name ?? null,
+        image: input.image ?? null,
+        handle,
+        firstName: input.name?.split(" ")[0] ?? null,
+        lastName: input.name?.split(" ").slice(1).join(" ") || null,
+        profileImageUrl: input.image ?? null,
+        avatarPortraitUrl: null,
+        membershipTier: (input.membershipTier ?? "viewer") as
+          | "viewer"
+          | "partner"
+          | "member",
+        primaryIndustry: null,
+        secondaryIndustries: [],
+        dataParticipation: false,
+        skills: [],
+        discipline: null,
+        profileMode: "contributor",
+        bio: null,
+        portfolioUrl: null,
+        buildTokenBalance: "0",
+        isAdmin: false,
+        talentTags: [],
+        profilePublic: true,
+        suspendedAt: null,
+        suspensionReason: null,
+        walletAddress: null,
+        connectedWalletAddress: null,
+        connectedWalletProvider: null,
+        walletConnectedAt: null,
+        stripeAccountId: null,
+        stripePayoutsEnabled: false,
+      });
+      return id;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError ?? new Error("Failed to create user");
 }
 
 /**

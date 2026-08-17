@@ -100,8 +100,60 @@ function newUserId(): string {
  * columns; base adapter would fail the INSERT because `handle` is
  * NOT NULL without a default. Custom impl fills the FM defaults.
  */
+/**
+ * Coerce a value that might be an ISO string, Date, or null into a Date
+ * (or null). Our sessions/verificationTokens schema uses `mode: "string"`
+ * so the DrizzleAdapter reads `expires` back as an ISO string, but
+ * Auth.js hands that value directly to Node's cookie serializer which
+ * only accepts a real Date — passing a string throws
+ * `TypeError: option expires is invalid`. Wrap read paths to convert.
+ */
+function coerceDate(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === "string" || typeof value === "number") {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
 const authAdapter: Adapter = {
   ...baseAdapter,
+  async getSessionAndUser(sessionToken) {
+    const result = await baseAdapter.getSessionAndUser!(sessionToken);
+    if (!result) return null;
+    return {
+      ...result,
+      session: {
+        ...result.session,
+        expires: coerceDate(result.session.expires) as Date,
+      },
+    };
+  },
+  async createSession(data) {
+    const result = await baseAdapter.createSession!(data);
+    return {
+      ...result,
+      expires: coerceDate(result.expires) as Date,
+    };
+  },
+  async updateSession(data) {
+    const result = await baseAdapter.updateSession!(data);
+    if (!result) return result;
+    return {
+      ...result,
+      expires: coerceDate(result.expires) as Date,
+    };
+  },
+  async useVerificationToken(params) {
+    const result = await baseAdapter.useVerificationToken!(params);
+    if (!result) return result;
+    return {
+      ...result,
+      expires: coerceDate(result.expires) as Date,
+    };
+  },
   async createUser(data) {
     const id = newUserId();
     const baseHandle = handleFromEmail(data.email);

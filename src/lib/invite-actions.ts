@@ -24,8 +24,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth-stub";
+import { createDirectSession, createFmUser } from "@/lib/auth";
 import { db } from "@/db/client";
-import { inviteLinks } from "@/db/schema";
+import { inviteLinks, users } from "@/db/schema";
 import {
   MOCK_INVITE_LINKS,
   createInviteLinkRecord,
@@ -236,12 +237,21 @@ export async function sendInviteLoiForSignature(
 }
 
 /**
- * Complete the invite: enforce T&C acceptance, optionally record data
- * opt-in, consume the invite, redirect to the welcome landing.
+ * Complete the invite: enforce T&C acceptance, provision the User row
+ * from the invite's target tier, consume the invite, mint a session
+ * cookie so the invitee lands on /welcome already signed in, then
+ * redirect to the welcome landing.
  *
- * MVP: does not yet create the User row — that lands with the Auth.js
- * activation sprint (see task #7). Placeholder here consumes the
- * invite so the flow has a terminal state.
+ * Idempotent-ish on the user side: if a user row with the invite's
+ * targetEmail already exists (e.g. someone signed in as a viewer with
+ * the same email before completing the ceremony), reuse it and upgrade
+ * its membershipTier to the invite's target tier. This avoids the
+ * ceremony creating a duplicate account.
+ *
+ * Data opt-in TODO: persist a talent-data agreement row when opted in
+ * (see legal.md talent-data-agreement). MVP does not yet write this;
+ * the checkbox exists so consent is captured client-side and can be
+ * backfilled once the agreements table is wired.
  *
  * FormData:
  *   - code               invite code (required)
@@ -273,20 +283,50 @@ export async function completeInviteSignup(formData: FormData): Promise<void> {
     throw new Error("This invitation has been revoked.");
   }
 
+  // Find or create the User row for this invitee. If a viewer-tier
+  // account already exists with the same email (someone signed in
+  // before completing the ceremony), reuse it and promote the tier.
+  const [existing] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, invite.targetEmail))
+    .limit(1);
+
+  let userId: string;
+  if (existing) {
+    userId = existing.id;
+    await db
+      .update(users)
+      .set({
+        membershipTier: invite.targetTier,
+        name: invite.targetName ?? undefined,
+      })
+      .where(eq(users.id, userId));
+  } else {
+    userId = await createFmUser({
+      email: invite.targetEmail,
+      name: invite.targetName,
+      membershipTier: invite.targetTier,
+      // emailVerified — the invite click plus LOI signature is enough
+      // trust; mark verified so downstream flows don't ask again.
+      emailVerified: new Date(),
+    });
+  }
+
   const now = new Date().toISOString();
   await db
     .update(inviteLinks)
     .set({
       consumedAt: now,
-      // consumedByUserId lands when the User row is created (Auth.js sprint).
+      consumedByUserId: userId,
     })
     .where(eq(inviteLinks.id, invite.id));
 
-  // TODO (Auth.js activation): create the User row here, seed
-  // membership_tier from invite.targetTier, kick off session, redirect
-  // to /dashboard. Also persist dataOptIn as a talent-data agreement
-  // row (see legal.md talent-data-agreement) when opted in.
+  // TODO: persist dataOptIn as a talent-data agreement row.
   void dataOptIn;
+
+  // Mint the session cookie so the invitee lands on /welcome signed in.
+  await createDirectSession(userId);
 
   revalidatePath("/admin/agreements");
   revalidatePath("/admin/members");

@@ -153,9 +153,26 @@ export async function POST(request: Request) {
 
   const valid = await verifyWebhookSignature(rawBody, signature);
   if (!valid) {
+    // Debug logging to help reconcile Documenso ↔ FM webhook secret
+    // when signatures mismatch. Logs the header names Documenso sent,
+    // the received signature (truncated), and what we computed with
+    // our secret. Compare the two in the deploy log; if they differ,
+    // the secrets don't match; if they match but we still reject,
+    // there's a format bug (prefix, encoding, etc.).
+    const { createHmac } = await import("crypto");
+    const computed = createHmac("sha256", DOCUMENSO_WEBHOOK_SECRET)
+      .update(rawBody)
+      .digest("hex");
+    const headerNames = [...request.headers.keys()]
+      .filter((n) => n.toLowerCase().includes("sig") || n.toLowerCase().includes("documenso"))
+      .join(",");
     // eslint-disable-next-line no-console
     console.warn(
-      "[documenso webhook] rejected request with invalid/missing signature",
+      `[documenso webhook] rejected request with invalid/missing signature. ` +
+        `receivedHeader=${signature ? `${signature.slice(0, 12)}…len=${signature.length}` : "null"} ` +
+        `computed=${computed.slice(0, 12)}…len=${computed.length} ` +
+        `signatureHeaders=[${headerNames}] ` +
+        `secretPreview=${DOCUMENSO_WEBHOOK_SECRET.slice(0, 4)}…len=${DOCUMENSO_WEBHOOK_SECRET.length}`,
     );
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }

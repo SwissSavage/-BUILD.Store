@@ -187,7 +187,11 @@ export async function generateInviteLink(formData: FormData) {
       title: `Talent Partner Letter of Intent — ${inviteeName}`,
       externalId: `invite:${invite.code}`,
       meta: {
-        redirectUrl: `${origin}/admin/members/invite?countersigned=${invite.id}`,
+        // Both signers land on the same return page (Documenso's
+        // redirectUrl is doc-level, not per-recipient). The return
+        // page routes them by session: admin → admin surface,
+        // invitee → T&C page.
+        redirectUrl: `${origin}/invite/${invite.code}/return`,
       },
     });
     const docId = generated.documentId ?? generated.id;

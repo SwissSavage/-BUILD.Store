@@ -514,15 +514,18 @@ export async function verifyWebhookSignature(
   rawBody: string,
   signatureHeader: string | null,
 ): Promise<boolean> {
+  // rawBody kept in signature for backwards compatibility with the
+  // original HMAC-based verification. Self-hosted Documenso as of
+  // 2026-08 uses a simpler auth model: the raw shared secret is sent
+  // in the X-Documenso-Secret header (see webhook route.ts), and we
+  // compare it directly to DOCUMENSO_WEBHOOK_SECRET. No HMAC.
+  void rawBody;
   const secret = process.env.DOCUMENSO_WEBHOOK_SECRET;
   if (!secret || !signatureHeader) return false;
 
-  const { createHmac, timingSafeEqual } = await import("crypto");
-
-  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
-  const expectedBuf = Buffer.from(expected);
+  const { timingSafeEqual } = await import("crypto");
+  const expectedBuf = Buffer.from(secret);
   const actualBuf = Buffer.from(signatureHeader);
-
   if (expectedBuf.length !== actualBuf.length) return false;
   return timingSafeEqual(expectedBuf, actualBuf);
 }

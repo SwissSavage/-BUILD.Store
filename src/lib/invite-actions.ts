@@ -413,7 +413,6 @@ export async function sendInviteLoiForSignature(
 
   redirect(signingUrl);
 }
-}
 
 /**
  * Complete the invite: enforce T&C acceptance, provision the User row

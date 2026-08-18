@@ -448,6 +448,33 @@ export const inviteLinks = pgTable("invite_links", {
   consumedByUserId: text("consumed_by_user_id").references(() => users.id),
   revokedAt: timestamp("revoked_at", { mode: "string", withTimezone: true }),
   revokedReason: text("revoked_reason"),
+  /**
+   * Documenso document id for the LOI generated at invite-creation time.
+   * Countersign-first flow: admin countersigns the LOI at generate,
+   * invitee is emailed the invitee-side signing URL only after the admin
+   * has completed their signature. This column lets the /invite/[code]/sign
+   * page resolve the invitee's existing signing URL instead of creating
+   * a duplicate document.
+   */
+  documensoDocumentId: text("documenso_document_id"),
+  /**
+   * When the admin completed the LOI countersign. Set by the Documenso
+   * webhook when the admin recipient (recipient[0]) reaches "completed"
+   * state. Used to gate the invitee email — we don't send it until this
+   * is populated.
+   */
+  adminCountersignedAt: timestamp("admin_countersigned_at", {
+    mode: "string",
+    withTimezone: true,
+  }),
+  /**
+   * When the invitee-side email dispatched (from the webhook that fires
+   * on admin countersign). Prevents double-sends if the webhook retries.
+   */
+  inviteeEmailSentAt: timestamp("invitee_email_sent_at", {
+    mode: "string",
+    withTimezone: true,
+  }),
 });
 
 export const tokenTransactions = pgTable("token_transactions", {

@@ -83,26 +83,32 @@ type NormalizedEvent =
  * "sent" preemptively so we don't need to observe the create).
  */
 function normalizeEvent(event: DocumensoWebhookEventType): NormalizedEvent | null {
-  switch (event) {
-    case "envelope.sent":
-    case "document.sent":
+  // Documenso ships event names in three casing conventions across
+  // versions: dotted lowercase (envelope.sent / document.sent),
+  // SCREAMING_CASE with underscores (DOCUMENT_SENT), and both prefixes.
+  // Normalize by uppercasing + stripping punctuation, then match on a
+  // single canonical string per FM verb.
+  const canon = String(event).toUpperCase().replace(/[.:_-]/g, "");
+  switch (canon) {
+    case "ENVELOPESENT":
+    case "DOCUMENTSENT":
       return "sent";
-    case "envelope.opened":
-    case "envelope.viewed":
-    case "document.opened":
-    case "document.viewed":
+    case "ENVELOPEOPENED":
+    case "ENVELOPEVIEWED":
+    case "DOCUMENTOPENED":
+    case "DOCUMENTVIEWED":
       return "viewed";
-    case "envelope.signed":
-    case "envelope.completed":
-    case "document.signed":
-    case "document.completed":
-    case "recipient.completed":
+    case "ENVELOPESIGNED":
+    case "ENVELOPECOMPLETED":
+    case "DOCUMENTSIGNED":
+    case "DOCUMENTCOMPLETED":
+    case "RECIPIENTCOMPLETED":
       return "completed";
-    case "envelope.rejected":
-    case "document.rejected":
+    case "ENVELOPEREJECTED":
+    case "DOCUMENTREJECTED":
       return "rejected";
-    case "envelope.cancelled":
-    case "document.cancelled":
+    case "ENVELOPECANCELLED":
+    case "DOCUMENTCANCELLED":
       return "voided";
     default:
       return null;
@@ -248,15 +254,40 @@ export async function POST(request: Request) {
       });
     }
 
-    // If this completion event is for the invitee recipient (email
-    // matches invite.targetEmail), it's the invitee finishing their
-    // side — no action needed. The T&C page handles the rest.
-    const recipientEmail = payload.recipient?.email?.toLowerCase() ?? "";
-    const isInviteeCompletion =
-      recipientEmail === invite.targetEmail.toLowerCase();
-    if (isInviteeCompletion) {
+    // Self-hosted Documenso payloads don't reliably surface the
+    // completing recipient at payload.recipient — it lives in
+    // data.recipients as an array with per-recipient signingStatus.
+    // Read that array (fall back to top-level recipient for older
+    // payload shapes) and decide by INVITEE's status:
+    //
+    //   - Invitee status is COMPLETED  → invitee just signed (or is
+    //     already done). Ceremony flow handles the rest. No email.
+    //   - Invitee status is PENDING/WAITING → admin just countersigned
+    //     (or event is spurious). If admin has completed and we haven't
+    //     sent the invitee email yet, fire it.
+    const payloadRecipients = (target?.recipients ?? []) as Array<{
+      email?: string;
+      signingStatus?: string;
+      status?: string;
+    }>;
+    const inviteeInPayload = payloadRecipients.find(
+      (r) => r.email?.toLowerCase() === invite.targetEmail.toLowerCase(),
+    );
+    const inviteeStatus = String(
+      inviteeInPayload?.signingStatus ?? inviteeInPayload?.status ?? "",
+    ).toUpperCase();
+    const inviteeAlreadyCompleted =
+      inviteeStatus === "COMPLETED" || inviteeStatus === "SIGNED";
+
+    // Legacy shape fallback: top-level recipient with email matching invitee.
+    const topLevelRecipientEmail =
+      payload.recipient?.email?.toLowerCase() ?? "";
+    const isInviteeCompletionByTopLevel =
+      topLevelRecipientEmail === invite.targetEmail.toLowerCase();
+
+    if (inviteeAlreadyCompleted || isInviteeCompletionByTopLevel) {
       console.log(
-        `[documenso webhook] invite:${inviteCode} — invitee ${recipientEmail} completed. No webhook action (ceremony flow drives).`,
+        `[documenso webhook] invite:${inviteCode} — invitee completed. No action (ceremony flow drives).`,
       );
       return NextResponse.json({
         received: true,
@@ -267,8 +298,10 @@ export async function POST(request: Request) {
       });
     }
 
-    // Otherwise this is the admin countersign completing. Idempotent
-    // guard: if we already dispatched the invitee email, skip.
+    // Invitee hasn't signed yet. This event must be the admin
+    // countersign (or an intermediate event we don't care about).
+    // Idempotent guard: if we already dispatched the invitee email,
+    // skip so retries don't double-send.
     if (invite.inviteeEmailSentAt) {
       console.log(
         `[documenso webhook] invite:${inviteCode} — invitee email already dispatched at ${invite.inviteeEmailSentAt}. Skipping duplicate.`,

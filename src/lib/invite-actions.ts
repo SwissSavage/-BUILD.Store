@@ -41,6 +41,7 @@ import {
   DocumensoError,
   generateDocumentFromTemplate,
   getTemplate,
+  sendDocument,
 } from "@/lib/documenso";
 
 // Default invite lifetime — 14 days from issue.
@@ -100,17 +101,44 @@ This link is single-use and expires in 14 days.
 A Future Modern
 `;
 
+  const brandBase =
+    process.env.AUTH_URL?.replace(/\/$/, "") ??
+    "https://build.afuturemodern.com";
+  const turtleUrl = `${brandBase}/brand/turtle.png`;
+  const wordmarkUrl = `${brandBase}/brand/wordmark.png`;
+
   const html = `<!doctype html>
-<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; color: #111; background: #fff;">
-  <p style="margin: 0 0 16px;">${greeting}</p>
-  <p style="margin: 0 0 24px; font-size: 17px; line-height: 1.5;"><strong>${tierLine}</strong></p>
-  <p style="margin: 0 0 24px; line-height: 1.6;">${expectation}</p>
-  <p style="margin: 0 0 24px;">
-    <a href="${input.inviteUrl}" style="display: inline-block; padding: 12px 20px; background: #111; color: #fff; text-decoration: none; border-radius: 999px; font-weight: 500;">Open your invitation</a>
-  </p>
-  <p style="margin: 0 0 24px; font-size: 13px; color: #666;">Or copy this link:<br/><a href="${input.inviteUrl}" style="color: #666; word-break: break-all;">${input.inviteUrl}</a></p>
-  <p style="margin: 0 0 8px; font-size: 13px; color: #666;">This link is single-use and expires in 14 days.</p>
-  <p style="margin: 24px 0 0; font-size: 13px; color: #666;">— ${input.senderName}<br/>A Future Modern</p>
+<html>
+<body style="margin:0;padding:0;background:#F5F5F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;color:#111;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F5;">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+        <tr><td align="center" style="padding:32px 32px 8px;">
+          <img src="${turtleUrl}" alt="A Future Modern" width="72" height="72" style="display:block;border:0;margin:0 auto 12px;"/>
+          <img src="${wordmarkUrl}" alt="A Future Modern" height="20" style="display:block;border:0;margin:0 auto;height:20px;"/>
+        </td></tr>
+        <tr><td style="padding:24px 32px 0;">
+          <p style="margin:0 0 12px;font-size:14px;color:#666;">${greeting}</p>
+          <p style="margin:0 0 20px;font-size:20px;line-height:1.35;font-weight:600;color:#111;">${tierLine}</p>
+          <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#333;">${expectation}</p>
+        </td></tr>
+        <tr><td align="center" style="padding:8px 32px 24px;">
+          <a href="${input.inviteUrl}" style="display:inline-block;padding:14px 28px;background:#D828A0;color:#FFFFFF;text-decoration:none;border-radius:999px;font-weight:600;font-size:15px;">Open your invitation</a>
+        </td></tr>
+        <tr><td style="padding:0 32px 24px;">
+          <p style="margin:0;font-size:12px;line-height:1.6;color:#666;">
+            Or copy this link:<br/>
+            <a href="${input.inviteUrl}" style="color:#5070F0;word-break:break-all;text-decoration:none;">${input.inviteUrl}</a>
+          </p>
+          <p style="margin:16px 0 0;font-size:12px;color:#666;">Single-use. Expires in 14 days.</p>
+        </td></tr>
+        <tr><td style="padding:16px 32px 32px;border-top:1px solid #EEE;">
+          <p style="margin:0;font-size:13px;color:#666;">— ${input.senderName}<br/><span style="color:#007048;font-weight:500;">A Future Modern</span></p>
+        </td></tr>
+      </table>
+      <p style="margin:16px 0 0;font-size:11px;color:#999;">You received this because someone at A Future Modern invited you personally.</p>
+    </td></tr>
+  </table>
 </body></html>`;
 
   return { text, html };
@@ -269,10 +297,16 @@ void MOCK_INVITE_LINKS;
 /**
  * Kick off the LOI signature for an invite. Called from the
  * /invite/[code]/sign page. Generates the Documenso document scoped to
- * the invite's targetEmail + targetName, does NOT call sendDocument
- * (the invitee is looking at the screen and gets redirected straight
- * into the signing URL — Documenso's email would be redundant), then
- * redirects into the signingUrl from the create-response.
+ * the invite's targetEmail + targetName, activates the envelope via
+ * sendDocument({ sendEmail: false }) so the signing URL becomes live
+ * without Documenso firing its own email (the invitee is already
+ * on-screen and gets redirected straight into the signing URL — we
+ * suppress the duplicate email), then redirects into the signingUrl
+ * from the create-response.
+ *
+ * The sendDocument({ sendEmail: false }) call is required: without it
+ * the envelope stays in DRAFT status and Documenso's /sign/<token>
+ * URLs return 404 until send transitions the envelope to PENDING.
  *
  * externalId on the envelope carries "invite:<code>" so the Documenso
  * webhook can advance invite state (letter_of_intent_signed_at) on
@@ -336,6 +370,12 @@ export async function sendInviteLoiForSignature(
       },
     });
     signingUrl = generated.recipients?.[0]?.signingUrl;
+    // Activate the envelope (DRAFT -> PENDING) so the signing URL
+    // stops returning 404. sendEmail: false suppresses Documenso's
+    // own notification; we already have the on-screen redirect path.
+    if (generated.id) {
+      await sendDocument(generated.id, { sendEmail: false });
+    }
   } catch (err) {
     if (err instanceof DocumensoError) {
       throw new Error(

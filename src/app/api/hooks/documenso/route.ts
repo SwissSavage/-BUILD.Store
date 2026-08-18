@@ -204,6 +204,18 @@ export async function POST(request: Request) {
   // Postgres for consistency with the rest of the FM domain model.
   const envelopeId = target?.id != null ? String(target.id) : null;
 
+  // TEMP debug: when envelope id lookup misses, log the actual shape
+  // Documenso self-hosted is sending so we can add the right accessor.
+  // Removes after webhook is green end-to-end.
+  if (!envelopeId) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[documenso webhook] DEBUG payload keys=[${Object.keys(payload).join(",")}] ` +
+        `dataKeys=[${payload.data ? Object.keys(payload.data as object).join(",") : "n/a"}] ` +
+        `bodyPreview=${rawBody.slice(0, 800)}`,
+    );
+  }
+
   // Always log for the audit trail — even events we don't route.
   // eslint-disable-next-line no-console
   console.log(

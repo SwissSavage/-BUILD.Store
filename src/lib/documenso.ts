@@ -582,11 +582,22 @@ export interface DocumensoWebhookPayload {
   document?: DocumensoEnvelope;
   /**
    * Self-hosted Documenso (as of 2026-08) wraps everything under
-   * `data` — the target envelope, its recipients, meta, all live
-   * here. Kept typed as DocumensoEnvelope-ish since the fields we
-   * actually read (id, externalId, recipients) line up.
+   * `data` or (more commonly) a field literally named `payload` —
+   * the target envelope, its recipients, meta, all live here. Kept
+   * typed as DocumensoEnvelope-ish since the fields we actually read
+   * (id, externalId, recipients) line up.
    */
   data?: DocumensoEnvelope & {
+    recipients?: Array<{
+      id: string | number;
+      email: string;
+      name?: string;
+      status?: string;
+      signingUrl?: string;
+      signingStatus?: string;
+    }>;
+  };
+  payload?: DocumensoEnvelope & {
     recipients?: Array<{
       id: string | number;
       email: string;
@@ -603,6 +614,8 @@ export interface DocumensoWebhookPayload {
     status?: string;
   };
   occurredAt?: string;
+  createdAt?: string;
+  webhookEndpoint?: string;
   [key: string]: unknown;
 }
 
@@ -610,13 +623,18 @@ export interface DocumensoWebhookPayload {
  * Normalize a webhook payload: returns the envelope/document object
  * regardless of which field name Documenso used, so consumers can
  * write `getPayloadTarget(payload).id` without branching per naming.
- * Self-hosted uses `data`; cloud/older self-hosted uses `envelope`
- * or `document`.
+ * Self-hosted (as observed 2026-08) uses `payload` as the inner
+ * wrapper; older versions used `data` or `envelope`/`document`.
  */
 export function getPayloadTarget(
   payload: DocumensoWebhookPayload,
 ): DocumensoEnvelope | undefined {
-  return payload.envelope ?? payload.document ?? payload.data;
+  return (
+    payload.envelope ??
+    payload.document ??
+    payload.data ??
+    payload.payload
+  );
 }
 
 // Re-export DocumensoError for typed catch handling upstream.

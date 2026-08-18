@@ -340,9 +340,9 @@ export async function sendInviteLoiForSignature(
     );
   }
 
-  const template = await getTemplate(templateId);
-  const placeholder = template.Recipient?.[0];
-  if (!placeholder) {
+   const template = await getTemplate(templateId);
+  const templateRecipients = template.Recipient ?? [];
+  if (templateRecipients.length === 0) {
     throw new DocumensoError(
       `Talent Partner LOI template ${templateId} has no placeholder recipient. Add one in Documenso.`,
       400,
@@ -351,33 +351,52 @@ export async function sendInviteLoiForSignature(
   }
 
   const recipientName = invite.targetName ?? invite.targetEmail;
+  const countersignerEmail =
+    process.env.FM_COUNTERSIGNER_EMAIL ?? "hello@afuturemodern.com";
+  const countersignerName =
+    process.env.FM_COUNTERSIGNER_NAME ?? "A Future Modern";
+
+  // Fill every template recipient. First = invitee, rest = FM countersigner.
+  // Sending 1 recipient to a 2-recipient template leaves the second as
+  // its template email, which blocks sendDocument.
+  const recipients = templateRecipients.map((r, idx) =>
+    idx === 0
+      ? { id: r.id, email: invite.targetEmail, name: recipientName }
+      : { id: r.id, email: countersignerEmail, name: countersignerName },
+  );
 
   let signingUrl: string | undefined;
   try {
     const generated = await generateDocumentFromTemplate({
       templateId,
-      recipients: [
-        {
-          id: placeholder.id,
-          email: invite.targetEmail,
-          name: recipientName,
-        },
-      ],
+      recipients,
       title: `Talent Partner Letter of Intent — ${recipientName}`,
       externalId: `invite:${code}`,
       meta: {
         redirectUrl: `${origin}/invite/${code}/code`,
       },
     });
-    signingUrl = generated.recipients?.[0]?.signingUrl;
-    // Activate the envelope (DRAFT -> PENDING) so the signing URL
-    // stops returning 404. sendEmail: false suppresses Documenso's
-    // own notification; we already have the on-screen redirect path.
-    if (generated.id) {
-      await sendDocument(generated.id, { sendEmail: false });
+    // Documenso's generate-document response uses `documentId` (not `id`).
+    const docId = generated.documentId ?? generated.id;
+    if (!docId) {
+      throw new DocumensoError(
+        "Documenso returned no document id from generate-document.",
+        500,
+        null,
+      );
     }
+    const inviteeRecipient = generated.recipients?.find(
+      (r) => r.email?.toLowerCase() === invite.targetEmail.toLowerCase(),
+    );
+    signingUrl = inviteeRecipient?.signingUrl ?? generated.recipients?.[0]?.signingUrl;
+    // Activate the envelope (DRAFT -> PENDING) so the signing URL stops
+    // returning 404. sendEmail: false suppresses Documenso's own email.
+    await sendDocument(docId, { sendEmail: false });
   } catch (err) {
     if (err instanceof DocumensoError) {
+      console.error("[invite] documenso failure", {
+        code, message: err.message, status: err.status,
+      });
       throw new Error(
         `Documenso rejected the LOI envelope: ${err.message} (HTTP ${err.status}). ` +
           `Check DOCUMENSO_TEMPLATE_TALENT_PARTNER_LOI and the template on sign.afuturemodern.com.`,
@@ -393,6 +412,7 @@ export async function sendInviteLoiForSignature(
   }
 
   redirect(signingUrl);
+}
 }
 
 /**

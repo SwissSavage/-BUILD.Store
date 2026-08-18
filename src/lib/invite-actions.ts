@@ -192,7 +192,7 @@ export async function generateInviteLink(formData: FormData) {
       targetName: invite.targetName,
       targetTier: invite.targetTier,
       inviteUrl,
-      senderName: admin.name ?? admin.handle ?? "Future Modern",
+      senderName: [admin.firstName, admin.lastName].filter(Boolean).join(" ") || admin.handle || "Future Modern",
     });
     await sendTransactionalEmail({
       to: invite.targetEmail,

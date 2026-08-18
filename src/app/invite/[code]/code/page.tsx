@@ -28,6 +28,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { inviteLinks } from "@/db/schema";
 import { completeInviteSignup } from "@/lib/invite-actions";
+import { TermsAcceptCheckbox } from "./TermsAcceptCheckbox";
 
 export const dynamic = "force-dynamic";
 
@@ -415,40 +416,7 @@ function ActivationForm({ code }: { code: string }) {
         Complete your account
       </h2>
 
-      <label
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: "12px",
-          marginBottom: "1.25rem",
-          cursor: "pointer",
-        }}
-      >
-        <input
-          type="checkbox"
-          name="termsAccepted"
-          required
-          style={{
-            marginTop: "4px",
-            accentColor: "#D828A0",
-            width: "18px",
-            height: "18px",
-            flexShrink: 0,
-          }}
-        />
-        <span style={{ fontSize: "16px", lineHeight: 1.6 }}>
-          I agree to the{" "}
-          <a
-            href="/policies"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#f5d16b", textDecoration: "underline" }}
-          >
-            Terms of Service
-          </a>
-          . <span style={{ opacity: 0.7 }}>Required.</span>
-        </span>
-      </label>
+      <TermsAcceptCheckbox />
 
       <label
         style={{

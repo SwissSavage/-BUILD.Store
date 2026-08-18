@@ -22,7 +22,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { requireAdmin } from "@/lib/auth-stub";
@@ -35,7 +34,6 @@ import {
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
 import type { MembershipTier } from "@/lib/types";
-import { sendTransactionalEmail } from "@/lib/email";
 import {
   DOCUMENSO_TEMPLATES,
   DocumensoError,
@@ -43,6 +41,19 @@ import {
   getTemplate,
   sendDocument,
 } from "@/lib/documenso";
+
+/** Admin countersigner defaults when no admin-specific override is set. */
+function adminSenderName(admin: {
+  firstName?: string | null;
+  lastName?: string | null;
+  handle?: string;
+}): string {
+  return (
+    [admin.firstName, admin.lastName].filter(Boolean).join(" ") ||
+    admin.handle ||
+    "Future Modern"
+  );
+}
 
 // Default invite lifetime — 14 days from issue.
 const INVITE_LIFETIME_MS = 14 * 24 * 60 * 60 * 1000;
@@ -54,94 +65,6 @@ function newInviteId(): string {
 function newInviteCode(): string {
   // 32 bytes → 43-char base64url token. URL-safe, hard to guess.
   return randomBytes(32).toString("base64url");
-}
-
-/**
- * Build the absolute invite URL from AUTH_URL or the request origin.
- * Prefer AUTH_URL so the link works when generated from an admin
- * surface hosted behind a proxy that rewrites the request origin.
- */
-async function inviteUrlFor(code: string): Promise<string> {
-  const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL;
-  if (base) return `${base.replace(/\/$/, "")}/invite/${code}`;
-  const h = await headers();
-  const host = h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "https";
-  return `${proto}://${host}/invite/${code}`;
-}
-
-function renderInviteEmail(input: {
-  targetName: string | null;
-  targetTier: MembershipTier;
-  inviteUrl: string;
-  senderName: string;
-}) {
-  const greeting = input.targetName ? `Hi ${input.targetName},` : "Hi,";
-  const tierLine =
-    input.targetTier === "member"
-      ? "You have been called to $BUILD with A Future Modern."
-      : "You have been invited to $BUILD alongside A Future Modern as a Partner.";
-  const expectation =
-    input.targetTier === "member"
-      ? "The care package flow will walk you through a letter, a signature, a code, and a short Terms acceptance. Ten minutes, tops."
-      : "You will sign a Talent Partner Letter of Intent, accept the Terms, and land on your dashboard.";
-
-  const text = `${greeting}
-
-${tierLine}
-
-${expectation}
-
-Your invitation:
-${input.inviteUrl}
-
-This link is single-use and expires in 14 days.
-
-— ${input.senderName}
-A Future Modern
-`;
-
-  const brandBase =
-    process.env.AUTH_URL?.replace(/\/$/, "") ??
-    "https://build.afuturemodern.com";
-  const turtleUrl = `${brandBase}/brand/turtle.png`;
-  const wordmarkUrl = `${brandBase}/brand/wordmark.png`;
-
-  const html = `<!doctype html>
-<html>
-<body style="margin:0;padding:0;background:#F5F5F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;color:#111;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F5;">
-    <tr><td align="center" style="padding:32px 16px;">
-      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-        <tr><td align="center" style="padding:32px 32px 8px;">
-          <img src="${turtleUrl}" alt="A Future Modern" width="72" height="72" style="display:block;border:0;margin:0 auto 12px;"/>
-          <img src="${wordmarkUrl}" alt="A Future Modern" height="20" style="display:block;border:0;margin:0 auto;height:20px;"/>
-        </td></tr>
-        <tr><td style="padding:24px 32px 0;">
-          <p style="margin:0 0 12px;font-size:14px;color:#666;">${greeting}</p>
-          <p style="margin:0 0 20px;font-size:20px;line-height:1.35;font-weight:600;color:#111;">${tierLine}</p>
-          <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#333;">${expectation}</p>
-        </td></tr>
-        <tr><td align="center" style="padding:8px 32px 24px;">
-          <a href="${input.inviteUrl}" style="display:inline-block;padding:14px 28px;background:#D828A0;color:#FFFFFF;text-decoration:none;border-radius:999px;font-weight:600;font-size:15px;">Open your invitation</a>
-        </td></tr>
-        <tr><td style="padding:0 32px 24px;">
-          <p style="margin:0;font-size:12px;line-height:1.6;color:#666;">
-            Or copy this link:<br/>
-            <a href="${input.inviteUrl}" style="color:#5070F0;word-break:break-all;text-decoration:none;">${input.inviteUrl}</a>
-          </p>
-          <p style="margin:16px 0 0;font-size:12px;color:#666;">Single-use. Expires in 14 days.</p>
-        </td></tr>
-        <tr><td style="padding:16px 32px 32px;border-top:1px solid #EEE;">
-          <p style="margin:0;font-size:13px;color:#666;">— ${input.senderName}<br/><span style="color:#007048;font-weight:500;">A Future Modern</span></p>
-        </td></tr>
-      </table>
-      <p style="margin:16px 0 0;font-size:11px;color:#999;">You received this because someone at A Future Modern invited you personally.</p>
-    </td></tr>
-  </table>
-</body></html>`;
-
-  return { text, html };
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -211,37 +134,115 @@ export async function generateInviteLink(formData: FormData) {
     reason: note.length > 0 ? note : null,
   });
 
-  // Fire the invite email. Failure here doesn't roll back the invite —
-  // the admin can resend from /admin/members if the first delivery
-  // errors out. Log the failure so it surfaces in server logs.
+  // Countersign-first flow: create the Documenso LOI now with the
+  // admin as the first signer and the invitee as the second. Activate
+  // it, then redirect the admin straight to their signing URL. The
+  // invitee email fires from the Documenso webhook once the admin
+  // completes their signature — that way the invitee opens a
+  // pre-countersigned LOI and only has to add their own signature.
+  //
+  // If the template lookup or generation fails, log and re-throw. The
+  // invite row stays in the DB with no consumedAt so an admin can
+  // retry from /admin/members/invite once the underlying issue is
+  // fixed (bad template id, Documenso down, etc.).
+  const templateId = DOCUMENSO_TEMPLATES.TALENT_PARTNER_LOI;
+  if (!templateId) {
+    throw new Error(
+      "DOCUMENSO_TEMPLATE_TALENT_PARTNER_LOI is not set. Populate the template id in Dokploy env before generating invites.",
+    );
+  }
+
+  const template = await getTemplate(templateId);
+  const templateRecipients = template.Recipient ?? [];
+  if (templateRecipients.length < 2) {
+    throw new Error(
+      `Talent Partner LOI template ${templateId} needs 2 placeholder recipients (admin countersigner + invitee). Currently has ${templateRecipients.length}. Add the missing slot in Documenso admin.`,
+    );
+  }
+
+  const adminName = adminSenderName(admin);
+  const inviteeName = invite.targetName ?? invite.targetEmail;
+  const adminEmail =
+    process.env.FM_COUNTERSIGNER_EMAIL ??
+    admin.email ??
+    "hello@afuturemodern.com";
+
+  // Fill recipients in template order. First slot = admin countersigner,
+  // remaining = invitee (any additional slots also get invitee — templates
+  // shouldn't have 3+ recipients for this flow, but safe fallback).
+  const recipients = templateRecipients.map((r, idx) =>
+    idx === 0
+      ? { id: r.id, email: adminEmail, name: adminName }
+      : { id: r.id, email: invite.targetEmail, name: inviteeName },
+  );
+
+  let adminSigningUrl: string | undefined;
   try {
-    const inviteUrl = await inviteUrlFor(invite.code);
-    const { text, html } = renderInviteEmail({
-      targetName: invite.targetName,
-      targetTier: invite.targetTier,
-      inviteUrl,
-      senderName: [admin.firstName, admin.lastName].filter(Boolean).join(" ") || admin.handle || "Future Modern",
+    const origin = (
+      process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? ""
+    ).replace(/\/$/, "");
+    const generated = await generateDocumentFromTemplate({
+      templateId,
+      recipients,
+      title: `Talent Partner Letter of Intent — ${inviteeName}`,
+      externalId: `invite:${invite.code}`,
+      meta: {
+        redirectUrl: `${origin}/admin/members/invite?countersigned=${invite.id}`,
+      },
     });
-    await sendTransactionalEmail({
-      to: invite.targetEmail,
-      subject:
-        invite.targetTier === "member"
-          ? "You have been called to $BUILD with A Future Modern"
-          : "A Future Modern — Talent Partner invitation",
-      text,
-      html,
-    });
+    const docId = generated.documentId ?? generated.id;
+    if (!docId) {
+      throw new DocumensoError(
+        "Documenso returned no document id from generate-document.",
+        500,
+        null,
+      );
+    }
+    // Match admin recipient by email — order isn't guaranteed.
+    const adminRecipient = generated.recipients?.find(
+      (r) => r.email?.toLowerCase() === adminEmail.toLowerCase(),
+    );
+    adminSigningUrl = adminRecipient?.signingUrl;
+    // Activate the envelope (DRAFT → PENDING) so both signing URLs
+    // become live. sendEmail: false suppresses Documenso's own emails
+    // — we redirect the admin directly, and the invitee gets our
+    // branded email from the webhook after admin countersigns.
+    await sendDocument(docId, { sendEmail: false });
+    // Persist the document id so the invitee's /sign page + the
+    // webhook can resolve the same envelope without re-creating it.
+    await db
+      .update(inviteLinks)
+      .set({ documensoDocumentId: String(docId) })
+      .where(eq(inviteLinks.id, invite.id));
   } catch (err) {
-    console.error("[invite] email dispatch failed", {
+    console.error("[invite] documenso countersign setup failed", {
       inviteId: invite.id,
       targetEmail: invite.targetEmail,
       error: err instanceof Error ? err.message : String(err),
     });
+    if (err instanceof DocumensoError) {
+      throw new Error(
+        `Documenso rejected the countersign envelope: ${err.message} (HTTP ${err.status}). Check DOCUMENSO_TEMPLATE_TALENT_PARTNER_LOI and the template.`,
+      );
+    }
+    throw err;
+  }
+
+  if (!adminSigningUrl) {
+    throw new Error(
+      "Documenso returned no signing URL for the admin countersigner. Retry, or check the template's recipient configuration.",
+    );
   }
 
   revalidatePath("/admin/members");
   revalidatePath("/admin/members/invite");
   revalidatePath("/admin/audit-log");
+
+  // Redirect the admin straight into Documenso to countersign. On
+  // completion, Documenso redirects back to
+  // /admin/members/invite?countersigned=<inviteId> (see meta.redirectUrl
+  // above) and the webhook fires the invitee email in parallel.
+  redirect(adminSigningUrl);
 }
 
 export async function revokeInviteLink(formData: FormData) {
@@ -296,21 +297,20 @@ void MOCK_INVITE_LINKS;
 
 /**
  * Kick off the LOI signature for an invite. Called from the
- * /invite/[code]/sign page. Generates the Documenso document scoped to
- * the invite's targetEmail + targetName, activates the envelope via
- * sendDocument({ sendEmail: false }) so the signing URL becomes live
- * without Documenso firing its own email (the invitee is already
- * on-screen and gets redirected straight into the signing URL — we
- * suppress the duplicate email), then redirects into the signingUrl
- * from the create-response.
+ * /invite/[code]/sign page.
  *
- * The sendDocument({ sendEmail: false }) call is required: without it
- * the envelope stays in DRAFT status and Documenso's /sign/<token>
- * URLs return 404 until send transitions the envelope to PENDING.
+ * Countersign-first flow: the LOI envelope was already created at
+ * invite-generation time (see generateInviteLink above) with both the
+ * admin and the invitee as recipients, and the admin has already
+ * countersigned. This action just resolves the invitee's existing
+ * signing URL from that same envelope and redirects into it — no new
+ * document is created, so the invitee opens a document that already
+ * carries the admin's signature.
  *
- * externalId on the envelope carries "invite:<code>" so the Documenso
- * webhook can advance invite state (letter_of_intent_signed_at) on
- * completion. That column lands as a follow-up migration.
+ * If the invite predates the countersign-first flow (no
+ * documensoDocumentId column on the row) or the admin countersign
+ * hasn't landed yet, we fall back to the previous behavior of
+ * generating a fresh document scoped to just the invitee.
  */
 export async function sendInviteLoiForSignature(
   code: string,
@@ -331,6 +331,34 @@ export async function sendInviteLoiForSignature(
     throw new Error("This invitation has expired.");
   }
 
+  // Preferred path: use the existing envelope created at invite time.
+  if (invite.documensoDocumentId) {
+    let signingUrl: string | undefined;
+    try {
+      const { getDocument } = await import("@/lib/documenso");
+      const doc = await getDocument(invite.documensoDocumentId);
+      const inviteeRecipient = doc.recipients?.find(
+        (r) => r.email?.toLowerCase() === invite.targetEmail.toLowerCase(),
+      );
+      signingUrl = inviteeRecipient?.signingUrl;
+    } catch (err) {
+      console.error("[invite] failed to resolve existing envelope", {
+        code,
+        docId: invite.documensoDocumentId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    if (signingUrl) {
+      redirect(signingUrl);
+    }
+    // Fall through to fresh-envelope creation if the lookup didn't
+    // produce a usable URL — better to let the invitee sign a
+    // one-recipient doc than block them entirely.
+  }
+
+  // Fallback path (legacy invites or lookup miss): create a fresh
+  // single-recipient envelope for the invitee. Loses the pre-applied
+  // admin countersign but keeps the invitee unblocked.
   const templateId = DOCUMENSO_TEMPLATES.TALENT_PARTNER_LOI;
   if (!templateId) {
     throw new DocumensoError(
@@ -340,7 +368,7 @@ export async function sendInviteLoiForSignature(
     );
   }
 
-   const template = await getTemplate(templateId);
+  const template = await getTemplate(templateId);
   const templateRecipients = template.Recipient ?? [];
   if (templateRecipients.length === 0) {
     throw new DocumensoError(
@@ -356,9 +384,6 @@ export async function sendInviteLoiForSignature(
   const countersignerName =
     process.env.FM_COUNTERSIGNER_NAME ?? "A Future Modern";
 
-  // Fill every template recipient. First = invitee, rest = FM countersigner.
-  // Sending 1 recipient to a 2-recipient template leaves the second as
-  // its template email, which blocks sendDocument.
   const recipients = templateRecipients.map((r, idx) =>
     idx === 0
       ? { id: r.id, email: invite.targetEmail, name: recipientName }
@@ -376,7 +401,6 @@ export async function sendInviteLoiForSignature(
         redirectUrl: `${origin}/invite/${code}/code`,
       },
     });
-    // Documenso's generate-document response uses `documentId` (not `id`).
     const docId = generated.documentId ?? generated.id;
     if (!docId) {
       throw new DocumensoError(
@@ -389,8 +413,6 @@ export async function sendInviteLoiForSignature(
       (r) => r.email?.toLowerCase() === invite.targetEmail.toLowerCase(),
     );
     signingUrl = inviteeRecipient?.signingUrl ?? generated.recipients?.[0]?.signingUrl;
-    // Activate the envelope (DRAFT -> PENDING) so the signing URL stops
-    // returning 404. sendEmail: false suppresses Documenso's own email.
     await sendDocument(docId, { sendEmail: false });
   } catch (err) {
     if (err instanceof DocumensoError) {

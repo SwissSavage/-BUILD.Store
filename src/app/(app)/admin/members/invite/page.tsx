@@ -15,8 +15,10 @@
  * user.invite_consumed on redemption (fired from the signup route).
  */
 import Link from "next/link";
+import { desc } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_INVITE_LINKS } from "@/lib/mock-data/invite-links";
+import { db } from "@/db/client";
+import { inviteLinks, users as usersTable } from "@/db/schema";
 import {
   generateInviteLink,
   revokeInviteLink,
@@ -28,6 +30,8 @@ import {
   type MembershipTier,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+type InviteRow = typeof inviteLinks.$inferSelect;
 
 // Invite form is restricted to Partner + Member. Anyone else gets a
 // public signup link. Viewer isn't invitable because it's the default
@@ -45,9 +49,7 @@ function formatDate(iso: string): string {
   });
 }
 
-function inviteStatus(
-  invite: (typeof MOCK_INVITE_LINKS)[number],
-): {
+function inviteStatus(invite: InviteRow): {
   label: string;
   color: string;
 } {
@@ -64,17 +66,44 @@ function inviteStatus(
 }
 
 function inviteUrl(code: string): string {
-  // Sandbox displays a relative URL; production wires the origin.
-  return `/signin/invite/${code}`;
+  const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "";
+  return `${base.replace(/\/$/, "")}/invite/${code}`;
 }
 
 export default async function InviteMemberPage() {
   await requireAdmin();
 
-  // Freshest first.
-  const invites = [...MOCK_INVITE_LINKS].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt),
+  // Freshest first. Pull the last N invites — 50 is plenty for the
+  // admin surface; older ones live in the audit log.
+  const invites = await db
+    .select()
+    .from(inviteLinks)
+    .orderBy(desc(inviteLinks.createdAt))
+    .limit(50);
+
+  // Preload the users the invites reference (issuer + consumer) so
+  // we don't hit the DB per-row inside the map. Union of both id sets.
+  const userIds = new Set<string>();
+  for (const i of invites) {
+    userIds.add(i.createdByUserId);
+    if (i.consumedByUserId) userIds.add(i.consumedByUserId);
+  }
+  const userRows = userIds.size
+    ? await db.select().from(usersTable)
+    : [];
+  const userById = new Map(
+    userRows
+      .filter((u) => userIds.has(u.id))
+      .map((u) => [u.id, u]),
   );
+  function nameFor(id: string | null): string {
+    if (!id) return "unknown";
+    const u = userById.get(id);
+    if (u) return u.name ?? u.handle ?? u.email;
+    // Legacy seed users may still be in MOCK_USERS.
+    const mock = MOCK_USERS.find((m) => m.id === id);
+    return mock ? adminName(mock) : "unknown";
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
@@ -177,11 +206,9 @@ export default async function InviteMemberPage() {
           <div className="mt-4 space-y-3">
             {invites.map((invite) => {
               const status = inviteStatus(invite);
-              const issuer = MOCK_USERS.find(
-                (u) => u.id === invite.createdByUserId,
-              );
-              const consumer = invite.consumedByUserId
-                ? MOCK_USERS.find((u) => u.id === invite.consumedByUserId)
+              const issuerName = nameFor(invite.createdByUserId);
+              const consumerName = invite.consumedByUserId
+                ? nameFor(invite.consumedByUserId)
                 : null;
               const live = status.label === "Live";
               return (
@@ -222,14 +249,14 @@ export default async function InviteMemberPage() {
 
                   <div className="mt-3 grid gap-x-4 gap-y-1 text-[11px] text-ink-faint md:grid-cols-2">
                     <span>
-                      Issued by {issuer ? adminName(issuer) : "unknown"} on{" "}
+                      Issued by {issuerName} on{" "}
                       {formatDate(invite.createdAt)}
                     </span>
                     <span>Expires {formatDate(invite.expiresAt)}</span>
                     {invite.consumedAt && (
                       <span>
                         Consumed {formatDate(invite.consumedAt)}
-                        {consumer && ` by ${adminName(consumer)}`}
+                        {consumerName && ` by ${consumerName}`}
                       </span>
                     )}
                     {invite.revokedAt && (

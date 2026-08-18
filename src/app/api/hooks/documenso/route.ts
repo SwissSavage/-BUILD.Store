@@ -136,7 +136,13 @@ function auditVerbForEvent(ev: NormalizedEvent): AuditLogAction {
 // ────────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
-  const signature = request.headers.get("X-Documenso-Signature");
+  // Self-hosted Documenso sends the raw shared secret in
+  // X-Documenso-Secret. Older/cloud versions used X-Documenso-Signature
+  // (HMAC over body). Check both for cross-version compat; the verifier
+  // treats the header value as the shared secret in either case.
+  const signature =
+    request.headers.get("X-Documenso-Secret") ??
+    request.headers.get("X-Documenso-Signature");
   const rawBody = await request.text();
 
   if (!DOCUMENSO_WEBHOOK_SECRET) {

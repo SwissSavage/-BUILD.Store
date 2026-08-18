@@ -22,27 +22,99 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
+import { randomBytes } from "crypto";
 import { requireAdmin } from "@/lib/auth-stub";
 import { createDirectSession, createFmUser } from "@/lib/auth";
 import { db } from "@/db/client";
 import { inviteLinks, users } from "@/db/schema";
-import {
-  MOCK_INVITE_LINKS,
-  createInviteLinkRecord,
-  findInviteById,
-} from "@/lib/mock-data/invite-links";
+import { MOCK_INVITE_LINKS } from "@/lib/mock-data/invite-links";
 import {
   logAuditEvent,
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
 import type { MembershipTier } from "@/lib/types";
+import { sendTransactionalEmail } from "@/lib/email";
 import {
   DOCUMENSO_TEMPLATES,
   DocumensoError,
   generateDocumentFromTemplate,
   getTemplate,
 } from "@/lib/documenso";
+
+// Default invite lifetime — 14 days from issue.
+const INVITE_LIFETIME_MS = 14 * 24 * 60 * 60 * 1000;
+
+function newInviteId(): string {
+  return `invite_${Date.now().toString(36)}_${randomBytes(3).toString("hex")}`;
+}
+
+function newInviteCode(): string {
+  // 32 bytes → 43-char base64url token. URL-safe, hard to guess.
+  return randomBytes(32).toString("base64url");
+}
+
+/**
+ * Build the absolute invite URL from AUTH_URL or the request origin.
+ * Prefer AUTH_URL so the link works when generated from an admin
+ * surface hosted behind a proxy that rewrites the request origin.
+ */
+async function inviteUrlFor(code: string): Promise<string> {
+  const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL;
+  if (base) return `${base.replace(/\/$/, "")}/invite/${code}`;
+  const h = await headers();
+  const host = h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  return `${proto}://${host}/invite/${code}`;
+}
+
+function renderInviteEmail(input: {
+  targetName: string | null;
+  targetTier: MembershipTier;
+  inviteUrl: string;
+  senderName: string;
+}) {
+  const greeting = input.targetName ? `Hi ${input.targetName},` : "Hi,";
+  const tierLine =
+    input.targetTier === "member"
+      ? "You have been called to $BUILD with A Future Modern."
+      : "You have been invited to $BUILD alongside A Future Modern as a Partner.";
+  const expectation =
+    input.targetTier === "member"
+      ? "The care package flow will walk you through a letter, a signature, a code, and a short Terms acceptance. Ten minutes, tops."
+      : "You will sign a Talent Partner Letter of Intent, accept the Terms, and land on your dashboard.";
+
+  const text = `${greeting}
+
+${tierLine}
+
+${expectation}
+
+Your invitation:
+${input.inviteUrl}
+
+This link is single-use and expires in 14 days.
+
+— ${input.senderName}
+A Future Modern
+`;
+
+  const html = `<!doctype html>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; color: #111; background: #fff;">
+  <p style="margin: 0 0 16px;">${greeting}</p>
+  <p style="margin: 0 0 24px; font-size: 17px; line-height: 1.5;"><strong>${tierLine}</strong></p>
+  <p style="margin: 0 0 24px; line-height: 1.6;">${expectation}</p>
+  <p style="margin: 0 0 24px;">
+    <a href="${input.inviteUrl}" style="display: inline-block; padding: 12px 20px; background: #111; color: #fff; text-decoration: none; border-radius: 999px; font-weight: 500;">Open your invitation</a>
+  </p>
+  <p style="margin: 0 0 24px; font-size: 13px; color: #666;">Or copy this link:<br/><a href="${input.inviteUrl}" style="color: #666; word-break: break-all;">${input.inviteUrl}</a></p>
+  <p style="margin: 0 0 8px; font-size: 13px; color: #666;">This link is single-use and expires in 14 days.</p>
+  <p style="margin: 24px 0 0; font-size: 13px; color: #666;">— ${input.senderName}<br/>A Future Modern</p>
+</body></html>`;
+
+  return { text, html };
+}
 
 // ────────────────────────────────────────────────────────────────
 //  Admin: generate + revoke invite links
@@ -77,13 +149,24 @@ export async function generateInviteLink(formData: FormData) {
     );
   }
 
-  const invite = createInviteLinkRecord({
+  const now = new Date();
+  const invite = {
+    id: newInviteId(),
+    code: newInviteCode(),
     targetEmail,
-    targetTier: targetTier as MembershipTier,
+    targetTier: targetTier as "partner" | "member",
     targetName: targetName.length > 0 ? targetName : null,
     note: note.length > 0 ? note : null,
     createdByUserId: admin.id,
-  });
+    createdAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + INVITE_LIFETIME_MS).toISOString(),
+    consumedAt: null,
+    consumedByUserId: null,
+    revokedAt: null,
+    revokedReason: null,
+  };
+
+  await db.insert(inviteLinks).values(invite);
 
   logAuditEvent({
     actorUserId: admin.id,
@@ -100,6 +183,34 @@ export async function generateInviteLink(formData: FormData) {
     reason: note.length > 0 ? note : null,
   });
 
+  // Fire the invite email. Failure here doesn't roll back the invite —
+  // the admin can resend from /admin/members if the first delivery
+  // errors out. Log the failure so it surfaces in server logs.
+  try {
+    const inviteUrl = await inviteUrlFor(invite.code);
+    const { text, html } = renderInviteEmail({
+      targetName: invite.targetName,
+      targetTier: invite.targetTier,
+      inviteUrl,
+      senderName: admin.name ?? admin.handle ?? "Future Modern",
+    });
+    await sendTransactionalEmail({
+      to: invite.targetEmail,
+      subject:
+        invite.targetTier === "member"
+          ? "You have been called to $BUILD with A Future Modern"
+          : "A Future Modern — Talent Partner invitation",
+      text,
+      html,
+    });
+  } catch (err) {
+    console.error("[invite] email dispatch failed", {
+      inviteId: invite.id,
+      targetEmail: invite.targetEmail,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
   revalidatePath("/admin/members");
   revalidatePath("/admin/members/invite");
   revalidatePath("/admin/audit-log");
@@ -110,7 +221,11 @@ export async function revokeInviteLink(formData: FormData) {
   const inviteId = String(formData.get("inviteId") ?? "").trim();
   const reason = String(formData.get("reason") ?? "").trim();
   if (!inviteId) throw new Error("inviteId is required");
-  const invite = findInviteById(inviteId);
+  const [invite] = await db
+    .select()
+    .from(inviteLinks)
+    .where(eq(inviteLinks.id, inviteId))
+    .limit(1);
   if (!invite) throw new Error("Invite not found");
   if (invite.revokedAt) throw new Error("Invite is already revoked");
   if (invite.consumedAt) {
@@ -119,8 +234,12 @@ export async function revokeInviteLink(formData: FormData) {
     );
   }
 
-  invite.revokedAt = new Date().toISOString();
-  invite.revokedReason = reason.length > 0 ? reason : null;
+  const revokedAt = new Date().toISOString();
+  const revokedReason = reason.length > 0 ? reason : null;
+  await db
+    .update(inviteLinks)
+    .set({ revokedAt, revokedReason })
+    .where(eq(inviteLinks.id, invite.id));
 
   logAuditEvent({
     actorUserId: admin.id,

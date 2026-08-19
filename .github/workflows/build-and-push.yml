@@ -50,9 +50,15 @@ jobs:
       - name: Compute image tags
         id: tags
         run: |
-          # Repo name in ghcr can't contain uppercase — lowercase it.
-          # For SwissSavage/-BUILD.Store this yields swisssavage/-build.store.
-          IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          # Docker image names must be lowercase, start with an
+          # alphanumeric, and not contain "." — so the raw GitHub repo
+          # SwissSavage/-BUILD.Store isn't a legal image name. We
+          # sanitize: lowercase, strip leading non-alphanumerics, and
+          # replace remaining "." with "-". Result: swisssavage/build-store.
+          OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          RAW_REPO=$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')
+          CLEAN_REPO=$(echo "$RAW_REPO" | sed 's/^[^a-z0-9]*//' | tr '.' '-')
+          IMAGE="ghcr.io/${OWNER}/${CLEAN_REPO}"
           SHA_TAG="${IMAGE}:sha-${GITHUB_SHA::7}"
           LATEST_TAG="${IMAGE}:latest"
           echo "tags=${SHA_TAG},${LATEST_TAG}" >> "$GITHUB_OUTPUT"

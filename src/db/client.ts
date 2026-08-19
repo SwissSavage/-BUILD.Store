@@ -23,10 +23,10 @@ import * as schema from "./schema";
 
 /**
  * DATABASE_URL is required at runtime. Build-time image builds (GitHub
- * Actions → GHCR) pass a dummy value so page data collection can
- * import server modules without crashing; runtime uses the real value
- * from Dokploy env vars. The build never opens a connection because
- * page prerender / API-route inspection only touches module load.
+ * Actions → GHCR) pass a dummy value via docker --build-arg so page
+ * data collection can import server modules without crashing; runtime
+ * uses the real value from Dokploy env vars. Nothing baked at build
+ * time is a secret.
  */
 if (!process.env.DATABASE_URL) {
   throw new Error(

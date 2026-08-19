@@ -1,0 +1,25 @@
+# Exclude junk from the Docker build context so image builds are fast
+# and don't accidentally bake in local dev artifacts.
+
+.git
+.github
+.next
+.vercel
+node_modules
+npm-debug.log*
+yarn-error.log*
+*.log
+
+.env
+.env.local
+.env.*.local
+
+.DS_Store
+Thumbs.db
+
+README.md
+docs/
+.claude/
+
+# Nixpacks leftovers from the old deploy path — no longer needed.
+.nixpacks/

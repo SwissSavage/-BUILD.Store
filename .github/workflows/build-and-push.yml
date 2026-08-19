@@ -1,0 +1,80 @@
+name: Build & push image to GHCR
+
+# Every push to main builds the Next.js Docker image and pushes it to
+# GitHub Container Registry (ghcr.io). Dokploy on the Hetzner box is
+# configured to pull the `latest` tag on redeploy — no more on-server
+# nixpacks builds filling the disk.
+#
+# Auth uses the built-in GITHUB_TOKEN with `packages: write` permission
+# — no extra secrets required. The published image lives at:
+#   ghcr.io/swisssavage/-build.store:latest
+#   ghcr.io/swisssavage/-build.store:sha-<commit>
+#
+# To trigger a manual rebuild without a code change, use the "Run
+# workflow" button on the Actions tab (workflow_dispatch below).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # Only one build-and-push at a time per branch. A newer push cancels
+  # any in-flight build for the same branch so we always publish the
+  # tip of main rather than a stale intermediate commit.
+  group: build-and-push-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required so GITHUB_TOKEN can push to ghcr.io.
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: tags
+        run: |
+          # Repo name in ghcr can't contain uppercase — lowercase it.
+          # For SwissSavage/-BUILD.Store this yields swisssavage/-build.store.
+          IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          SHA_TAG="${IMAGE}:sha-${GITHUB_SHA::7}"
+          LATEST_TAG="${IMAGE}:latest"
+          echo "tags=${SHA_TAG},${LATEST_TAG}" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          # Cache layers between runs to keep incremental builds fast.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # BuildKit's provenance metadata is heavy and Dokploy doesn't
+          # need it — turn off for a smaller image manifest.
+          provenance: false
+
+      - name: Summary
+        run: |
+          echo "### Image published" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`${{ steps.tags.outputs.image }}:latest\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`${{ steps.tags.outputs.image }}:sha-${GITHUB_SHA::7}\`" >> "$GITHUB_STEP_SUMMARY"

@@ -285,7 +285,7 @@ function AdminDropdown({ self }: { self: User }) {
           href="/admin/agreements"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >
-          Signed agreements
+          Agreements
         </Link>
         <Link
           href="/admin/vouchers"

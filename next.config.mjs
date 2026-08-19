@@ -1,5 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  /**
+   * Emit a self-contained deployable at .next/standalone. Copies only
+   * the production dependencies + files Next.js actually uses at
+   * runtime into a minimal directory tree, so the Docker image we ship
+   * to ghcr.io stays small (~200MB vs. ~1GB with full node_modules)
+   * and cold-start is quick. Required by the Dockerfile in repo root.
+   */
+  output: "standalone",
+
   reactStrictMode: true,
 
   /**

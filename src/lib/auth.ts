@@ -34,6 +34,7 @@ import NextAuth, { type NextAuthConfig } from "next-auth";
 import type { Adapter, AdapterUser } from "next-auth/adapters";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import Nodemailer from "next-auth/providers/nodemailer";
+import Google from "next-auth/providers/google";
 import { randomBytes } from "crypto";
 
 import { db } from "@/db/client";
@@ -353,6 +354,20 @@ export const authConfig: NextAuthConfig = {
         },
       },
       from: process.env.EMAIL_FROM,
+    }),
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      // FM users are provisioned by email first (invite ceremony or
+      // magic-link sign-in). When they later sign in with Google, we
+      // want to link the Google identity to the existing user row
+      // instead of creating a duplicate account under the same email.
+      // Auth.js requires this opt-in because the general case (an
+      // attacker registering with a victim's email before the victim
+      // links their real Google) is unsafe — but on FM the invite
+      // ceremony verifies email ownership before the user row exists,
+      // so auto-linking by email is safe here.
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
   session: {

@@ -76,6 +76,25 @@ jobs:
           # BuildKit's provenance metadata is heavy and Dokploy doesn't
           # need it — turn off for a smaller image manifest.
           provenance: false
+          # Build-time dummy env vars: Next.js's page data collection
+          # imports server modules that read env at load time (db
+          # client, Auth.js config, Documenso wrapper). We supply
+          # obviously-fake values so imports don't throw during build.
+          # None of these connect anywhere — real values are injected
+          # at runtime by Dokploy.
+          build-args: |
+            DATABASE_URL=postgres://dummy:dummy@localhost:5432/dummy
+            AUTH_SECRET=dummy-build-time-secret-not-used-at-runtime
+            AUTH_URL=https://build.afuturemodern.com
+            EMAIL_SERVER_HOST=smtp.example.com
+            EMAIL_SERVER_PORT=587
+            EMAIL_SERVER_USER=dummy
+            EMAIL_SERVER_PASSWORD=dummy
+            EMAIL_FROM=dummy@example.com
+            DOCUMENSO_API_KEY=api_dummy
+            DOCUMENSO_WEBHOOK_SECRET=dummy
+            GOOGLE_CLIENT_ID=dummy
+            GOOGLE_CLIENT_SECRET=dummy
 
       - name: Summary
         run: |

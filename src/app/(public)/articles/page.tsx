@@ -38,7 +38,6 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";
 
 /** Static-rendered. Pipe reads a build-time array. */
-export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "Articles",

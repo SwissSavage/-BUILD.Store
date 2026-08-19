@@ -28,7 +28,6 @@ import { Avatar } from "@/components/Avatar";
 import { OnChainBadge } from "@/components/OnChainBadge";
 
 /** Static-rendered. Reads a build-time array. */
-export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "Cohort",

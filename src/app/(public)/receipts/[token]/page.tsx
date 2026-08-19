@@ -31,7 +31,6 @@ import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 /** Static-rendered by token — Next builds one page per known token. */
-export const dynamic = "force-static";
 
 /**
  * Pre-generate the static params for every known receipt token so

@@ -21,7 +21,6 @@ import { OnChainBadge } from "@/components/OnChainBadge";
 import { PARAGRAPH_BASE } from "@/lib/mock-data/articles";
 
 /** Static-rendered — reads build-time arrays. */
-export const dynamic = "force-static";
 
 /**
  * Pre-generate the static params for every known period so Next

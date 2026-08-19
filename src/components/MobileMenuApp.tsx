@@ -68,7 +68,7 @@ const adminLinks = [
   { href: "/admin/cohort", label: "Cohort spotlights" },
   { href: "/admin/cooperative-quotes", label: "Cooperative quotes" },
   { href: "/admin/receipts", label: "Cooperative receipts" },
-  { href: "/admin/agreements", label: "Signed agreements" },
+  { href: "/admin/agreements", label: "Agreements" },
   { href: "/admin/vouchers", label: "$BUILD vouchers" },
   { href: "/admin/pools", label: "Structural pools" },
   { href: "/admin/invoices", label: "Invoices + receipts" },

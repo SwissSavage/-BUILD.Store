@@ -37,6 +37,36 @@ COPY . .
 # Prevent Next.js's telemetry ping during the build.
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Build-time env vars. Next.js page data collection imports server
+# modules that read env at load time (db client, Auth.js config, etc)
+# and throws if the values are missing — so we pass dummies at build
+# time via docker --build-arg. Real values come in at runtime from
+# Dokploy env vars — nothing baked here is a secret or used post-build.
+ARG DATABASE_URL
+ARG AUTH_SECRET
+ARG AUTH_URL
+ARG EMAIL_SERVER_HOST
+ARG EMAIL_SERVER_PORT
+ARG EMAIL_SERVER_USER
+ARG EMAIL_SERVER_PASSWORD
+ARG EMAIL_FROM
+ARG DOCUMENSO_API_KEY
+ARG DOCUMENSO_WEBHOOK_SECRET
+ARG GOOGLE_CLIENT_ID
+ARG GOOGLE_CLIENT_SECRET
+ENV DATABASE_URL=$DATABASE_URL \
+    AUTH_SECRET=$AUTH_SECRET \
+    AUTH_URL=$AUTH_URL \
+    EMAIL_SERVER_HOST=$EMAIL_SERVER_HOST \
+    EMAIL_SERVER_PORT=$EMAIL_SERVER_PORT \
+    EMAIL_SERVER_USER=$EMAIL_SERVER_USER \
+    EMAIL_SERVER_PASSWORD=$EMAIL_SERVER_PASSWORD \
+    EMAIL_FROM=$EMAIL_FROM \
+    DOCUMENSO_API_KEY=$DOCUMENSO_API_KEY \
+    DOCUMENSO_WEBHOOK_SECRET=$DOCUMENSO_WEBHOOK_SECRET \
+    GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID \
+    GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
+
 RUN npm run build
 
 # ────────────────────────────────────────────────────────────────

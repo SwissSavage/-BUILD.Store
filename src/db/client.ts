@@ -22,64 +22,30 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
 
 /**
- * Lazily-initialized Postgres pool. Deferred so `import { db }` at
- * module load time doesn't throw during Next.js's build-time page
- * data collection (which imports server modules without DATABASE_URL
- * present in the container-image build environment). The first
- * actual query call resolves the pool and errors clearly if the env
- * var is missing at runtime.
- *
+ * DATABASE_URL is required at runtime. Build-time image builds (GitHub
+ * Actions → GHCR) pass a dummy value so page data collection can
+ * import server modules without crashing; runtime uses the real value
+ * from Dokploy env vars. The build never opens a connection because
+ * page prerender / API-route inspection only touches module load.
+ */
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL is not set. See .env.example. Production reads this from Dokploy env vars; CI builds pass a dummy via the workflow env.",
+  );
+}
+
+/**
+ * Shared Postgres pool. Reused across the app instance lifetime.
  * Max connection count tuned modestly — Dokploy Postgres 18 default
  * limit is 100 connections; leaving headroom for pgAdmin / psql
  * sessions and other consumers.
  */
-let _pool: Pool | null = null;
-function getPool(): Pool {
-  if (_pool) return _pool;
-  if (!process.env.DATABASE_URL) {
-    throw new Error(
-      "DATABASE_URL is not set. See .env.example. Production reads this from Dokploy env vars.",
-    );
-  }
-  _pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    max: 20,
-    idleTimeoutMillis: 30_000,
-  });
-  return _pool;
-}
-
-/**
- * Proxy that materializes the pool on first access. Downstream code
- * still writes `pool.query(...)` or `pool.connect()` without needing
- * to change; the pool is only created when actually used.
- */
-export const pool = new Proxy({} as Pool, {
-  get(_target, prop) {
-    const target = getPool();
-    const value = (target as unknown as Record<PropertyKey, unknown>)[prop as string];
-    return typeof value === "function" ? (value as (...args: unknown[]) => unknown).bind(target) : value;
-  },
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 20,
+  idleTimeoutMillis: 30_000,
 });
 
-/**
- * Same lazy pattern for the Drizzle client — materialized on first
- * property access via a proxy so `import { db }` at build time doesn't
- * touch DATABASE_URL.
- */
-let _db: ReturnType<typeof drizzle<typeof schema>> | null = null;
-function getDb() {
-  if (_db) return _db;
-  _db = drizzle(getPool(), { schema });
-  return _db;
-}
-
-export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
-  get(_target, prop) {
-    const target = getDb();
-    const value = (target as unknown as Record<PropertyKey, unknown>)[prop as string];
-    return typeof value === "function" ? (value as (...args: unknown[]) => unknown).bind(target) : value;
-  },
-});
+export const db = drizzle(pool, { schema });
 
 export type DbClient = typeof db;

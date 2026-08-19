@@ -25,7 +25,6 @@ import {
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 /** Static-rendered. Partner rosters read from build-time mock stores. */
-export const dynamic = "force-static";
 
 export const metadata = {
   title: "Partners · $BUILD.Store",

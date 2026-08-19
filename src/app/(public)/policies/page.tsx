@@ -14,7 +14,6 @@ import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 /** Static-rendered. Policy index has no dynamic dependencies. */
-export const dynamic = "force-static";
 
 interface PolicyEntry {
   slug: string;

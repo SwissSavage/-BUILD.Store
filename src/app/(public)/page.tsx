@@ -16,7 +16,6 @@ import { Avatar } from "@/components/Avatar";
  * Static-rendered. Roster reads MOCK_USERS at build time; no request-time
  * dependencies. Home serves as cached HTML from the edge.
  */
-export const dynamic = "force-static";
 
 export default function Home() {
   return (

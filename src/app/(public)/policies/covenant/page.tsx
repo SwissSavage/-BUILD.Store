@@ -19,7 +19,6 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";
 
 /** Static-rendered. Cooperative Covenant is a published document. */
-export const dynamic = "force-static";
 
 export default function CovenantPolicy() {
   return (

@@ -19,6 +19,8 @@
  */
 import type { MetadataRoute } from "next";
 import { cohortSpotlightsByRecency } from "@/lib/mock-data/cohort-spotlights";
+import { MOCK_JOBS } from "@/lib/mock-data/jobs";
+import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";
@@ -48,7 +50,45 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/whitelist`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/showcase`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
     { url: `${SITE_URL}/signup`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    // Job / contract listing indexes — high priority so their per-item
+    // pages surface via the listing crawl.
+    { url: `${SITE_URL}/jobs`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    { url: `${SITE_URL}/contracts`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
   ];
+
+  /**
+   * Per-job posting routes — each open role gets an indexable URL that
+   * emits JobPosting JSON-LD. datePosted from the record so Google
+   * knows when it went live.
+   */
+  const jobRoutes: MetadataRoute.Sitemap = MOCK_JOBS
+    .filter((j) => j.status === "open")
+    .map((j) => ({
+      url: `${SITE_URL}/jobs/${j.id}`,
+      lastModified: new Date(j.createdAt),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    }));
+
+  /**
+   * Per-contract routes — RFP-approved open contracts only. Same
+   * schema markup as jobs (JobPosting with employmentType=CONTRACTOR)
+   * so Google Jobs picks them up alongside FT/PT roles.
+   */
+  const contractRoutes: MetadataRoute.Sitemap = MOCK_PROJECTS
+    .filter(
+      (p) =>
+        p.kind === "contract" &&
+        p.isRfp &&
+        p.status === "open" &&
+        p.rfpApprovedAt !== null,
+    )
+    .map((p) => ({
+      url: `${SITE_URL}/contracts/${p.id}`,
+      lastModified: new Date(p.rfpApprovedAt ?? p.status),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    }));
 
   /**
    * Cohort spotlight pages — one indexable URL per period. Each is a
@@ -63,5 +103,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }),
   );
 
-  return [...staticRoutes, ...cohortRoutes];
+  return [...staticRoutes, ...cohortRoutes, ...jobRoutes, ...contractRoutes];
 }

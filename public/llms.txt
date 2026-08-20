@@ -2,6 +2,8 @@
 
 > A worker-owned cooperative platform for cross-disciplinary talent. Builders own the upside of the work they ship, denominated in transferable equity ($BUILD) plus fair cash compensation. Operated as Future Modern Builderberg LLC.
 
+Sitemap: https://build.afuturemodern.com/sitemap.xml
+
 Future Modern (FM) runs a cooperative platform where art, music, fashion, culture (ARTEL), and professional-services delivery converge into one ownership structure. The model is called Venture Labor — labor treated as equity in the enterprise it builds, on the same on-chain rails everyone else in web3 uses, without the extractive founder-team economics that dominate the space.
 
 FM is neither traditional cooperativist nor traditional degen. Cooperative-ownership thesis is the load-bearing structure; crypto primitives (transparent settlement, portable equity, on-chain provenance, EIP-2981 secondary royalties, POAP participation receipts) are the tools that make the structure work at real scale. FM speaks both languages natively.

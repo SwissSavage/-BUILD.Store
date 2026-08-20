@@ -143,6 +143,8 @@ export async function Nav() {
             <>
               <Link href="/about" className={navLink}>About</Link>
               <StoreDropdown />
+              <Link href="/jobs" className={navLink}>Jobs</Link>
+              <Link href="/contracts" className={navLink}>Contracts</Link>
               <Link href="/showcase" className={navLink}>Showcase</Link>
               <Link href="/partners" className={navLink}>Partners</Link>
               <Link href="/whitelist" className={navLink}>Whitelist</Link>

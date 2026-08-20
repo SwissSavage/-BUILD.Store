@@ -57,7 +57,13 @@ export const config = {
     "/team/:path*",
     "/wallet/:path*",
     "/projects/:path*",
-    "/contracts/:path*",
+    // /contracts and /contracts/[id] are PUBLIC (SEO surface — Google
+    // Jobs indexes them). Member-only contract sub-routes stay gated
+    // individually rather than blanket-gating /contracts/:path*.
+    "/contracts/new",
+    "/contracts/:id/feedback",
+    "/contracts/:id/quote",
+    "/contracts/:id/tracker",
     "/quotes/:path*",
     "/locker/:path*",
     "/receipts/:path*",

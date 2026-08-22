@@ -17,6 +17,8 @@ import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
 import { Card } from "@/components/Card";
+import { BidOnContractForm } from "@/components/BidOnContractForm";
+import { computeRateBounds } from "@/lib/rate-bounds";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -58,7 +60,16 @@ export default async function ContractDetailPage({
     notFound();
   }
 
-  const isSignedIn = !!(await getCurrentUser());
+  const currentUser = await getCurrentUser();
+  const isSignedIn = !!currentUser;
+
+  // Bid range for the signed-in bidder (task #48). Flat platform
+  // range for everyone — talent sets their own rates; admin handles
+  // outliers during triage. Null for signed-out viewers so they see
+  // the sign-in card instead of the bid form.
+  const rateBounds = currentUser
+    ? computeRateBounds(currentUser)
+    : null;
 
   // Contracts don't have a compensation string; budget is a numeric.
   // Compose a display range that Google can parse into MonetaryAmount.
@@ -138,19 +149,12 @@ export default async function ContractDetailPage({
         )}
 
         <div className="mt-12">
-          {isSignedIn ? (
-            <Card>
-              <p className="text-sm text-ink-muted">
-                You&apos;re signed in. Full brief + bid form live in your
-                dashboard.
-              </p>
-              <Link
-                href={`/dashboard`}
-                className="mt-4 inline-block rounded-full bg-brand-magenta px-5 py-2 text-sm text-white hover:opacity-90"
-              >
-                Open bid form
-              </Link>
-            </Card>
+          {isSignedIn && rateBounds ? (
+            <BidOnContractForm
+              contractId={project.id}
+              contractTitle={project.title}
+              rateBounds={rateBounds}
+            />
           ) : (
             <Card>
               <p className="text-lg font-medium">

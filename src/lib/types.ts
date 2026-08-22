@@ -106,6 +106,13 @@ export interface User {
    */
   profileMode: "contributor" | "epk";
   bio: string | null;
+  /**
+   * Short one-liner (~80 chars) surfaced on player cards + public
+   * profile hero. Distinct from `bio` (long-form). Renders on
+   * `/projects/[id]/quotes` bid cards and the public Person card.
+   * First-name / alias only surfaces still apply.
+   */
+  tagline: string | null;
   portfolioUrl: string | null;
   buildTokenBalance: string; // string to match Drizzle numeric(18,8)
   isAdmin: boolean;
@@ -2630,9 +2637,18 @@ export type NotificationKind =
   | "epk_published"
   | "epk_revision_requested"
   | "milestone_due_soon"
+  | "milestone_due_important"
+  | "milestone_due_urgent"
   | "milestone_overdue"
   | "milestone_status_changed"
   | "milestone_blocked"
+  | "project_weekly_rollup"
+  | "agreement_renewal_sixty_days"
+  | "agreement_renewal_thirty_days"
+  | "agreement_renewal_seven_days"
+  | "agreement_renewal_day_of"
+  | "agreement_renewal_overdue"
+  | "portfolio_fraud_flag"
   | "booking_request_received"
   | "booking_request_approved"
   | "booking_request_declined"
@@ -2668,9 +2684,18 @@ export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   quote_approved: "Quote approved",
   quote_declined: "Quote declined",
   milestone_due_soon: "Milestone due soon",
+  milestone_due_important: "Milestone due — important",
+  milestone_due_urgent: "Milestone due — today",
   milestone_overdue: "Milestone overdue",
   milestone_status_changed: "Milestone status",
   milestone_blocked: "Milestone blocked",
+  project_weekly_rollup: "Weekly project rollup",
+  agreement_renewal_sixty_days: "Agreement renewal — 60 days",
+  agreement_renewal_thirty_days: "Agreement renewal — 30 days",
+  agreement_renewal_seven_days: "Agreement renewal — next week",
+  agreement_renewal_day_of: "Agreement renewal — today",
+  agreement_renewal_overdue: "Agreement renewal overdue",
+  portfolio_fraud_flag: "Portfolio duplicate flagged",
 };
 
 /* ------------------------------------------------------------------ */
@@ -2893,8 +2918,17 @@ export interface InboundSubmission {
   /** Pillars relevant to this submission. Empty for non-pillar submissions. */
   pillarTags: Industry[];
   /** Hashtag-ish keywords pulled from the submission body — drives
-   *  semantic match in `lib/talent-match.ts`. */
+   *  semantic match in `lib/talent-match.ts`. Canonical: these are
+   *  either declared from the known-good tag set OR promoted from
+   *  proposedKeywordTags after admin review. */
   keywordTags: string[];
+  /** Applicant-declared "other skills" that haven't been vetted yet.
+   *  Admin at /admin/inbound reviews each proposed tag and either
+   *  accepts (moves into keywordTags + the global canonical corpus),
+   *  merges into an existing canonical tag, or rejects. Prevents the
+   *  matcher from being polluted by typos, marketing puffery, or
+   *  aspirational skill claims. Task #43. */
+  proposedKeywordTags?: string[];
   /** Long-form context the admin sees first when triaging. */
   body: string;
   /** Files attached (sandbox = metadata only). */
@@ -4022,7 +4056,13 @@ export type AuditLogAction =
   | "partner_referral.declined"
   // Admin config
   | "config.setting_changed"
-  | "config.access_reviewed";
+  | "config.access_reviewed"
+  // Public apply/bid + inbound triage bridges (tasks #30, #43)
+  | "user.applied"
+  | "inbound.promoted_to_invite"
+  | "inbound.tag_proposed"
+  | "inbound.tag_accepted"
+  | "inbound.tag_rejected";
 
 export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "user.signed_in": "User signed in",
@@ -4098,6 +4138,11 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "partner_referral.declined": "Partner referral declined",
   "config.setting_changed": "Config setting changed",
   "config.access_reviewed": "Access review completed",
+  "user.applied": "Applied to public job or contract",
+  "inbound.promoted_to_invite": "Inbound submission promoted to invite",
+  "inbound.tag_proposed": "Applicant proposed new skill tag",
+  "inbound.tag_accepted": "Admin accepted proposed tag into canonical set",
+  "inbound.tag_rejected": "Admin rejected proposed tag",
 };
 
 /** Coarse resource kinds referenced from audit entries. Keep aligned

@@ -57,15 +57,21 @@ export function TermsAcceptCheckbox() {
       <div
         ref={scrollRef}
         style={{
-          maxHeight: "180px",
+          // Take most of the viewport per Rob's beta pass — T&C is
+          // the primary content on this page, shouldn't feel like
+          // fine print in a corner. Capped at 720px so it stays
+          // readable on very tall screens; min-height guarantees a
+          // usable read window on short viewports too.
+          maxHeight: "min(70vh, 720px)",
+          minHeight: "320px",
           overflowY: "auto",
-          padding: "12px 16px",
+          padding: "20px 24px",
           background: "rgba(255,255,255,0.04)",
           border: "1px solid rgba(212,167,82,0.35)",
           borderRadius: "6px",
           fontFamily: "'Cormorant Garamond', serif",
-          fontSize: "14px",
-          lineHeight: 1.65,
+          fontSize: "17px",
+          lineHeight: 1.6,
           color: "#e0ceac",
           marginBottom: "12px",
         }}

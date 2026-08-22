@@ -10,8 +10,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { users as usersTable } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { MOCK_USERS } from "@/lib/mock-data/users";
+import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { applicationsByUser } from "@/lib/mock-data/project-applications";
 import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
 import { MOCK_QUOTES } from "@/lib/mock-data/quotes";
 import { MOCK_ATTRIBUTION } from "@/lib/mock-data/attribution";
@@ -46,37 +51,98 @@ const ALL_INDUSTRIES: Industry[] = ["stem", "creative-media", "professional-serv
 
 async function saveProfile(formData: FormData) {
   "use server";
-  const uid = String(formData.get("uid") ?? "");
-  const u = MOCK_USERS.find((x) => x.id === uid);
-  if (!u) throw new Error("User not found");
+  // Always resolve the writer from the actual session, not from a
+  // hidden form field. Fixes the bug Rob hit: real Auth.js users
+  // (like Rob, invited via Track A) aren't in MOCK_USERS, so the
+  // old MOCK_USERS.find(...) returned undefined and threw
+  // "User not found" — everyone saw a broken save.
+  const currentUser = await getCurrentUser();
+  if (!currentUser) throw new Error("Sign in required");
+  const uid = currentUser.id;
 
-  u.firstName = String(formData.get("firstName") ?? "") || u.firstName;
-  u.lastName = String(formData.get("lastName") ?? "") || u.lastName;
-  u.bio = String(formData.get("bio") ?? "") || null;
-  u.portfolioUrl = String(formData.get("portfolioUrl") ?? "") || null;
-  u.profileImageUrl = String(formData.get("profileImageUrl") ?? "") || null;
+  // Compose the update patch from the form. Blank strings become
+  // null for nullable columns; primaries fall back to current
+  // values when empty so we don't clobber good data with a whitespace
+  // submit.
+  const firstName =
+    String(formData.get("firstName") ?? "").trim() || currentUser.firstName;
+  const lastName =
+    String(formData.get("lastName") ?? "").trim() || currentUser.lastName;
+  const bio = String(formData.get("bio") ?? "").trim() || null;
+  const rawTagline = String(formData.get("tagline") ?? "").trim();
+  const tagline = rawTagline ? rawTagline.slice(0, 120) : null;
+  const portfolioUrl =
+    String(formData.get("portfolioUrl") ?? "").trim() || null;
+  const profileImageUrl =
+    String(formData.get("profileImageUrl") ?? "").trim() || null;
 
-  const primary = String(formData.get("primaryIndustry") ?? "") as Industry;
-  if (ALL_INDUSTRIES.includes(primary)) {
-    u.primaryIndustry = primary;
-  }
+  const primaryRaw = String(formData.get("primaryIndustry") ?? "") as Industry;
+  const primaryIndustry: Industry | null = ALL_INDUSTRIES.includes(primaryRaw)
+    ? primaryRaw
+    : currentUser.primaryIndustry;
 
-  // Secondary pillars arrive as individual checkbox values. FormData.getAll
-  // collects them. Exclude the primary so we never double-count.
+  // Secondary pillars are checkbox values. Exclude the primary so
+  // we never double-count.
   const rawSecondaries = formData.getAll("secondaryIndustries").map(String);
-  u.secondaryIndustries = rawSecondaries
+  const secondaryIndustries = rawSecondaries
     .filter((v): v is Industry => ALL_INDUSTRIES.includes(v as Industry))
-    .filter((v) => v !== u.primaryIndustry);
+    .filter((v) => v !== primaryIndustry);
 
   const skillsRaw = String(formData.get("skills") ?? "");
-  u.skills = skillsRaw
+  const skills = skillsRaw
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  u.updatedAt = new Date().toISOString();
+
+  const updatedAt = new Date().toISOString();
+
+  // Real Postgres write. Wrapped in try so mock-only users
+  // (view-as / seeded sandbox accounts that don't have a
+  // Postgres row) still get their profile updated via the mock
+  // path fallback — no regression for the dev/demo flow.
+  let dbWrote = false;
+  try {
+    const res = await db
+      .update(usersTable)
+      .set({
+        firstName,
+        lastName,
+        bio,
+        tagline,
+        portfolioUrl,
+        profileImageUrl,
+        primaryIndustry,
+        secondaryIndustries,
+        skills,
+        updatedAt,
+      })
+      .where(eq(usersTable.id, uid))
+      .returning({ id: usersTable.id });
+    dbWrote = res.length > 0;
+  } catch {
+    // DB unreachable — fall through to mock update below so local
+    // dev without Postgres still works.
+  }
+
+  if (!dbWrote) {
+    const mock = MOCK_USERS.find((x) => x.id === uid);
+    if (mock) {
+      mock.firstName = firstName;
+      mock.lastName = lastName;
+      mock.bio = bio;
+      mock.tagline = tagline;
+      mock.portfolioUrl = portfolioUrl;
+      mock.profileImageUrl = profileImageUrl;
+      if (primaryIndustry) mock.primaryIndustry = primaryIndustry;
+      mock.secondaryIndustries = secondaryIndustries;
+      mock.skills = skills;
+      mock.updatedAt = updatedAt;
+    }
+  }
 
   revalidatePath("/profile");
   revalidatePath("/dashboard");
+  revalidatePath(`/u/${currentUser.handle}`);
 }
 
 export default async function ProfilePage() {
@@ -103,6 +169,35 @@ export default async function ProfilePage() {
   const lifetimePaid = myPayouts
     .filter((s) => s.payoutStatus === "sent")
     .reduce((sum, s) => sum + Number(s.amount), 0);
+
+  // Personal cockpit metrics + contracts list (task #61, moved from
+  // a standalone /dashboard/personal into /profile per Jamar's call —
+  // "yeah let's move that page to the profile tab and have people
+  // surface their contracts there for quick uncluttered review").
+  //
+  // Client-side (users with projects where they're the client) view
+  // ships when task #44 magic-link → optional account creation lands;
+  // the shape below is talent-first.
+  const myApplications = applicationsByUser(user.id);
+  const myProposalsSent = myApplications.length;
+  const myProposalsAccepted = myApplications.filter(
+    (a) => a.status === "approved",
+  ).length;
+  const myAssignedProjects = MOCK_PROJECTS.filter(
+    (p) => Array.isArray(p.assignedMemberIds) && p.assignedMemberIds.includes(user.id),
+  );
+  const myActiveContracts = myAssignedProjects.filter(
+    (p) => p.status === "in_progress",
+  );
+  const myCompletedContracts = myAssignedProjects.filter(
+    (p) => p.status === "completed",
+  );
+  // Cooperative profits attributable to this contributor's work:
+  // approximate as FM's 15/85 share of the contributor's earned
+  // payouts. Real figure comes from settlement metadata once the
+  // revenue-split ledger lands its "fm_share" column; today's
+  // approximation is a good-enough headline number.
+  const coopProfitsFromMe = Math.round((lifetimePaid * 15) / 85);
 
   // Marketplace seller posture — drives the fulfillment dashboard card.
   const sellerApp = [...MOCK_SELLER_APPLICATIONS]
@@ -156,6 +251,24 @@ export default async function ProfilePage() {
             <Field name="firstName" label="First name" defaultValue={user.firstName ?? ""} />
             <Field name="lastName" label="Last name" defaultValue={user.lastName ?? ""} />
           </div>
+
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-ink-muted">
+              Tagline
+            </span>
+            <input
+              name="tagline"
+              defaultValue={user.tagline ?? ""}
+              maxLength={120}
+              placeholder="e.g. RevOps strategist for B2B services orgs"
+              className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
+            />
+            <p className="mt-1.5 text-xs text-ink-faint">
+              One-liner shown on your player card and on client-facing
+              bid cards. Up to 120 characters. First-name / alias only
+              on public surfaces.
+            </p>
+          </label>
 
           <label className="block">
             <span className="text-xs uppercase tracking-wider text-ink-muted">
@@ -226,6 +339,90 @@ export default async function ProfilePage() {
           </button>
         </form>
       </Card>
+
+      {/* Personal cockpit — metrics + contracts. Uncluttered snapshot
+          of what you've done, what's live, and what's earned. Every
+          profile gets this; client-side view (project sign-off) lands
+          when magic-link → optional account creation ships (task #44
+          extension). */}
+      <Card className="mt-6">
+        <CardEyebrow>Your work at a glance</CardEyebrow>
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
+          <Metric label="Proposals sent" value={myProposalsSent} />
+          <Metric label="Accepted" value={myProposalsAccepted} />
+          <Metric label="Completed" value={myCompletedContracts.length} />
+          <Metric label="Currently active" value={myActiveContracts.length} />
+          <Metric
+            label="Revenue earned"
+            value={`$${lifetimePaid.toLocaleString()}`}
+          />
+          <Metric
+            label="FM cooperative share"
+            value={`$${coopProfitsFromMe.toLocaleString()}`}
+            hint="Approximate 15/85 share of your paid engagements."
+          />
+        </div>
+      </Card>
+
+      {/* My contracts — quick uncluttered review of what's in flight
+          and what's wrapped. Clicking through goes to the project
+          tracker (task #46). Client sign-off surface lives on the
+          same shape once client-side accounts land. */}
+      {(myActiveContracts.length > 0 || myCompletedContracts.length > 0) && (
+        <Card className="mt-6">
+          <CardEyebrow>Your contracts</CardEyebrow>
+          {myActiveContracts.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs uppercase tracking-wider text-brand-magenta">
+                Currently active
+              </p>
+              <ul className="mt-2 space-y-2">
+                {myActiveContracts.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-baseline justify-between rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-3 py-2"
+                  >
+                    <Link
+                      href={`/projects/${p.id}`}
+                      className="text-sm font-medium hover:text-brand-magenta"
+                    >
+                      {p.title}
+                    </Link>
+                    <span className="text-[11px] text-ink-faint">
+                      {INDUSTRY_LABELS[p.industry]}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {myCompletedContracts.length > 0 && (
+            <div className="mt-5">
+              <p className="text-xs uppercase tracking-wider text-ink-muted">
+                Completed
+              </p>
+              <ul className="mt-2 space-y-2">
+                {myCompletedContracts.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-baseline justify-between rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
+                  >
+                    <Link
+                      href={`/projects/${p.id}`}
+                      className="text-sm hover:text-brand-magenta"
+                    >
+                      {p.title}
+                    </Link>
+                    <span className="text-[11px] text-ink-faint">
+                      {INDUSTRY_LABELS[p.industry]}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Card>
+      )}
 
       {(() => {
         const mvpSnapshot = mvpScoreForUser(user.id);
@@ -772,6 +969,28 @@ function Field({
         className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
       />
     </label>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: number | string;
+  hint?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-3">
+      <div className="text-[10px] uppercase tracking-wider text-ink-muted">
+        {label}
+      </div>
+      <div className="mt-1 font-display text-2xl font-semibold">{value}</div>
+      {hint && (
+        <div className="mt-0.5 text-[10px] text-ink-faint">{hint}</div>
+      )}
+    </div>
   );
 }
 

@@ -19,6 +19,7 @@ import { db } from "@/db/client";
 import { projects } from "@/db/schema";
 import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { updateHubspotDealStage } from "@/lib/crm-stub";
 
 const ALL_INDUSTRIES: Industry[] = ["stem", "creative-media", "professional-services"];
 
@@ -48,6 +49,23 @@ async function approveRfp(formData: FormData) {
 
   await db.update(projects).set(patch).where(eq(projects.id, id));
 
+  // Task #50: RFP approval means the contract is live for talent bids.
+  // Push the HubSpot deal to presentationscheduled so the pipeline
+  // reflects "we're actively presenting talent to the client."
+  // Best-effort — skipped if no hubspotDealId or no HUBSPOT_ACCESS_TOKEN.
+  const [approvedProject] = await db
+    .select({ hubspotDealId: projects.hubspotDealId, title: projects.title })
+    .from(projects)
+    .where(eq(projects.id, id))
+    .limit(1);
+  if (approvedProject?.hubspotDealId) {
+    void updateHubspotDealStage(
+      approvedProject.hubspotDealId,
+      "presentationscheduled",
+      `RFP approved and published to /contracts. Talent bids opening.`,
+    );
+  }
+
   revalidatePath("/admin/rfps");
   revalidatePath("/contracts");
   revalidatePath("/dashboard");
@@ -69,6 +87,21 @@ async function rejectRfp(formData: FormData) {
       updatedAt: new Date().toISOString(),
     })
     .where(eq(projects.id, id));
+
+  // Task #50: RFP rejection = deal is dead. Push closedlost with the
+  // admin's decline note so the pipeline doesn't sit stale.
+  const [rejectedProject] = await db
+    .select({ hubspotDealId: projects.hubspotDealId })
+    .from(projects)
+    .where(eq(projects.id, id))
+    .limit(1);
+  if (rejectedProject?.hubspotDealId) {
+    void updateHubspotDealStage(
+      rejectedProject.hubspotDealId,
+      "closedlost",
+      note,
+    );
+  }
 
   revalidatePath("/admin/rfps");
 }

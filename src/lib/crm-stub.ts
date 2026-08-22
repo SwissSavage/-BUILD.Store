@@ -262,3 +262,91 @@ export async function applyHubspotStageWebhook(
   project.updatedAt = new Date().toISOString();
   return { updated: true, projectId: project.id };
 }
+
+/**
+ * Outbound: push a stage change TO HubSpot. Complements
+ * `applyHubspotStageWebhook` (inbound). Called when the platform
+ * initiates a stage transition — e.g. client decline on the magic-
+ * link quote surface (task #49) fires a transition to closedlost
+ * so HubSpot reflects the loss without waiting for admin to update
+ * it manually.
+ *
+ * Best-effort: logs and returns false on failure. Callers should
+ * still complete the platform-side state change even if HubSpot is
+ * unavailable; the sync will reconcile on the next webhook cycle.
+ *
+ * Requires `HUBSPOT_ACCESS_TOKEN` to be set. In sandbox / dev
+ * without the token, we skip the network call and just return
+ * false so the caller's happy-path flow still works.
+ */
+export async function updateHubspotDealStage(
+  hubspotDealId: string,
+  newRawStage:
+    | "appointmentscheduled"
+    | "qualifiedtobuy"
+    | "presentationscheduled"
+    | "decisionmakerboughtin"
+    | "contractsent"
+    | "closedwon"
+    | "closedlost",
+  reason?: string,
+): Promise<boolean> {
+  if (!HUBSPOT_ACCESS_TOKEN) {
+    // eslint-disable-next-line no-console
+    console.info(
+      "[crm] skipping HubSpot stage push (no HUBSPOT_ACCESS_TOKEN)",
+      { hubspotDealId, newRawStage, reason },
+    );
+    return false;
+  }
+  if (!hubspotDealId) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[crm] cannot push stage — no hubspotDealId on project",
+      { newRawStage, reason },
+    );
+    return false;
+  }
+
+  try {
+    // v3 PATCH /crm/v3/objects/deals/{dealId} — properties.dealstage
+    // gets set to the raw HubSpot pipeline stage. Reason is stored
+    // in `closed_lost_reason` when set (custom property in most
+    // portals) — if the property doesn't exist HubSpot silently
+    // ignores it, no error thrown.
+    const properties: Record<string, string> = {
+      dealstage: newRawStage,
+    };
+    if (reason && newRawStage === "closedlost") {
+      properties.closed_lost_reason = reason.slice(0, 500);
+    }
+
+    const res = await fetch(
+      `${HUBSPOT_DEALS_ENDPOINT}/${hubspotDealId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${HUBSPOT_ACCESS_TOKEN}`,
+        },
+        body: JSON.stringify({ properties }),
+      },
+    );
+
+    if (!res.ok) {
+      const detail = await res.text();
+      // eslint-disable-next-line no-console
+      console.error(
+        "[crm] HubSpot stage push failed",
+        res.status,
+        detail.slice(0, 500),
+      );
+      return false;
+    }
+    return true;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[crm] HubSpot stage push threw", err);
+    return false;
+  }
+}

@@ -65,6 +65,8 @@ export async function signOut() {
   const jar = await cookies();
   const uid = jar.get(SESSION_COOKIE)?.value;
   const user = uid ? MOCK_USERS.find((u) => u.id === uid) : null;
+
+  // Clear the sandbox cookies first — cheap and can't throw.
   jar.delete(SESSION_COOKIE);
   jar.delete(REAL_SESSION_COOKIE);
 
@@ -78,7 +80,16 @@ export async function signOut() {
     });
   }
 
-  redirect("/");
+  // Also tear down the Auth.js session cookie. Without this, users who
+  // signed in via Google OAuth stayed "logged in" after the button
+  // click because we only cleared the sandbox stub cookies —
+  // getCurrentUser() reads Auth.js first, so it kept resolving.
+  //
+  // authSignOut() throws a redirect internally (NEXT_REDIRECT); it
+  // MUST be the last statement in the function so Next.js's redirect
+  // control-flow surfaces cleanly.
+  const { signOut: authSignOut } = await import("@/lib/auth");
+  await authSignOut({ redirectTo: "/" });
 }
 
 /**

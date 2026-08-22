@@ -18,6 +18,7 @@ import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
 import { Card } from "@/components/Card";
+import { ApplyToJobForm } from "@/components/ApplyToJobForm";
 
 const TYPE_LABEL: Record<string, string> = {
   "full-time": "Full-time",
@@ -132,23 +133,11 @@ export default async function JobDetailPage({
           </div>
         )}
 
-        {/* Auth-gated section — the actual apply flow */}
+        {/* Auth-gated section — the actual apply form. Members submit
+            a real application here; admin sees it in the queue. */}
         <div className="mt-12">
           {isSignedIn ? (
-            <Card>
-              <p className="text-sm text-ink-muted">
-                You&apos;re signed in. Submit your application from your
-                dashboard or reply to the posting via your account.
-              </p>
-              {/* TODO: real apply form. For now the surface exists so
-                  members know where to go. */}
-              <Link
-                href="/dashboard"
-                className="mt-4 inline-block rounded-full bg-brand-magenta px-5 py-2 text-sm text-white hover:opacity-90"
-              >
-                Apply from dashboard
-              </Link>
-            </Card>
+            <ApplyToJobForm jobId={job.id} jobTitle={job.title} />
           ) : (
             <Card>
               <p className="text-lg font-medium">

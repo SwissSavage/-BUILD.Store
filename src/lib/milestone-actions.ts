@@ -35,6 +35,7 @@ import {
   MILESTONE_DUE_SOON_DAYS,
   type MilestoneStatus,
   type Notification,
+  type NotificationKind,
   type ProjectMilestone,
 } from "@/lib/types";
 
@@ -211,26 +212,105 @@ export async function resolveBlocker(formData: FormData) {
 }
 
 /**
- * Admin sweep: scans every milestone, fires `milestone_due_soon` for
- * owners on rows due within MILESTONE_DUE_SOON_DAYS that haven't been
- * notified in the last 24 hours, and fans `milestone_overdue` to project
- * admins for past-due rows that haven't been notified in the last 24
- * hours. Debounced via the lastDueSoon / lastOverdue timestamps.
+ * Escalating urgency buckets for pre-due milestone pings (task #51).
+ * The bucket enum encodes both the timing and the priority label —
+ * more urgent buckets fire even if a less-urgent bucket already
+ * pinged, so a milestone that was 7d out yesterday still gets a
+ * fresh 3d ping today.
  *
- * In production this runs on a daily cron; the action body is identical.
+ * Notification `kind` maps 1:1 so surface renderers can route by
+ * urgency (bell red vs muted, sort order, digest inclusion, etc).
+ */
+type DueBucket = "day_of" | "one_day" | "three_days" | "seven_days";
+const BUCKET_ORDER: DueBucket[] = [
+  "seven_days",
+  "three_days",
+  "one_day",
+  "day_of",
+];
+const BUCKET_MS: Record<DueBucket, number> = {
+  seven_days: 7 * 86_400_000,
+  three_days: 3 * 86_400_000,
+  one_day: 1 * 86_400_000,
+  day_of: 0,
+};
+const BUCKET_KIND: Record<DueBucket, NotificationKind> = {
+  seven_days: "milestone_due_soon",
+  three_days: "milestone_due_soon",
+  one_day: "milestone_due_important",
+  day_of: "milestone_due_urgent",
+};
+const BUCKET_LABEL: Record<DueBucket, string> = {
+  seven_days: "Heads up",
+  three_days: "Reminder",
+  one_day: "Important",
+  day_of: "Due today",
+};
+
+/** Returns the most urgent bucket the milestone currently qualifies
+ *  for, or null if the due date is more than 7 days out. */
+function currentBucket(dueMs: number, now: number): DueBucket | null {
+  const remaining = dueMs - now;
+  if (remaining < 0) return null;
+  // Walk buckets from most urgent to least urgent.
+  if (remaining <= BUCKET_MS.day_of + 86_400_000) return "day_of";
+  if (remaining <= BUCKET_MS.one_day + 86_400_000) return "one_day";
+  if (remaining <= BUCKET_MS.three_days) return "three_days";
+  if (remaining <= BUCKET_MS.seven_days) return "seven_days";
+  return null;
+}
+
+/**
+ * Admin sweep: scans every milestone, fires escalating pre-due pings
+ * (7d → 3d → 1d → day-of) for owners, and fans `milestone_overdue`
+ * to project admins for past-due rows.
+ *
+ * Escalation logic: each bucket is more urgent than the last. When
+ * the milestone crosses into a more-urgent bucket, we fire a fresh
+ * ping regardless of when the last one went out. The bucket is
+ * encoded in `lastDueSoonNoticeAt` via a short suffix so we don't
+ * need a schema migration for the tracking field — YYYY-MM-DDTHH
+ * format with a "|bucket" suffix. Real Drizzle swap adds a proper
+ * `last_notice_bucket` column.
+ *
+ * In production this runs on a daily cron via
+ * /api/cron/sweep-milestones; the action body stays the same.
  */
 export async function sweepDeadlines() {
   await requireAdmin();
+  await runMilestoneSweep();
+  revalidatePath("/admin");
+}
+
+/**
+ * Cron-friendly body — no auth check, no revalidate. Called by
+ * requireAdmin-gated sweepDeadlines above AND by the cron route
+ * (/api/cron/sweep-milestones) which does its own shared-secret
+ * auth. Split so the cron doesn't need an admin session.
+ *
+ * Async signature satisfies the "use server" module contract even
+ * though the current body runs synchronously against MOCK data —
+ * the real Drizzle swap will introduce awaited queries.
+ */
+export async function runMilestoneSweep(): Promise<{
+  preDuePings: number;
+  overduePings: number;
+  scanned: number;
+}> {
   const now = Date.now();
-  const dueSoonMs = MILESTONE_DUE_SOON_DAYS * 86_400_000;
-  const debounceMs = 24 * 60 * 60 * 1000;
+  const debounceMs = 20 * 60 * 60 * 1000; // 20h — avoids double-fire on same day
+  let preDuePings = 0;
+  let overduePings = 0;
+  let scanned = 0;
 
   for (const row of MOCK_PROJECT_MILESTONES) {
     if (row.status === "completed") continue;
+    scanned += 1;
     const dueMs = new Date(row.dueAt).getTime();
     const project = MOCK_PROJECTS.find((p) => p.id === row.projectId);
     if (!project) continue;
 
+    // Overdue path — daily admin escalation until resolved.
     if (dueMs < now) {
       const last = row.lastOverdueNoticeAt
         ? new Date(row.lastOverdueNoticeAt).getTime()
@@ -245,25 +325,113 @@ export async function sweepDeadlines() {
       });
       row.lastOverdueNoticeAt = new Date(now).toISOString();
       row.updatedAt = row.lastOverdueNoticeAt;
-    } else if (dueMs - now <= dueSoonMs) {
-      const last = row.lastDueSoonNoticeAt
-        ? new Date(row.lastDueSoonNoticeAt).getTime()
-        : 0;
-      if (now - last < debounceMs) continue;
-      const daysOut = Math.ceil((dueMs - now) / 86_400_000);
-      pushNotification({
-        userId: row.ownerUserId,
-        kind: "milestone_due_soon",
-        title: `Due soon: ${row.title}`,
-        body: `${project.title}. Due in ${daysOut} day${daysOut === 1 ? "" : "s"}.`,
-        href: `/projects/${row.projectId}`,
-      });
-      row.lastDueSoonNoticeAt = new Date(now).toISOString();
-      row.updatedAt = row.lastDueSoonNoticeAt;
+      overduePings += 1;
+      continue;
     }
+
+    // Pre-due escalation path. Fires when the milestone enters a
+    // more-urgent bucket than the last ping. Same bucket + inside
+    // debounce = skip.
+    const bucket = currentBucket(dueMs, now);
+    if (!bucket) continue;
+
+    const raw = row.lastDueSoonNoticeAt ?? "";
+    const [lastIso, lastBucket] = raw.includes("|")
+      ? raw.split("|")
+      : [raw, ""];
+    const lastMs = lastIso ? new Date(lastIso).getTime() : 0;
+    const bucketIndex = BUCKET_ORDER.indexOf(bucket);
+    const lastBucketIndex = lastBucket
+      ? BUCKET_ORDER.indexOf(lastBucket as DueBucket)
+      : -1;
+
+    const escalated = bucketIndex > lastBucketIndex;
+    const debounced = now - lastMs < debounceMs;
+    if (!escalated && debounced) continue;
+
+    const daysOut = Math.max(0, Math.ceil((dueMs - now) / 86_400_000));
+    const timing =
+      bucket === "day_of"
+        ? "Due today"
+        : bucket === "one_day"
+          ? "Due tomorrow"
+          : `Due in ${daysOut} day${daysOut === 1 ? "" : "s"}`;
+
+    pushNotification({
+      userId: row.ownerUserId,
+      kind: BUCKET_KIND[bucket],
+      title: `${BUCKET_LABEL[bucket]}: ${row.title}`,
+      body: `${project.title}. ${timing}.`,
+      href: `/projects/${row.projectId}`,
+    });
+    row.lastDueSoonNoticeAt = `${new Date(now).toISOString()}|${bucket}`;
+    row.updatedAt = new Date(now).toISOString();
+    preDuePings += 1;
   }
 
-  revalidatePath("/admin");
+  return { preDuePings, overduePings, scanned };
+}
+
+/**
+ * Weekly rollup — Monday project digest. For each active project,
+ * emails/pings the assigned members + admins a summary of what's
+ * due this week, what slipped last week, and next milestones. Runs
+ * as part of the same cron entry point but only fires when today
+ * is a Monday.
+ */
+export async function runWeeklyProjectRollup(): Promise<{
+  digestsSent: number;
+}> {
+  const now = new Date();
+  if (now.getUTCDay() !== 1) return { digestsSent: 0 }; // Monday = 1
+
+  const nowMs = now.getTime();
+  const weekFromNowMs = nowMs + 7 * 86_400_000;
+  const weekAgoMs = nowMs - 7 * 86_400_000;
+  let digestsSent = 0;
+
+  for (const project of MOCK_PROJECTS) {
+    if (project.status !== "in_progress") continue;
+    const milestones = MOCK_PROJECT_MILESTONES.filter(
+      (m) => m.projectId === project.id,
+    );
+    if (milestones.length === 0) continue;
+
+    const dueThisWeek = milestones.filter((m) => {
+      if (m.status === "completed") return false;
+      const d = new Date(m.dueAt).getTime();
+      return d >= nowMs && d <= weekFromNowMs;
+    });
+    const slippedLastWeek = milestones.filter((m) => {
+      if (m.status === "completed") return false;
+      const d = new Date(m.dueAt).getTime();
+      return d < nowMs && d >= weekAgoMs;
+    });
+    if (dueThisWeek.length === 0 && slippedLastWeek.length === 0) continue;
+
+    const dueLine =
+      dueThisWeek.length > 0
+        ? `${dueThisWeek.length} due this week: ${dueThisWeek.map((m) => m.title).slice(0, 3).join(", ")}${dueThisWeek.length > 3 ? "…" : ""}.`
+        : "";
+    const slippedLine =
+      slippedLastWeek.length > 0
+        ? ` ${slippedLastWeek.length} slipped from last week.`
+        : "";
+
+    const recipients = [
+      ...(project.assignedMemberIds ?? []),
+      ...projectAdminUserIds(project.id),
+    ];
+    fanOut(recipients, {
+      kind: "project_weekly_rollup",
+      title: `Weekly rollup — ${project.title}`,
+      body: `${dueLine}${slippedLine}`.trim(),
+      href: `/projects/${project.id}`,
+    });
+    digestsSent += 1;
+  }
+
+  return { digestsSent };
 }
 
 function ownerName(userId: string): string {

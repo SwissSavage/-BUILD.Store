@@ -44,6 +44,8 @@ const memberLinks = [
 const publicLinks = [
   { href: "/about", label: "About" },
   { href: "/store", label: "Store" },
+  { href: "/jobs", label: "Jobs" },
+  { href: "/contracts", label: "Contracts" },
   { href: "/showcase", label: "Showcase" },
   { href: "/cohort", label: "Cohort" },
   { href: "/articles", label: "Articles" },
@@ -195,7 +197,7 @@ export function MobileMenuApp({
                       onClick={() => setOpen(false)}
                       className="flex items-center justify-between rounded-lg px-4 py-3 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                     >
-                      <span>Inbox</span>
+                      <span>🔔 Notifications</span>
                       {unread > 0 && (
                         <span className="inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-brand-magenta px-2 text-xs font-medium text-white">
                           {unread > 9 ? "9+" : unread}

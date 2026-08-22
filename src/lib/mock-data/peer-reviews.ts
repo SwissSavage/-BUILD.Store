@@ -26,6 +26,7 @@ export const MOCK_PEER_REVIEWS: PeerReview[] = [
     collaboration: 5,
     craft: 5,
     reliability: 5,
+    professionalism: 5,
     prose:
       "Michael ran the operational scorecard end-to-end and pulled in regional benchmarks I didn't know existed. Decisive on scope, never made me chase. Pair again, no hesitation.",
     createdAt: "2026-04-20T15:30:00Z",
@@ -40,6 +41,7 @@ export const MOCK_PEER_REVIEWS: PeerReview[] = [
     collaboration: 5,
     craft: 4,
     reliability: 4,
+    professionalism: 4,
     prose:
       "Rob's market selection memo was the spine of the whole deliverable. Caught one timeline slip mid-week — owned it, recovered it, no drama. Strong builder.",
     createdAt: "2026-04-21T10:12:00Z",
@@ -58,6 +60,7 @@ export const MOCK_PEER_REVIEWS: PeerReview[] = [
     collaboration: 4,
     craft: 5,
     reliability: 4,
+    professionalism: 4,
     prose:
       "Trevor's voting-weight prototype was tight — clean Solidity, sane gas profile. Comms on standups were lighter than I'd want for a longer engagement, but for a prototype sprint it landed.",
     createdAt: "2026-04-23T19:45:00Z",
@@ -110,16 +113,29 @@ export function aggregateRating(userId: string): {
   collaboration: number;
   craft: number;
   reliability: number;
+  professionalism: number | null;
+  professionalismCount: number;
 } | null {
   const rs = reviewsForUser(userId);
   if (rs.length === 0) return null;
   const sum = (key: keyof PeerReview) =>
     rs.reduce((acc, r) => acc + Number(r[key]), 0) / rs.length;
+  // Professionalism was added later; legacy rows have null. Average
+  // only the ones that carry a value, and expose the count so the UI
+  // can render "based on N of M reviews" if it wants to.
+  const withProf = rs.filter((r) => r.professionalism != null);
+  const professionalism =
+    withProf.length > 0
+      ? withProf.reduce((acc, r) => acc + Number(r.professionalism), 0) /
+        withProf.length
+      : null;
   return {
     mean: sum("stars"),
     count: rs.length,
     collaboration: sum("collaboration"),
     craft: sum("craft"),
     reliability: sum("reliability"),
+    professionalism,
+    professionalismCount: withProf.length,
   };
 }

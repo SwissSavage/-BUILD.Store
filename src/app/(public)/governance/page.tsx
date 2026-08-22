@@ -25,7 +25,6 @@ const SITE_URL =
  * Static-rendered. Constellation is a client component that hydrates
  * after paint; the surrounding page is pure content.
  */
-export const dynamic = "force-static";
 
 export default function GovernancePage() {
   return (

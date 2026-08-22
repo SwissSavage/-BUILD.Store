@@ -5,7 +5,6 @@
  * /signin. The user should see this until they click the emailed
  * link, which takes them into a fresh session.
  */
-export const dynamic = "force-static";
 
 export const metadata = {
   title: "Check your email — Future Modern",

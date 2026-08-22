@@ -20,7 +20,6 @@ import { CardEyebrow } from "@/components/Card";
  * schema anchor for AEO/GEO retrieval.
  */
 
-export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "Glossary — Future Modern canonical terminology",

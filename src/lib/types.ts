@@ -2233,6 +2233,12 @@ export interface PeerReview {
   collaboration: number;
   craft: number;
   reliability: number;
+  /**
+   * Professionalism sub-rating (task #28). 1–5 peer-graded sentiment
+   * for client-facing conduct. Nullable on legacy rows that predate
+   * the rubric addition; new submissions always populate.
+   */
+  professionalism: number | null;
   /** Free-text. Visible to reviewee + admin. */
   prose: string;
   createdAt: string;

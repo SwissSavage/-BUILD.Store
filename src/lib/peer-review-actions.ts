@@ -90,6 +90,10 @@ export async function submitPeerReview(formData: FormData) {
   );
   const craft = clampStar(formData.get("craft"), "Craft");
   const reliability = clampStar(formData.get("reliability"), "Reliability");
+  const professionalism = clampStar(
+    formData.get("professionalism"),
+    "Professionalism",
+  );
   const prose = String(formData.get("prose") ?? "").trim();
   if (prose.length < 20) {
     throw new Error("Prose must be at least 20 characters — say something real");
@@ -110,6 +114,7 @@ export async function submitPeerReview(formData: FormData) {
     collaboration,
     craft,
     reliability,
+    professionalism,
     prose,
     createdAt: new Date().toISOString(),
   };

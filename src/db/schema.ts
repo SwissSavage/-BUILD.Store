@@ -859,6 +859,18 @@ export const peerReviews = pgTable("peer_reviews", {
   collaboration: integer("collaboration").notNull(),
   craft: integer("craft").notNull(),
   reliability: integer("reliability").notNull(),
+  /**
+   * Professionalism sub-rating (task #28). Peer-graded sentiment for
+   * client-facing conduct — comms hygiene, boundary respect, no
+   * side-channel moves. Distinct from the mvp_compliance_penalties
+   * layer (admin-adjudicated, binary, mechanical). Repeated
+   * professionalism dings become the paper trail justifying a
+   * formal compliance penalty if the pattern doesn't correct.
+   *
+   * Nullable so legacy peer_review rows keep loading. New submissions
+   * always populate this via the form.
+   */
+  professionalism: integer("professionalism"),
   prose: text("prose").notNull(),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
 }, (t) => ({

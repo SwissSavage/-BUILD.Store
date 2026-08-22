@@ -610,10 +610,16 @@ export default async function PublicProfilePage({
                     {aggregate.count === 1 ? "review" : "reviews"} from
                     teammates on completed engagements
                   </p>
-                  <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs md:grid-cols-4">
                     <Sub label="Collaboration" value={aggregate.collaboration} />
                     <Sub label="Craft" value={aggregate.craft} />
                     <Sub label="Reliability" value={aggregate.reliability} />
+                    {aggregate.professionalism !== null && (
+                      <Sub
+                        label="Professionalism"
+                        value={aggregate.professionalism}
+                      />
+                    )}
                   </div>
                   <p className="mt-4 text-[11px] text-ink-faint">
                     Reviewers stay anonymous to {publicName(user)}.

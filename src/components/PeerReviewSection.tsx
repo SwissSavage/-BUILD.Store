@@ -131,7 +131,13 @@ function ReviewForm({
         <StarSelect name="collaboration" label="Collaboration" />
         <StarSelect name="craft" label="Craft" />
         <StarSelect name="reliability" label="Reliability" />
+        <StarSelect name="professionalism" label="Professionalism" />
       </div>
+      <p className="text-[10px] text-ink-faint">
+        Professionalism: comms hygiene, boundary respect,
+        client-facing conduct. Repeated low scores flag admin for
+        compliance review — separate from the peer sentiment above.
+      </p>
 
       <div>
         <label

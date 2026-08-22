@@ -65,6 +65,8 @@ export async function signOut() {
   const jar = await cookies();
   const uid = jar.get(SESSION_COOKIE)?.value;
   const user = uid ? MOCK_USERS.find((u) => u.id === uid) : null;
+
+  // Clear the sandbox cookies first — cheap and can't throw.
   jar.delete(SESSION_COOKIE);
   jar.delete(REAL_SESSION_COOKIE);
 

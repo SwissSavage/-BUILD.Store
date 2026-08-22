@@ -13,6 +13,7 @@
 import Link from "next/link";
 import { CardEyebrow } from "@/components/Card";
 import { DefinedTermSchema } from "@/components/DefinedTermSchema";
+import { TncSummary } from "@/components/TncSummary";
 import { getEntriesForPage } from "@/lib/glossary";
 
 const SITE_URL =
@@ -55,6 +56,14 @@ export default function CovenantPolicy() {
           signed effective-date footer counter-signed by the founding
           Members.
         </p>
+      </div>
+
+      {/* Plain-language summary — same source (src/components/TncSummary.tsx)
+          the invite acceptance ceremony renders. Ensures the summary
+          shown at consent time and the summary browseable here can't
+          drift. Full canonical text follows below. */}
+      <div className="mt-6">
+        <TncSummary variant="policy" />
       </div>
 
       <section className="mt-8 space-y-6 text-sm text-ink-muted">

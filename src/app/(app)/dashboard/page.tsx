@@ -206,7 +206,7 @@ export default async function DashboardPage() {
           <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div>
-                <CardEyebrow>Inbox</CardEyebrow>
+                <CardEyebrow>Notifications</CardEyebrow>
                 <p className="mt-1 font-display text-2xl font-semibold">
                   {inboxUnreadCount} unread{" "}
                   {inboxUnreadCount === 1 ? "item" : "items"}

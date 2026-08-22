@@ -47,7 +47,7 @@ export const MOCK_CUSTOMER_FEEDBACK: CustomerFeedback[] = [
     createdAt: "2026-02-21T18:30:00Z",
   },
 
-  // ── p_003 (DCG GTM — Rob + Michael, just completed). Pending admin.
+  // ── p_003 (GTM contract — Rob + Michael, just completed). Pending admin.
   {
     id: "cf_002",
     contextKind: "contract",

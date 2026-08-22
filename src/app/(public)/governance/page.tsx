@@ -52,22 +52,19 @@ export default function GovernancePage() {
       <Section
         eyebrow="Tier ladder"
         id="tier"
-        title="Viewer → Prospect → Partner → Member"
+        title="Viewer → Partner → Member"
         body={
           <>
             <p>
-              Four tiers. Contribution and vouching. No tier for sale.
+              Three tiers. Contribution and vouching. No tier for sale.
             </p>
             <ul className="mt-3 space-y-1 pl-5 text-sm text-ink-muted list-disc">
               <li>
                 <strong className="text-ink">Viewer:</strong>{" "}
-                unauthenticated public. Sees marketing surfaces, open
-                RFPs, published showcase, policies, trust page.
-              </li>
-              <li>
-                <strong className="text-ink">Prospect:</strong> signed
-                up. Can manage own profile, opt in/out of Tier-2 data
-                participation, apply toward Partner status.
+                unauthenticated public + anyone signed up but not yet
+                vouched. Sees marketing surfaces, open RFPs, published
+                showcase, policies, trust page; can manage own profile
+                and opt in/out of Tier-2 data participation.
               </li>
               <li>
                 <strong className="text-ink">Partner:</strong> vetted

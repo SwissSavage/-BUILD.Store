@@ -39,21 +39,6 @@ export const MOCK_JOBS: Job[] = [
     createdAt: "2026-04-08T00:00:00Z",
   },
   {
-    id: "j_003",
-    title: "Enterprise account executive — MSP vertical",
-    description:
-      "Sell Direct Connect Global's managed-services offerings into mid-market and Fortune 1000 accounts. Our partner's posting, open to our members first.",
-    industry: "professional-services",
-    skillsRequired: ["enterprise sales", "MSP", "account management"],
-    compensation: "$120k base + commission",
-    location: "Remote",
-    employmentType: "full-time",
-    postedBy: "partner_dcg",
-    postedByLabel: "Direct Connect Global (partner)",
-    status: "open",
-    createdAt: "2026-04-14T00:00:00Z",
-  },
-  {
     id: "j_004",
     title: "Video editor — part-time, recurring",
     description:

@@ -49,7 +49,6 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 // company name; sandbox keeps a tiny lookup so we don't surface raw IDs.
 const CLIENT_LABELS: Record<string, string> = {
   client_url_media: "URL Media",
-  client_dcg: "Direct Connect Global",
 };
 
 export default async function ClientProposalPage({

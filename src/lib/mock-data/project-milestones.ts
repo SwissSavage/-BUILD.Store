@@ -1,7 +1,7 @@
 /**
  * Per-project milestones for the Domino's-style tracker.
  *
- * Seed covers two active contract projects (p_003 DCG / GTM, p_004 URL
+ * Seed covers two active contract projects (p_003 retired-client / GTM, p_004 URL
  * Media editorial) and one internal cooperative project (p_103 governance
  * tooling) so the tracker has data on every surface that consumes it.
  *
@@ -23,7 +23,7 @@ const dayOffset = (n: number): string => {
 };
 
 export const MOCK_PROJECT_MILESTONES: ProjectMilestone[] = [
-  // ── p_003 (DCG GTM — Rob + Michael).
+  // ── p_003 (GTM contract — Rob + Michael).
   {
     id: "ms_003_01",
     projectId: "p_003",

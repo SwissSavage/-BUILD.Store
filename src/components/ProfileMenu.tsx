@@ -83,6 +83,11 @@ export function ProfileMenu({
       label: "Completed jobs",
       blurb: "Wrapped work and case studies.",
     },
+    {
+      href: "/policies/covenant",
+      label: "Review T&C",
+      blurb: "The Cooperative Covenant — what you agreed to. Always browseable.",
+    },
   ];
 
   return (

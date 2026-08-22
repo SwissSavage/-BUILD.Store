@@ -7,7 +7,7 @@
  * primary record of contribution.
  *
  * Coverage:
- *   p_003 (open, in-progress GTM contract for DCG) — Rob introduced, Michael
+ *   p_003 (open, in-progress GTM contract) — Rob introduced, Michael
  *         leads delivery, both contribute substantively.
  *   p_004 (closed editorial series for URL Media) — Aliza did the lion's
  *         share; Jamar introduced.
@@ -25,7 +25,7 @@ export const MOCK_ATTRIBUTION: AttributionEntry[] = [
     userId: "u_rob",
     role: "introducer",
     weight: 0.15,
-    notes: "Inbound through Rob's DCG relationship.",
+    notes: "Inbound through Rob's client relationship.",
     loggedBy: "u_jamar",
     loggedAt: "2026-03-01T12:00:00Z",
   },

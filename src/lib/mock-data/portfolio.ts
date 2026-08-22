@@ -10,7 +10,7 @@
  * to respect redactions. Members always see their own raw submissions.
  *
  * Seed data updated 2026-05-04 to reflect real FM-shipped work from the
- * canon Service Engagement Revenue Log + Catalog curation series. DCG
+ * canon Service Engagement Revenue Log + Catalog curation series.
  * entries retired (engagement walked, see projects-active.md).
  */
 import type { PortfolioItem } from "@/lib/types";

@@ -33,7 +33,6 @@ function tokenAuthorizesContract(token: string, contractId: string): boolean {
 
 const CLIENT_LABELS: Record<string, string> = {
   client_url_media: "URL Media",
-  client_dcg: "Direct Connect Global",
   client_bk_greenroots: "Brooklyn GreenRoots",
   client_arborai: "ArborAI",
 };

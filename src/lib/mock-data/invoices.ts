@@ -6,11 +6,11 @@
  *                  Mercury ACH; matches the $12,000 collectedRevenue on
  *                  p_004 that the split engine settles.
  *
- *   inv_p003_001 — GTM plan for DCG. Milestone 1 ($7,500) issued, partially
+ *   inv_p003_001 — GTM plan for retired client. Milestone 1 ($7,500) issued, partially
  *                  received ($3,750 deposit landed, balance outstanding).
  *                  Mirrors the in-flight contract.
  *
- *   inv_p002_001 — DCG smart-contract audit. Client requested CC at the
+ *   inv_p002_001 — smart-contract audit. Client requested CC at the
  *                  contracting stage, so this one is acceptsCard=true with
  *                  the gross-up line item baked in. Status=issued, awaiting
  *                  payment.
@@ -75,7 +75,7 @@ export const MOCK_INVOICES: Invoice[] = [
   },
 
   // ──────────────────────────────────────────────────────────────────────
-  //  p_003 — GTM plan, DCG. Mercury ACH, milestone 1 partially received.
+  //  p_003 — GTM plan,. Mercury ACH, milestone 1 partially received.
   // ──────────────────────────────────────────────────────────────────────
   {
     id: "inv_p003_001",
@@ -117,7 +117,7 @@ export const MOCK_INVOICES: Invoice[] = [
   },
 
   // ──────────────────────────────────────────────────────────────────────
-  //  p_002 — Smart-contract audit, DCG. Client opted into CC; gross-up
+  //  p_002 — Smart-contract audit,. Client opted into CC; gross-up
   //  line item is baked into the issued invoice.
   //
   //  Math: subtotal $14,000 → gross-up at 2.9% + $0.30
@@ -166,7 +166,7 @@ export const MOCK_INVOICES: Invoice[] = [
     mercuryReference: null,
     stripePaymentIntentId: null,
     notes:
-      "Client requested CC at contracting (DCG procurement runs corporate Amex). Markup is the gross-up — cooperative still nets $14,000.",
+      "Client requested CC at contracting (client requires corporate Amex). Markup is the gross-up — cooperative still nets $14,000.",
     documensoEnvelopeId: null,
     signatureStatus: null,
     signatureCompletedAt: null,
@@ -228,7 +228,7 @@ export const MOCK_INVOICES: Invoice[] = [
 
   // ──────────────────────────────────────────────────────────────────────
   //  Internal invoices — talent_to_coop
-  //  Contributors on p_003 (DCG GTM plan) billing the coop for their work.
+  //  Contributors on p_003 (GTM contract plan) billing the coop for their work.
   //  Approved internals feed the contributor pool at settlement.
   // ──────────────────────────────────────────────────────────────────────
   {

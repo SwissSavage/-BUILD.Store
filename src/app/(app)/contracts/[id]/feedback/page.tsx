@@ -39,7 +39,6 @@ const FEEDBACK_TOKENS: Record<string, string> = {
 // Friendly client labels. Keep in sync with the invoice / proposal pages.
 const CLIENT_LABELS: Record<string, string> = {
   client_url_media: "URL Media",
-  client_dcg: "Direct Connect Global",
   client_bk_greenroots: "Brooklyn GreenRoots",
   client_arborai: "ArborAI",
 };

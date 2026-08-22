@@ -25,7 +25,7 @@
  *                        cooperative. Start blank and drop links in as
  *                        we negotiate each one.
  *
- * Note: URL Media and Direct Connect Global are CLIENTS, not partners.
+ * Note: URL Media and Retired client are CLIENTS, not partners.
  * They do NOT belong in this file. (Earlier seed had them here; removed
  * 2026-05-04.)
  *

@@ -27,7 +27,7 @@ export const MOCK_TRANSACTIONS: TokenTransaction[] = [
     amount: "300.00000000",
     type: "project_completion",
     projectId: "p_003",
-    description: "DCG GTM milestone 1.",
+    description: "GTM contract milestone 1.",
     transactionHash: null,
     compStage: null,
     withholdReason: null,

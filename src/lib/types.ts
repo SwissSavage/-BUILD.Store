@@ -326,7 +326,7 @@ export interface Project {
    * at settlement.
    *
    * NOTE: a user can be both a contract admin AND a contributor (e.g. Rob
-   * on the DCG GTM contract — he introduced the deal and also did delivery
+   * on the GTM contract contract — he introduced the deal and also did delivery
    * work). The two pools are independent.
    */
   adminUserIds: string[];
@@ -908,7 +908,7 @@ export interface QuoteSheet {
   workSamples: QuoteSheetSample[];
   /**
    * Internal note from member to admin — context the client should NOT see
-   * (e.g. "I know the lead from a past gig at DCG, can fast-track intro").
+   * (e.g. "I know the lead from a past gig at, can fast-track intro").
    */
   memberNote: string | null;
   createdAt: string;

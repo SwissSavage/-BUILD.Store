@@ -23,6 +23,7 @@
  * needed on the completeInviteSignup side.
  */
 import { useEffect, useRef, useState } from "react";
+import { TncSummary } from "@/components/TncSummary";
 
 const SCROLL_THRESHOLD_PX = 8;
 
@@ -76,55 +77,7 @@ export function TermsAcceptCheckbox() {
           marginBottom: "12px",
         }}
       >
-        <p style={{ margin: "0 0 10px", fontWeight: 600, color: "#f5d16b" }}>
-          Future Modern — Terms of Service (summary)
-        </p>
-        <p style={{ margin: "0 0 8px" }}>
-          By accepting, you agree to participate in the Future Modern
-          cooperative as a member or partner in good faith. You agree to
-          the tier you were invited under, its associated responsibilities,
-          and the Future Modernist&apos;s Code above.
-        </p>
-        <p style={{ margin: "0 0 8px" }}>
-          Your account is provisioned to your email address. You are
-          responsible for keeping that address secure. Signing in uses
-          magic links delivered to that address; possession of the
-          address is treated as authorization.
-        </p>
-        <p style={{ margin: "0 0 8px" }}>
-          Contributions you make through the cooperative — projects,
-          referrals, governance activity, review — are subject to the
-          reciprocity floor described in the Code. Membership review
-          may follow prolonged inactivity.
-        </p>
-        <p style={{ margin: "0 0 8px" }}>
-          You may leave at any time. Future Modern may pause or end
-          membership when the relationship stops being reciprocal, as
-          described in the Sovereignty principle.
-        </p>
-        <p style={{ margin: "0 0 8px" }}>
-          Personal data you provide is used to operate your account and
-          match you to relevant opportunities. It is not sold. Data
-          participation (the labor-value dataset) is a separate,
-          optional opt-in below.
-        </p>
-        <p style={{ margin: "0 0 8px" }}>
-          Full Terms, Privacy Policy, and Data Use Policy live at{" "}
-          <a
-            href="/policies"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#f5d16b", textDecoration: "underline" }}
-          >
-            /policies
-          </a>
-          . The summary here highlights the parts most likely to
-          matter — read the full text if any of it is unclear before
-          accepting.
-        </p>
-        <p style={{ margin: "0", fontStyle: "italic", opacity: 0.7 }}>
-          — End of summary —
-        </p>
+        <TncSummary variant="invite" />
       </div>
 
       <label

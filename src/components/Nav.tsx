@@ -227,6 +227,12 @@ function AdminDropdown({ self }: { self: User }) {
           Project applications
         </Link>
         <Link
+          href="/admin/jobs/applications"
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          Job applications
+        </Link>
+        <Link
           href="/admin/projects/contributions"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >

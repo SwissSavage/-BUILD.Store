@@ -202,138 +202,55 @@ function AdminDropdown({ self }: { self: User }) {
         >
           Admin home
         </Link>
-        <Link
-          href="/admin/team"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Team
-        </Link>
-        <Link
-          href="/admin/members"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Members
-        </Link>
-        <Link
-          href="/admin/projects"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          All projects
-        </Link>
-        <Link
-          href="/admin/projects/applications"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Project applications
-        </Link>
-        <Link
-          href="/admin/jobs/applications"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Job applications
-        </Link>
-        <Link
-          href="/admin/projects/contributions"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Outside contributors
-        </Link>
-        <Link
-          href="/admin/chat"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Live chat
-        </Link>
-        <Link
-          href="/admin/cohort"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Cohort spotlights
-        </Link>
-        <Link
-          href="/admin/cooperative-quotes"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Cooperative quotes
-        </Link>
-        <Link
-          href="/admin/receipts"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Cooperative receipts
-        </Link>
-        <Link
-          href="/admin/agreements"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Agreements
-        </Link>
-        <Link
-          href="/admin/vouchers"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          $BUILD vouchers
-        </Link>
-        <Link
-          href="/admin/pools"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Structural pools
-        </Link>
-        <Link
-          href="/admin/invoices"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Invoices + receipts
-        </Link>
-        <Link
-          href="/admin/reserve"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Contract reserves
-        </Link>
-        <Link
-          href="/admin/clients"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Client patterns
-        </Link>
-        <Link
-          href="/admin/referrals"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Partner referrals
-        </Link>
-        <Link
-          href="/admin/feedback"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Beta feedback
-        </Link>
-        <Link
-          href="/admin/testimonials"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Customer testimonials
-        </Link>
-        <Link
-          href="/admin/epk"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          EPK approvals
-        </Link>
-        <Link
-          href="/admin/categories"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Store categories
-        </Link>
-        <Link
-          href="/admin/locker"
-          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-        >
-          Locker moderation
-        </Link>
+
+        {/* Sections consolidate 20+ admin links so the dropdown stays
+            scannable. Native <details> per section — same progressive-
+            enhancement pattern as JobsDropdown/StoreDropdown. Each
+            summary shows the count of items inside so admin can tell
+            what's under the fold. */}
+        <AdminSection label="People">
+          <AdminLink href="/admin/team">Team</AdminLink>
+          <AdminLink href="/admin/members">Members</AdminLink>
+          <AdminLink href="/admin/projects/applications">
+            Project applications
+          </AdminLink>
+          <AdminLink href="/admin/jobs/applications">
+            Job applications
+          </AdminLink>
+          <AdminLink href="/admin/projects/contributions">
+            Outside contributors
+          </AdminLink>
+          <AdminLink href="/admin/epk">EPK approvals</AdminLink>
+        </AdminSection>
+
+        <AdminSection label="Deals & projects">
+          <AdminLink href="/admin/projects">All projects</AdminLink>
+          <AdminLink href="/admin/cooperative-quotes">
+            Cooperative quotes
+          </AdminLink>
+          <AdminLink href="/admin/clients">Client patterns</AdminLink>
+          <AdminLink href="/admin/referrals">Partner referrals</AdminLink>
+        </AdminSection>
+
+        <AdminSection label="Money & agreements">
+          <AdminLink href="/admin/agreements">Agreements</AdminLink>
+          <AdminLink href="/admin/receipts">Cooperative receipts</AdminLink>
+          <AdminLink href="/admin/invoices">Invoices + receipts</AdminLink>
+          <AdminLink href="/admin/reserve">Contract reserves</AdminLink>
+          <AdminLink href="/admin/vouchers">$BUILD vouchers</AdminLink>
+          <AdminLink href="/admin/pools">Structural pools</AdminLink>
+        </AdminSection>
+
+        <AdminSection label="Content & moderation">
+          <AdminLink href="/admin/chat">Live chat</AdminLink>
+          <AdminLink href="/admin/cohort">Cohort spotlights</AdminLink>
+          <AdminLink href="/admin/testimonials">
+            Customer testimonials
+          </AdminLink>
+          <AdminLink href="/admin/feedback">Beta feedback</AdminLink>
+          <AdminLink href="/admin/categories">Store categories</AdminLink>
+          <AdminLink href="/admin/locker">Locker moderation</AdminLink>
+        </AdminSection>
 
         <div className="my-2 border-t border-[var(--surface-border)]" />
         <p className="px-3 pt-1 text-[10px] uppercase tracking-wider text-ink-muted">
@@ -382,5 +299,53 @@ function ViewAsButton({ target, label }: { target: string; label: string }) {
     >
       {label}
     </button>
+  );
+}
+
+/**
+ * Collapsible section inside the admin dropdown. Native <details> so
+ * it works without client JS. Summary shows the section label and a
+ * small item-count badge so admin can see what's under the fold
+ * without opening it.
+ */
+function AdminSection({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  const count = Array.isArray(children) ? children.length : 1;
+  return (
+    <details className="group">
+      <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 text-[11px] uppercase tracking-wider text-ink-muted hover:bg-[var(--surface-inset)]">
+        <span>{label}</span>
+        <span className="text-[10px] text-ink-faint">
+          {count}
+          <span className="ml-1 group-open:hidden">▸</span>
+          <span className="ml-1 hidden group-open:inline">▾</span>
+        </span>
+      </summary>
+      <div className="ml-2 border-l border-[var(--surface-border)] pl-1">
+        {children}
+      </div>
+    </details>
+  );
+}
+
+function AdminLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="block rounded-lg px-3 py-1.5 text-sm hover:bg-[var(--surface-inset)]"
+    >
+      {children}
+    </Link>
   );
 }

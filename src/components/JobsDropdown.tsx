@@ -33,7 +33,12 @@ const ITEMS: JobsDropdownItem[] = [
   {
     href: "/projects",
     label: "Projects",
-    blurb: "Case studies + active builds recruiting contributors.",
+    blurb: "Active builds recruiting contributors.",
+  },
+  {
+    href: "/case-studies",
+    label: "Case studies",
+    blurb: "Completed contracts delivered through the cooperative.",
   },
 ];
 

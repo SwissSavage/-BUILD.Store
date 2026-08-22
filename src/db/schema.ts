@@ -75,6 +75,13 @@ export const users = pgTable("users", {
     enum: ["contributor", "epk"],
   }).notNull().default("contributor"),
   bio: text("bio"),
+  /**
+   * Short one-liner shown on the player card + public profile hero.
+   * Distinct from `bio` (long-form) — this is the ~80-char pitch that
+   * lands on `/projects/[id]/quotes` bid cards and the public Person
+   * card. First-name / alias only surfaces still apply.
+   */
+  tagline: text("tagline"),
   portfolioUrl: text("portfolio_url"),
   buildTokenBalance: numeric("build_token_balance", { precision: 18, scale: 8 })
     .notNull()
@@ -1020,6 +1027,30 @@ export const projectMilestones = pgTable("project_milestones", {
   updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
 });
 
+/**
+ * Applications to /jobs postings. Parallel shape to project_applications
+ * (which handles /contracts bids because contracts ARE projects).
+ * Separate table because jobs and projects are separate concepts —
+ * jobs have compensation/employmentType, projects have budget/isRFP.
+ * Admin reviews at /admin/jobs/applications.
+ */
+export const jobApplications = pgTable("job_applications", {
+  id: text("id").primaryKey(),
+  jobId: text("job_id").notNull().references(() => jobs.id),
+  userId: text("user_id").notNull().references(() => users.id),
+  pitch: text("pitch").notNull(),
+  portfolioLink: text("portfolio_link"),
+  desiredCompensation: text("desired_compensation"),
+  status: text("status", {
+    enum: ["pending", "approved", "rejected", "withdrawn"],
+  }).notNull().default("pending"),
+  reviewedBy: text("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at", { mode: "string", withTimezone: true }),
+  adminNote: text("admin_note"),
+  withdrawnAt: timestamp("withdrawn_at", { mode: "string", withTimezone: true }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
 export const projectApplications = pgTable("project_applications", {
   id: text("id").primaryKey(),
   projectId: text("project_id").notNull().references(() => projects.id),
@@ -1027,6 +1058,12 @@ export const projectApplications = pgTable("project_applications", {
   proposedRole: text("proposed_role").notNull(),
   pitch: text("pitch").notNull(),
   hoursPerWeek: integer("hours_per_week").notNull().default(0),
+  /**
+   * Proposed hourly rate in USD. Bounded by the talent's current
+   * compliance-tier rate cap (task #48, see `src/lib/rate-bounds.ts`).
+   * Null-safe for legacy rows that predate the rate-cap mechanic.
+   */
+  hourlyRate: numeric("hourly_rate", { precision: 10, scale: 2 }),
   portfolioLink: text("portfolio_link"),
   status: text("status", {
     enum: ["pending", "approved", "rejected", "withdrawn"],
@@ -1394,6 +1431,7 @@ export const schema = {
   chatMessages,
   projectMilestones,
   projectApplications,
+  jobApplications,
   prospectiveContributions,
   walkthroughSteps,
   walkthroughProgress,

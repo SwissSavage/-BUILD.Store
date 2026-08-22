@@ -26,6 +26,9 @@ import {
   unassignInbound,
   setInboundTriageNote,
   appendInboundKeywordTags,
+  promoteInboundToInvite,
+  acceptProposedInboundTag,
+  rejectProposedInboundTag,
 } from "@/lib/inbound-submission-actions";
 import {
   approveBookingRequest,
@@ -418,6 +421,66 @@ function SubmissionRow({
                   Save note
                 </button>
               </form>
+
+              {row.kind === "join_talent_signup" && row.submitterEmail && (
+                <form action={promoteInboundToInvite} className="mt-3">
+                  <input type="hidden" name="id" value={row.id} />
+                  <button
+                    type="submit"
+                    className="rounded-full bg-brand-magenta px-3 py-1.5 text-[11px] font-medium text-white hover:opacity-90"
+                    title="Prefill /admin/members/invite with this applicant's email + name and jump you there. Countersign-first invite ceremony fires from that page."
+                  >
+                    Promote to invite →
+                  </button>
+                </form>
+              )}
+
+              {(row.proposedKeywordTags?.length ?? 0) > 0 && (
+                <div className="mt-3 rounded-lg border border-dashed border-[#D8931B]/60 bg-[rgba(216,147,27,0.06)] p-3">
+                  <div className="text-[10px] uppercase tracking-wider text-[#B4740F]">
+                    Proposed tags · unverified
+                  </div>
+                  <p className="mt-1 text-[11px] text-ink-muted">
+                    Applicant declared these under &ldquo;Other skills.&rdquo;
+                    Accept promotes to the canonical tag set; reject
+                    drops it without matching.
+                  </p>
+                  <ul className="mt-2 space-y-1.5">
+                    {(row.proposedKeywordTags ?? []).map((t) => (
+                      <li
+                        key={t}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <span className="rounded-full bg-white/60 px-2 py-0.5 text-[11px] font-medium text-[#8A5A0B]">
+                          {t}
+                        </span>
+                        <div className="flex gap-1.5">
+                          <form action={acceptProposedInboundTag}>
+                            <input type="hidden" name="id" value={row.id} />
+                            <input type="hidden" name="tag" value={t} />
+                            <button
+                              type="submit"
+                              className="rounded-full bg-[#007048] px-2.5 py-0.5 text-[10px] font-medium text-white hover:opacity-90"
+                            >
+                              Accept
+                            </button>
+                          </form>
+                          <form action={rejectProposedInboundTag}>
+                            <input type="hidden" name="id" value={row.id} />
+                            <input type="hidden" name="tag" value={t} />
+                            <button
+                              type="submit"
+                              className="rounded-full border border-[var(--surface-border)] px-2.5 py-0.5 text-[10px] hover:border-[#d84343] hover:text-[#d84343]"
+                            >
+                              Reject
+                            </button>
+                          </form>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <form action={appendInboundKeywordTags} className="mt-3 text-xs">
                 <input type="hidden" name="id" value={row.id} />

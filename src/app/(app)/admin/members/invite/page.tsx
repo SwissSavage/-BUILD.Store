@@ -70,8 +70,31 @@ function inviteUrl(code: string): string {
   return `${base.replace(/\/$/, "")}/invite/${code}`;
 }
 
-export default async function InviteMemberPage() {
+export default async function InviteMemberPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    email?: string;
+    name?: string;
+    note?: string;
+    fromInboundId?: string;
+  }>;
+}) {
   await requireAdmin();
+
+  // Prefill support — the /admin/inbound "Promote to invite" action
+  // redirects here with the applicant's email + name so admin can
+  // one-click generate the invite off an external application (task
+  // #43 Track B). Never trust the query string for anything other
+  // than form defaultValues; the actual invite creation still runs
+  // through generateInviteLink's own validation.
+  const sp = searchParams ? await searchParams : {};
+  const prefill = {
+    email: (sp.email ?? "").trim().toLowerCase().slice(0, 200),
+    name: (sp.name ?? "").trim().slice(0, 120),
+    note: (sp.note ?? "").trim().slice(0, 400),
+    fromInboundId: (sp.fromInboundId ?? "").trim().slice(0, 40),
+  };
 
   // Freshest first. Pull the last N invites — 50 is plenty for the
   // admin surface; older ones live in the audit log.
@@ -135,6 +158,7 @@ export default async function InviteMemberPage() {
                 type="email"
                 name="targetEmail"
                 required
+                defaultValue={prefill.email}
                 className="mt-1 block w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink"
                 placeholder="alex@example.com"
               />
@@ -163,6 +187,7 @@ export default async function InviteMemberPage() {
             <input
               type="text"
               name="targetName"
+              defaultValue={prefill.name}
               className="mt-1 block w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink"
               placeholder="Preset first-name shown on the redemption page"
             />
@@ -173,6 +198,7 @@ export default async function InviteMemberPage() {
               name="note"
               rows={2}
               maxLength={400}
+              defaultValue={prefill.note}
               className="mt-1 block w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink"
               placeholder="Which lens they cover · why now · anything relevant for the record"
             />

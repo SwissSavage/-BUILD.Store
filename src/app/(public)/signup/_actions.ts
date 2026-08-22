@@ -56,6 +56,30 @@ export async function handleSignup(formData: FormData) {
   const talentPortfolioUrl = String(formData.get("talentPortfolioUrl") ?? "").trim();
   const talentSummary = String(formData.get("talentSummary") ?? "").trim();
 
+  // User-declared skill tags from the /signup/join intake. Merged with
+  // the free-text keyword scrub below so the auto-match scorer has
+  // both explicit tags AND derived ones to work with. Task #43.
+  const declaredSkillTags = String(formData.get("skillTags") ?? "")
+    .toLowerCase()
+    .split(/[\s,]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0)
+    .slice(0, 20);
+
+  // Applicant-proposed "other skills" — land as unverified. Admin
+  // reviews at /admin/inbound and either promotes each proposed tag
+  // to canonical keywordTags or rejects it. Kept as a separate array
+  // so the matcher never sees an unvetted tag until admin says so.
+  const proposedSkillTags = String(formData.get("proposedSkillTags") ?? "")
+    .toLowerCase()
+    .split(/[\s,]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0)
+    // De-dupe against the declared canonical set — if applicant
+    // typed the same string in both fields, canonical wins.
+    .filter((t) => !declaredSkillTags.includes(t))
+    .slice(0, 20);
+
   // Project the lead into the unified inbound queue so /admin/inbound
   // shows every form submission alongside RFPs, chats, and applications.
   const kindMap: Record<SignupIntent, InboundSubmissionKind> = {
@@ -85,7 +109,12 @@ export async function handleSignup(formData: FormData) {
     submitterEmail: email || null,
     submitterCompany: company || null,
     pillarTags: resolvedPillars,
-    keywordTags: extractKeywords(body),
+    keywordTags: Array.from(
+      new Set([...declaredSkillTags, ...extractKeywords(body)]),
+    ).slice(0, 50),
+    proposedKeywordTags: proposedSkillTags.length > 0
+      ? proposedSkillTags
+      : undefined,
     body,
     attachments: jdUploads,
     assignedAdminId: null,

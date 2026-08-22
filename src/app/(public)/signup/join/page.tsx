@@ -57,6 +57,46 @@ export default function JoinAsTalentSignupPage() {
             Sandbox accepts a URL. In production this becomes a real
             upload (resume PDF + up to 5 portfolio files).
           </p>
+
+          <div className="mt-5">
+            <label htmlFor="skillTags" className="text-xs uppercase tracking-wider text-brand-magenta">
+              Skill tags
+            </label>
+            <p className="mt-1 text-xs text-ink-muted">
+              Comma-separated. Pick from the known-good set so the
+              auto-matcher can route you cleanly. Examples:
+              <span className="text-ink">
+                {" "}shopify, revops, dtc, brand, solidity, 3d
+              </span>.
+            </p>
+            <input
+              id="skillTags"
+              type="text"
+              name="skillTags"
+              placeholder="shopify, brand, revops, ..."
+              className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="mt-5">
+            <label htmlFor="proposedSkillTags" className="text-xs uppercase tracking-wider text-brand-magenta">
+              Other skills we should know about
+            </label>
+            <p className="mt-1 text-xs text-ink-muted">
+              Comma-separated. Anything that doesn&apos;t fit the known
+              tags above — a niche stack, a certification, a domain
+              we&apos;d never think to list. These land as
+              <span className="italic"> proposed</span> and admin
+              reviews each one before it counts toward matching.
+            </p>
+            <input
+              id="proposedSkillTags"
+              type="text"
+              name="proposedSkillTags"
+              placeholder="hyperspectral imaging, LEED AP BD+C, ..."
+              className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+            />
+          </div>
         </section>
 
         <section className="space-y-4 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-5">

@@ -35,6 +35,7 @@ import { cooperativeQuotes, projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import { updateHubspotDealStage } from "@/lib/crm-stub";
 import {
   logAuditEvent,
   snapshotActorRole,
@@ -483,11 +484,26 @@ export async function approveCooperativeQuote(formData: FormData) {
     ? `${leadUser.firstName} ${leadUser.lastName}`.trim()
     : selectedLeadUserId;
   const [project] = await db
-    .select({ title: projects.title })
+    .select({
+      title: projects.title,
+      hubspotDealId: projects.hubspotDealId,
+    })
     .from(projects)
     .where(eq(projects.id, quote.projectId))
     .limit(1);
   const projectTitle = project?.title ?? quote.projectId;
+
+  // Task #49 + #50: push the approval to HubSpot. contractsent is
+  // the right stage here — client has picked their lead but LOI + SOW
+  // dispatch (task #45) haven't fired yet. Once both envelopes come
+  // back signed, downstream logic moves the deal to closedwon.
+  if (project?.hubspotDealId) {
+    void updateHubspotDealStage(
+      project.hubspotDealId,
+      "contractsent",
+      `Client ${quote.clientDisplayName} selected ${leadName} as lead. Awaiting LOI + SOW signatures.`,
+    );
+  }
 
   logAuditEvent({
     actorUserId: quote.createdByUserId,
@@ -560,11 +576,30 @@ export async function declineCooperativeQuote(formData: FormData) {
   // (In practice most declines will null out selectedLeadUserId.)
 
   const [project] = await db
-    .select({ title: projects.title })
+    .select({
+      title: projects.title,
+      hubspotDealId: projects.hubspotDealId,
+    })
     .from(projects)
     .where(eq(projects.id, quote.projectId))
     .limit(1);
   const projectTitle = project?.title ?? quote.projectId;
+
+  // Task #49: push the decline to HubSpot as closedlost so the deal
+  // doesn't sit stale in the pipeline waiting for a manual admin
+  // update. Best-effort — failure is logged but doesn't rollback
+  // the platform-side decline; the inbound webhook will reconcile
+  // on the next stage change.
+  if (project?.hubspotDealId) {
+    // Fire and forget; don't block the client action on HubSpot
+    // latency. Response handling is inside updateHubspotDealStage.
+    void updateHubspotDealStage(
+      project.hubspotDealId,
+      "closedlost",
+      reason ||
+        `Client ${quote.clientDisplayName} declined the cooperative quote via magic-link.`,
+    );
+  }
 
   logAuditEvent({
     actorUserId: quote.createdByUserId,

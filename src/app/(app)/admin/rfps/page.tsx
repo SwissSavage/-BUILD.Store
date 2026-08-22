@@ -14,6 +14,7 @@
  */
 import { requireAdmin } from "@/lib/auth-stub";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projects } from "@/db/schema";
@@ -69,6 +70,11 @@ async function approveRfp(formData: FormData) {
   revalidatePath("/admin/rfps");
   revalidatePath("/contracts");
   revalidatePath("/dashboard");
+
+  // Natural next step: dispatch quote requests to matched talent
+  // (task #36). Land admin straight on the dispatch surface so the
+  // approve→dispatch flow is one click, not a hunt through nav.
+  redirect(`/admin/rfps/${id}/dispatch`);
 }
 
 async function rejectRfp(formData: FormData) {

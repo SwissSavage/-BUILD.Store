@@ -54,6 +54,7 @@ const KIND_ACCENT: Record<NotificationKind, string> = {
   agreement_renewal_day_of: "#D828A0",
   agreement_renewal_overdue: "#D828A0",
   portfolio_fraud_flag: "#D828A0",
+  rfp_quote_request: "#5070F0",
   quote_approved: "#007048",
   quote_declined: "#D828A0",
 };

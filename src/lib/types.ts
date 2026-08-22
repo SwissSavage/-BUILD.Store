@@ -2679,6 +2679,7 @@ export type NotificationKind =
   | "agreement_renewal_day_of"
   | "agreement_renewal_overdue"
   | "portfolio_fraud_flag"
+  | "rfp_quote_request"
   | "booking_request_received"
   | "booking_request_approved"
   | "booking_request_declined"
@@ -2726,6 +2727,7 @@ export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   agreement_renewal_day_of: "Agreement renewal — today",
   agreement_renewal_overdue: "Agreement renewal overdue",
   portfolio_fraud_flag: "Portfolio duplicate flagged",
+  rfp_quote_request: "Quote request from admin",
 };
 
 /* ------------------------------------------------------------------ */
@@ -4092,7 +4094,8 @@ export type AuditLogAction =
   | "inbound.promoted_to_invite"
   | "inbound.tag_proposed"
   | "inbound.tag_accepted"
-  | "inbound.tag_rejected";
+  | "inbound.tag_rejected"
+  | "rfp.dispatched";
 
 export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "user.signed_in": "User signed in",
@@ -4173,6 +4176,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "inbound.tag_proposed": "Applicant proposed new skill tag",
   "inbound.tag_accepted": "Admin accepted proposed tag into canonical set",
   "inbound.tag_rejected": "Admin rejected proposed tag",
+  "rfp.dispatched": "RFP quote-request dispatched to talent",
 };
 
 /** Coarse resource kinds referenced from audit entries. Keep aligned

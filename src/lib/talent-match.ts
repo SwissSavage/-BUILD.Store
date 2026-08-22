@@ -284,3 +284,83 @@ export function scoreTalentMatch(
 
   return results;
 }
+
+/**
+ * Fair-shake match dispatch (task #40). Returns a MIX for the admin
+ * dispatch queue — top-ranked candidates + a rotation slot for
+ * newer/less-utilized talent + an alphabet-fair shuffle so the same
+ * heavy hitters don't get every RFP.
+ *
+ * Split (default limit=8):
+ *   - 4 slots: top by scoreTalentMatch fit
+ *   - 2 slots: rotation — lowest recent-engagement count among
+ *     fitScore > 0 candidates, giving newer talent shots
+ *   - 2 slots: alphabet-fair — pulled from the remaining pool
+ *     ordered by first-letter distance from the most-recent RFP's
+ *     picks so different names surface engagement to engagement
+ *
+ * Every returned entry carries a `bucket` label ("top" | "rotation"
+ * | "alphabet") so the admin surface can show the mix intent.
+ */
+export interface FairMixMember extends TalentMatchResult {
+  bucket: "top" | "rotation" | "alphabet";
+}
+
+export function fairMixTalentForRfp(
+  target: { pillars: Industry[]; keywordTags: string[] },
+  options: {
+    limit?: number;
+    // Rotation seed — count of engagements per userId, so we can
+    // prefer the least-utilized among matched candidates. Caller
+    // computes this from project_applications + assignedMemberIds.
+    // Empty map = everyone treated as un-engaged (fine for MVP).
+    engagementCountByUserId?: Map<string, number>;
+    // Alphabet-fair seed — first letters of names picked on recent
+    // dispatches, so we bias away from them. Empty = neutral.
+    recentPickInitials?: Set<string>;
+  } = {},
+): FairMixMember[] {
+  const limit = options.limit ?? 8;
+  const engagementCounts = options.engagementCountByUserId ?? new Map();
+  const recentInitials = options.recentPickInitials ?? new Set();
+
+  // Pull a wide pool so we have candidates to slot into each bucket.
+  const pool = scoreTalentMatch(target, Math.max(limit * 3, 24));
+
+  const topN = Math.ceil(limit * 0.5);
+  const rotationN = Math.floor(limit * 0.25);
+  const alphabetN = limit - topN - rotationN;
+
+  const top = pool.slice(0, topN);
+  const topIds = new Set(top.map((r) => r.user.id));
+
+  const remaining = pool.filter((r) => !topIds.has(r.user.id));
+
+  const rotation = [...remaining]
+    .sort((a, b) => {
+      const ca = engagementCounts.get(a.user.id) ?? 0;
+      const cb = engagementCounts.get(b.user.id) ?? 0;
+      if (ca !== cb) return ca - cb; // fewer engagements first
+      return b.score - a.score;
+    })
+    .slice(0, rotationN);
+  const rotationIds = new Set(rotation.map((r) => r.user.id));
+
+  const alphabet = [...remaining]
+    .filter((r) => !rotationIds.has(r.user.id))
+    .sort((a, b) => {
+      const ai = (a.user.firstName ?? "?")[0].toUpperCase();
+      const bi = (b.user.firstName ?? "?")[0].toUpperCase();
+      const aRecent = recentInitials.has(ai) ? 1 : 0;
+      const bRecent = recentInitials.has(bi) ? 1 : 0;
+      if (aRecent !== bRecent) return aRecent - bRecent; // un-recent first
+      return b.score - a.score;
+    })
+    .slice(0, alphabetN);
+
+  return [
+    ...top.map((r) => ({ ...r, bucket: "top" as const })),
+    ...rotation.map((r) => ({ ...r, bucket: "rotation" as const })),
+    ...alphabet.map((r) => ({ ...r, bucket: "alphabet" as const })),
+  ];
+}

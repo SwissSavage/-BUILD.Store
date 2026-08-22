@@ -14,7 +14,7 @@
  */
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { signOut, viewAsUser } from "@/lib/auth-actions";
+import { viewAsUser } from "@/lib/auth-actions";
 import { cn } from "@/lib/cn";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { unreadNotificationCount } from "@/lib/mock-data/notifications";
@@ -25,6 +25,8 @@ import {
   type User,
 } from "@/lib/types";
 import { StoreDropdown } from "@/components/StoreDropdown";
+import { JobsDropdown } from "@/components/JobsDropdown";
+import { ProfileMenu } from "@/components/ProfileMenu";
 import { MobileMenuApp } from "@/components/MobileMenuApp";
 
 const VIEW_AS_TIER_ORDER: MembershipTier[] = [
@@ -92,59 +94,30 @@ export async function Nav() {
           {isLoggedIn ? (
             <>
               <Link href="/dashboard" className={navLink}>Dashboard</Link>
-              <Link href="/jobs" className={navLink}>Jobs</Link>
-              <Link href="/contracts" className={navLink}>Contracts</Link>
-              <Link href="/projects" className={navLink}>Projects</Link>
-              <Link href="/wallet" className={navLink}>Wallet</Link>
+              <JobsDropdown />
               <StoreDropdown />
               <Link href="/orders" className={navLink}>Orders</Link>
               <Link href="/showcase" className={navLink}>Showcase</Link>
-              <Link href="/locker" className={navLink}>Locker</Link>
-              <Link
-                href="/notifications"
-                className={cn(navLink, "relative inline-flex items-center")}
-                aria-label={
-                  unread > 0
-                    ? `Notifications, ${unread} unread`
-                    : "Notifications"
-                }
-              >
-                Inbox
-                {unread > 0 && (
-                  <span
-                    aria-hidden="true"
-                    className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-magenta px-1.5 text-[10px] font-medium leading-4 text-white"
-                  >
-                    {unread > 9 ? "9+" : unread}
-                  </span>
-                )}
-              </Link>
-              {/* Non-admin members keep Profile in the row. For admins,
-                  Profile lives as the first item inside the Admin
-                  dropdown to keep the row scannable. Artists (profileMode
-                  "epk") get a dedicated EPK editor link. */}
-              {!user!.isAdmin && (
-                <Link href="/profile" className={navLink}>Profile</Link>
-              )}
+              {/* Artists (profileMode "epk") get a dedicated EPK editor
+                  link — separate from the profile dropdown because EPK
+                  is a distinct authoring surface, not a personal-scope
+                  utility. */}
               {!user!.isAdmin && user!.profileMode === "epk" && (
                 <Link href="/profile/epk" className={navLink}>EPK</Link>
               )}
               {user!.isAdmin && <AdminDropdown self={user!} />}
-              <form action={signOut}>
-                <button
-                  type="submit"
-                  className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:bg-[var(--surface-elevated)]"
-                >
-                  Sign out
-                </button>
-              </form>
+              {/* Personal-scope surfaces (profile, notifications, locker,
+                  wallet, agreements, jobs status, sign out) live inside
+                  the avatar dropdown per Rob's beta note #2 / task #60.
+                  Keeps the top nav focused on discovery + platform-wide
+                  surfaces. */}
+              <ProfileMenu user={user!} unreadNotificationCount={unread} />
             </>
           ) : (
             <>
               <Link href="/about" className={navLink}>About</Link>
               <StoreDropdown />
-              <Link href="/jobs" className={navLink}>Jobs</Link>
-              <Link href="/contracts" className={navLink}>Contracts</Link>
+              <JobsDropdown />
               <Link href="/showcase" className={navLink}>Showcase</Link>
               <Link href="/partners" className={navLink}>Partners</Link>
               <Link href="/whitelist" className={navLink}>Whitelist</Link>

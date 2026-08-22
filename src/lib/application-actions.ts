@@ -21,11 +21,12 @@ import { randomBytes } from "crypto";
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { jobApplications, projectApplications, projects } from "@/db/schema";
-import { getCurrentUser } from "@/lib/auth-stub";
+import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import {
   logAuditEvent,
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
+import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import {
   computeRateBounds,
   validateRateAgainstBounds,
@@ -224,4 +225,86 @@ function isUniqueViolation(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const code = (err as { code?: unknown }).code;
   return code === "23505";
+}
+
+/**
+ * Admin review of a job application (task #42). Approving or rejecting
+ * flips status + stamps reviewer + note, then fires a notification to
+ * the applicant. Withdrawing is a separate path the applicant owns —
+ * this action is admin-only.
+ *
+ * Idempotent-ish: re-reviewing an already-decided row updates the
+ * decision + timestamp + note. Rare use case but harmless.
+ */
+export async function reviewJobApplication(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  const decisionRaw = String(formData.get("decision") ?? "").trim();
+  const note = String(formData.get("adminNote") ?? "").trim();
+  if (!id) throw new Error("id is required");
+  if (decisionRaw !== "approved" && decisionRaw !== "rejected") {
+    throw new Error("decision must be approved or rejected");
+  }
+  const decision = decisionRaw as "approved" | "rejected";
+  const now = new Date().toISOString();
+
+  const [existing] = await db
+    .select({
+      id: jobApplications.id,
+      jobId: jobApplications.jobId,
+      userId: jobApplications.userId,
+      status: jobApplications.status,
+    })
+    .from(jobApplications)
+    .where(eq(jobApplications.id, id))
+    .limit(1);
+  if (!existing) throw new Error("Application not found");
+
+  await db
+    .update(jobApplications)
+    .set({
+      status: decision,
+      reviewedBy: admin.id,
+      reviewedAt: now,
+      adminNote: note.length > 0 ? note : null,
+    })
+    .where(eq(jobApplications.id, id));
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: decision === "approved" ? "user.applied" : "user.applied",
+    resourceKind: "user",
+    resourceId: id,
+    before: { status: existing.status },
+    after: { status: decision, note: note.length > 0 ? note : null },
+    reason: `Job application ${id} ${decision} by admin.`,
+  });
+
+  // Applicant-facing ping. Notification kind reused from the peer
+  // review / status change family since we don't have a dedicated
+  // job_application_decision kind yet — the title + body carry the
+  // context. Follow-up: introduce a distinct NotificationKind.
+  MOCK_NOTIFICATIONS.push({
+    id: `ntf_ja_${Date.now().toString(36)}_${Math.random()
+      .toString(36)
+      .slice(2, 5)}`,
+    userId: existing.userId,
+    kind: "project_application_decision",
+    title:
+      decision === "approved"
+        ? "Your job application was accepted"
+        : "Update on your job application",
+    body:
+      decision === "approved"
+        ? "Admin routed you to the client for next steps. Watch your inbox for follow-up."
+        : note.length > 0
+          ? `Not this round. Note from admin: ${note}`
+          : "Not this round. Admin didn't leave a note — feel free to apply to other open roles.",
+    href: `/jobs/${existing.jobId}`,
+    createdAt: now,
+    readAt: null,
+  });
+
+  revalidatePath("/admin/jobs/applications");
 }

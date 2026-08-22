@@ -89,10 +89,22 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Migration runner + migration files (task #65). Applied on every
+# container start before Next.js takes over. Prevents the class of
+# incident from 2026-08-22 where an unrun ALTER TABLE took auth down.
+# The runner uses `pg` from the standalone node_modules — already
+# included since the app imports it directly.
+COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/migrate.mjs ./scripts/migrate.mjs
+
 USER nextjs
 
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-CMD ["node", "server.js"]
+# Run migrations, then start Next.js. sh -c so && chaining works.
+# Migration failure → non-zero exit → container refuses to start →
+# Dokploy healthcheck fails → old container keeps serving. That's
+# by design; a bad migration must not reach users.
+CMD ["sh", "-c", "node scripts/migrate.mjs && node server.js"]

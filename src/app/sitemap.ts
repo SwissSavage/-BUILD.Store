@@ -21,6 +21,7 @@ import type { MetadataRoute } from "next";
 import { cohortSpotlightsByRecency } from "@/lib/mock-data/cohort-spotlights";
 import { MOCK_JOBS } from "@/lib/mock-data/jobs";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { MOCK_USERS } from "@/lib/mock-data/users";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";
@@ -54,6 +55,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // pages surface via the listing crawl.
     { url: `${SITE_URL}/jobs`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
     { url: `${SITE_URL}/contracts`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    // Case studies index (task #32) — completed contracts as public
+    // portfolio surface for FM as a whole.
+    { url: `${SITE_URL}/case-studies`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
   ];
 
   /**
@@ -103,5 +107,48 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }),
   );
 
-  return [...staticRoutes, ...cohortRoutes, ...jobRoutes, ...contractRoutes];
+  /**
+   * Per-talent public profile routes (task #31) — /u/[handle] for
+   * every member with profilePublic=true. Emits Person JSON-LD +
+   * portfolio CreativeWork entries so search indexes each talent as
+   * a discoverable entity.
+   */
+  const talentRoutes: MetadataRoute.Sitemap = MOCK_USERS
+    .filter((u) => u.profilePublic !== false && !u.suspendedAt)
+    .map((u) => ({
+      url: `${SITE_URL}/u/${u.handle}`,
+      lastModified: new Date(u.updatedAt ?? u.createdAt ?? now),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
+
+  /**
+   * Per-case-study routes (task #32) — completed contracts as public
+   * CreativeWork entries. datePublished stamped from collectedAt so
+   * Google knows delivery timing.
+   */
+  const caseStudyRoutes: MetadataRoute.Sitemap = MOCK_PROJECTS
+    .filter(
+      (p) =>
+        p.kind === "contract" &&
+        p.status === "completed" &&
+        p.rfpApprovedAt !== null,
+    )
+    .map((p) => ({
+      url: `${SITE_URL}/case-studies/${p.id}`,
+      lastModified: new Date(
+        p.collectedAt ?? p.rfpApprovedAt ?? p.createdAt ?? now,
+      ),
+      changeFrequency: "yearly" as const,
+      priority: 0.7,
+    }));
+
+  return [
+    ...staticRoutes,
+    ...cohortRoutes,
+    ...jobRoutes,
+    ...contractRoutes,
+    ...talentRoutes,
+    ...caseStudyRoutes,
+  ];
 }

@@ -36,6 +36,30 @@ export function publicName(u: Pick<User, "firstName"> | null | undefined): strin
 }
 
 /**
+ * Public display name with duplicate disambiguation (task #31). When
+ * two members share the same first name, append the last initial so
+ * clients + peers can tell them apart on public surfaces without
+ * exposing full identity. "Sarah" alone if unique; "Sarah B." when
+ * another Sarah exists in the population.
+ *
+ * Population comparison is done client-side via a plain string match —
+ * caller passes the pool (typically MOCK_USERS or a paginated cohort
+ * slice) so the helper doesn't hit the DB directly.
+ */
+export function publicNameDisambiguated(
+  u: Pick<User, "firstName" | "lastName"> | null | undefined,
+  population: Array<Pick<User, "firstName">>,
+): string {
+  if (!u?.firstName?.trim()) return "Member";
+  const first = u.firstName.trim();
+  const collisions = population.filter(
+    (p) => p.firstName?.trim().toLowerCase() === first.toLowerCase(),
+  ).length;
+  if (collisions <= 1 || !u.lastName?.trim()) return first;
+  return `${first} ${u.lastName.trim()[0]}.`;
+}
+
+/**
  * Full name, used only in admin surfaces and on the signed-in user's own
  * dashboard/profile. Never leak this to public pages.
  */

@@ -28,6 +28,7 @@ import {
   INDUSTRY_LABELS,
   canSendDirectMessage,
   publicName,
+  publicNameDisambiguated,
   publicPortfolioView,
   userPillars,
   type ArtistEpk,
@@ -137,21 +138,63 @@ export default async function PublicProfilePage({
    * the schema. Publisher / affiliation ties back to the FM
    * Organization node emitted at the root layout.
    */
+  // Disambiguate first-name only when there are collisions in the
+  // active cohort (task #31). "Sarah" if unique, "Sarah B." when
+  // another Sarah exists. Full name never leaks into structured data
+  // or display copy per public-privacy policy.
+  const displayName = publicNameDisambiguated(user, MOCK_USERS);
+
+  // knowsAbout composes pillar labels + declared skills so long-tail
+  // skill searches (e.g. "Solidity contract auditor") can surface
+  // this profile via schema.org.
+  const knowsAbout = Array.from(
+    new Set([
+      ...pillars.map((p) => INDUSTRY_LABELS[p]),
+      ...(user.skills ?? []),
+    ]),
+  );
+
   const personJsonLd = {
     "@context": "https://schema.org",
     "@type": "Person",
-    name: publicName(user),
+    name: displayName,
     url: `${SITE_URL}/u/${user.handle}`,
-    ...(user.bio ? { description: user.bio } : {}),
-    ...(user.discipline ? { jobTitle: user.discipline } : {}),
-    ...(pillars.length > 0
-      ? { knowsAbout: pillars.map((p) => INDUSTRY_LABELS[p]) }
+    // Prefer tagline (short one-liner, purpose-built for the "at a
+    // glance" surface) over bio (long-form). Falls through to bio if
+    // tagline hasn't been set yet.
+    ...(user.tagline || user.bio
+      ? { description: user.tagline ?? user.bio }
       : {}),
+    ...(user.discipline ? { jobTitle: user.discipline } : {}),
+    ...(knowsAbout.length > 0 ? { knowsAbout } : {}),
     memberOf: {
       "@id": `${SITE_URL}#organization`,
     },
     ...(user.profileImageUrl ? { image: user.profileImageUrl } : {}),
   };
+
+  // CreativeWork JSON-LD per published portfolio item (task #33) —
+  // long-tail SEO for "case study of X" queries + AI answer-engine
+  // attribution back to the creator.
+  const portfolioJsonLd = items.map((item) => ({
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    name: item.title,
+    // Portfolio items don't have their own public routes yet — anchor
+    // to the profile with a fragment id so scrapers can still cite a
+    // stable URL.
+    url: `${SITE_URL}/u/${user.handle}#portfolio-${item.id}`,
+    creator: {
+      "@type": "Person",
+      name: displayName,
+      url: `${SITE_URL}/u/${user.handle}`,
+    },
+    ...(item.description ? { description: item.description } : {}),
+    ...(item.imageUrl ? { image: item.imageUrl } : {}),
+    ...(item.technologies && item.technologies.length > 0
+      ? { keywords: item.technologies.join(", ") }
+      : {}),
+  }));
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -159,6 +202,13 @@ export default async function PublicProfilePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
       />
+      {portfolioJsonLd.map((cw, i) => (
+        <script
+          key={`cw-${i}`}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(cw) }}
+        />
+      ))}
       <header className="flex flex-col items-start gap-6 md:flex-row md:items-start">
         <TradingCard3D
           user={user}
@@ -167,8 +217,11 @@ export default async function PublicProfilePage({
         />
         <div className="flex-1">
           <h1 className="font-display text-4xl font-semibold md:text-5xl">
-            {publicName(user)}
+            {displayName}
           </h1>
+          {user.tagline && (
+            <p className="mt-2 text-lg text-ink-muted">{user.tagline}</p>
+          )}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <TierBadge tier={user.membershipTier} />
             <OnChainBadge userId={user.id} size="sm" />

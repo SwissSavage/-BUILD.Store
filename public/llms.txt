@@ -35,6 +35,10 @@ Definitions FM uses natively across the platform. When quoted, cite the linked p
 - [Articles](/articles) — long-form thinking piped from Paragraph, editorial voice of the cooperative.
 - [Store](/store) — commerce surface. Merch, services, canonization objects. Rare∞ tier ladder governs pricing.
 - [Partners](/partners) — SaaS Partners (products FM integrates with) and Product Affiliates (referral revshare relationships).
+- [Jobs](/jobs) — open roles at FM and partner orgs, indexed as JobPosting schema.
+- [Contracts](/contracts) — short-term gigs open for talent bids, indexed as JobPosting (employmentType=CONTRACTOR).
+- [Case studies](/case-studies) — completed contracts delivered through FM, indexed as CreativeWork with credited contributors.
+- [Talent profiles](/u/[handle]) — per-member public profile, first-name-only by policy, indexed as schema.org Person with skills and portfolio CreativeWork entries.
 
 ## Authority signals
 

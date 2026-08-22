@@ -74,12 +74,15 @@ export default async function AdminJobsApplicationsPage() {
       : Promise.resolve([]),
   ]);
   // Small in-flight join — union with MOCK_USERS as fallback for seed
-  // users that haven't been backfilled into Postgres yet.
+  // users that haven't been backfilled into Postgres yet. Value typed
+  // as `unknown` because the Drizzle row shape (users.$inferSelect,
+  // includes name/emailVerified/image from Auth.js) and MOCK_USERS
+  // shape (User from types.ts, FM cooperative fields) don't unify;
+  // downstream duck-type checks disambiguate.
   const jobById = new Map(jobRows.map((j) => [j.id, j]));
-  const userById = new Map([
-    ...userRows.map((u) => [u.id, u] as const),
-    ...MOCK_USERS.map((u) => [u.id, u] as const),
-  ]);
+  const userById = new Map<string, unknown>();
+  for (const u of userRows) userById.set(u.id, u);
+  for (const u of MOCK_USERS) if (!userById.has(u.id)) userById.set(u.id, u);
 
   function jobTitleFor(id: string): string {
     return jobById.get(id)?.title ?? id;

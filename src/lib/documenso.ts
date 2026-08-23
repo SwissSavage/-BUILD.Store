@@ -59,6 +59,20 @@ export const DOCUMENSO_TEMPLATES = {
   /** Mutual NCNDA — multi-party (FM + up to 3 counterparties). */
   MUTUAL_NCNDA_MULTI:
     process.env.DOCUMENSO_TEMPLATE_MUTUAL_NCNDA_MULTI ?? "",
+  /**
+   * Client SOW (task #45) — engagement scope + pricing dispatched to the
+   * client when they pick a lead on the cooperative-quote surface. First
+   * half of the dual-envelope pattern.
+   */
+  CLIENT_SOW: process.env.DOCUMENSO_TEMPLATE_CLIENT_SOW ?? "",
+  /**
+   * Talent Engagement Confirmation (task #45) — dispatched to the
+   * lead talent picked by the client, confirming the gig, quoted rate,
+   * and referencing the master Talent Partner Agreement. Second half
+   * of the dual-envelope pattern.
+   */
+  TALENT_ENGAGEMENT_CONFIRMATION:
+    process.env.DOCUMENSO_TEMPLATE_TALENT_ENGAGEMENT_CONFIRMATION ?? "",
 } as const;
 
 // ────────────────────────────────────────────────────────────────

@@ -3566,6 +3566,24 @@ export interface CooperativeQuote {
    * selection.
    */
   selectedLeadUserId: string | null;
+  /**
+   * Task #45 — client contact info captured at approve-time so the
+   * dual-envelope SOW dispatch has an address to send the Documenso
+   * envelope to. Null until the client approves; magic-link quote
+   * viewing is otherwise anonymous.
+   */
+  clientContactEmail?: string | null;
+  clientContactName?: string | null;
+  /** Documenso envelope id for the client-facing SOW. */
+  clientSowDocumensoId?: string | null;
+  /** Documenso envelope id for the talent engagement confirmation. */
+  talentEngagementDocumensoId?: string | null;
+  /** When both envelopes were dispatched from approveCooperativeQuote. */
+  sowDispatchedAt?: string | null;
+  /** When the client completed their SOW signature (webhook-updated). */
+  sowClientSignedAt?: string | null;
+  /** When the lead talent completed their engagement signature. */
+  sowTalentSignedAt?: string | null;
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -4095,7 +4113,10 @@ export type AuditLogAction =
   | "inbound.tag_proposed"
   | "inbound.tag_accepted"
   | "inbound.tag_rejected"
-  | "rfp.dispatched";
+  | "rfp.dispatched"
+  // Client SOW dual-envelope dispatch (task #45)
+  | "sow.dispatched"
+  | "sow.dispatch_failed";
 
 export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "user.signed_in": "User signed in",
@@ -4177,6 +4198,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "inbound.tag_accepted": "Admin accepted proposed tag into canonical set",
   "inbound.tag_rejected": "Admin rejected proposed tag",
   "rfp.dispatched": "RFP quote-request dispatched to talent",
+  "sow.dispatched": "SOW dual-envelope dispatched (client + talent)",
+  "sow.dispatch_failed": "SOW dual-envelope dispatch failed",
 };
 
 /** Coarse resource kinds referenced from audit entries. Keep aligned

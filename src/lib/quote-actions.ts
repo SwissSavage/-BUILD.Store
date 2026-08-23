@@ -31,11 +31,19 @@
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { cooperativeQuotes, projects } from "@/db/schema";
+import {
+  cooperativeQuotes,
+  projects,
+  users as usersTable,
+} from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import { updateHubspotDealStage } from "@/lib/crm-stub";
+import {
+  DOCUMENSO_TEMPLATES,
+  inviteRecipientToTemplate,
+} from "@/lib/documenso";
 import {
   logAuditEvent,
   snapshotActorRole,
@@ -438,9 +446,30 @@ export async function approveCooperativeQuote(formData: FormData) {
   const selectedLeadUserId = String(
     formData.get("selectedLeadUserId") ?? "",
   ).trim();
+  // Task #45 — client contact info captured on approve so the dual-
+  // envelope SOW dispatch has an address. Magic-link viewing is
+  // anonymous, so this is the first point where the client identifies.
+  const clientContactEmail = String(
+    formData.get("clientContactEmail") ?? "",
+  )
+    .trim()
+    .toLowerCase();
+  const clientContactName = String(
+    formData.get("clientContactName") ?? "",
+  ).trim();
+
   if (!token) throw new Error("Quote token is required.");
   if (!selectedLeadUserId) {
     throw new Error("Select a lead builder before approving.");
+  }
+  if (
+    !clientContactEmail ||
+    !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clientContactEmail)
+  ) {
+    throw new Error("A valid contact email is required to send you the SOW.");
+  }
+  if (clientContactName.length < 2) {
+    throw new Error("Your name is required so we can address the SOW to you.");
   }
 
   const [quote] = await db
@@ -472,12 +501,16 @@ export async function approveCooperativeQuote(formData: FormData) {
       status: "approved",
       decidedAt: now,
       selectedLeadUserId,
+      clientContactEmail,
+      clientContactName,
     })
     .where(eq(cooperativeQuotes.id, quote.id));
   // Reflect changes in the in-memory object for notification helper.
   quote.status = "approved";
   quote.decidedAt = now;
   quote.selectedLeadUserId = selectedLeadUserId;
+  quote.clientContactEmail = clientContactEmail;
+  quote.clientContactName = clientContactName;
 
   const leadUser = MOCK_USERS.find((u) => u.id === selectedLeadUserId);
   const leadName = leadUser
@@ -520,6 +553,8 @@ export async function approveCooperativeQuote(formData: FormData) {
       status: "approved",
       selectedLeadUserId,
       decidedAt: now,
+      clientContactEmail,
+      clientContactName,
     },
     reason: `Client ${quote.clientDisplayName} approved the quote and selected ${leadName} as lead.`,
   });
@@ -531,8 +566,186 @@ export async function approveCooperativeQuote(formData: FormData) {
     `Lead: ${leadName}. Kick off contracts + calendar within one business day.`,
   );
 
+  // Task #45 — dispatch the two envelopes. Kept OUT of the approve
+  // transaction so a Documenso outage doesn't roll back the client's
+  // approval. Errors are audit-logged; admin gets a follow-up nudge
+  // via the sow.dispatch_failed entry in /admin/audit-log.
+  await dispatchSowDualEnvelope({
+    quoteId: quote.id,
+    clientToken: quote.clientToken,
+    projectId: quote.projectId,
+    projectTitle,
+    clientContactEmail,
+    clientContactName,
+    leadUserId: selectedLeadUserId,
+    leadName,
+    actorUserId: quote.createdByUserId,
+  });
+
   revalidatePath("/admin/cooperative-quotes");
   revalidatePath(`/quotes/${quote.clientToken}`);
+}
+
+/**
+ * Task #45 — dispatch client SOW + talent engagement confirmation
+ * envelopes via Documenso. Best-effort: if a template id is not
+ * configured or the Documenso call fails, log the failure and continue
+ * (the approval itself stays valid). Admin gets the failure via audit
+ * log and can retry from /admin/cooperative-quotes.
+ *
+ * On success both envelope ids are persisted onto the quote row so the
+ * webhook route (existing infra from task #19) can match inbound
+ * signature-completed events back to the quote and stamp
+ * sowClientSignedAt / sowTalentSignedAt.
+ */
+async function dispatchSowDualEnvelope(input: {
+  quoteId: string;
+  clientToken: string;
+  projectId: string;
+  projectTitle: string;
+  clientContactEmail: string;
+  clientContactName: string;
+  leadUserId: string;
+  leadName: string;
+  actorUserId: string;
+}): Promise<void> {
+  const {
+    quoteId,
+    clientToken,
+    projectId,
+    projectTitle,
+    clientContactEmail,
+    clientContactName,
+    leadUserId,
+    leadName,
+    actorUserId,
+  } = input;
+
+  // Fetch the picked talent's email for the engagement envelope.
+  const [leadRow] = await db
+    .select({
+      email: usersTable.email,
+      firstName: usersTable.firstName,
+      lastName: usersTable.lastName,
+    })
+    .from(usersTable)
+    .where(eq(usersTable.id, leadUserId))
+    .limit(1);
+
+  const leadEmail = leadRow?.email ?? null;
+  const leadFullName = leadRow
+    ? `${leadRow.firstName ?? ""} ${leadRow.lastName ?? ""}`.trim() || leadName
+    : leadName;
+
+  const clientTemplateId = DOCUMENSO_TEMPLATES.CLIENT_SOW;
+  const talentTemplateId = DOCUMENSO_TEMPLATES.TALENT_ENGAGEMENT_CONFIRMATION;
+
+  let clientSowDocumensoId: string | null = null;
+  let talentEngagementDocumensoId: string | null = null;
+  const failures: string[] = [];
+
+  // 1) Client SOW envelope.
+  if (!clientTemplateId) {
+    failures.push(
+      "CLIENT_SOW template id is not configured (DOCUMENSO_TEMPLATE_CLIENT_SOW).",
+    );
+  } else {
+    try {
+      const doc = await inviteRecipientToTemplate({
+        templateEnvelopeId: clientTemplateId,
+        recipient: {
+          name: clientContactName,
+          email: clientContactEmail,
+          role: "SIGNER",
+        },
+        title: `SOW — ${projectTitle}`,
+        externalId: `quote:${quoteId}:client_sow`,
+      });
+      clientSowDocumensoId = String(doc.documentId ?? doc.id ?? "");
+    } catch (e) {
+      failures.push(
+        `Client SOW dispatch failed: ${(e as Error).message}`,
+      );
+    }
+  }
+
+  // 2) Talent engagement envelope.
+  if (!talentTemplateId) {
+    failures.push(
+      "TALENT_ENGAGEMENT_CONFIRMATION template id is not configured (DOCUMENSO_TEMPLATE_TALENT_ENGAGEMENT_CONFIRMATION).",
+    );
+  } else if (!leadEmail) {
+    failures.push(
+      `Lead talent ${leadUserId} has no email on file — cannot send engagement envelope.`,
+    );
+  } else {
+    try {
+      const doc = await inviteRecipientToTemplate({
+        templateEnvelopeId: talentTemplateId,
+        recipient: {
+          name: leadFullName,
+          email: leadEmail,
+          role: "SIGNER",
+        },
+        title: `Engagement Confirmation — ${projectTitle}`,
+        externalId: `quote:${quoteId}:talent_engagement`,
+      });
+      talentEngagementDocumensoId = String(doc.documentId ?? doc.id ?? "");
+    } catch (e) {
+      failures.push(
+        `Talent engagement dispatch failed: ${(e as Error).message}`,
+      );
+    }
+  }
+
+  const dispatchedAt = new Date().toISOString();
+  await db
+    .update(cooperativeQuotes)
+    .set({
+      clientSowDocumensoId,
+      talentEngagementDocumensoId,
+      sowDispatchedAt: dispatchedAt,
+    })
+    .where(eq(cooperativeQuotes.id, quoteId));
+
+  if (failures.length > 0) {
+    logAuditEvent({
+      actorUserId,
+      actorRoleSnapshot: "system",
+      action: "sow.dispatch_failed",
+      resourceKind: "cooperative_quote",
+      resourceId: quoteId,
+      before: null,
+      after: {
+        projectId,
+        clientContactEmail,
+        leadUserId,
+        clientSowDocumensoId,
+        talentEngagementDocumensoId,
+        failures,
+      },
+      reason: failures.join(" | "),
+    });
+  } else {
+    logAuditEvent({
+      actorUserId,
+      actorRoleSnapshot: "system",
+      action: "sow.dispatched",
+      resourceKind: "cooperative_quote",
+      resourceId: quoteId,
+      before: null,
+      after: {
+        projectId,
+        clientContactEmail,
+        leadUserId,
+        clientSowDocumensoId,
+        talentEngagementDocumensoId,
+        dispatchedAt,
+      },
+      reason: `SOW + engagement envelopes dispatched for ${projectTitle}.`,
+    });
+  }
+  void clientToken;
 }
 
 /**

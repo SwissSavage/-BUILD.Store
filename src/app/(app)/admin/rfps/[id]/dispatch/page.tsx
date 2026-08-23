@@ -21,7 +21,10 @@ import { projects } from "@/db/schema";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { fairMixTalentForRfp } from "@/lib/talent-match";
-import { dispatchRfpQuoteRequests } from "@/lib/rfp-dispatch-actions";
+import {
+  dispatchRfpQuoteRequests,
+  inviteExternalTalentForRfp,
+} from "@/lib/rfp-dispatch-actions";
 import {
   INDUSTRY_LABELS,
   publicName,
@@ -113,6 +116,15 @@ export default async function RfpDispatchPage({
         {(rfp.skillsRequired ?? []).join(", ") || "—"}
       </p>
 
+      <div className="mt-4 flex gap-3 text-xs">
+        <Link
+          href={`/admin/rfps/${rfp.id}/bids`}
+          className="rounded-full border border-brand-magenta/40 px-3 py-1 text-brand-magenta hover:bg-brand-magenta/10"
+        >
+          View bids received → compile client quote
+        </Link>
+      </div>
+
       <Card className="mt-6">
         <CardTitle>Suggested talent — fair-shake mix</CardTitle>
         <p className="mt-2 text-xs text-ink-muted">
@@ -200,6 +212,90 @@ export default async function RfpDispatchPage({
             </p>
           </form>
         )}
+      </Card>
+
+      {/* Task #37 — recruit external talent into the bid pool. */}
+      <Card className="mt-6">
+        <CardTitle>Invite external talent</CardTitle>
+        <p className="mt-1 text-xs text-ink-muted">
+          Someone outside the roster who'd be perfect for this? Send
+          them an invite. They'll join at the tier you pick and can
+          submit a bid on /contracts once they've completed intake.
+          The RFP context is attached to the invite note for follow-up
+          grounding.
+        </p>
+
+        <form action={inviteExternalTalentForRfp} className="mt-4 space-y-3">
+          <input type="hidden" name="rfpId" value={rfp.id} />
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="block">
+              <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                Email
+              </span>
+              <input
+                name="targetEmail"
+                type="email"
+                required
+                placeholder="name@example.com"
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                Name (optional)
+              </span>
+              <input
+                name="targetName"
+                placeholder="Their name for the invite letter"
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="block">
+              <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                Tier
+              </span>
+              <select
+                name="targetTier"
+                defaultValue="partner"
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+              >
+                <option value="partner">Partner (default)</option>
+                <option value="member">Member (proven contributor)</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                Why (private note)
+              </span>
+              <input
+                name="inviteReason"
+                placeholder="e.g. Rob's referral, needed for X skill"
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            className="rounded-full border border-brand-magenta px-5 py-2 text-sm font-medium text-brand-magenta hover:bg-brand-magenta hover:text-white"
+          >
+            Generate invite for external talent
+          </button>
+          <p className="text-[11px] text-ink-faint">
+            Grab the invite URL from{" "}
+            <Link
+              href="/admin/members/invite"
+              className="text-brand-magenta hover:underline"
+            >
+              /admin/members/invite
+            </Link>
+            {" "}and send it however you normally reach them.
+          </p>
+        </form>
       </Card>
     </div>
   );

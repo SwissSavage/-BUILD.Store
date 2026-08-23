@@ -20,8 +20,9 @@
 
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { randomBytes } from "crypto";
 import { db } from "@/db/client";
-import { projects } from "@/db/schema";
+import { inviteLinks, projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import {
@@ -131,4 +132,122 @@ export async function dispatchRfpQuoteRequests(
   // count surfaced, wire a session flash.
   void dispatched;
   void skipped;
+}
+
+// ────────────────────────────────────────────────────────────────
+//  Task #37 — RFP → optional invite (external talent recruitment)
+// ────────────────────────────────────────────────────────────────
+
+const INVITE_LIFETIME_MS = 14 * 24 * 60 * 60 * 1000;
+
+function newInviteId(): string {
+  return `invite_${Date.now().toString(36)}_${randomBytes(3).toString("hex")}`;
+}
+
+function newInviteCode(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+/**
+ * Recruit external talent into an RFP bid. Kicks off the existing
+ * invite-link flow (Partner tier by default — external talent lands
+ * as a Partner and can graduate to Member after standing up), with
+ * the invite `note` field carrying the RFP context so the follow-up
+ * touch has grounding.
+ *
+ * Deliberately minimal — does NOT auto-send the Documenso LOI at
+ * generation time (unlike admin-invite ceremony via generateInviteLink)
+ * because external talent may not be a fit after intake. Admin
+ * follows up manually to promote qualified applicants into the full
+ * countersign flow. The follow-up: generalize LOI-on-generate as a
+ * checkbox so this action can opt in when the RFP fit is obvious.
+ */
+export async function inviteExternalTalentForRfp(
+  formData: FormData,
+): Promise<void> {
+  const admin = await requireAdmin();
+  const rfpId = String(formData.get("rfpId") ?? "").trim();
+  const targetEmail = String(formData.get("targetEmail") ?? "")
+    .trim()
+    .toLowerCase();
+  const targetName = String(formData.get("targetName") ?? "").trim();
+  const targetTier =
+    (String(formData.get("targetTier") ?? "partner").trim() as
+      | "partner"
+      | "member");
+  const inviteReason = String(formData.get("inviteReason") ?? "").trim();
+
+  if (!rfpId) throw new Error("rfpId is required");
+  if (!targetEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(targetEmail)) {
+    throw new Error("A valid target email is required.");
+  }
+  if (targetTier !== "partner" && targetTier !== "member") {
+    throw new Error("Invite tier must be partner or member.");
+  }
+
+  const [rfp] = await db
+    .select({
+      id: projects.id,
+      title: projects.title,
+      kind: projects.kind,
+      status: projects.status,
+      isRfp: projects.isRfp,
+      rfpApprovedAt: projects.rfpApprovedAt,
+    })
+    .from(projects)
+    .where(eq(projects.id, rfpId))
+    .limit(1);
+
+  if (
+    !rfp ||
+    rfp.kind !== "contract" ||
+    !rfp.isRfp ||
+    !rfp.rfpApprovedAt
+  ) {
+    throw new Error(
+      "This RFP isn't open for external invites. Approve it first at /admin/rfps.",
+    );
+  }
+
+  const now = new Date();
+  const notePrefix = `Invited to bid on RFP: ${rfp.title} (${rfp.id}).`;
+  const note = inviteReason
+    ? `${notePrefix} ${inviteReason}`
+    : notePrefix;
+
+  const invite = {
+    id: newInviteId(),
+    code: newInviteCode(),
+    targetEmail,
+    targetTier,
+    targetName: targetName.length > 0 ? targetName : null,
+    note,
+    createdByUserId: admin.id,
+    createdAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + INVITE_LIFETIME_MS).toISOString(),
+    consumedAt: null,
+    consumedByUserId: null,
+    revokedAt: null,
+    revokedReason: null,
+  };
+  await db.insert(inviteLinks).values(invite);
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "user.invited",
+    resourceKind: "user",
+    resourceId: invite.id,
+    before: null,
+    after: {
+      targetEmail: invite.targetEmail,
+      targetTier: invite.targetTier,
+      rfpId: rfp.id,
+      inviteMode: "rfp_recruit",
+    },
+    reason: `RFP-recruit invite for ${rfp.title}`,
+  });
+
+  revalidatePath(`/admin/rfps/${rfpId}/dispatch`);
+  revalidatePath("/admin/members/invite");
 }

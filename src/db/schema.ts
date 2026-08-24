@@ -1363,6 +1363,30 @@ export const triangulatedComposites = pgTable("triangulated_composites", {
  * should prefer soft-delete of users; hard-delete stays available
  * for GDPR-style erasure and cleanup.
  */
+/**
+ * Task #64 — public community chat. Simple message board, first-name-
+ * only display, PII-scrubbed on post. Anyone reads; Partner+ posts.
+ * Soft-deleted via deleted_at so moderation stays auditable.
+ * parent_message_id is nullable for future threading; MVP is top-level
+ * only.
+ */
+export const communityMessages = pgTable("community_messages", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  parentMessageId: text("parent_message_id"),
+  body: text("body").notNull(),
+  scrubbedBody: text("scrubbed_body").notNull(),
+  piiHits: jsonb("pii_hits").notNull().default([]),
+  deletedAt: timestamp("deleted_at", { mode: "string", withTimezone: true }),
+  deletedByUserId: text("deleted_by_user_id").references(() => users.id),
+  deletionReason: text("deletion_reason"),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const agreements = pgTable("agreements", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -1478,4 +1502,5 @@ export const schema = {
   reservePoolLedger,
   triangulatedComposites,
   partnerReferrals,
+  communityMessages,
 } as const;

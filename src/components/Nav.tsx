@@ -98,6 +98,7 @@ export async function Nav() {
               <StoreDropdown />
               <Link href="/orders" className={navLink}>Orders</Link>
               <Link href="/showcase" className={navLink}>Showcase</Link>
+              <Link href="/community" className={navLink}>Community</Link>
               {/* Artists (profileMode "epk") get a dedicated EPK editor
                   link — separate from the profile dropdown because EPK
                   is a distinct authoring surface, not a personal-scope
@@ -119,6 +120,7 @@ export async function Nav() {
               <StoreDropdown />
               <JobsDropdown />
               <Link href="/showcase" className={navLink}>Showcase</Link>
+              <Link href="/community" className={navLink}>Community</Link>
               <Link href="/partners" className={navLink}>Partners</Link>
               <Link href="/whitelist" className={navLink}>Whitelist</Link>
               {/* Talent application is a quiet text link — the contributor

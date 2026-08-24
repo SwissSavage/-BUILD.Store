@@ -26,6 +26,7 @@ import {
   deleteMilestone,
   pingMilestoneOwner,
   resolveBlocker,
+  seedProjectWithTemplate,
   sweepDeadlines,
   updateMilestoneStatus,
 } from "@/lib/milestone-actions";
@@ -81,7 +82,8 @@ export default async function AdminTrackerPage({
             {project.title}
           </h1>
           <p className="mt-2 text-sm text-ink-muted">
-            {progress.completed} of {progress.total} milestones complete.
+            {progress.completed} of {progress.total} milestones complete
+            {progress.total > 0 && ` (${Math.round(progress.ratio * 100)}%)`}.
             Status: <strong>{project.status}</strong>.
           </p>
         </div>
@@ -146,9 +148,24 @@ export default async function AdminTrackerPage({
           {milestones.length === 0 ? (
             <Card>
               <p className="text-sm text-ink-muted">
-                No milestones yet. Add the first one below to start the
-                tracker.
+                No milestones yet. Seed a standard 5-milestone template
+                (kickoff → discovery → build → review → handoff, weekly
+                cadence) or add one manually below.
               </p>
+              <form action={seedProjectWithTemplate} className="mt-4">
+                <input type="hidden" name="projectId" value={id} />
+                <button
+                  type="submit"
+                  className="rounded-full border border-brand-magenta px-4 py-1.5 text-xs font-medium text-brand-magenta hover:bg-brand-magenta hover:text-white"
+                >
+                  Seed with standard template
+                </button>
+                <p className="mt-2 text-[11px] text-ink-faint">
+                  All five land assigned to the first admin on the
+                  project roster. Reassign owners + adjust due dates
+                  after seeding.
+                </p>
+              </form>
             </Card>
           ) : (
             milestones.map((m) => (

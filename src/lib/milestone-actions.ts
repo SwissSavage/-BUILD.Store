@@ -147,6 +147,75 @@ export async function createMilestone(formData: FormData) {
   revalidatePath(`/projects/${projectId}`);
 }
 
+/**
+ * Task #46 — seed a fresh project with a standard 5-milestone
+ * template so admin can iterate from a starting point rather than an
+ * empty screen. Only fires when the project has zero milestones (no
+ * clobber risk). Assigns every milestone to the first admin on the
+ * project's roster; admin re-owner-assigns per milestone after seed.
+ */
+export async function seedProjectWithTemplate(formData: FormData) {
+  await requireAdmin();
+  const projectId = String(formData.get("projectId") ?? "");
+  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  if (!project) throw new Error("Project not found");
+
+  const existing = milestonesForProject(projectId);
+  if (existing.length > 0) {
+    throw new Error(
+      "Project already has milestones. Seed only runs on empty trackers.",
+    );
+  }
+
+  const defaultOwner =
+    project.adminUserIds[0] ??
+    project.assignedMemberIds[0];
+  if (!defaultOwner) {
+    throw new Error(
+      "Project has no admin or assigned member. Assign someone before seeding.",
+    );
+  }
+
+  const now = new Date();
+  const nowIso = now.toISOString();
+  // Standard 5-milestone template — kickoff, discovery, build, review,
+  // handoff. Weekly cadence gives clients a concrete rhythm; admin
+  // adjusts dates + owners after seed. Order matters (sequence = i * 10).
+  const template = [
+    { title: "Kickoff + scope confirmation", offsetDays: 7 },
+    { title: "Discovery + planning complete", offsetDays: 14 },
+    { title: "Build in progress + first review", offsetDays: 28 },
+    { title: "Client review + revisions", offsetDays: 42 },
+    { title: "Delivery + handoff", offsetDays: 56 },
+  ];
+
+  for (let i = 0; i < template.length; i++) {
+    const t = template[i];
+    const due = new Date(now.getTime() + t.offsetDays * 24 * 60 * 60 * 1000);
+    const row: ProjectMilestone = {
+      id: newId(),
+      projectId,
+      sequence: (i + 1) * 10,
+      title: t.title,
+      description: null,
+      ownerUserId: defaultOwner,
+      dueAt: due.toISOString(),
+      status: "not_started",
+      blockerNote: null,
+      completedAt: null,
+      lastDueSoonNoticeAt: null,
+      lastOverdueNoticeAt: null,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    MOCK_PROJECT_MILESTONES.push(row);
+  }
+
+  revalidatePath(`/admin/contracts/${projectId}/tracker`);
+  revalidatePath(`/contracts/${projectId}`);
+  revalidatePath(`/projects/${projectId}`);
+}
+
 export async function deleteMilestone(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");

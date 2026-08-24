@@ -97,6 +97,12 @@ export const users = pgTable("users", {
   walletConnectedAt: timestamp("wallet_connected_at", { mode: "string", withTimezone: true }),
   stripeAccountId: text("stripe_account_id"),
   stripePayoutsEnabled: boolean("stripe_payouts_enabled").notNull().default(false),
+  // Task #27 — Documenso account perk for Partners + Members.
+  // Nullable + manual-provisioning until OIDC (task #7) lands and
+  // auto-provisions on first sign-in.
+  documensoInvitedAt: timestamp("documenso_invited_at", { mode: "string", withTimezone: true }),
+  documensoAccountLinkedAt: timestamp("documenso_account_linked_at", { mode: "string", withTimezone: true }),
+  documensoUserId: text("documenso_user_id"),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
     .notNull()
     .defaultNow(),

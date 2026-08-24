@@ -70,6 +70,7 @@ const KIND_ACCENT: Record<NotificationKind, string> = {
   quote_approved: "#007048",
   quote_declined: "#D828A0",
   agreement_signature_completed: "#007048",
+  documenso_account_ready: "#007048",
 };
 
 function formatTime(iso: string): string {

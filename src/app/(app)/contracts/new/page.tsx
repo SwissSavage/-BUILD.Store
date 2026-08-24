@@ -16,6 +16,20 @@ import { createHubspotLead } from "@/lib/crm-stub";
 import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
 
+// Task #29 — attachment caps enforced here + at the schema comment.
+// Server-side validation is authoritative; client-side accept="" is
+// just UX. Base64 balloons ~33%, so 2 MB source ≈ 2.7 MB encoded per
+// file, 3 files ≈ 8 MB row max.
+const MAX_ATTACHMENTS = 3;
+const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
+
+interface RfpAttachment {
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  base64: string;
+}
+
 async function createRfp(formData: FormData) {
   "use server";
   const title = String(formData.get("title") ?? "").trim();
@@ -26,6 +40,29 @@ async function createRfp(formData: FormData) {
   const clientId = String(formData.get("clientId") ?? "client_anon");
 
   if (!title || !description) throw new Error("Title and description required");
+
+  // Task #29 — read up to MAX_ATTACHMENTS files. Skip empty File
+  // slots that the browser sends when nothing was picked. Validate
+  // size per-file; throw with a clear message if any exceeds the cap.
+  const rawFiles = formData
+    .getAll("attachments")
+    .filter((v): v is File => v instanceof File && v.size > 0)
+    .slice(0, MAX_ATTACHMENTS);
+  const attachments: RfpAttachment[] = [];
+  for (const f of rawFiles) {
+    if (f.size > MAX_ATTACHMENT_BYTES) {
+      throw new Error(
+        `Attachment "${f.name}" is ${(f.size / 1024 / 1024).toFixed(1)} MB. Max per file is 2 MB.`,
+      );
+    }
+    const buf = Buffer.from(await f.arrayBuffer());
+    attachments.push({
+      name: f.name.slice(0, 200),
+      mimeType: f.type || "application/octet-stream",
+      sizeBytes: f.size,
+      base64: buf.toString("base64"),
+    });
+  }
 
   // Land the RFP in HubSpot as a contact + deal before we persist the
   // Project locally, so hubspotDealId is populated from creation instead
@@ -96,6 +133,7 @@ async function createRfp(formData: FormData) {
     pmEngagementRating: null,
     bonusDecision: null,
     bonusDecidedAt: null,
+    rfpAttachments: attachments,
     createdAt: now,
     updatedAt: now,
   });
@@ -123,7 +161,11 @@ export default async function NewContractPage() {
 
       <Card className="mt-8">
         <CardEyebrow>Contract</CardEyebrow>
-        <form action={createRfp} className="mt-4 space-y-5">
+        <form
+          action={createRfp}
+          className="mt-4 space-y-5"
+          encType="multipart/form-data"
+        >
           <input type="hidden" name="clientId" value={user.id} />
 
           <Field name="title" label="Title" required />
@@ -163,6 +205,26 @@ export default async function NewContractPage() {
             label="Skills required (comma separated)"
             defaultValue=""
           />
+
+          {/* Task #29 — attach briefs, mood boards, screenshots.
+              Base64-inlined until R2 storage lands (#57/#58); the
+              zero-external-deps posture the task called for. */}
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-ink-muted">
+              Attach brief (optional)
+            </span>
+            <input
+              type="file"
+              name="attachments"
+              multiple
+              accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.gif,.webp"
+              className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-magenta file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
+            />
+            <p className="mt-1 text-[11px] text-ink-faint">
+              Up to 3 files, 2 MB each. PDFs, docs, images. Admin sees
+              these on the intake queue when scrubbing the RFP.
+            </p>
+          </label>
 
           <button
             type="submit"

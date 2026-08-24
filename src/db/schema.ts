@@ -187,6 +187,10 @@ export const projects = pgTable("projects", {
     enum: ["pending", "released", "reclaimed"],
   }),
   bonusDecidedAt: timestamp("bonus_decided_at", { mode: "string", withTimezone: true }),
+  // Task #29 — RFP attachments (client briefs, mood boards, etc.)
+  // Base64-encoded inline until R2 storage backend lands (#57/#58).
+  // Shape: Array<{ name, mimeType, sizeBytes, base64 }>.
+  rfpAttachments: jsonb("rfp_attachments").notNull().default([]),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
     .notNull()
     .defaultNow(),

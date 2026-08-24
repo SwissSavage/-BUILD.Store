@@ -157,6 +157,41 @@ export default async function AdminRfpQueuePage() {
                   <p className="mt-3 whitespace-pre-wrap text-sm text-ink-muted">
                     {p.description}
                   </p>
+
+                  {/* Task #29 — attachments the client submitted with
+                      the RFP. Admin sees them here before broadcasting
+                      so they can pull briefs into the vetted copy. */}
+                  {Array.isArray(p.rfpAttachments) &&
+                    (p.rfpAttachments as Array<{
+                      name: string;
+                      sizeBytes: number;
+                    }>).length > 0 && (
+                      <div className="mt-4 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2">
+                        <div className="text-[10px] uppercase tracking-wider text-ink-muted">
+                          Attachments
+                        </div>
+                        <ul className="mt-1 space-y-1">
+                          {(p.rfpAttachments as Array<{
+                            name: string;
+                            sizeBytes: number;
+                          }>).map((a, i) => (
+                            <li key={i} className="text-xs">
+                              <a
+                                href={`/api/rfps/${p.id}/attachments/${i}`}
+                                className="text-brand-magenta hover:underline"
+                                download
+                              >
+                                {a.name}
+                              </a>
+                              <span className="ml-2 text-[10px] text-ink-faint">
+                                {(a.sizeBytes / 1024).toFixed(0)} KB
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
                   <div className="mt-4 text-xs text-ink-faint">
                     Client: <span className="font-mono">{p.clientId}</span>
                   </div>

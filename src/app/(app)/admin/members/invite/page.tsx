@@ -20,7 +20,9 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { db } from "@/db/client";
 import { inviteLinks, users as usersTable } from "@/db/schema";
 import {
+  extendInviteExpiry,
   generateInviteLink,
+  resendInviteLink,
   revokeInviteLink,
 } from "@/lib/invite-actions";
 import { MOCK_USERS } from "@/lib/mock-data/users";
@@ -300,33 +302,65 @@ export default async function InviteMemberPage({
                   )}
 
                   {live && (
-                    <details className="mt-3">
-                      <summary className="cursor-pointer text-[11px] text-brand-magenta hover:underline">
-                        Revoke this invite
-                      </summary>
-                      <form
-                        action={revokeInviteLink}
-                        className="mt-2 space-y-2"
-                      >
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {/* Task #25 — resend + extend + revoke lifecycle
+                          actions inline. Compact so the row doesn't
+                          balloon; revoke is behind a details summary
+                          because it needs the optional reason field. */}
+                      <form action={resendInviteLink}>
                         <input
                           type="hidden"
                           name="inviteId"
                           value={invite.id}
                         />
+                        <button
+                          type="submit"
+                          className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[11px] text-brand-magenta hover:border-brand-magenta hover:bg-brand-magenta/10"
+                        >
+                          Resend email
+                        </button>
+                      </form>
+                      <form action={extendInviteExpiry}>
                         <input
-                          type="text"
-                          name="reason"
-                          className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-2 py-1 text-xs text-ink"
-                          placeholder="Optional reason (recorded)"
+                          type="hidden"
+                          name="inviteId"
+                          value={invite.id}
                         />
                         <button
                           type="submit"
-                          className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magenta hover:border-brand-magenta"
+                          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
                         >
-                          Revoke
+                          Extend +14 days
                         </button>
                       </form>
-                    </details>
+                      <details className="grow">
+                        <summary className="cursor-pointer text-[11px] text-ink-faint hover:text-brand-magenta">
+                          Revoke →
+                        </summary>
+                        <form
+                          action={revokeInviteLink}
+                          className="mt-2 space-y-2"
+                        >
+                          <input
+                            type="hidden"
+                            name="inviteId"
+                            value={invite.id}
+                          />
+                          <input
+                            type="text"
+                            name="reason"
+                            className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-2 py-1 text-xs text-ink"
+                            placeholder="Optional reason (recorded)"
+                          />
+                          <button
+                            type="submit"
+                            className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magenta hover:border-brand-magenta"
+                          >
+                            Revoke
+                          </button>
+                        </form>
+                      </details>
+                    </div>
                   )}
                 </Card>
               );

@@ -2263,6 +2263,14 @@ export interface PeerReview {
    * the rubric addition; new submissions always populate.
    */
   professionalism: number | null;
+  /**
+   * Communication sub-rating (Aug 2026). 1–5 peer-graded assessment
+   * of how the reviewee kept the room informed — clarity, cadence,
+   * proactive check-ins. Distinct from Collaboration (how they work
+   * WITH people) — Communication scores how they SIGNAL.
+   * Nullable on legacy rows.
+   */
+  communication: number | null;
   /** Free-text. Visible to reviewee + admin. */
   prose: string;
   createdAt: string;
@@ -3024,6 +3032,7 @@ export type MvpSubRating =
   | "reliability" // milestone-hit + deadline + minutes completeness
   | "hustle" // inbound response time + brief acceptance + volunteer
   | "collaboration" // peer collaboration sub-score
+  | "communication" // (Aug 2026) clarity, cadence, keeping the room informed
   | "attendance" // meeting attendance once minutes rail is live
   | "referrals_bd"; // referrer attributions converted to revenue
 
@@ -3033,6 +3042,7 @@ export const MVP_SUB_RATING_LABELS: Record<MvpSubRating, string> = {
   reliability: "Reliability",
   hustle: "Hustle",
   collaboration: "Collaboration",
+  communication: "Communication",
   attendance: "Attendance",
   referrals_bd: "Referrals / BD",
 };

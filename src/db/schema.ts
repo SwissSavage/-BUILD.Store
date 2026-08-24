@@ -881,6 +881,16 @@ export const peerReviews = pgTable("peer_reviews", {
    * always populate this via the form.
    */
   professionalism: integer("professionalism"),
+  /**
+   * Communication sub-rating (Aug 2026). Distinct from collaboration —
+   * how well the reviewee KEEPS THE ROOM INFORMED (clarity, cadence,
+   * proactive check-ins). Feeds the new MVP sub-rating of the same
+   * name via aggregatePeerReviewsIntoSubRating in mvp-score.ts.
+   *
+   * Nullable so legacy rows load; new submissions populate this via
+   * the peer-review form.
+   */
+  communication: integer("communication"),
   prose: text("prose").notNull(),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
 }, (t) => ({

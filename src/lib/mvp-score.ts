@@ -25,20 +25,25 @@ import {
 } from "@/lib/types";
 
 /**
- * Weights for each sub-rating. Reliability + Quality + Outcomes + Hustle
- * are high-weight (0.18 each); Collaboration + Attendance are medium
- * (0.10 each); Referrals / BD is medium (0.08). Sums to 1.00.
+ * Weights for each sub-rating. Sums to 1.00.
+ *
+ * Aug 2026 rebalance: added Communication (0.10) — clarity, cadence, and
+ * keeping the room informed is now scored distinctly from Collaboration
+ * (which captures how someone works WITH people; communication captures
+ * how they SIGNAL). Reduced hustle (0.18 → 0.14) and each of quality /
+ * outcomes / reliability (0.18 → 0.16) to make room without inflating
+ * total.
  *
  * Quality includes brand-fit per the 2026-06-29 lock — "clients leave
- * when work is 'not on brand AND untimely'." Quality and Reliability
- * carry equal weight.
+ * when work is 'not on brand AND untimely'."
  */
 export const MVP_WEIGHTS: Record<MvpSubRating, number> = {
-  quality: 0.18,
-  outcomes: 0.18,
-  reliability: 0.18,
-  hustle: 0.18,
+  quality: 0.16,
+  outcomes: 0.16,
+  reliability: 0.16,
+  hustle: 0.14,
   collaboration: 0.1,
+  communication: 0.1,
   attendance: 0.1,
   referrals_bd: 0.08,
 };
@@ -231,4 +236,86 @@ export function championsCourtMembers(
  */
 export function subRatingLabel(k: MvpSubRating): string {
   return MVP_SUB_RATING_LABELS[k];
+}
+
+// ──────────────────────────────────────────────────────────────────────
+//  Peer-review → sub-rating aggregation (Aug 2026 — expert weighting)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Weight applied to a peer review, based on the reviewer's standing.
+ * Expert reviews (admins + top-band OVR) carry 2x the weight of a
+ * standard-standing review. Provisional / low-standing / no-OVR
+ * reviewers get 1x. Formalizes Jamar's ask: "leverage expert peer
+ * review as a contributing factor to scoring."
+ *
+ * Rationale for the specific bands:
+ *   - Admins carry 2x — they set the bar for cooperative-facing
+ *     conduct and their read is the calibration signal.
+ *   - Reviewers with OVR ≥ 85 (top of good-standing / future-modernist
+ *     pool + Champion's Court) carry 2x — sustained performers know
+ *     what "good" looks like for the cooperative's work.
+ *   - Everyone else carries 1x — dignity of the peer-review vote is
+ *     preserved even when the reviewer is still building track record.
+ *
+ * Kept as a pure function so aggregation is deterministic and testable.
+ */
+export const EXPERT_REVIEW_WEIGHT = 2;
+export const STANDARD_REVIEW_WEIGHT = 1;
+export const EXPERT_OVR_THRESHOLD = 85;
+
+export interface ReviewerContext {
+  userId: string;
+  isAdmin: boolean;
+  ovr: number | null;
+  isProvisional: boolean;
+}
+
+export function reviewWeightFor(reviewer: ReviewerContext): number {
+  if (reviewer.isProvisional) return STANDARD_REVIEW_WEIGHT;
+  if (reviewer.isAdmin) return EXPERT_REVIEW_WEIGHT;
+  if (reviewer.ovr !== null && reviewer.ovr >= EXPERT_OVR_THRESHOLD) {
+    return EXPERT_REVIEW_WEIGHT;
+  }
+  return STANDARD_REVIEW_WEIGHT;
+}
+
+/**
+ * Aggregate a set of peer reviews on a single reviewee into a scalar
+ * sub-rating value (0-99, matching MVP_WEIGHTS input scale).
+ *
+ * Selector picks the dimension off each review (e.g. r => r.communication,
+ * r => r.professionalism). Values on the review are 1–5 stars; we
+ * rescale to the 0-99 sub-rating scale here (× 19.8, capped).
+ *
+ * Reviews with a null value on the selected dimension are skipped
+ * (legacy rows pre-communication / pre-professionalism).
+ *
+ * Expert-weighted mean: sum(weight × value) / sum(weight). One 2x
+ * expert plus one 1x standard both scoring the same person 5/5 → 5.
+ * One 2x expert scoring 4/5 plus one 1x standard scoring 2/5 →
+ * (2*4 + 1*2) / 3 = 3.33 (not 3 — expert pulls harder).
+ */
+export function aggregatePeerReviewsIntoSubRating<T>(
+  reviews: Array<T & { reviewerId: string }>,
+  selectValue: (r: T) => number | null,
+  reviewerLookup: (id: string) => ReviewerContext | null,
+  fallback: number = 70,
+): number {
+  let weightedSum = 0;
+  let totalWeight = 0;
+  for (const r of reviews) {
+    const raw = selectValue(r);
+    if (raw === null || Number.isNaN(raw)) continue;
+    const reviewer = reviewerLookup(r.reviewerId);
+    if (!reviewer) continue;
+    const w = reviewWeightFor(reviewer);
+    weightedSum += w * raw;
+    totalWeight += w;
+  }
+  if (totalWeight === 0) return fallback;
+  const meanStars = weightedSum / totalWeight;
+  // 1–5 → 0-99 rescale. Cap at 99 to match the OVR clamp.
+  const scaled = Math.round(meanStars * 19.8);
+  return Math.max(0, Math.min(99, scaled));
 }

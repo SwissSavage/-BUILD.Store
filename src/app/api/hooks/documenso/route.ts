@@ -45,7 +45,10 @@ import {
   invoices as invoicesTable,
   inviteLinks as inviteLinksTable,
   users as usersTable,
+  cooperativeQuotes as cooperativeQuotesTable,
+  projects as projectsTable,
 } from "@/db/schema";
+import { updateHubspotDealStage } from "@/lib/crm-stub";
 import {
   verifyWebhookSignature,
   getPayloadTarget,
@@ -485,6 +488,90 @@ export async function POST(request: Request) {
       targetKind: "invite",
       inviteId: invite.id,
     });
+  }
+
+  // 0b. Quote SOW dual-envelope path (task #45). External IDs come from
+  //     dispatchSowDualEnvelope in quote-actions.ts:
+  //       quote:<quoteId>:client_sow       → client-side SOW envelope
+  //       quote:<quoteId>:talent_engagement → talent-side engagement
+  //     On completion, stamp the corresponding *_signed_at column on
+  //     cooperative_quotes. When BOTH sides signed, advance HubSpot to
+  //     closedwon (per approve-time comment "Once both envelopes come
+  //     back signed, downstream logic moves the deal to closedwon").
+  if (externalIdRaw.startsWith("quote:") && normalized === "completed") {
+    const [, quoteId, side] = externalIdRaw.split(":");
+    if (
+      quoteId &&
+      (side === "client_sow" || side === "talent_engagement")
+    ) {
+      const [row] = await db
+        .select()
+        .from(cooperativeQuotesTable)
+        .where(eq(cooperativeQuotesTable.id, quoteId))
+        .limit(1);
+      if (row) {
+        const stampField =
+          side === "client_sow" ? "sowClientSignedAt" : "sowTalentSignedAt";
+        await db
+          .update(cooperativeQuotesTable)
+          .set({ [stampField]: now })
+          .where(eq(cooperativeQuotesTable.id, quoteId));
+
+        logAuditEvent({
+          actorUserId: null,
+          actorRoleSnapshot: "system",
+          action: "document.signature_completed",
+          resourceKind: "cooperative_quote",
+          resourceId: quoteId,
+          before: { [stampField]: null },
+          after: {
+            [stampField]: now,
+            envelopeId,
+            side,
+          },
+          reason: `SOW ${side} envelope ${envelopeId} completed for quote ${quoteId}.`,
+        });
+
+        // Both signed? Advance HubSpot deal to closedwon.
+        const bothSigned =
+          (side === "client_sow" ? now : row.sowClientSignedAt) &&
+          (side === "talent_engagement" ? now : row.sowTalentSignedAt);
+        if (bothSigned && row.projectId) {
+          const [project] = await db
+            .select({ hubspotDealId: projectsTable.hubspotDealId })
+            .from(projectsTable)
+            .where(eq(projectsTable.id, row.projectId))
+            .limit(1);
+          if (project?.hubspotDealId) {
+            void updateHubspotDealStage(
+              project.hubspotDealId,
+              "closedwon",
+              `SOW + engagement both signed. Quote ${quoteId} fully executed.`,
+            );
+          }
+        }
+
+        // In-app fanout — same helper the agreement/invoice paths use.
+        await fanoutSignatureCompletedNotifications({
+          agreementId: quoteId,
+          agreementType:
+            side === "client_sow" ? "Client SOW" : "Talent Engagement",
+          signerUserId:
+            side === "talent_engagement" ? row.selectedLeadUserId : null,
+          envelopeId,
+        });
+
+        return NextResponse.json({
+          received: true,
+          handled: true,
+          event,
+          targetKind: "cooperative_quote",
+          targetId: quoteId,
+          side,
+          bothSigned: Boolean(bothSigned),
+        });
+      }
+    }
   }
 
   // 1. Look up an invoice row keyed to this envelope.

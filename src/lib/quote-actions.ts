@@ -934,3 +934,58 @@ export async function undoCooperativeQuoteDecision(formData: FormData) {
   revalidatePath("/admin/cooperative-quotes");
   revalidatePath(`/quotes/${quote.clientToken}`);
 }
+
+/**
+ * Task #45 — admin retry for SOW dual-envelope dispatch. Fires when
+ * the initial dispatch failed on one or both envelopes (Documenso
+ * outage, missing template id at approve time, lead had no email on
+ * file). Reads the current quote row, re-runs dispatchSowDualEnvelope
+ * with the saved client contact + selected lead.
+ */
+export async function retrySowDispatch(formData: FormData) {
+  const admin = await requireAdmin();
+  const quoteId = String(formData.get("id") ?? "").trim();
+  if (!quoteId) throw new Error("Quote id required.");
+
+  const [quote] = await db
+    .select()
+    .from(cooperativeQuotes)
+    .where(eq(cooperativeQuotes.id, quoteId))
+    .limit(1);
+  if (!quote) throw new Error("Quote not found.");
+  if (quote.status !== "approved" || !quote.selectedLeadUserId) {
+    throw new Error(
+      "Only approved quotes with a picked lead can retry SOW dispatch.",
+    );
+  }
+  if (!quote.clientContactEmail || !quote.clientContactName) {
+    throw new Error(
+      "Missing client contact — no way to re-dispatch. Ask the client to re-submit.",
+    );
+  }
+
+  const leadUser = MOCK_USERS.find((u) => u.id === quote.selectedLeadUserId);
+  const leadName = leadUser
+    ? `${leadUser.firstName} ${leadUser.lastName}`.trim()
+    : quote.selectedLeadUserId;
+
+  const [project] = await db
+    .select({ title: projects.title })
+    .from(projects)
+    .where(eq(projects.id, quote.projectId))
+    .limit(1);
+
+  await dispatchSowDualEnvelope({
+    quoteId: quote.id,
+    clientToken: quote.clientToken,
+    projectId: quote.projectId,
+    projectTitle: project?.title ?? quote.projectId,
+    clientContactEmail: quote.clientContactEmail,
+    clientContactName: quote.clientContactName,
+    leadUserId: quote.selectedLeadUserId,
+    leadName,
+    actorUserId: admin.id,
+  });
+
+  revalidatePath("/admin/cooperative-quotes");
+}

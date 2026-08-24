@@ -2685,7 +2685,12 @@ export type NotificationKind =
   | "booking_request_declined"
   | "booking_confirmed"
   | "quote_approved"
-  | "quote_declined";
+  | "quote_declined"
+  // Documenso signature completion fanout — fires to (a) the signer and
+  // (b) admins the moment an envelope reaches `completed` on the
+  // webhook. Distinct from agreement_renewal_* which are anniversary
+  // pings; this one is transactional at moment of signing.
+  | "agreement_signature_completed";
 
 export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   order_status: "Order update",
@@ -2728,6 +2733,7 @@ export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   agreement_renewal_overdue: "Agreement renewal overdue",
   portfolio_fraud_flag: "Portfolio duplicate flagged",
   rfp_quote_request: "Quote request from admin",
+  agreement_signature_completed: "Agreement signed",
 };
 
 /* ------------------------------------------------------------------ */

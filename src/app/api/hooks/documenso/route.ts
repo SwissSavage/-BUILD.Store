@@ -44,6 +44,7 @@ import {
   agreements as agreementsTable,
   invoices as invoicesTable,
   inviteLinks as inviteLinksTable,
+  users as usersTable,
 } from "@/db/schema";
 import {
   verifyWebhookSignature,
@@ -56,12 +57,87 @@ import { dispatchInviteEmail } from "@/lib/invite-email";
 import {
   logAuditEvent,
 } from "@/lib/mock-data/audit-log";
+import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import type {
   Agreement,
   AgreementType,
   AuditLogAction,
+  Notification,
   SignatureStatus,
 } from "@/lib/types";
+
+// ────────────────────────────────────────────────────────────────
+//  Signature-completion notification fanout
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Fire an "agreement signed" notification to:
+ *   - the signer (identified by agreement.userId when it maps to a
+ *     real FM user id — the LOI path stores the userId here, NCNDA
+ *     stores an "ncnda:<email>" label instead and gets skipped)
+ *   - every admin flagged is_admin, so the ops team sees the signal
+ *     in-app immediately without having to check the Documenso dash
+ *
+ * Best-effort. If the notification insert fails we don't roll back
+ * the agreement — the audit log is the source of truth for the
+ * signature event; the notification is just a UX ping.
+ */
+async function fanoutSignatureCompletedNotifications(input: {
+  agreementId: string;
+  agreementType: string;
+  signerUserId: string | null;
+  envelopeId: string;
+}): Promise<void> {
+  const { agreementId, agreementType, signerUserId, envelopeId } = input;
+  const now = new Date().toISOString();
+
+  const humanType = agreementType === "loi"
+    ? "Talent Partner LOI"
+    : agreementType === "ncnda"
+      ? "NCNDA"
+      : agreementType === "invoice"
+        ? "Retroactive Receipt"
+        : "Agreement";
+
+  const push = (userId: string, title: string, body: string) => {
+    const ntf: Notification = {
+      id: `ntf_sig_${envelopeId}_${userId}_${Math.random().toString(36).slice(2, 5)}`,
+      userId,
+      kind: "agreement_signature_completed",
+      title,
+      body,
+      href: `/agreements`,
+      createdAt: now,
+      readAt: null,
+    };
+    MOCK_NOTIFICATIONS.push(ntf);
+  };
+
+  // Signer notification. Skip the ncnda:<email> label case — those
+  // aren't FM users and there's nothing to ping in-app.
+  if (signerUserId && !signerUserId.startsWith("ncnda:")) {
+    push(
+      signerUserId,
+      `${humanType} fully signed`,
+      `Your ${humanType} is now countersigned and filed in your agreements.`,
+    );
+  }
+
+  // Admin fanout.
+  const admins = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.isAdmin, true));
+  for (const admin of admins) {
+    // Skip duplicate ping if the admin was also the signer.
+    if (admin.id === signerUserId) continue;
+    push(
+      admin.id,
+      `${humanType} signed by ${signerUserId ?? "counterparty"}`,
+      `Envelope ${envelopeId} completed — filed under /agreements as ${agreementId}.`,
+    );
+  }
+}
 
 const DOCUMENSO_WEBHOOK_SECRET = process.env.DOCUMENSO_WEBHOOK_SECRET;
 
@@ -446,6 +522,15 @@ export async function POST(request: Request) {
       reason: `Documenso ${event} — envelope ${envelopeId} on invoice ${invoice.number}.`,
     });
 
+    if (normalized === "completed") {
+      await fanoutSignatureCompletedNotifications({
+        agreementId: invoice.id,
+        agreementType: "invoice",
+        signerUserId: invoice.recipientId,
+        envelopeId,
+      });
+    }
+
     return NextResponse.json({
       received: true,
       handled: true,
@@ -490,6 +575,18 @@ export async function POST(request: Request) {
       },
       reason: `Documenso ${event} — envelope ${envelopeId} on agreement ${existingAgreement.id}.`,
     });
+
+    // Fanout: notify signer + admins on completion. Skipped for
+    // non-terminal events (viewed / sent / rejected) — those change
+    // the audit trail but don't warrant an inbox ping.
+    if (normalized === "completed") {
+      await fanoutSignatureCompletedNotifications({
+        agreementId: existingAgreement.id,
+        agreementType: existingAgreement.agreementType,
+        signerUserId: existingAgreement.userId,
+        envelopeId,
+      });
+    }
 
     return NextResponse.json({
       received: true,
@@ -612,6 +709,13 @@ export async function POST(request: Request) {
       userIdOrLabel,
     },
     reason: `Documenso ${event}. Auto-created ${persistedAgreementType} agreement from externalId=${externalId}, document=${envelopeId}.`,
+  });
+
+  await fanoutSignatureCompletedNotifications({
+    agreementId: agreementRow.id,
+    agreementType: persistedAgreementType,
+    signerUserId: userIdOrLabel,
+    envelopeId,
   });
 
   return NextResponse.json({

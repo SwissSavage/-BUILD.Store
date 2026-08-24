@@ -57,6 +57,7 @@ const KIND_ACCENT: Record<NotificationKind, string> = {
   rfp_quote_request: "#5070F0",
   quote_approved: "#007048",
   quote_declined: "#D828A0",
+  agreement_signature_completed: "#007048",
 };
 
 export function NotificationStrip({

@@ -41,6 +41,7 @@ import {
   getTemplate,
   sendDocument,
 } from "@/lib/documenso";
+import { dispatchInviteEmail } from "@/lib/invite-email";
 
 /** Admin countersigner defaults when no admin-specific override is set. */
 function adminSenderName(admin: {
@@ -247,6 +248,105 @@ export async function generateInviteLink(formData: FormData) {
   // /admin/members/invite?countersigned=<inviteId> (see meta.redirectUrl
   // above) and the webhook fires the invitee email in parallel.
   redirect(adminSigningUrl);
+}
+
+/**
+ * Task #25 — resend an invite email for a live, unconsumed invite.
+ * Reuses the invite's existing code + redemption URL so the target
+ * doesn't get a new link. Fires the audit trail so admin can see how
+ * many nudges an unresponsive invitee has received.
+ */
+export async function resendInviteLink(formData: FormData) {
+  const admin = await requireAdmin();
+  const inviteId = String(formData.get("inviteId") ?? "").trim();
+  if (!inviteId) throw new Error("inviteId is required");
+
+  const [invite] = await db
+    .select()
+    .from(inviteLinks)
+    .where(eq(inviteLinks.id, inviteId))
+    .limit(1);
+  if (!invite) throw new Error("Invite not found");
+  if (invite.revokedAt) throw new Error("Cannot resend a revoked invite");
+  if (invite.consumedAt) throw new Error("Cannot resend a consumed invite");
+  if (new Date(invite.expiresAt).getTime() < Date.now()) {
+    throw new Error(
+      "Cannot resend an expired invite. Extend expiry first, or revoke + reissue.",
+    );
+  }
+
+  const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "";
+  const inviteUrl = `${base.replace(/\/$/, "")}/invite/${invite.code}`;
+  await dispatchInviteEmail({
+    targetEmail: invite.targetEmail,
+    targetName: invite.targetName,
+    targetTier: invite.targetTier,
+    inviteUrl,
+    senderName: adminSenderName(admin),
+  });
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "user.invited",
+    resourceKind: "user",
+    resourceId: invite.id,
+    before: null,
+    after: {
+      resent: true,
+      targetEmail: invite.targetEmail,
+      senderName: adminSenderName(admin),
+    },
+    reason: "Invite email resent by admin.",
+  });
+
+  revalidatePath("/admin/members/invite");
+  revalidatePath("/admin/audit-log");
+}
+
+/**
+ * Task #25 — push out the expiry on a live invite by 14 days from
+ * now (not additive on top of the existing expiry, since additive
+ * lets an invite drift indefinitely). Only valid on live invites.
+ */
+export async function extendInviteExpiry(formData: FormData) {
+  const admin = await requireAdmin();
+  const inviteId = String(formData.get("inviteId") ?? "").trim();
+  if (!inviteId) throw new Error("inviteId is required");
+
+  const [invite] = await db
+    .select()
+    .from(inviteLinks)
+    .where(eq(inviteLinks.id, inviteId))
+    .limit(1);
+  if (!invite) throw new Error("Invite not found");
+  if (invite.revokedAt) throw new Error("Cannot extend a revoked invite");
+  if (invite.consumedAt) throw new Error("Cannot extend a consumed invite");
+
+  const previousExpiry = invite.expiresAt;
+  const newExpiry = new Date(Date.now() + INVITE_LIFETIME_MS).toISOString();
+  await db
+    .update(inviteLinks)
+    .set({ expiresAt: newExpiry })
+    .where(eq(inviteLinks.id, invite.id));
+
+  logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "user.invited",
+    resourceKind: "user",
+    resourceId: invite.id,
+    before: { expiresAt: previousExpiry },
+    after: {
+      expiresAt: newExpiry,
+      targetEmail: invite.targetEmail,
+      extendedByDays: 14,
+    },
+    reason: "Invite expiry extended by admin.",
+  });
+
+  revalidatePath("/admin/members/invite");
+  revalidatePath("/admin/audit-log");
 }
 
 export async function revokeInviteLink(formData: FormData) {

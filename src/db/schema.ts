@@ -318,6 +318,16 @@ export const cooperativeQuotes = pgTable("cooperative_quotes", {
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
   createdByUserId: text("created_by_user_id").notNull().references(() => users.id),
   selectedLeadUserId: text("selected_lead_user_id").references(() => users.id),
+  // Task #45 — captured on client-side approve so we can dispatch the
+  // dual envelope (client SOW + talent engagement confirmation) to the
+  // right addresses. Nullable because pre-#45 rows won't have these.
+  clientContactEmail: text("client_contact_email"),
+  clientContactName: text("client_contact_name"),
+  clientSowDocumensoId: text("client_sow_documenso_id"),
+  talentEngagementDocumensoId: text("talent_engagement_documenso_id"),
+  sowDispatchedAt: timestamp("sow_dispatched_at", { mode: "string", withTimezone: true }),
+  sowClientSignedAt: timestamp("sow_client_signed_at", { mode: "string", withTimezone: true }),
+  sowTalentSignedAt: timestamp("sow_talent_signed_at", { mode: "string", withTimezone: true }),
 });
 
 export const cooperativeReceipts = pgTable("cooperative_receipts", {
@@ -871,6 +881,16 @@ export const peerReviews = pgTable("peer_reviews", {
    * always populate this via the form.
    */
   professionalism: integer("professionalism"),
+  /**
+   * Communication sub-rating (Aug 2026). Distinct from collaboration —
+   * how well the reviewee KEEPS THE ROOM INFORMED (clarity, cadence,
+   * proactive check-ins). Feeds the new MVP sub-rating of the same
+   * name via aggregatePeerReviewsIntoSubRating in mvp-score.ts.
+   *
+   * Nullable so legacy rows load; new submissions populate this via
+   * the peer-review form.
+   */
+  communication: integer("communication"),
   prose: text("prose").notNull(),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
 }, (t) => ({

@@ -38,6 +38,7 @@ import { publicName, type ProposedBuilder } from "@/lib/types";
 import {
   createCooperativeQuote,
   removeCooperativeQuote,
+  retrySowDispatch,
 } from "@/lib/quote-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import {
@@ -446,6 +447,54 @@ export default async function AdminCooperativeQuotesPage() {
                     <code className="mt-1 block break-all rounded-lg bg-[var(--surface-inset)] px-3 py-2 text-[11px] text-ink">
                       /quotes/{quote.clientToken}
                     </code>
+
+                    {/* Task #45 — SOW dual-envelope status strip.
+                        Only renders on approved quotes since dispatch
+                        fires from approveCooperativeQuote. */}
+                    {quote.status === "approved" && (
+                      <div className="mt-4 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-[11px]">
+                        <div className="font-medium uppercase tracking-wider text-ink-muted">
+                          SOW dispatch
+                        </div>
+                        <div className="mt-1 grid gap-1 text-ink">
+                          <div>
+                            Client SOW:{" "}
+                            {quote.sowClientSignedAt
+                              ? `✓ signed ${new Date(quote.sowClientSignedAt).toLocaleDateString()}`
+                              : quote.clientSowDocumensoId
+                                ? `sent (envelope ${quote.clientSowDocumensoId})`
+                                : "⚠ not dispatched"}
+                          </div>
+                          <div>
+                            Talent engagement:{" "}
+                            {quote.sowTalentSignedAt
+                              ? `✓ signed ${new Date(quote.sowTalentSignedAt).toLocaleDateString()}`
+                              : quote.talentEngagementDocumensoId
+                                ? `sent (envelope ${quote.talentEngagementDocumensoId})`
+                                : "⚠ not dispatched"}
+                          </div>
+                        </div>
+                        {(!quote.clientSowDocumensoId ||
+                          !quote.talentEngagementDocumensoId) && (
+                          <form
+                            action={retrySowDispatch}
+                            className="mt-2"
+                          >
+                            <input
+                              type="hidden"
+                              name="id"
+                              value={quote.id}
+                            />
+                            <button
+                              type="submit"
+                              className="rounded-full border border-brand-magenta px-3 py-1 text-[10px] font-medium text-brand-magenta hover:bg-brand-magenta hover:text-white"
+                            >
+                              Retry SOW dispatch
+                            </button>
+                          </form>
+                        )}
+                      </div>
+                    )}
 
                     <div className="mt-4 flex items-center gap-3">
                       <Link

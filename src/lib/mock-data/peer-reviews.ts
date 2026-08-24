@@ -27,6 +27,7 @@ export const MOCK_PEER_REVIEWS: PeerReview[] = [
     craft: 5,
     reliability: 5,
     professionalism: 5,
+    communication: 5,
     prose:
       "Michael ran the operational scorecard end-to-end and pulled in regional benchmarks I didn't know existed. Decisive on scope, never made me chase. Pair again, no hesitation.",
     createdAt: "2026-04-20T15:30:00Z",
@@ -42,6 +43,7 @@ export const MOCK_PEER_REVIEWS: PeerReview[] = [
     craft: 4,
     reliability: 4,
     professionalism: 4,
+    communication: 4,
     prose:
       "Rob's market selection memo was the spine of the whole deliverable. Caught one timeline slip mid-week — owned it, recovered it, no drama. Strong builder.",
     createdAt: "2026-04-21T10:12:00Z",
@@ -61,6 +63,7 @@ export const MOCK_PEER_REVIEWS: PeerReview[] = [
     craft: 5,
     reliability: 4,
     professionalism: 4,
+    communication: 4,
     prose:
       "Trevor's voting-weight prototype was tight — clean Solidity, sane gas profile. Comms on standups were lighter than I'd want for a longer engagement, but for a prototype sprint it landed.",
     createdAt: "2026-04-23T19:45:00Z",

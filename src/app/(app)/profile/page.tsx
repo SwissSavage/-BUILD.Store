@@ -214,14 +214,94 @@ export default async function ProfilePage() {
     .filter((o) => o.splitDistributedAt)
     .reduce((sum, o) => sum + previewOrderSplit(Number(o.subtotal)).seller, 0);
 
+  // Task #66 — /profile UX pass. Compute one place for the hero-strip
+  // headline stats so the top of the page reads like a proper profile,
+  // not a raw form. Every value here is already computed above; this
+  // just names them for the hero.
+  const heroStats: Array<{ label: string; value: string }> = [
+    { label: "Proposals sent", value: String(myProposalsSent) },
+    { label: "Active contracts", value: String(myActiveContracts.length) },
+    { label: "Completed", value: String(myCompletedContracts.length) },
+    {
+      label: "Lifetime paid",
+      value: `$${lifetimePaid.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+    },
+  ];
+  const mvp = mvpScoreForUser(user.id);
+
+  // Sticky section-jump nav. Each entry maps to an <section id> below.
+  const jumpTargets: Array<{ id: string; label: string }> = [
+    { id: "identity", label: "Identity" },
+    { id: "work", label: "Work" },
+    { id: "paperwork", label: "Paperwork" },
+    { id: "tags", label: "Talent tags" },
+    { id: "portfolio", label: "Portfolio" },
+    { id: "money", label: "Money" },
+    { id: "data", label: "Data" },
+  ];
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-4xl font-semibold">Your profile</h1>
-        <TierBadge tier={user.membershipTier} />
-      </div>
+      {/* Hero — Avatar + name + tagline + tier + MVP + quick stats.
+          Replaces the previous bare h1 so the page opens like a
+          profile page, not a form. */}
+      <section className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-6 py-6">
+        <div className="flex flex-wrap items-start gap-4">
+          <Avatar user={user} size="xl" />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-display text-3xl font-semibold">
+                {user.firstName ?? user.handle ?? "You"}
+                {user.lastName ? ` ${user.lastName}` : ""}
+              </h1>
+              <TierBadge tier={user.membershipTier} />
+              {mvp && !mvp.isProvisional && (
+                <span className="rounded-full border border-brand-magenta/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-brand-magenta">
+                  OVR {mvp.ovr}
+                </span>
+              )}
+            </div>
+            {user.tagline && (
+              <p className="mt-2 text-sm text-ink-muted">{user.tagline}</p>
+            )}
+            <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 md:grid-cols-4">
+              {heroStats.map((s) => (
+                <div key={s.label}>
+                  <div className="text-[10px] uppercase tracking-wider text-ink-faint">
+                    {s.label}
+                  </div>
+                  <div className="mt-0.5 font-display text-lg font-semibold">
+                    {s.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <Card className="mt-8">
+      {/* Section jump. Sticky under the app nav so scrolling stays
+          oriented. Uses native anchor jumps — no JS required. */}
+      <nav
+        className="sticky top-16 z-10 -mx-6 mt-4 border-y border-[var(--surface-border)] bg-[var(--surface)]/95 px-6 py-2 backdrop-blur"
+        aria-label="Profile sections"
+      >
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          {jumpTargets.map((j) => (
+            <li key={j.id}>
+              <a
+                href={`#${j.id}`}
+                className="text-ink-muted hover:text-brand-magenta"
+              >
+                {j.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <section id="identity" className="scroll-mt-24">
+      <Card className="mt-6">
         <CardEyebrow>Edit</CardEyebrow>
         <form action={saveProfile} className="mt-4 space-y-5">
           <input type="hidden" name="uid" value={user.id} />
@@ -339,7 +419,9 @@ export default async function ProfilePage() {
           </button>
         </form>
       </Card>
+      </section>
 
+      <section id="work" className="scroll-mt-24">
       {/* Personal cockpit — metrics + contracts. Uncluttered snapshot
           of what you've done, what's live, and what's earned. Every
           profile gets this; client-side view (project sign-off) lands
@@ -448,6 +530,9 @@ export default async function ProfilePage() {
         );
       })()}
 
+      </section>
+
+      <section id="paperwork" className="scroll-mt-24">
       <Card className="mt-6 border-[#5070F0]/40">
         <CardEyebrow>Data participation</CardEyebrow>
         <h2 className="mt-1 font-display text-xl font-semibold">
@@ -558,6 +643,9 @@ export default async function ProfilePage() {
         );
       })()}
 
+      </section>
+
+      <section id="tags" className="scroll-mt-24">
       <Card className="mt-6 border-[#D828A0]/40">
         <CardEyebrow>Talent match tags</CardEyebrow>
         <h2 className="mt-1 font-display text-xl font-semibold">
@@ -627,7 +715,9 @@ export default async function ProfilePage() {
           </button>
         </form>
       </Card>
+      </section>
 
+      <section id="portfolio" className="scroll-mt-24">
       {isApprovedSeller ? (
         <section
           className="mt-6 rounded-2xl border p-6"
@@ -821,7 +911,9 @@ export default async function ProfilePage() {
           </div>
         </div>
       </Card>
+      </section>
 
+      <section id="money" className="scroll-mt-24">
       <Card className="mt-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -927,7 +1019,9 @@ export default async function ProfilePage() {
           {user.walletAddress ?? "Not yet provisioned"}
         </p>
       </Card>
+      </section>
 
+      <section id="data" className="scroll-mt-24">
       <Card className="mt-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -947,6 +1041,7 @@ export default async function ProfilePage() {
           </div>
         </div>
       </Card>
+      </section>
     </div>
   );
 }

@@ -22,7 +22,13 @@ import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
 
-export const dynamic = "force-static";
+// NOTE: intentionally NOT `force-static`. Force-static evaluates
+// cookies() as empty at build time, which propagates up into the
+// (public) layout's Nav and renders it in the signed-out state even
+// when the visitor has a valid session — the effect is that clicking
+// "Case studies" appears to sign the user out. Leaving this route
+// dynamic (default) keeps the Nav auth-aware; the page itself still
+// caches well at the CDN via response headers.
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";

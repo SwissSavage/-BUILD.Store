@@ -27,6 +27,10 @@ function subs(input: Partial<Record<MvpSubRating, number>>): Record<MvpSubRating
     reliability: input.reliability ?? 70,
     hustle: input.hustle ?? 70,
     collaboration: input.collaboration ?? 70,
+    // Communication defaults to Collaboration if not explicitly seeded —
+    // most existing snapshots pre-date the split, and the two axes
+    // correlate strongly. New reviews will populate this directly.
+    communication: input.communication ?? input.collaboration ?? 70,
     attendance: input.attendance ?? 70,
     referrals_bd: input.referrals_bd ?? 70,
   };

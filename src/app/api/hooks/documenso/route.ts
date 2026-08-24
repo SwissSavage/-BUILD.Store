@@ -44,7 +44,11 @@ import {
   agreements as agreementsTable,
   invoices as invoicesTable,
   inviteLinks as inviteLinksTable,
+  users as usersTable,
+  cooperativeQuotes as cooperativeQuotesTable,
+  projects as projectsTable,
 } from "@/db/schema";
+import { updateHubspotDealStage } from "@/lib/crm-stub";
 import {
   verifyWebhookSignature,
   getPayloadTarget,
@@ -56,12 +60,87 @@ import { dispatchInviteEmail } from "@/lib/invite-email";
 import {
   logAuditEvent,
 } from "@/lib/mock-data/audit-log";
+import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import type {
   Agreement,
   AgreementType,
   AuditLogAction,
+  Notification,
   SignatureStatus,
 } from "@/lib/types";
+
+// ────────────────────────────────────────────────────────────────
+//  Signature-completion notification fanout
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Fire an "agreement signed" notification to:
+ *   - the signer (identified by agreement.userId when it maps to a
+ *     real FM user id — the LOI path stores the userId here, NCNDA
+ *     stores an "ncnda:<email>" label instead and gets skipped)
+ *   - every admin flagged is_admin, so the ops team sees the signal
+ *     in-app immediately without having to check the Documenso dash
+ *
+ * Best-effort. If the notification insert fails we don't roll back
+ * the agreement — the audit log is the source of truth for the
+ * signature event; the notification is just a UX ping.
+ */
+async function fanoutSignatureCompletedNotifications(input: {
+  agreementId: string;
+  agreementType: string;
+  signerUserId: string | null;
+  envelopeId: string;
+}): Promise<void> {
+  const { agreementId, agreementType, signerUserId, envelopeId } = input;
+  const now = new Date().toISOString();
+
+  const humanType = agreementType === "loi"
+    ? "Talent Partner LOI"
+    : agreementType === "ncnda"
+      ? "NCNDA"
+      : agreementType === "invoice"
+        ? "Retroactive Receipt"
+        : "Agreement";
+
+  const push = (userId: string, title: string, body: string) => {
+    const ntf: Notification = {
+      id: `ntf_sig_${envelopeId}_${userId}_${Math.random().toString(36).slice(2, 5)}`,
+      userId,
+      kind: "agreement_signature_completed",
+      title,
+      body,
+      href: `/agreements`,
+      createdAt: now,
+      readAt: null,
+    };
+    MOCK_NOTIFICATIONS.push(ntf);
+  };
+
+  // Signer notification. Skip the ncnda:<email> label case — those
+  // aren't FM users and there's nothing to ping in-app.
+  if (signerUserId && !signerUserId.startsWith("ncnda:")) {
+    push(
+      signerUserId,
+      `${humanType} fully signed`,
+      `Your ${humanType} is now countersigned and filed in your agreements.`,
+    );
+  }
+
+  // Admin fanout.
+  const admins = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.isAdmin, true));
+  for (const admin of admins) {
+    // Skip duplicate ping if the admin was also the signer.
+    if (admin.id === signerUserId) continue;
+    push(
+      admin.id,
+      `${humanType} signed by ${signerUserId ?? "counterparty"}`,
+      `Envelope ${envelopeId} completed — filed under /agreements as ${agreementId}.`,
+    );
+  }
+}
 
 const DOCUMENSO_WEBHOOK_SECRET = process.env.DOCUMENSO_WEBHOOK_SECRET;
 
@@ -411,6 +490,90 @@ export async function POST(request: Request) {
     });
   }
 
+  // 0b. Quote SOW dual-envelope path (task #45). External IDs come from
+  //     dispatchSowDualEnvelope in quote-actions.ts:
+  //       quote:<quoteId>:client_sow       → client-side SOW envelope
+  //       quote:<quoteId>:talent_engagement → talent-side engagement
+  //     On completion, stamp the corresponding *_signed_at column on
+  //     cooperative_quotes. When BOTH sides signed, advance HubSpot to
+  //     closedwon (per approve-time comment "Once both envelopes come
+  //     back signed, downstream logic moves the deal to closedwon").
+  if (externalIdRaw.startsWith("quote:") && normalized === "completed") {
+    const [, quoteId, side] = externalIdRaw.split(":");
+    if (
+      quoteId &&
+      (side === "client_sow" || side === "talent_engagement")
+    ) {
+      const [row] = await db
+        .select()
+        .from(cooperativeQuotesTable)
+        .where(eq(cooperativeQuotesTable.id, quoteId))
+        .limit(1);
+      if (row) {
+        const stampField =
+          side === "client_sow" ? "sowClientSignedAt" : "sowTalentSignedAt";
+        await db
+          .update(cooperativeQuotesTable)
+          .set({ [stampField]: now })
+          .where(eq(cooperativeQuotesTable.id, quoteId));
+
+        logAuditEvent({
+          actorUserId: null,
+          actorRoleSnapshot: "system",
+          action: "document.signature_completed",
+          resourceKind: "cooperative_quote",
+          resourceId: quoteId,
+          before: { [stampField]: null },
+          after: {
+            [stampField]: now,
+            envelopeId,
+            side,
+          },
+          reason: `SOW ${side} envelope ${envelopeId} completed for quote ${quoteId}.`,
+        });
+
+        // Both signed? Advance HubSpot deal to closedwon.
+        const bothSigned =
+          (side === "client_sow" ? now : row.sowClientSignedAt) &&
+          (side === "talent_engagement" ? now : row.sowTalentSignedAt);
+        if (bothSigned && row.projectId) {
+          const [project] = await db
+            .select({ hubspotDealId: projectsTable.hubspotDealId })
+            .from(projectsTable)
+            .where(eq(projectsTable.id, row.projectId))
+            .limit(1);
+          if (project?.hubspotDealId) {
+            void updateHubspotDealStage(
+              project.hubspotDealId,
+              "closedwon",
+              `SOW + engagement both signed. Quote ${quoteId} fully executed.`,
+            );
+          }
+        }
+
+        // In-app fanout — same helper the agreement/invoice paths use.
+        await fanoutSignatureCompletedNotifications({
+          agreementId: quoteId,
+          agreementType:
+            side === "client_sow" ? "Client SOW" : "Talent Engagement",
+          signerUserId:
+            side === "talent_engagement" ? row.selectedLeadUserId : null,
+          envelopeId,
+        });
+
+        return NextResponse.json({
+          received: true,
+          handled: true,
+          event,
+          targetKind: "cooperative_quote",
+          targetId: quoteId,
+          side,
+          bothSigned: Boolean(bothSigned),
+        });
+      }
+    }
+  }
+
   // 1. Look up an invoice row keyed to this envelope.
   const [invoice] = await db
     .select()
@@ -445,6 +608,15 @@ export async function POST(request: Request) {
       },
       reason: `Documenso ${event} — envelope ${envelopeId} on invoice ${invoice.number}.`,
     });
+
+    if (normalized === "completed") {
+      await fanoutSignatureCompletedNotifications({
+        agreementId: invoice.id,
+        agreementType: "invoice",
+        signerUserId: invoice.recipientId,
+        envelopeId,
+      });
+    }
 
     return NextResponse.json({
       received: true,
@@ -490,6 +662,18 @@ export async function POST(request: Request) {
       },
       reason: `Documenso ${event} — envelope ${envelopeId} on agreement ${existingAgreement.id}.`,
     });
+
+    // Fanout: notify signer + admins on completion. Skipped for
+    // non-terminal events (viewed / sent / rejected) — those change
+    // the audit trail but don't warrant an inbox ping.
+    if (normalized === "completed") {
+      await fanoutSignatureCompletedNotifications({
+        agreementId: existingAgreement.id,
+        agreementType: existingAgreement.agreementType,
+        signerUserId: existingAgreement.userId,
+        envelopeId,
+      });
+    }
 
     return NextResponse.json({
       received: true,
@@ -612,6 +796,13 @@ export async function POST(request: Request) {
       userIdOrLabel,
     },
     reason: `Documenso ${event}. Auto-created ${persistedAgreementType} agreement from externalId=${externalId}, document=${envelopeId}.`,
+  });
+
+  await fanoutSignatureCompletedNotifications({
+    agreementId: agreementRow.id,
+    agreementType: persistedAgreementType,
+    signerUserId: userIdOrLabel,
+    envelopeId,
   });
 
   return NextResponse.json({

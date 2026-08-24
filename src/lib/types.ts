@@ -2263,6 +2263,14 @@ export interface PeerReview {
    * the rubric addition; new submissions always populate.
    */
   professionalism: number | null;
+  /**
+   * Communication sub-rating (Aug 2026). 1–5 peer-graded assessment
+   * of how the reviewee kept the room informed — clarity, cadence,
+   * proactive check-ins. Distinct from Collaboration (how they work
+   * WITH people) — Communication scores how they SIGNAL.
+   * Nullable on legacy rows.
+   */
+  communication: number | null;
   /** Free-text. Visible to reviewee + admin. */
   prose: string;
   createdAt: string;
@@ -2685,7 +2693,12 @@ export type NotificationKind =
   | "booking_request_declined"
   | "booking_confirmed"
   | "quote_approved"
-  | "quote_declined";
+  | "quote_declined"
+  // Documenso signature completion fanout — fires to (a) the signer and
+  // (b) admins the moment an envelope reaches `completed` on the
+  // webhook. Distinct from agreement_renewal_* which are anniversary
+  // pings; this one is transactional at moment of signing.
+  | "agreement_signature_completed";
 
 export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   order_status: "Order update",
@@ -2728,6 +2741,7 @@ export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   agreement_renewal_overdue: "Agreement renewal overdue",
   portfolio_fraud_flag: "Portfolio duplicate flagged",
   rfp_quote_request: "Quote request from admin",
+  agreement_signature_completed: "Agreement signed",
 };
 
 /* ------------------------------------------------------------------ */
@@ -3018,6 +3032,7 @@ export type MvpSubRating =
   | "reliability" // milestone-hit + deadline + minutes completeness
   | "hustle" // inbound response time + brief acceptance + volunteer
   | "collaboration" // peer collaboration sub-score
+  | "communication" // (Aug 2026) clarity, cadence, keeping the room informed
   | "attendance" // meeting attendance once minutes rail is live
   | "referrals_bd"; // referrer attributions converted to revenue
 
@@ -3027,6 +3042,7 @@ export const MVP_SUB_RATING_LABELS: Record<MvpSubRating, string> = {
   reliability: "Reliability",
   hustle: "Hustle",
   collaboration: "Collaboration",
+  communication: "Communication",
   attendance: "Attendance",
   referrals_bd: "Referrals / BD",
 };
@@ -3566,6 +3582,24 @@ export interface CooperativeQuote {
    * selection.
    */
   selectedLeadUserId: string | null;
+  /**
+   * Task #45 — client contact info captured at approve-time so the
+   * dual-envelope SOW dispatch has an address to send the Documenso
+   * envelope to. Null until the client approves; magic-link quote
+   * viewing is otherwise anonymous.
+   */
+  clientContactEmail?: string | null;
+  clientContactName?: string | null;
+  /** Documenso envelope id for the client-facing SOW. */
+  clientSowDocumensoId?: string | null;
+  /** Documenso envelope id for the talent engagement confirmation. */
+  talentEngagementDocumensoId?: string | null;
+  /** When both envelopes were dispatched from approveCooperativeQuote. */
+  sowDispatchedAt?: string | null;
+  /** When the client completed their SOW signature (webhook-updated). */
+  sowClientSignedAt?: string | null;
+  /** When the lead talent completed their engagement signature. */
+  sowTalentSignedAt?: string | null;
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -4095,7 +4129,10 @@ export type AuditLogAction =
   | "inbound.tag_proposed"
   | "inbound.tag_accepted"
   | "inbound.tag_rejected"
-  | "rfp.dispatched";
+  | "rfp.dispatched"
+  // Client SOW dual-envelope dispatch (task #45)
+  | "sow.dispatched"
+  | "sow.dispatch_failed";
 
 export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "user.signed_in": "User signed in",
@@ -4177,6 +4214,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "inbound.tag_accepted": "Admin accepted proposed tag into canonical set",
   "inbound.tag_rejected": "Admin rejected proposed tag",
   "rfp.dispatched": "RFP quote-request dispatched to talent",
+  "sow.dispatched": "SOW dual-envelope dispatched (client + talent)",
+  "sow.dispatch_failed": "SOW dual-envelope dispatch failed",
 };
 
 /** Coarse resource kinds referenced from audit entries. Keep aligned

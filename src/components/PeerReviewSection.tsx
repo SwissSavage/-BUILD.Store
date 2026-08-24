@@ -132,6 +132,7 @@ function ReviewForm({
         <StarSelect name="craft" label="Craft" />
         <StarSelect name="reliability" label="Reliability" />
         <StarSelect name="professionalism" label="Professionalism" />
+        <StarSelect name="communication" label="Communication" />
       </div>
       <p className="text-[10px] text-ink-faint">
         Professionalism: comms hygiene, boundary respect,

@@ -28,6 +28,7 @@ import {
   optInDataParticipation,
   optOutDataParticipation,
 } from "@/lib/consent-actions";
+import { claimDocumensoAccount } from "@/lib/documenso-member-actions";
 import {
   addMyTalentTag,
   removeMyTalentTag,
@@ -591,6 +592,55 @@ export default async function ProfilePage() {
           this toggle.
         </p>
       </Card>
+
+      {/* Task #27 — Documenso account perk. Partner + Member only. */}
+      {(user.membershipTier === "partner" ||
+        user.membershipTier === "member") && (
+        <Card className="mt-6 border-brand-magenta/40">
+          <CardEyebrow>Perk · Documenso account</CardEyebrow>
+          {user.documensoAccountLinkedAt ? (
+            <p className="mt-2 text-sm text-ink-muted">
+              Your Documenso account is linked. Send and track your
+              own signed documents at{" "}
+              <a
+                href={
+                  process.env.NEXT_PUBLIC_DOCUMENSO_BASE_URL ??
+                  "https://sign.afuturemodern.com"
+                }
+                target="_blank"
+                rel="noreferrer"
+                className="text-brand-magenta hover:underline"
+              >
+                sign.afuturemodern.com
+              </a>
+              .
+            </p>
+          ) : user.documensoInvitedAt ? (
+            <>
+              <p className="mt-2 text-sm text-ink-muted">
+                Your invite went out on{" "}
+                {new Date(user.documensoInvitedAt).toLocaleDateString()}
+                . Check your inbox notification for the claim link.
+                Once you complete signup, come back and confirm below.
+              </p>
+              <form action={claimDocumensoAccount} className="mt-3">
+                <button
+                  type="submit"
+                  className="rounded-full border border-brand-magenta px-4 py-1.5 text-xs font-medium text-brand-magenta hover:bg-brand-magenta hover:text-white"
+                >
+                  I've claimed my account
+                </button>
+              </form>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-ink-muted">
+              You're eligible for a free Documenso account through
+              Future Modern. Ask an admin to send you the claim link,
+              or wait — the invite lands in your inbox once processed.
+            </p>
+          )}
+        </Card>
+      )}
 
       {(() => {
         const myAgreements = agreementsForUser(user.id);

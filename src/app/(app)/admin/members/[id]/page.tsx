@@ -31,6 +31,7 @@ import {
   toggleAdminFlag,
   toggleProfilePublic,
 } from "@/lib/member-management-actions";
+import { inviteMemberToDocumenso } from "@/lib/documenso-member-actions";
 import { agreementsForUser } from "@/lib/mock-data/agreements";
 import {
   AGREEMENT_PROVIDER_LABELS,
@@ -349,6 +350,40 @@ export default async function MemberDrillDown({
               </form>
             )}
           </Card>
+
+          {/* Documenso perk (task #27) — Partner + Member only */}
+          {(user.membershipTier === "partner" ||
+            user.membershipTier === "member") && (
+            <Card>
+              <CardEyebrow>Documenso perk</CardEyebrow>
+              <CardTitle className="mt-1 text-lg">
+                Documenso account
+              </CardTitle>
+              <p className="mt-2 text-xs text-ink-muted">
+                {user.documensoAccountLinkedAt
+                  ? `Linked ${new Date(user.documensoAccountLinkedAt).toLocaleDateString()}.`
+                  : user.documensoInvitedAt
+                    ? `Invite sent ${new Date(user.documensoInvitedAt).toLocaleDateString()}. Awaiting member confirmation on /profile.`
+                    : "Not yet invited. Send them a claim link they can hit from their notification bell."}
+              </p>
+              {!user.documensoAccountLinkedAt && (
+                <form
+                  action={inviteMemberToDocumenso}
+                  className="mt-3"
+                >
+                  <input type="hidden" name="userId" value={user.id} />
+                  <button
+                    type="submit"
+                    className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magenta hover:border-brand-magenta"
+                  >
+                    {user.documensoInvitedAt
+                      ? "Re-send invite"
+                      : "Send Documenso invite"}
+                  </button>
+                </form>
+              )}
+            </Card>
+          )}
 
           {/* Suspend */}
           {!user.suspendedAt && !isSelf && !user.isAdmin && (

@@ -224,6 +224,14 @@ export interface User {
    * `payouts_enabled` flags. Synced via webhook.
    */
   stripePayoutsEnabled: boolean;
+  /**
+   * Task #27 — Documenso account perk state. Partner + Member get a
+   * free Documenso account on sign.afuturemodern.com. Manual claim
+   * until OIDC (task #7) auto-provisions on first sign-in.
+   */
+  documensoInvitedAt?: string | null;
+  documensoAccountLinkedAt?: string | null;
+  documensoUserId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -2698,7 +2706,9 @@ export type NotificationKind =
   // (b) admins the moment an envelope reaches `completed` on the
   // webhook. Distinct from agreement_renewal_* which are anniversary
   // pings; this one is transactional at moment of signing.
-  | "agreement_signature_completed";
+  | "agreement_signature_completed"
+  // Task #27 — Documenso member-account perk provisioned
+  | "documenso_account_ready";
 
 export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   order_status: "Order update",
@@ -2742,6 +2752,7 @@ export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   portfolio_fraud_flag: "Portfolio duplicate flagged",
   rfp_quote_request: "Quote request from admin",
   agreement_signature_completed: "Agreement signed",
+  documenso_account_ready: "Documenso account ready",
 };
 
 /* ------------------------------------------------------------------ */

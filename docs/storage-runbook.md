@@ -44,8 +44,24 @@ R2_SECRET_ACCESS_KEY=
 R2_BUCKET_NAME=fm-uploads-prod
 R2_PUBLIC_URL_BASE=https://media.afuturemodern.com   # optional; enables public URL vs presigned
 
-GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON=<entire keyfile JSON on one line>
-GOOGLE_DRIVE_ROOT_FOLDER_ID=
+## Google Drive credentials — prefer file mount over env var
+
+Dokploy (and many other container platforms) mangle escape sequences inside multi-line env var values, which breaks the `\n` markers in the service account's `private_key` field on the way into the container. Two supported paths:
+
+### Preferred: file mount (Dokploy → Mounts / Files → paste the JSON)
+
+1. In Dokploy app config → **Advanced** → **Mounts** (or **Files**) → add a mount:
+   - **Container path:** `/run/secrets/google-drive-key.json`
+   - **Content:** paste the ORIGINAL pretty-printed JSON keyfile (multi-line is fine here — real files preserve `\n` correctly).
+2. Env var: `GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH=/run/secrets/google-drive-key.json`
+
+### Fallback: inline env var (works on platforms that don't touch escapes)
+
+`GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON=<entire keyfile JSON minified to one line>`
+
+### Common to both
+
+`GOOGLE_DRIVE_ROOT_FOLDER_ID=<folder ID shared with the service account email>
 
 HETZNER_UPLOAD_DIR=/var/fm/uploads
 ```

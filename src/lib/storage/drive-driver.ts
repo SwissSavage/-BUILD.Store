@@ -1,17 +1,26 @@
 /**
  * Google Drive driver.
  *
- * Uses a service account (JSON key in env) with domain-narrow scope.
- * All files land in a single root folder (`GOOGLE_DRIVE_ROOT_FOLDER_ID`)
+ * Uses a service account (JSON key) with domain-narrow scope. All
+ * files land in a single root folder (`GOOGLE_DRIVE_ROOT_FOLDER_ID`)
  * shared with the service account email. Per-kind subfolders are
  * created lazily on first write.
  *
- * Config:
+ * Config (pick ONE of the credential sources):
+ *   GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH — path to a file containing
+ *     the JSON keyfile. Preferred — Dokploy env vars mangle the
+ *     `\n` escape sequences inside the private_key when passing to
+ *     the container, which breaks JSON.parse. Mount the keyfile as
+ *     a file instead and point this env var at it.
  *   GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON — full JSON keyfile contents
- *   GOOGLE_DRIVE_ROOT_FOLDER_ID — the shared root folder
+ *     as a single env var. Fallback only; works if the platform
+ *     passes env vars verbatim without escape processing.
+ *
+ *   GOOGLE_DRIVE_ROOT_FOLDER_ID — the shared root folder.
  */
 import { google, type drive_v3 } from "googleapis";
 import { Readable } from "stream";
+import { readFileSync } from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
 import type {
@@ -23,31 +32,64 @@ import { StorageError } from "./types";
 
 const SERVICE_ACCOUNT_JSON =
   process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON ?? "";
+const SERVICE_ACCOUNT_KEY_PATH =
+  process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH ?? "";
 const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID ?? "";
 
 function isConfigured(): boolean {
-  return Boolean(SERVICE_ACCOUNT_JSON && ROOT_FOLDER_ID);
+  return Boolean(
+    ROOT_FOLDER_ID && (SERVICE_ACCOUNT_JSON || SERVICE_ACCOUNT_KEY_PATH),
+  );
+}
+
+/**
+ * Load + parse the service account credentials. Path takes precedence
+ * over inline env because file contents survive Dokploy's env-var
+ * escape processing intact.
+ */
+function loadCredentials(): Record<string, unknown> {
+  if (SERVICE_ACCOUNT_KEY_PATH) {
+    let raw: string;
+    try {
+      raw = readFileSync(SERVICE_ACCOUNT_KEY_PATH, "utf8");
+    } catch (err) {
+      throw new StorageError(
+        `Could not read GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH at ${SERVICE_ACCOUNT_KEY_PATH}. Verify the Dokploy file mount is in place and the container has read access.`,
+        "google_drive",
+        err,
+      );
+    }
+    try {
+      return JSON.parse(raw);
+    } catch (err) {
+      throw new StorageError(
+        `File at GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH is not valid JSON. Re-mount the original keyfile contents unmodified.`,
+        "google_drive",
+        err,
+      );
+    }
+  }
+  try {
+    return JSON.parse(SERVICE_ACCOUNT_JSON);
+  } catch (err) {
+    throw new StorageError(
+      "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON is not valid JSON. Env var passthrough mangles the private_key escape sequences on many platforms; recommend switching to GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH + a file mount.",
+      "google_drive",
+      err,
+    );
+  }
 }
 
 let _client: drive_v3.Drive | null = null;
 function getDrive(): drive_v3.Drive {
   if (!isConfigured()) {
     throw new StorageError(
-      "Google Drive is not configured. Set GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON and GOOGLE_DRIVE_ROOT_FOLDER_ID.",
+      "Google Drive is not configured. Set GOOGLE_DRIVE_ROOT_FOLDER_ID and either GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH (preferred) or GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON.",
       "google_drive",
     );
   }
   if (!_client) {
-    let creds: Record<string, unknown>;
-    try {
-      creds = JSON.parse(SERVICE_ACCOUNT_JSON);
-    } catch (err) {
-      throw new StorageError(
-        "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON is not valid JSON. Paste the entire keyfile contents on one line.",
-        "google_drive",
-        err,
-      );
-    }
+    const creds = loadCredentials();
     const auth = new google.auth.GoogleAuth({
       credentials: creds,
       scopes: ["https://www.googleapis.com/auth/drive.file"],
@@ -176,7 +218,7 @@ export async function driveHealth(): Promise<StorageDriverHealth> {
       backend: "google_drive",
       status: "unhealthy",
       detail:
-        "Missing GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON or GOOGLE_DRIVE_ROOT_FOLDER_ID.",
+        "Missing GOOGLE_DRIVE_ROOT_FOLDER_ID or credentials (set GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH — preferred — or GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON).",
       latencyMs: null,
     };
   }

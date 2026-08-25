@@ -6,12 +6,15 @@
  * shared with the service account email. Per-kind subfolders are
  * created lazily on first write.
  *
- * Config (pick ONE of the credential sources):
+ * Config (pick ONE of the credential sources, in preference order):
+ *   GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64 — base64-encoded JSON
+ *     keyfile as a single env var. Preferred for platforms whose env
+ *     var handling mangles escape sequences (Dokploy does this to
+ *     the `\n` in private_key). Base64 has no special chars so it
+ *     survives all escape processing.
  *   GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH — path to a file containing
- *     the JSON keyfile. Preferred — Dokploy env vars mangle the
- *     `\n` escape sequences inside the private_key when passing to
- *     the container, which breaks JSON.parse. Mount the keyfile as
- *     a file instead and point this env var at it.
+ *     the JSON keyfile. Also robust; use when a file mount is easier
+ *     than a base64 env var.
  *   GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON — full JSON keyfile contents
  *     as a single env var. Fallback only; works if the platform
  *     passes env vars verbatim without escape processing.
@@ -32,29 +35,58 @@ import { StorageError } from "./types";
 
 const SERVICE_ACCOUNT_JSON =
   process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON ?? "";
+const SERVICE_ACCOUNT_JSON_B64 =
+  process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64 ?? "";
 const SERVICE_ACCOUNT_KEY_PATH =
   process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH ?? "";
 const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID ?? "";
 
 function isConfigured(): boolean {
   return Boolean(
-    ROOT_FOLDER_ID && (SERVICE_ACCOUNT_JSON || SERVICE_ACCOUNT_KEY_PATH),
+    ROOT_FOLDER_ID &&
+      (SERVICE_ACCOUNT_JSON_B64 ||
+        SERVICE_ACCOUNT_KEY_PATH ||
+        SERVICE_ACCOUNT_JSON),
   );
 }
 
 /**
- * Load + parse the service account credentials. Path takes precedence
- * over inline env because file contents survive Dokploy's env-var
- * escape processing intact.
+ * Load + parse the service account credentials. Preference order:
+ *   1. Base64-encoded env var — no escape-mangling risk (base64 chars
+ *      are all safe for env var passthrough).
+ *   2. File mount — content lives in a real file, escapes preserved.
+ *   3. Raw JSON env var — only reliable on platforms that don't touch
+ *      escape sequences.
  */
 function loadCredentials(): Record<string, unknown> {
+  if (SERVICE_ACCOUNT_JSON_B64) {
+    let decoded: string;
+    try {
+      decoded = Buffer.from(SERVICE_ACCOUNT_JSON_B64, "base64").toString("utf8");
+    } catch (err) {
+      throw new StorageError(
+        "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64 is not valid base64. Re-encode the keyfile with `base64 -w 0 keyfile.json` and paste the single-line output.",
+        "google_drive",
+        err,
+      );
+    }
+    try {
+      return JSON.parse(decoded);
+    } catch (err) {
+      throw new StorageError(
+        "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64 decoded but the result is not valid JSON. Verify the source file is the original service account keyfile.",
+        "google_drive",
+        err,
+      );
+    }
+  }
   if (SERVICE_ACCOUNT_KEY_PATH) {
     let raw: string;
     try {
       raw = readFileSync(SERVICE_ACCOUNT_KEY_PATH, "utf8");
     } catch (err) {
       throw new StorageError(
-        `Could not read GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH at ${SERVICE_ACCOUNT_KEY_PATH}. Verify the Dokploy file mount is in place and the container has read access.`,
+        `Could not read GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH at ${SERVICE_ACCOUNT_KEY_PATH}. Verify the file mount is in place and the container has read access.`,
         "google_drive",
         err,
       );
@@ -73,7 +105,7 @@ function loadCredentials(): Record<string, unknown> {
     return JSON.parse(SERVICE_ACCOUNT_JSON);
   } catch (err) {
     throw new StorageError(
-      "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON is not valid JSON. Env var passthrough mangles the private_key escape sequences on many platforms; recommend switching to GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH + a file mount.",
+      "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON is not valid JSON. Env var passthrough mangles the private_key escape sequences on many platforms; recommend switching to GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64 (base64) or GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH (file mount).",
       "google_drive",
       err,
     );
@@ -84,7 +116,7 @@ let _client: drive_v3.Drive | null = null;
 function getDrive(): drive_v3.Drive {
   if (!isConfigured()) {
     throw new StorageError(
-      "Google Drive is not configured. Set GOOGLE_DRIVE_ROOT_FOLDER_ID and either GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH (preferred) or GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON.",
+      "Google Drive is not configured. Set GOOGLE_DRIVE_ROOT_FOLDER_ID and ONE of: GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64 (preferred), GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH, or GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON.",
       "google_drive",
     );
   }
@@ -218,7 +250,7 @@ export async function driveHealth(): Promise<StorageDriverHealth> {
       backend: "google_drive",
       status: "unhealthy",
       detail:
-        "Missing GOOGLE_DRIVE_ROOT_FOLDER_ID or credentials (set GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH — preferred — or GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON).",
+        "Missing GOOGLE_DRIVE_ROOT_FOLDER_ID or credentials. Set GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64 (preferred), GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH, or GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON.",
       latencyMs: null,
     };
   }

@@ -44,22 +44,34 @@ R2_SECRET_ACCESS_KEY=
 R2_BUCKET_NAME=fm-uploads-prod
 R2_PUBLIC_URL_BASE=https://media.afuturemodern.com   # optional; enables public URL vs presigned
 
-## Google Drive credentials — prefer file mount over env var
+## Google Drive credentials — prefer base64 env var
 
-Dokploy (and many other container platforms) mangle escape sequences inside multi-line env var values, which breaks the `\n` markers in the service account's `private_key` field on the way into the container. Two supported paths:
+Dokploy (and many other container platforms) mangle escape sequences inside multi-line env var values, which breaks the `\n` markers in the service account's `private_key` field on the way into the container. The driver supports three credential formats, in preference order:
 
-### Preferred: file mount (Dokploy → Mounts / Files → paste the JSON)
+### Preferred: base64 env var (no file mount, no VPS shell)
 
-1. In Dokploy app config → **Advanced** → **Mounts** (or **Files**) → add a mount:
-   - **Container path:** `/run/secrets/google-drive-key.json`
-   - **Content:** paste the ORIGINAL pretty-printed JSON keyfile (multi-line is fine here — real files preserve `\n` correctly).
-2. Env var: `GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH=/run/secrets/google-drive-key.json`
+1. Encode the keyfile locally:
+   ```
+   base64 -w 0 /path/to/keyfile.json | clip     # Windows Git Bash
+   base64 -w 0 /path/to/keyfile.json | pbcopy   # macOS
+   ```
+2. Dokploy env var: `GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64=<paste the single-line base64 blob>`
 
-### Fallback: inline env var (works on platforms that don't touch escapes)
+Base64 characters are all safe for env var passthrough — no escape processing can touch them.
+
+### Alternate: file mount (when you'd rather not put the secret in an env var)
+
+1. Create the file on the VPS at `/var/fm/secrets/google-drive-key.json` (via Hetzner Console or SSH).
+2. In Dokploy app config → **Advanced** → **Volumes** → add a Bind mount:
+   - **File Path (host):** `/var/fm/secrets/google-drive-key.json`
+   - **Mount Path (container):** `/run/secrets/google-drive-key.json`
+3. Env var: `GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH=/run/secrets/google-drive-key.json`
+
+### Fallback: raw JSON env var (only if the platform preserves escapes verbatim)
 
 `GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON=<entire keyfile JSON minified to one line>`
 
-### Common to both
+### Common to all three
 
 `GOOGLE_DRIVE_ROOT_FOLDER_ID=<folder ID shared with the service account email>
 

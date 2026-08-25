@@ -51,65 +51,90 @@ function isConfigured(): boolean {
 }
 
 /**
- * Load + parse the service account credentials. Preference order:
- *   1. Base64-encoded env var — no escape-mangling risk (base64 chars
- *      are all safe for env var passthrough).
- *   2. File mount — content lives in a real file, escapes preserved.
- *   3. Raw JSON env var — only reliable on platforms that don't touch
- *      escape sequences.
+ * Load + parse the service account credentials.
+ *
+ * Auto-detects the format of each source: any value can be either
+ * raw JSON or base64-encoded JSON, and the driver tries both. This
+ * removes the "did Dokploy save the b64 var correctly" guessing —
+ * paste the base64 blob (or the raw JSON) into whichever env var
+ * name Dokploy is willing to persist.
+ *
+ * Preference order across sources:
+ *   1. GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64
+ *   2. GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH (mounted file)
+ *   3. GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON
+ * For each source: try JSON.parse, then base64-decode + JSON.parse.
  */
-function loadCredentials(): Record<string, unknown> {
-  if (SERVICE_ACCOUNT_JSON_B64) {
-    let decoded: string;
-    try {
-      decoded = Buffer.from(SERVICE_ACCOUNT_JSON_B64, "base64").toString("utf8");
-    } catch (err) {
-      throw new StorageError(
-        "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64 is not valid base64. Re-encode the keyfile with `base64 -w 0 keyfile.json` and paste the single-line output.",
-        "google_drive",
-        err,
-      );
-    }
-    try {
-      return JSON.parse(decoded);
-    } catch (err) {
-      throw new StorageError(
-        "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64 decoded but the result is not valid JSON. Verify the source file is the original service account keyfile.",
-        "google_drive",
-        err,
-      );
-    }
-  }
-  if (SERVICE_ACCOUNT_KEY_PATH) {
-    let raw: string;
-    try {
-      raw = readFileSync(SERVICE_ACCOUNT_KEY_PATH, "utf8");
-    } catch (err) {
-      throw new StorageError(
-        `Could not read GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH at ${SERVICE_ACCOUNT_KEY_PATH}. Verify the file mount is in place and the container has read access.`,
-        "google_drive",
-        err,
-      );
-    }
-    try {
-      return JSON.parse(raw);
-    } catch (err) {
-      throw new StorageError(
-        `File at GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH is not valid JSON. Re-mount the original keyfile contents unmodified.`,
-        "google_drive",
-        err,
-      );
-    }
-  }
+function tryParseJson(raw: string): Record<string, unknown> | null {
   try {
-    return JSON.parse(SERVICE_ACCOUNT_JSON);
-  } catch (err) {
-    throw new StorageError(
-      "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON is not valid JSON. Env var passthrough mangles the private_key escape sequences on many platforms; recommend switching to GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64 (base64) or GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH (file mount).",
-      "google_drive",
-      err,
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function tryParseBase64Json(raw: string): Record<string, unknown> | null {
+  try {
+    const decoded = Buffer.from(raw, "base64").toString("utf8");
+    if (!decoded.trim().startsWith("{")) return null;
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+function loadCredentials(): Record<string, unknown> {
+  const attempts: Array<{
+    name: string;
+    value: string;
+    isPath: boolean;
+  }> = [
+    {
+      name: "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64",
+      value: SERVICE_ACCOUNT_JSON_B64,
+      isPath: false,
+    },
+    {
+      name: "GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH",
+      value: SERVICE_ACCOUNT_KEY_PATH,
+      isPath: true,
+    },
+    {
+      name: "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON",
+      value: SERVICE_ACCOUNT_JSON,
+      isPath: false,
+    },
+  ];
+
+  const failures: string[] = [];
+  for (const attempt of attempts) {
+    if (!attempt.value) {
+      failures.push(`${attempt.name}: unset`);
+      continue;
+    }
+    let raw = attempt.value;
+    if (attempt.isPath) {
+      try {
+        raw = readFileSync(attempt.value, "utf8");
+      } catch (err) {
+        failures.push(
+          `${attempt.name}: read failed (${(err as Error).message})`,
+        );
+        continue;
+      }
+    }
+    const asJson = tryParseJson(raw);
+    if (asJson) return asJson;
+    const asBase64Json = tryParseBase64Json(raw);
+    if (asBase64Json) return asBase64Json;
+    failures.push(
+      `${attempt.name}: value present (${raw.length} chars) but neither valid JSON nor base64-encoded JSON`,
     );
   }
+  throw new StorageError(
+    `No valid Drive credentials found. Attempts: ${failures.join(" | ")}. Paste either the raw JSON keyfile OR its base64 encoding into any of the three env vars — the driver will auto-detect.`,
+    "google_drive",
+  );
 }
 
 let _client: drive_v3.Drive | null = null;
@@ -245,12 +270,21 @@ export async function driveDelete(fileId: string): Promise<void> {
 }
 
 export async function driveHealth(): Promise<StorageDriverHealth> {
+  // Diagnostic env-var summary so the health payload itself tells
+  // operators what the container has (lengths + presence, not values).
+  // Cheap; safe to expose to admin.
+  const envSummary =
+    `env: ROOT_FOLDER_ID=${ROOT_FOLDER_ID ? `set(${ROOT_FOLDER_ID.length})` : "MISSING"}, ` +
+    `JSON_B64=${SERVICE_ACCOUNT_JSON_B64 ? `set(${SERVICE_ACCOUNT_JSON_B64.length})` : "MISSING"}, ` +
+    `KEY_PATH=${SERVICE_ACCOUNT_KEY_PATH ? `set(${SERVICE_ACCOUNT_KEY_PATH.length})` : "MISSING"}, ` +
+    `JSON=${SERVICE_ACCOUNT_JSON ? `set(${SERVICE_ACCOUNT_JSON.length})` : "MISSING"}`;
+
   if (!isConfigured()) {
     return {
       backend: "google_drive",
       status: "unhealthy",
       detail:
-        "Missing GOOGLE_DRIVE_ROOT_FOLDER_ID or credentials. Set GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_B64 (preferred), GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH, or GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON.",
+        `Missing GOOGLE_DRIVE_ROOT_FOLDER_ID or credentials. ${envSummary}`,
       latencyMs: null,
     };
   }
@@ -261,14 +295,14 @@ export async function driveHealth(): Promise<StorageDriverHealth> {
     return {
       backend: "google_drive",
       status: "ok",
-      detail: `Root folder ${ROOT_FOLDER_ID} accessible.`,
+      detail: `Root folder ${ROOT_FOLDER_ID} accessible. ${envSummary}`,
       latencyMs: Date.now() - t0,
     };
   } catch (err) {
     return {
       backend: "google_drive",
       status: "unhealthy",
-      detail: `Drive probe failed: ${(err as Error).message}`,
+      detail: `Drive probe failed: ${(err as Error).message} | ${envSummary}`,
       latencyMs: Date.now() - t0,
     };
   }

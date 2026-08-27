@@ -29,6 +29,7 @@ import {
   optOutDataParticipation,
 } from "@/lib/consent-actions";
 import { claimDocumensoAccount } from "@/lib/documenso-member-actions";
+import { uploadProfileAvatar } from "@/lib/image-upload-actions";
 import {
   addMyTalentTag,
   removeMyTalentTag,
@@ -302,31 +303,54 @@ export default async function ProfilePage() {
       </nav>
 
       <section id="identity" className="scroll-mt-24">
+      {/* Avatar upload — separate form so file uploads don't get
+          entangled with the main text-field save action. Task #58. */}
+      <Card className="mt-6">
+        <CardEyebrow>Profile image</CardEyebrow>
+        <form
+          action={uploadProfileAvatar}
+          className="mt-4 flex flex-wrap items-center gap-4"
+          encType="multipart/form-data"
+        >
+          <Avatar user={user} size="xl" />
+          <div className="flex-1 min-w-0">
+            <input
+              type="file"
+              name="image"
+              accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/tiff"
+              required
+              className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-magenta file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
+            />
+            <p className="mt-1.5 text-[11px] text-ink-faint">
+              JPEG / PNG / WebP up to 25 MB. Resized to three variants
+              (thumbnail, medium, full) and served from R2 through the
+              FM domain.
+            </p>
+          </div>
+          <button
+            type="submit"
+            className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-white hover:opacity-90"
+          >
+            Upload
+          </button>
+        </form>
+      </Card>
+
       <Card className="mt-6">
         <CardEyebrow>Edit</CardEyebrow>
         <form action={saveProfile} className="mt-4 space-y-5">
           <input type="hidden" name="uid" value={user.id} />
 
-          <div className="flex items-center gap-4">
-            <Avatar user={user} size="xl" />
-            <div className="flex-1">
-              <label className="block">
-                <span className="text-xs uppercase tracking-wider text-ink-muted">
-                  Profile image URL
-                </span>
-                <input
-                  name="profileImageUrl"
-                  defaultValue={user.profileImageUrl ?? ""}
-                  placeholder="https://… (leave blank for initials)"
-                  className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
-                />
-              </label>
-              <p className="mt-1.5 text-xs text-ink-faint">
-                Sandbox mode — paste any public image URL. Replaced by real
-                uploads once storage is wired up.
-              </p>
-            </div>
-          </div>
+          {/* Avatar preview + upload lives in its own Card above.
+              Keep the current URL as a hidden field so saveProfile
+              doesn't clobber it back to empty on the next save.
+              uploadProfileAvatar writes the fresh URL directly to
+              the DB on upload success. */}
+          <input
+            type="hidden"
+            name="profileImageUrl"
+            value={user.profileImageUrl ?? ""}
+          />
 
           <div className="grid gap-4 md:grid-cols-2">
             <Field name="firstName" label="First name" defaultValue={user.firstName ?? ""} />

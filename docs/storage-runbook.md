@@ -101,6 +101,20 @@ HETZNER_UPLOAD_DIR=/var/fm/uploads
 - **Hetzner disk fills up** — health check reports `unhealthy` at 90% capacity (follow-up). Alert cadence lives in Uptime Robot / whatever monitoring wraps the health endpoint.
 - **Drive folder deleted by accident** — `GOOGLE_DRIVE_ROOT_FOLDER_ID` becomes invalid; health probe returns unhealthy immediately. Recreate the folder + reshare with the service account + update the env var.
 
+## Image upload pipeline (task #58 — landed 2026-08-25)
+
+Server-side sharp pipeline that resizes every image upload into three variants (thumbnail 200px / medium 800px / full 2000px, all WebP) and pushes each to R2 through the storage router.
+
+- `src/lib/image-processing.ts` — sharp resize + EXIF-rotate + DoS guards (25 MB source cap, 50 MP resolution cap).
+- `src/lib/image-upload-actions.ts` — `uploadImage(formData)` for generic use, `uploadProfileAvatar(formData)` writes the medium variant URL onto `users.profileImageUrl`.
+- `src/app/api/media/r2/[...key]/route.ts` — public read proxy so R2 objects serve through the FM domain instead of `<account>.r2.cloudflarestorage.com` URLs. Immutable `Cache-Control` (keys are content-addressed via random suffix).
+- Profile editor: URL text field → file upload form + Avatar preview card.
+- Requires `sharp` npm dep (added to package.json).
+
+Follow-ups when custom domain `media.afuturemodern.com` wires up:
+- Set `R2_PUBLIC_URL_BASE=https://media.afuturemodern.com` in Dokploy.
+- Callers can then use `StoredFile.publicUrl` directly and skip `/api/media/r2/...` — CDN edge is cheaper than an app-server hop.
+
 ## What's NOT in this task
 
 - Image resizing (that's task #58 — sharp pipeline).

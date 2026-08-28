@@ -28,9 +28,16 @@ const IMPERSONATION_COOKIE = "bs_uid";
 
 export function middleware(req: NextRequest) {
   const jar = req.cookies;
+  // Non-empty check — expired cookies can still have a truthy .has()
+  // reading while the value has been cleared to "". Sign-out sets the
+  // session-token to "" with an expiration in the past; browsers may
+  // send that empty-value cookie on the very next request before
+  // dropping it. Treat empty as "no session" so those requests
+  // redirect to /signin instead of the app.
+  const cookieValue = (name: string) => (jar.get(name)?.value ?? "").trim();
   const hasSession =
-    SESSION_COOKIES.some((name) => jar.has(name)) ||
-    jar.has(IMPERSONATION_COOKIE);
+    SESSION_COOKIES.some((name) => cookieValue(name).length > 0) ||
+    cookieValue(IMPERSONATION_COOKIE).length > 0;
 
   if (hasSession) return NextResponse.next();
 

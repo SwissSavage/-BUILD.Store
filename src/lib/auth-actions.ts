@@ -101,15 +101,36 @@ export async function signOut() {
   jar.delete(SESSION_COOKIE);
   jar.delete(REAL_SESSION_COOKIE);
 
-  // Clear every Auth.js cookie we might have set. Deleting a cookie
-  // that doesn't exist is a no-op — safe to sweep all names both
-  // ways (secure + insecure prefixes). This is what the earlier
-  // hotfix comment referenced as a follow-up: proper Auth.js
-  // tear-down without dynamic-importing auth.ts (which broke
-  // sign-in when tried before). Cookie-only clear keeps the sign-in
-  // path intact.
-  for (const name of AUTHJS_SESSION_COOKIES) jar.delete(name);
-  for (const name of AUTHJS_ANCILLARY_COOKIES) jar.delete(name);
+  // Clear every Auth.js cookie we might have set.
+  //
+  // __Secure- prefixed cookies have strict browser rules: a delete
+  // request is only honored when the delete-attempt matches the
+  // original cookie's Secure + Path + Domain attributes exactly.
+  // `cookies().delete(name)` in Next.js doesn't always send those
+  // attributes, so the __Secure-authjs.session-token cookie can
+  // survive a plain .delete() call.
+  //
+  // Belt-and-suspenders: for each Auth.js cookie, overwrite with an
+  // empty value + past expiration + Secure/Path attributes matching
+  // what Auth.js originally set. That definitively invalidates the
+  // cookie in the browser regardless of prefix handling. Then also
+  // call .delete() so any unprefixed variant we might have missed
+  // gets removed the standard way.
+  const expiredOptions = {
+    path: "/",
+    expires: new Date(0),
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax" as const,
+  };
+  for (const name of AUTHJS_SESSION_COOKIES) {
+    jar.set(name, "", expiredOptions);
+    jar.delete(name);
+  }
+  for (const name of AUTHJS_ANCILLARY_COOKIES) {
+    jar.set(name, "", expiredOptions);
+    jar.delete(name);
+  }
 
   if (user) {
     logAuditEvent({

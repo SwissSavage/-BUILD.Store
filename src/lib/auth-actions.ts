@@ -61,14 +61,55 @@ export async function signIn(formData: FormData) {
   redirect("/dashboard");
 }
 
+/**
+ * Auth.js session cookie names to clear on sign-out. Auth.js prefixes
+ * `__Secure-` on HTTPS deploys and uses `authjs.` on v5 / `next-auth.`
+ * on legacy names. Clearing all four covers both eras + both schemes
+ * so no session cookie can linger and re-authenticate the user on the
+ * next request.
+ *
+ * We also nuke csrf-token, callback-url, and pkce/state cookies so the
+ * next sign-in flow starts fully clean.
+ */
+const AUTHJS_SESSION_COOKIES = [
+  "authjs.session-token",
+  "__Secure-authjs.session-token",
+  "next-auth.session-token",
+  "__Secure-next-auth.session-token",
+];
+const AUTHJS_ANCILLARY_COOKIES = [
+  "authjs.csrf-token",
+  "__Host-authjs.csrf-token",
+  "next-auth.csrf-token",
+  "__Host-next-auth.csrf-token",
+  "authjs.callback-url",
+  "__Secure-authjs.callback-url",
+  "next-auth.callback-url",
+  "__Secure-next-auth.callback-url",
+  "authjs.pkce.code_verifier",
+  "__Secure-authjs.pkce.code_verifier",
+  "authjs.state",
+  "__Secure-authjs.state",
+];
+
 export async function signOut() {
   const jar = await cookies();
   const uid = jar.get(SESSION_COOKIE)?.value;
   const user = uid ? MOCK_USERS.find((u) => u.id === uid) : null;
 
-  // Clear the sandbox cookies first — cheap and can't throw.
+  // Clear the sandbox cookies.
   jar.delete(SESSION_COOKIE);
   jar.delete(REAL_SESSION_COOKIE);
+
+  // Clear every Auth.js cookie we might have set. Deleting a cookie
+  // that doesn't exist is a no-op — safe to sweep all names both
+  // ways (secure + insecure prefixes). This is what the earlier
+  // hotfix comment referenced as a follow-up: proper Auth.js
+  // tear-down without dynamic-importing auth.ts (which broke
+  // sign-in when tried before). Cookie-only clear keeps the sign-in
+  // path intact.
+  for (const name of AUTHJS_SESSION_COOKIES) jar.delete(name);
+  for (const name of AUTHJS_ANCILLARY_COOKIES) jar.delete(name);
 
   if (user) {
     logAuditEvent({
@@ -80,14 +121,6 @@ export async function signOut() {
     });
   }
 
-  // NOTE: hotfix — the earlier `authSignOut({ redirectTo: "/" })` call
-  // was reverted because it broke the whole sign-in surface on
-  // production (no Google, no magic-link, no sandbox viewer worked).
-  // Restoring the original behavior (clear sandbox cookies + redirect)
-  // so sign-in comes back. Proper Auth.js session tear-down needs a
-  // more careful path — probably a dedicated /api/auth/signout POST
-  // rather than dynamic-importing auth.ts from a server action.
-  // Tracked as a follow-up.
   redirect("/");
 }
 

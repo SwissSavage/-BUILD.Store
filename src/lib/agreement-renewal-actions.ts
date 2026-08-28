@@ -43,6 +43,7 @@ import {
   mvpScoreForUser,
 } from "@/lib/mock-data/mvp-scores";
 import { computeOvr, standingBand } from "@/lib/mvp-score";
+import { notify } from "@/lib/writers/notifications";
 
 const INITIAL_TERM_YEARS = 2;
 const RENEWAL_TERM_YEARS = 1;
@@ -179,18 +180,13 @@ function alreadyPingedInBucket(
   });
 }
 
-function pushNotification(
+async function pushNotification(
   partial: Omit<Notification, "id" | "createdAt" | "readAt">,
-): void {
-  const id = `ntf_rn_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
-  MOCK_NOTIFICATIONS.push({
-    ...partial,
-    id,
-    createdAt: new Date().toISOString(),
-    readAt: null,
-  });
+): Promise<void> {
+  // Writer swap 2026-08-28: delegates to the shared Postgres writer.
+  // Was an in-memory push, so these notifications never survived a
+  // deploy and the bell icon was effectively decorative.
+  await notify(partial);
 }
 
 /**
@@ -235,7 +231,7 @@ export async function runAgreementRenewalSweep(): Promise<{
       if (alreadyToday) continue;
       const daysOver = Math.ceil((now - renewalMs) / 86_400_000);
       for (const aid of adminIds) {
-        pushNotification({
+        await pushNotification({
           userId: aid,
           kind: "agreement_renewal_overdue",
           title: `Overdue renewal: ${labelForType(l.agreementType)}`,
@@ -257,7 +253,7 @@ export async function runAgreementRenewalSweep(): Promise<{
     if (
       !alreadyPingedInBucket(l.userId, l.agreementType, bucket, debounceMs)
     ) {
-      pushNotification({
+      await pushNotification({
         userId: l.userId,
         kind: `agreement_renewal_${bucket}` as NotificationKind,
         title: BUCKET_TITLES[bucket].artist,
@@ -274,7 +270,7 @@ export async function runAgreementRenewalSweep(): Promise<{
         alreadyPingedInBucket(aid, l.agreementType, bucket, debounceMs)
       )
         continue;
-      pushNotification({
+      await pushNotification({
         userId: aid,
         kind: `agreement_renewal_${bucket}` as NotificationKind,
         title: `${BUCKET_TITLES[bucket].admin}: ${labelForType(l.agreementType)}`,

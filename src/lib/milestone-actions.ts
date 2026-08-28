@@ -22,6 +22,7 @@
  */
 "use server";
 
+import { notify, notifyMany } from "@/lib/writers/notifications";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import {
@@ -46,27 +47,21 @@ const MILESTONE_STATUSES: ReadonlyArray<MilestoneStatus> = [
   "completed",
 ];
 
-function pushNotification(
+async function pushNotification(
   partial: Omit<Notification, "id" | "createdAt" | "readAt">,
-): void {
-  const id = `ntf_ms_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
-  MOCK_NOTIFICATIONS.push({
-    ...partial,
-    id,
-    createdAt: new Date().toISOString(),
-    readAt: null,
-  });
+): Promise<void> {
+  // Writer swap 2026-08-28: delegates to the shared Postgres writer.
+  // Was an in-memory push, so these notifications never survived a
+  // deploy and the bell icon was effectively decorative.
+  await notify(partial);
 }
 
-function fanOut(
+async function fanOut(
   userIds: string[],
   partial: Omit<Notification, "id" | "createdAt" | "readAt" | "userId">,
-): void {
-  for (const uid of new Set(userIds)) {
-    pushNotification({ ...partial, userId: uid });
-  }
+): Promise<void> {
+  // Batched insert rather than N round-trips.
+  await notifyMany(Array.from(new Set(userIds)), partial);
 }
 
 function parseDueAt(raw: FormDataEntryValue | null): string {
@@ -134,7 +129,7 @@ export async function createMilestone(formData: FormData) {
   };
   MOCK_PROJECT_MILESTONES.push(row);
 
-  pushNotification({
+  await pushNotification({
     userId: ownerUserId,
     kind: "milestone_status_changed",
     title: `New milestone on ${project.title}`,
@@ -246,7 +241,7 @@ export async function pingMilestoneOwner(formData: FormData) {
         ? "Due today."
         : `Overdue by ${Math.abs(daysOut)} day${Math.abs(daysOut) === 1 ? "" : "s"}.`;
 
-  pushNotification({
+  await pushNotification({
     userId: row.ownerUserId,
     kind: "milestone_due_soon",
     title: `Ping: ${row.title}`,
@@ -268,7 +263,7 @@ export async function resolveBlocker(formData: FormData) {
   row.blockerNote = null;
   row.updatedAt = new Date().toISOString();
 
-  pushNotification({
+  await pushNotification({
     userId: row.ownerUserId,
     kind: "milestone_status_changed",
     title: `Blocker cleared on "${row.title}"`,
@@ -386,7 +381,7 @@ export async function runMilestoneSweep(): Promise<{
         : 0;
       if (now - last < debounceMs) continue;
       const daysOver = Math.ceil((now - dueMs) / 86_400_000);
-      fanOut(projectAdminUserIds(row.projectId), {
+      await fanOut(projectAdminUserIds(row.projectId), {
         kind: "milestone_overdue",
         title: `Overdue: ${row.title}`,
         body: `${project.title}. ${daysOver} day${daysOver === 1 ? "" : "s"} past due. Owner: ${ownerName(row.ownerUserId)}.`,
@@ -426,7 +421,7 @@ export async function runMilestoneSweep(): Promise<{
           ? "Due tomorrow"
           : `Due in ${daysOut} day${daysOut === 1 ? "" : "s"}`;
 
-    pushNotification({
+    await pushNotification({
       userId: row.ownerUserId,
       kind: BUCKET_KIND[bucket],
       title: `${BUCKET_LABEL[bucket]}: ${row.title}`,
@@ -491,7 +486,7 @@ export async function runWeeklyProjectRollup(): Promise<{
       ...(project.assignedMemberIds ?? []),
       ...projectAdminUserIds(project.id),
     ];
-    fanOut(recipients, {
+    await fanOut(recipients, {
       kind: "project_weekly_rollup",
       title: `Weekly rollup — ${project.title}`,
       body: `${dueLine}${slippedLine}`.trim(),
@@ -556,7 +551,7 @@ export async function updateMilestoneStatus(formData: FormData) {
   const recipients = projectAdminUserIds(row.projectId);
   if (row.ownerUserId !== user.id) recipients.push(row.ownerUserId);
 
-  fanOut(recipients, {
+  await fanOut(recipients, {
     kind: next === "blocked" ? "milestone_blocked" : "milestone_status_changed",
     title:
       next === "blocked"

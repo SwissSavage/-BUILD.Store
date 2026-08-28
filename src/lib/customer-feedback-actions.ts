@@ -21,6 +21,8 @@
  */
 "use server";
 
+import { notify, notifyMany } from "@/lib/writers/notifications";
+import { getAllUsers } from "@/lib/readers/users";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
@@ -43,48 +45,42 @@ import type {
   Notification,
 } from "@/lib/types";
 
-function pushNotification(
+async function pushNotification(
   partial: Omit<Notification, "id" | "createdAt" | "readAt">,
-): void {
-  const id = `ntf_cf_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
-  MOCK_NOTIFICATIONS.push({
-    ...partial,
-    id,
-    createdAt: new Date().toISOString(),
-    readAt: null,
-  });
+): Promise<void> {
+  // Writer swap 2026-08-28: delegates to the shared Postgres writer.
+  // Was an in-memory push, so these notifications never survived a
+  // deploy and the bell icon was effectively decorative.
+  await notify(partial);
 }
 
-function fanOutToAdmins(title: string, body: string, href: string): void {
-  for (const u of MOCK_USERS) {
-    if (!u.isAdmin) continue;
-    pushNotification({
-      userId: u.id,
-      kind: "customer_feedback_received",
-      title,
-      body,
-      href,
-    });
-  }
+async function fanOutToAdmins(
+  title: string,
+  body: string,
+  href: string,
+): Promise<void> {
+  const { users } = await getAllUsers();
+  await notifyMany(
+    users.filter((u) => u.isAdmin).map((u) => u.id),
+    { kind: "customer_feedback_received", title, body, href },
+  );
 }
 
-function fanOutReviewOptIn(
+async function fanOutReviewOptIn(
   customerName: string,
   contextLabel: string,
   href: string,
-): void {
-  for (const u of MOCK_USERS) {
-    if (!u.isAdmin) continue;
-    pushNotification({
-      userId: u.id,
+): Promise<void> {
+  const { users } = await getAllUsers();
+  await notifyMany(
+    users.filter((u) => u.isAdmin).map((u) => u.id),
+    {
       kind: "customer_review_optin",
       title: `${customerName} opted in to a Google Review`,
       body: `${customerName} (${contextLabel}) said yes to leaving a Google Review. Verify the prose, then send the follow-up email from the testimonials queue.`,
       href,
-    });
-  }
+    },
+  );
 }
 
 function clampStar(raw: FormDataEntryValue | null, field: string): number {
@@ -215,14 +211,14 @@ export async function submitCustomerFeedbackByLink(formData: FormData) {
   };
   MOCK_CUSTOMER_FEEDBACK.push(row);
 
-  fanOutToAdmins(
+  await fanOutToAdmins(
     `Customer feedback on ${project.title}`,
     `${parsed.customerName} left a ${parsed.overallStars}★ review. Open the queue to triage and decide whether to publish a quote.`,
     "/admin/testimonials",
   );
 
   if (optedInToReview) {
-    fanOutReviewOptIn(
+    await fanOutReviewOptIn(
       parsed.customerName,
       project.title,
       "/admin/testimonials",
@@ -316,14 +312,14 @@ export async function submitBuyerFeedback(formData: FormData) {
   };
   MOCK_CUSTOMER_FEEDBACK.push(row);
 
-  fanOutToAdmins(
+  await fanOutToAdmins(
     `Buyer feedback on ${order.number}`,
     `${row.customerName} left a ${overallStars}★ review on the marketplace order. Open the queue to triage.`,
     "/admin/testimonials",
   );
 
   if (optedInToReview) {
-    fanOutReviewOptIn(row.customerName, `Order ${order.number}`, "/admin/testimonials");
+    await fanOutReviewOptIn(row.customerName, `Order ${order.number}`, "/admin/testimonials");
   }
 
   revalidatePath(`/admin/feedback`);
@@ -386,7 +382,7 @@ export async function publishTestimonial(formData: FormData) {
     },
   });
 
-  pushNotification({
+  await pushNotification({
     userId: publishedForUserId,
     kind: "testimonial_published",
     title: `Testimonial published to your profile`,

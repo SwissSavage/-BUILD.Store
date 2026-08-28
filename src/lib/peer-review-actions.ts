@@ -23,19 +23,15 @@ import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_PEER_REVIEWS } from "@/lib/mock-data/peer-reviews";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import type { Notification, PeerReview, ReviewContextKind } from "@/lib/types";
+import { notify } from "@/lib/writers/notifications";
 
-function pushNotification(
+async function pushNotification(
   partial: Omit<Notification, "id" | "createdAt" | "readAt">,
-): void {
-  const id = `ntf_pr_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
-  MOCK_NOTIFICATIONS.push({
-    ...partial,
-    id,
-    createdAt: new Date().toISOString(),
-    readAt: null,
-  });
+): Promise<void> {
+  // Writer swap 2026-08-28: delegates to the shared Postgres writer.
+  // Was an in-memory push, so these notifications never survived a
+  // deploy and the bell icon was effectively decorative.
+  await notify(partial);
 }
 
 function clampStar(raw: FormDataEntryValue | null, field: string): number {
@@ -126,7 +122,7 @@ export async function submitPeerReview(formData: FormData) {
   MOCK_PEER_REVIEWS.push(review);
 
   // Notify reviewee — anonymous body (no reviewer identity leaks here).
-  pushNotification({
+  await pushNotification({
     userId: revieweeId,
     kind: "peer_review_requested",
     title: `New peer review on ${project.title}`,

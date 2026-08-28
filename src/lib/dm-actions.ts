@@ -25,19 +25,15 @@ import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import { adminName, canSendDirectMessage } from "@/lib/types";
 import type { Notification } from "@/lib/types";
+import { notify } from "@/lib/writers/notifications";
 
-function pushNotification(
+async function pushNotification(
   partial: Omit<Notification, "id" | "createdAt" | "readAt">,
-): void {
-  const id = `ntf_dm_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
-  MOCK_NOTIFICATIONS.push({
-    ...partial,
-    id,
-    createdAt: new Date().toISOString(),
-    readAt: null,
-  });
+): Promise<void> {
+  // Writer swap 2026-08-28: delegates to the shared Postgres writer.
+  // Was an in-memory push, so these notifications never survived a
+  // deploy and the bell icon was effectively decorative.
+  await notify(partial);
 }
 
 export async function sendDirectMessage(formData: FormData) {
@@ -62,7 +58,7 @@ export async function sendDirectMessage(formData: FormData) {
     throw new Error("Subject and body are required");
   }
 
-  pushNotification({
+  await pushNotification({
     userId: recipient.id,
     kind: "direct_message",
     title: `${subject} — from ${adminName(sender)}`,

@@ -10,6 +10,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { REAL_SESSION_COOKIE, SESSION_COOKIE } from "@/lib/auth-stub";
+import { signOut as authJsSignOut } from "@/lib/auth";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   logAuditEvent,
@@ -61,75 +62,39 @@ export async function signIn(formData: FormData) {
   redirect("/dashboard");
 }
 
-/**
- * Auth.js session cookie names to clear on sign-out. Auth.js prefixes
- * `__Secure-` on HTTPS deploys and uses `authjs.` on v5 / `next-auth.`
- * on legacy names. Clearing all four covers both eras + both schemes
- * so no session cookie can linger and re-authenticate the user on the
- * next request.
- *
- * We also nuke csrf-token, callback-url, and pkce/state cookies so the
- * next sign-in flow starts fully clean.
- */
-const AUTHJS_SESSION_COOKIES = [
-  "authjs.session-token",
-  "__Secure-authjs.session-token",
-  "next-auth.session-token",
-  "__Secure-next-auth.session-token",
-];
-const AUTHJS_ANCILLARY_COOKIES = [
-  "authjs.csrf-token",
-  "__Host-authjs.csrf-token",
-  "next-auth.csrf-token",
-  "__Host-next-auth.csrf-token",
-  "authjs.callback-url",
-  "__Secure-authjs.callback-url",
-  "next-auth.callback-url",
-  "__Secure-next-auth.callback-url",
-  "authjs.pkce.code_verifier",
-  "__Secure-authjs.pkce.code_verifier",
-  "authjs.state",
-  "__Secure-authjs.state",
-];
-
 export async function signOut() {
   const jar = await cookies();
   const uid = jar.get(SESSION_COOKIE)?.value;
   const user = uid ? MOCK_USERS.find((u) => u.id === uid) : null;
 
-  // Clear the sandbox cookies.
+  // Clear the sandbox cookies (bs_uid + bs_uid_real) — these are
+  // ours and Auth.js doesn't touch them.
   jar.delete(SESSION_COOKIE);
   jar.delete(REAL_SESSION_COOKIE);
 
-  // Clear every Auth.js cookie we might have set.
+  // Root-cause fix (diagnosed 2026-08-27): session strategy is
+  // "database" in auth.ts. Cookie-only clears are meaningless —
+  // deleting the browser cookie doesn't invalidate the row in the
+  // Postgres `sessions` table, so the next request re-establishes
+  // the session from that row. Auth.js's own signOut() deletes
+  // both the DB row AND the cookie atomically.
   //
-  // __Secure- prefixed cookies have strict browser rules: a delete
-  // request is only honored when the delete-attempt matches the
-  // original cookie's Secure + Path + Domain attributes exactly.
-  // `cookies().delete(name)` in Next.js doesn't always send those
-  // attributes, so the __Secure-authjs.session-token cookie can
-  // survive a plain .delete() call.
+  // We pass redirect: false so Auth.js doesn't throw its own
+  // NEXT_REDIRECT (which conflicted with our outer redirect in the
+  // failed earlier hotfix). We then do our own redirect + audit-log
+  // in one clean flow.
   //
-  // Belt-and-suspenders: for each Auth.js cookie, overwrite with an
-  // empty value + past expiration + Secure/Path attributes matching
-  // what Auth.js originally set. That definitively invalidates the
-  // cookie in the browser regardless of prefix handling. Then also
-  // call .delete() so any unprefixed variant we might have missed
-  // gets removed the standard way.
-  const expiredOptions = {
-    path: "/",
-    expires: new Date(0),
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax" as const,
-  };
-  for (const name of AUTHJS_SESSION_COOKIES) {
-    jar.set(name, "", expiredOptions);
-    jar.delete(name);
-  }
-  for (const name of AUTHJS_ANCILLARY_COOKIES) {
-    jar.set(name, "", expiredOptions);
-    jar.delete(name);
+  // Cookie-sweep constants + comment history intentionally removed:
+  // they can't fix a database-session bug. Kept the audit-log +
+  // sandbox-cookie-clear which are still correct.
+  try {
+    await authJsSignOut({ redirect: false });
+  } catch (err) {
+    // Don't let a signOut() failure trap the user in a signed-in
+    // state. Log and continue to the redirect so at minimum the
+    // sandbox cookies are gone and the user lands on public.
+    // eslint-disable-next-line no-console
+    console.error("[auth] authJsSignOut failed", err);
   }
 
   if (user) {

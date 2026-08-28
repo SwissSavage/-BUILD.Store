@@ -1446,6 +1446,53 @@ export const agreements = pgTable("agreements", {
 });
 
 // ──────────────────────────────────────────────────────────────────────
+//  Payout methods (task #63 — payments hub)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * A contributor's registered outbound payout destinations. One row per
+ * rail they've set up; `is_default` picks the settlement target.
+ *
+ * Replaces the single-rail assumption baked into users.stripe_account_id,
+ * which stays in place for backward compatibility during the cutover —
+ * the Stripe rail reads it as a fallback when no payout_methods row
+ * exists yet.
+ *
+ * PayPal and Venmo are deliberately excluded (2026-08-28, Jamar).
+ * See src/lib/payments/types.ts for the reasoning.
+ *
+ * SENSITIVE-DATA POSTURE: `external_ref` holds a provider token or a
+ * contact handle, never a raw bank account or routing number. The
+ * Plaid rail stores its access token in `metadata` and fetches ACH
+ * numbers on demand at settlement rather than persisting them.
+ */
+export const payoutMethods = pgTable("payout_methods", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  rail: text("rail", {
+    enum: [
+      "stripe_connect",
+      "zelle",
+      "plaid_ach",
+      "crypto_wallet",
+      "manual_check",
+    ],
+  }).notNull(),
+  displayLabel: text("display_label").notNull(),
+  /** Provider token or contact handle. See types.ts PayoutMethod docs. */
+  externalRef: text("external_ref").notNull().default(""),
+  /** Non-sensitive extras: venmo phone last-4, plaid item id, chain id. */
+  metadata: jsonb("metadata").$type<Record<string, string> | null>(),
+  isDefault: boolean("is_default").notNull().default(false),
+  verifiedAt: timestamp("verified_at", { mode: "string", withTimezone: true }),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+// ──────────────────────────────────────────────────────────────────────
 //  Full schema re-export bundle (drizzle-kit + client entry)
 // ──────────────────────────────────────────────────────────────────────
 
@@ -1509,4 +1556,5 @@ export const schema = {
   triangulatedComposites,
   partnerReferrals,
   communityMessages,
+  payoutMethods,
 } as const;

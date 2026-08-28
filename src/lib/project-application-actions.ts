@@ -23,28 +23,28 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_PROJECT_APPLICATIONS } from "@/lib/mock-data/project-applications";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+
+import { notify } from "@/lib/writers/notifications";
+import { db } from "@/db/client";
+import { projectApplications } from "@/db/schema";
+import { getProjectById } from "@/lib/readers/projects";
+import { findPendingApplication } from "@/lib/readers/project-applications";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { publicName } from "@/lib/types";
 import type { Notification, ProjectApplication } from "@/lib/types";
 
 /**
- * Push a new entry into MOCK_NOTIFICATIONS. In production this is a
+ * Create a notification. Writes to Postgres via the shared writer.
  * real DB insert per recipient; here it just keeps the in-memory array
  * coherent so the inbox surface re-renders with the new row.
  */
-function pushNotification(
+async function pushNotification(
   partial: Omit<Notification, "id" | "createdAt" | "readAt">,
-): void {
-  const id = `ntf_pa_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
-  MOCK_NOTIFICATIONS.push({
-    ...partial,
-    id,
-    createdAt: new Date().toISOString(),
-    readAt: null,
-  });
+): Promise<void> {
+  // Writer swap 2026-08-28: delegates to the shared Postgres writer.
+  // Was appending to MOCK_NOTIFICATIONS, so every bid notification
+  // died with the container process.
+  await notify(partial);
 }
 
 /** Every platform admin's userId. Drives the apply-fan-out recipient list. */
@@ -62,7 +62,9 @@ export async function applyToProject(formData: FormData) {
   const hoursRaw = String(formData.get("hoursPerWeek") ?? "0");
   const portfolioRaw = String(formData.get("portfolioLink") ?? "").trim();
 
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  // Reader swap 2026-08-28: was MOCK_PROJECTS, which meant a bid on a
+  // real (Postgres-created) project threw "Project not found".
+  const project = await getProjectById(projectId);
   if (!project) throw new Error("Project not found");
   if (project.kind !== "internal") {
     throw new Error("Apply is for internal cooperative projects only");
@@ -76,12 +78,7 @@ export async function applyToProject(formData: FormData) {
 
   // Block double-applies — one pending row at a time. Reapplies after a
   // rejection / withdraw are fine (a fresh row is created).
-  const existingPending = MOCK_PROJECT_APPLICATIONS.find(
-    (a) =>
-      a.projectId === projectId &&
-      a.userId === user.id &&
-      a.status === "pending",
-  );
+  const existingPending = await findPendingApplication(projectId, user.id);
   if (existingPending) {
     throw new Error("You already have a pending application on this project");
   }
@@ -109,12 +106,35 @@ export async function applyToProject(formData: FormData) {
     withdrawnAt: null,
     createdAt: new Date().toISOString(),
   };
-  MOCK_PROJECT_APPLICATIONS.push(application);
+  // Writer swap 2026-08-28: was an in-memory push, so submitted bids
+  // disappeared on the next deploy and never reached the admin queue.
+  try {
+    await db.insert(projectApplications).values({
+      id: application.id,
+      projectId: application.projectId,
+      userId: application.userId,
+      proposedRole: application.proposedRole,
+      pitch: application.pitch,
+      hoursPerWeek: application.hoursPerWeek,
+      hourlyRate: null,
+      portfolioLink: application.portfolioLink,
+      status: application.status,
+      reviewedBy: null,
+      reviewedAt: null,
+      adminNote: null,
+      withdrawnAt: null,
+      createdAt: application.createdAt,
+    });
+  } catch {
+    // Postgres unreachable, or a seed-only project id with no real
+    // row to reference. Keep the in-memory copy so local dev works.
+    MOCK_PROJECT_APPLICATIONS.push(application);
+  }
 
   // Fan out to every admin so the queue light flips immediately.
   const applicantLabel = publicName(user);
   for (const adminId of adminUserIds()) {
-    pushNotification({
+    await pushNotification({
       userId: adminId,
       kind: "project_application",
       title: `New application — ${project.title}`,
@@ -161,7 +181,7 @@ export async function decideProjectApplication(formData: FormData) {
       project.assignedMemberIds = [...project.assignedMemberIds, app.userId];
     }
     project.updatedAt = now;
-    pushNotification({
+    await pushNotification({
       userId: app.userId,
       kind: "project_application_decision",
       title: `You're on — ${project.title}`,
@@ -173,7 +193,7 @@ export async function decideProjectApplication(formData: FormData) {
     });
   } else {
     app.status = "rejected";
-    pushNotification({
+    await pushNotification({
       userId: app.userId,
       kind: "project_application_decision",
       title: `Application update — ${project.title}`,

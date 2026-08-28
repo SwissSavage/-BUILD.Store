@@ -4,21 +4,56 @@
  */
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth-stub";
+import { db } from "@/db/client";
+import { projects as projectsTable } from "@/db/schema";
+import { getAllProjects } from "@/lib/readers/projects";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { newContributionCount } from "@/lib/mock-data/prospective-contributions";
 import { INDUSTRY_LABELS, type Project } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
+/**
+ * Advance a project's lifecycle status.
+ *
+ * Writer swap 2026-08-28: this mutated MOCK_PROJECTS in memory, so an
+ * admin moving a project to "completed" saw it change, then saw it
+ * revert on the next deploy or whenever the request hit a different
+ * container process. Now writes to Postgres.
+ *
+ * Mock fallback retained only for seed-only project ids that have no
+ * Postgres row, so the demo data stays clickable.
+ */
 async function advance(formData: FormData) {
   "use server";
   const id = String(formData.get("id"));
   const next = String(formData.get("status")) as Project["status"];
-  const p = MOCK_PROJECTS.find((x) => x.id === id);
-  if (p) {
-    p.status = next;
-    p.updatedAt = new Date().toISOString();
+  const now = new Date().toISOString();
+
+  let wrote = false;
+  try {
+    const res = await db
+      .update(projectsTable)
+      .set({ status: next, updatedAt: now })
+      .where(eq(projectsTable.id, id))
+      .returning({ id: projectsTable.id });
+    wrote = res.length > 0;
+  } catch {
+    // Fall through to the mock path below.
   }
+
+  if (!wrote) {
+    const p = MOCK_PROJECTS.find((x) => x.id === id);
+    if (p) {
+      p.status = next;
+      p.updatedAt = now;
+    }
+  }
+
   revalidatePath("/admin/projects");
+  revalidatePath("/contracts");
 }
 
 const STATUSES: Project["status"][] = ["open", "in_progress", "completed", "cancelled"];
@@ -26,6 +61,8 @@ const STATUSES: Project["status"][] = ["open", "in_progress", "completed", "canc
 export default async function AdminProjectsPage() {
   await requireAdmin();
   const newOutsideOffers = newContributionCount();
+  // Reader swap 2026-08-28: was MOCK_PROJECTS.
+  const { projects: allProjects } = await getAllProjects();
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -67,7 +104,7 @@ export default async function AdminProjectsPage() {
             </tr>
           </thead>
           <tbody>
-            {MOCK_PROJECTS.map((p) => (
+            {allProjects.map((p) => (
               <tr key={p.id} className="border-t border-[var(--surface-border)]">
                 <td className="p-4">
                   <div className="font-medium">{p.title}</div>

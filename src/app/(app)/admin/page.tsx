@@ -10,6 +10,7 @@ import { MOCK_TRANSACTIONS } from "@/lib/mock-data/tokens";
 import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
 import { MOCK_QUOTES } from "@/lib/mock-data/quotes";
 import { MOCK_INVOICES } from "@/lib/mock-data/invoices";
+import { MOCK_SPLITS } from "@/lib/mock-data/splits";
 import { MOCK_SELLER_APPLICATIONS } from "@/lib/mock-data/seller-applications";
 import { MOCK_PRODUCTS } from "@/lib/mock-data/products";
 import {
@@ -149,6 +150,14 @@ export default async function AdminHome() {
       title: "Testimonials",
       count: testimonialsPending,
       sub: `${testimonialsPending} customer reviews awaiting promotion`,
+    },
+    {
+      href: "/admin/payments",
+      title: "Payments",
+      count: MOCK_SPLITS.filter(
+        (s) => s.payoutStatus === "queued" || s.payoutStatus === "pending",
+      ).length,
+      sub: "Payout rail status · manual-send queue",
     },
     {
       href: "/admin/compliance",

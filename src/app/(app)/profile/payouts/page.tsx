@@ -52,6 +52,8 @@ import {
   createConnectAccount,
   disconnectPayouts,
 } from "@/lib/payouts-stub";
+import { listMyPayoutMethods } from "@/lib/payout-method-actions";
+import { PayoutMethodsCard } from "@/components/PayoutMethodsCard";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 const PAYOUT_COLOR: Record<PayoutStatus, string> = {
@@ -88,6 +90,9 @@ async function disconnect() {
 export default async function PayoutsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
+
+  // Task #63 — rails beyond Stripe. Reads the payout_methods registry.
+  const payoutMethods = await listMyPayoutMethods();
 
   const myPayouts = MOCK_SPLITS.filter((s) => s.recipientId === user.id).sort(
     (a, b) => {
@@ -139,6 +144,8 @@ export default async function PayoutsPage() {
           failedCount={failedCount}
         />
       )}
+
+      <PayoutMethodsCard methods={payoutMethods} />
 
       <Card className="mt-6">
         <CardEyebrow>Recent payouts</CardEyebrow>

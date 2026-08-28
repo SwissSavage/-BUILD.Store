@@ -4143,7 +4143,14 @@ export type AuditLogAction =
   | "rfp.dispatched"
   // Client SOW dual-envelope dispatch (task #45)
   | "sow.dispatched"
-  | "sow.dispatch_failed";
+  | "sow.dispatch_failed"
+  // Payments hub — contributor payout rails (task #63)
+  | "payout_method.added"
+  | "payout_method.removed"
+  | "payout_method.default_changed"
+  | "payout.dispatched"
+  | "payout.dispatch_failed"
+  | "payout.manual_confirmed";
 
 export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "user.signed_in": "User signed in",
@@ -4227,6 +4234,12 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "rfp.dispatched": "RFP quote-request dispatched to talent",
   "sow.dispatched": "SOW dual-envelope dispatched (client + talent)",
   "sow.dispatch_failed": "SOW dual-envelope dispatch failed",
+  "payout_method.added": "Payout method added",
+  "payout_method.removed": "Payout method removed",
+  "payout_method.default_changed": "Default payout method changed",
+  "payout.dispatched": "Payout dispatched",
+  "payout.dispatch_failed": "Payout dispatch failed",
+  "payout.manual_confirmed": "Manual payout confirmed sent",
 };
 
 /** Coarse resource kinds referenced from audit entries. Keep aligned
@@ -4250,7 +4263,10 @@ export type AuditLogResourceKind =
   | "triangulated_composite"
   | "partner_referral"
   | "notification_rule"
-  | "config";
+  | "config"
+  // Payments hub (task #63)
+  | "payout_method"
+  | "revenue_split";
 
 /**
  * Append-only audit log entry.

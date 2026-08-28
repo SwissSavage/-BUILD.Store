@@ -78,6 +78,19 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Build provenance. Passed by CI as --build-arg from the triggering
+# commit. Surfaced at /api/debug/session so we can tell, in one page
+# load, whether a running container is actually on the code we think
+# it is. "Nothing changed after I deployed" has burned multiple
+# debugging cycles; this makes stale-container the FIRST thing ruled
+# out rather than the last.
+#
+# Not a secret — it's a public commit SHA on a public repo.
+ARG BUILD_SHA=unknown
+ARG BUILD_TIME=unknown
+ENV BUILD_SHA=$BUILD_SHA
+ENV BUILD_TIME=$BUILD_TIME
+
 # Run as non-root for defense in depth.
 RUN addgroup --system --gid 1001 nodejs && \
     adduser  --system --uid 1001 nextjs

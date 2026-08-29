@@ -18,11 +18,16 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { mvpCompliancePenalties } from "@/db/schema";
+import { getUserById } from "@/lib/readers/users";
 import {
-  MOCK_MVP_PENALTIES,
-  MOCK_MVP_SCORES,
-} from "@/lib/mock-data/mvp-scores";
+  recomputeMvpScore,
+  setProvisional,
+  setSubRating as writeSubRating,
+} from "@/lib/writers/mvp-score";
+import { mvpScoreReader } from "@/lib/readers";
 import {
   logAuditEvent,
   snapshotActorRole,
@@ -47,24 +52,12 @@ function ninetyDaysOut(now: Date): string {
 }
 
 /**
- * Recompute the published snapshot for one user against the latest
- * sub-ratings + penalty stack. Sandbox shortcut — production runs this
- * once a day across all users from the compute job.
+ * Recompute now delegates to src/lib/writers/mvp-score.ts, which
+ * derives sub-ratings from real peer reviews and persists the
+ * snapshot. The old local version read existing.subRatings and wrote
+ * them straight back, so an OVR never moved regardless of how many
+ * reviews a member received.
  */
-function recomputeSnapshot(userId: string): void {
-  const existing = MOCK_MVP_SCORES.find((s) => s.userId === userId);
-  if (!existing) return;
-  const penalties = MOCK_MVP_PENALTIES.filter((p) => p.userId === userId);
-  const fresh = buildSnapshot({
-    userId,
-    subRatings: existing.subRatings,
-    penalties,
-    publishedAt: new Date().toISOString(),
-  });
-  // Replace the existing snapshot in place so the array reference stays stable.
-  const idx = MOCK_MVP_SCORES.findIndex((s) => s.userId === userId);
-  if (idx >= 0) MOCK_MVP_SCORES[idx] = fresh;
-}
 
 /**
  * Admin applies a compliance penalty to a Member. Per locked mechanic:
@@ -83,7 +76,7 @@ export async function applyCompliancePenalty(formData: FormData) {
       "Reason must be at least 10 characters — penalties are admin-only but recorded for arbitration.",
     );
   }
-  const target = MOCK_USERS.find((u) => u.id === userId);
+  const target = await getUserById(userId);
   if (!target) throw new Error("Target user not found");
 
   const now = new Date();
@@ -95,8 +88,11 @@ export async function applyCompliancePenalty(formData: FormData) {
     ovrImpact: MVP_VIOLATION_OVR_IMPACT,
     reason,
   };
-  MOCK_MVP_PENALTIES.push(penalty);
-  recomputeSnapshot(userId);
+  // Writer swap 2026-08-28: penalties were in-memory, so a compliance
+  // action an admin took vanished on the next deploy and the member's
+  // OVR silently recovered.
+  await db.insert(mvpCompliancePenalties).values(penalty);
+  await recomputeMvpScore(userId);
 
   logAuditEvent({
     actorUserId: admin.id,
@@ -153,14 +149,13 @@ export async function setSubRating(formData: FormData) {
     throw new Error(`Unknown sub-rating: ${subRating}`);
   }
 
-  const snapshot = MOCK_MVP_SCORES.find((s) => s.userId === userId);
+  const snapshot = await mvpScoreReader.byId(userId);
   if (!snapshot) throw new Error("Snapshot not found for user");
 
   const key = subRating as keyof typeof snapshot.subRatings;
   const previous = snapshot.subRatings[key];
   const rounded = Math.round(raw);
-  snapshot.subRatings[key] = rounded;
-  recomputeSnapshot(userId);
+  await writeSubRating(userId, key, rounded);
 
   logAuditEvent({
     actorUserId: admin.id,
@@ -172,7 +167,7 @@ export async function setSubRating(formData: FormData) {
     after: { [subRating]: rounded },
   });
 
-  const target = MOCK_USERS.find((u) => u.id === userId);
+  const target = await getUserById(userId);
   revalidatePath("/admin/mvp");
   revalidatePath(`/admin/mvp/${userId}`);
   if (target) revalidatePath(`/u/${target.handle}`);
@@ -190,13 +185,12 @@ export async function promoteFromProvisional(formData: FormData) {
   const admin = await requireAdmin();
   const userId = String(formData.get("userId") ?? "").trim();
   if (!userId) throw new Error("userId is required");
-  const snapshot = MOCK_MVP_SCORES.find((s) => s.userId === userId);
+  const snapshot = await mvpScoreReader.byId(userId);
   if (!snapshot) throw new Error("Snapshot not found");
   if (!snapshot.isProvisional) {
     throw new Error("Already off provisional standing.");
   }
-  snapshot.isProvisional = false;
-  recomputeSnapshot(userId);
+  await setProvisional(userId, false);
 
   logAuditEvent({
     actorUserId: admin.id,
@@ -208,7 +202,7 @@ export async function promoteFromProvisional(formData: FormData) {
     after: { isProvisional: false },
   });
 
-  const target = MOCK_USERS.find((u) => u.id === userId);
+  const target = await getUserById(userId);
   revalidatePath("/admin/mvp");
   revalidatePath(`/admin/mvp/${userId}`);
   if (target) revalidatePath(`/u/${target.handle}`);
@@ -225,11 +219,10 @@ export async function demoteToProvisional(formData: FormData) {
   const admin = await requireAdmin();
   const userId = String(formData.get("userId") ?? "").trim();
   if (!userId) throw new Error("userId is required");
-  const snapshot = MOCK_MVP_SCORES.find((s) => s.userId === userId);
+  const snapshot = await mvpScoreReader.byId(userId);
   if (!snapshot) throw new Error("Snapshot not found");
   const wasProvisional = snapshot.isProvisional;
-  snapshot.isProvisional = true;
-  recomputeSnapshot(userId);
+  await setProvisional(userId, true);
 
   logAuditEvent({
     actorUserId: admin.id,
@@ -241,7 +234,7 @@ export async function demoteToProvisional(formData: FormData) {
     after: { isProvisional: true },
   });
 
-  const target = MOCK_USERS.find((u) => u.id === userId);
+  const target = await getUserById(userId);
   revalidatePath("/admin/mvp");
   revalidatePath(`/admin/mvp/${userId}`);
   if (target) revalidatePath(`/u/${target.handle}`);
@@ -261,12 +254,17 @@ export async function rescindCompliancePenalty(formData: FormData) {
   const admin = await requireAdmin();
   const penaltyId = String(formData.get("penaltyId") ?? "").trim();
   if (!penaltyId) throw new Error("penaltyId is required");
-  const idx = MOCK_MVP_PENALTIES.findIndex((p) => p.id === penaltyId);
-  if (idx < 0) throw new Error("Penalty not found");
-  const original = MOCK_MVP_PENALTIES[idx];
+  const [original] = await db
+    .select()
+    .from(mvpCompliancePenalties)
+    .where(eq(mvpCompliancePenalties.id, penaltyId))
+    .limit(1);
+  if (!original) throw new Error("Penalty not found");
   const userId = original.userId;
-  MOCK_MVP_PENALTIES.splice(idx, 1);
-  recomputeSnapshot(userId);
+  await db
+    .delete(mvpCompliancePenalties)
+    .where(eq(mvpCompliancePenalties.id, penaltyId));
+  await recomputeMvpScore(userId);
 
   logAuditEvent({
     actorUserId: admin.id,
@@ -285,7 +283,7 @@ export async function rescindCompliancePenalty(formData: FormData) {
     reason: "Admin rescinded penalty",
   });
 
-  const target = MOCK_USERS.find((u) => u.id === userId);
+  const target = await getUserById(userId);
   revalidatePath("/admin/mvp");
   revalidatePath(`/admin/mvp/${userId}`);
   if (target) revalidatePath(`/u/${target.handle}`);

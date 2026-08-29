@@ -20,6 +20,7 @@
  */
 "use server";
 
+import { notify } from "@/lib/writers/notifications";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import {
@@ -42,18 +43,13 @@ import type {
   Web3MarketplaceProfile,
 } from "@/lib/types";
 
-function pushNotification(
+async function pushNotification(
   partial: Omit<Notification, "id" | "createdAt" | "readAt">,
-): void {
-  const id = `ntf_epk_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
-  MOCK_NOTIFICATIONS.push({
-    ...partial,
-    id,
-    createdAt: new Date().toISOString(),
-    readAt: null,
-  });
+): Promise<void> {
+  // Writer swap 2026-08-28: delegates to the shared Postgres writer.
+  // Was an in-memory push, so these notifications never survived a
+  // deploy and the bell icon was effectively decorative.
+  await notify(partial);
 }
 
 function upsertEpk(userId: string): ArtistEpk {
@@ -381,7 +377,7 @@ export async function submitEpkForReview() {
 
   for (const u of MOCK_USERS) {
     if (!u.isAdmin) continue;
-    pushNotification({
+    await pushNotification({
       userId: u.id,
       kind: "epk_submitted",
       title: `EPK submitted — ${user.firstName ?? user.handle}`,
@@ -435,7 +431,7 @@ export async function approveEpk(formData: FormData) {
     after: { status: "published", publishedAt: now },
   });
 
-  pushNotification({
+  await pushNotification({
     userId: target.id,
     kind: "epk_published",
     title: "Your EPK is live",
@@ -489,7 +485,7 @@ export async function requestEpkRevision(formData: FormData) {
     reason: note,
   });
 
-  pushNotification({
+  await pushNotification({
     userId: target.id,
     kind: "epk_revision_requested",
     title: "EPK needs revision",

@@ -18,7 +18,7 @@ import { MOCK_SELLER_APPLICATIONS } from "@/lib/mock-data/seller-applications";
 import {
   notificationsForUser,
   unreadNotificationCount,
-} from "@/lib/mock-data/notifications";
+} from "@/lib/readers/notifications";
 import {
   INDUSTRY_LABELS,
   NOTIFICATION_KIND_LABELS,
@@ -82,8 +82,8 @@ export default async function DashboardPage() {
   );
   // Inbox preview — top 3 unread surfaces inline so the dashboard
   // doubles as the daily check-in instead of routing through Nav.
-  const inboxUnreadCount = unreadNotificationCount(user.id);
-  const inboxPreview = notificationsForUser(user.id)
+  const inboxUnreadCount = await unreadNotificationCount(user.id);
+  const inboxPreview = (await notificationsForUser(user.id))
     .filter((n) => n.readAt === null)
     .slice(0, 3);
 

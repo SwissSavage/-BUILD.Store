@@ -20,7 +20,7 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import {
   notificationsForUser,
   unreadNotificationCount,
-} from "@/lib/mock-data/notifications";
+} from "@/lib/readers/notifications";
 import {
   markAllNotificationsRead,
   markNotificationRead,
@@ -87,10 +87,10 @@ export default async function NotificationsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin?next=/notifications");
 
-  const all = notificationsForUser(user.id);
+  const all = await notificationsForUser(user.id);
   const unread = all.filter((n) => n.readAt === null);
   const earlier = all.filter((n) => n.readAt !== null);
-  const unreadCount = unreadNotificationCount(user.id);
+  const unreadCount = await unreadNotificationCount(user.id);
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -170,7 +170,7 @@ function NotificationRow({
   n,
   unread = false,
 }: {
-  n: ReturnType<typeof notificationsForUser>[number];
+  n: Awaited<ReturnType<typeof notificationsForUser>>[number];
   unread?: boolean;
 }) {
   const accent = KIND_ACCENT[n.kind];

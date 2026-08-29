@@ -21,6 +21,7 @@
  */
 "use server";
 
+import { notify } from "@/lib/writers/notifications";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
@@ -34,18 +35,13 @@ import type {
   ProspectiveContributionStatus,
 } from "@/lib/types";
 
-function pushNotification(
+async function pushNotification(
   partial: Omit<Notification, "id" | "createdAt" | "readAt">,
-): void {
-  const id = `ntf_pc_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
-  MOCK_NOTIFICATIONS.push({
-    ...partial,
-    id,
-    createdAt: new Date().toISOString(),
-    readAt: null,
-  });
+): Promise<void> {
+  // Writer swap 2026-08-28: delegates to the shared Postgres writer.
+  // Was an in-memory push, so these notifications never survived a
+  // deploy and the bell icon was effectively decorative.
+  await notify(partial);
 }
 
 function adminUserIds(): string[] {
@@ -106,7 +102,7 @@ export async function submitProspectiveContribution(formData: FormData) {
 
   // Fan a heads-up to every admin so the queue light flips immediately.
   for (const adminId of adminUserIds()) {
-    pushNotification({
+    await pushNotification({
       userId: adminId,
       kind: "prospective_contribution",
       title: `Outside offer — ${project.title}`,

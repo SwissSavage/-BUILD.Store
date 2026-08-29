@@ -83,6 +83,8 @@ jobs:
           # None of these connect anywhere — real values are injected
           # at runtime by Dokploy.
           build-args: |
+            BUILD_SHA=${{ github.sha }}
+            BUILD_TIME=${{ github.event.repository.updated_at }}
             DATABASE_URL=postgres://dummy:dummy@localhost:5432/dummy
             AUTH_SECRET=dummy-build-time-secret-not-used-at-runtime
             AUTH_URL=https://build.afuturemodern.com

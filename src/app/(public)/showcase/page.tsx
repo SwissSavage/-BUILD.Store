@@ -9,12 +9,13 @@
  * "see work samples for STEM" path is one click from /locker.
  */
 import Link from "next/link";
-import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { portfolioReader, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
 import { publicProfileEligible } from "@/lib/profile-visibility";
 import {
   INDUSTRY_LABELS,
   type Industry,
+  type User,
   publicName,
   publicPortfolioView,
 } from "@/lib/types";
@@ -28,6 +29,8 @@ function parsePillar(raw: string | undefined): Industry | null {
   return PILLAR_ORDER.includes(raw as Industry) ? (raw as Industry) : null;
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function ShowcasePage({
   searchParams,
 }: {
@@ -40,10 +43,17 @@ export default async function ShowcasePage({
   // discovery-eligible users (Members + currently-recognized Partners)
   // surface here. Partner items without active recognition stay link-
   // only via their direct `/u/[handle]` URL. See `profile-visibility.ts`.
+  // Reader swap 2026-08-28: was MOCK_USERS + MOCK_PORTFOLIO, so the
+  // showcase rendered seed work and never a real member's portfolio.
+  const [{ users }, allItems] = await Promise.all([
+    getAllUsers(),
+    safely(() => portfolioReader.all(), []),
+  ]);
   const eligibleUserIds = new Set(
-    MOCK_USERS.filter((u) => publicProfileEligible(u)).map((u) => u.id),
+    users.filter((u) => publicProfileEligible(u)).map((u) => u.id),
   );
-  const published = MOCK_PORTFOLIO
+  const authorsById = new Map(users.map((u) => [u.id, u]));
+  const published = allItems
     .filter((p) => eligibleUserIds.has(p.userId))
     .map(publicPortfolioView)
     .filter((x): x is NonNullable<ReturnType<typeof publicPortfolioView>> => x !== null);
@@ -65,12 +75,12 @@ export default async function ShowcasePage({
       <PillarFilter active={activePillar} />
 
       <Section title="Featured">
-        {featured.length === 0 ? <Empty pillar={activePillar} /> : <Grid items={featured} />}
+        {featured.length === 0 ? <Empty pillar={activePillar} /> : <Grid items={featured} authorsById={authorsById} />}
       </Section>
 
       {rest.length > 0 && (
         <Section title="More">
-          <Grid items={rest} />
+          <Grid items={rest} authorsById={authorsById} />
         </Section>
       )}
     </div>
@@ -127,11 +137,17 @@ function Empty({ pillar }: { pillar: Industry | null }) {
 
 type PublicItem = NonNullable<ReturnType<typeof publicPortfolioView>>;
 
-function Grid({ items }: { items: PublicItem[] }) {
+function Grid({
+  items,
+  authorsById,
+}: {
+  items: PublicItem[];
+  authorsById: Map<string, User>;
+}) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {items.map((item) => {
-        const author = MOCK_USERS.find((u) => u.id === item.userId);
+        const author = authorsById.get(item.userId) ?? null;
         const authorName = publicName(author);
         return (
           <Card key={item.id}>

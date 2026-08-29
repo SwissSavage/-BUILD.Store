@@ -5,14 +5,18 @@
  * "pending review" — admins publish (optionally with scrubbed public text
  * and/or the projectUrl redacted) before they appear on public surfaces.
  *
- * Sandbox: mutates MOCK_PORTFOLIO in memory.
+ * Reads and writes the live portfolio_items table.
  * REPLACE WITH: Drizzle insert/update/delete on the portfolio_items table.
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
+import { randomUUID } from "crypto";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { portfolioItems } from "@/db/schema";
+import { getPortfolioForUser, safely } from "@/lib/readers";
 import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -35,8 +39,10 @@ async function createItem(formData: FormData) {
     .map((t) => t.trim())
     .filter(Boolean);
 
-  MOCK_PORTFOLIO.push({
-    id: `pf_${Date.now()}`,
+  // Writer swap 2026-08-28: was an in-memory push, so submitted
+  // portfolio work vanished before an admin ever saw it in the queue.
+  await db.insert(portfolioItems).values({
+    id: `pf_${randomUUID()}`,
     userId: user.id,
     title,
     description,
@@ -64,8 +70,13 @@ async function deleteItem(formData: FormData) {
   if (!user) throw new Error("Not signed in");
 
   const id = String(formData.get("id") ?? "");
-  const idx = MOCK_PORTFOLIO.findIndex((p) => p.id === id && p.userId === user.id);
-  if (idx >= 0) MOCK_PORTFOLIO.splice(idx, 1);
+  // Ownership is part of the WHERE clause — a hand-crafted POST for
+  // someone else's item matches zero rows rather than deleting it.
+  await db
+    .delete(portfolioItems)
+    .where(
+      and(eq(portfolioItems.id, id), eq(portfolioItems.userId, user.id)),
+    );
 
   revalidatePath("/profile/portfolio");
   revalidatePath("/admin/portfolios");
@@ -82,13 +93,14 @@ function statusLabel(item: {
   return { text: "Pending review", color: "#5070F0" };
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function PortfolioEditorPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
 
-  const mine = MOCK_PORTFOLIO.filter((p) => p.userId === user.id).sort(
-    (a, b) => b.createdAt.localeCompare(a.createdAt),
-  );
+  // Reader swap 2026-08-28: was MOCK_PORTFOLIO.
+  const mine = await safely(() => getPortfolioForUser(user.id), []);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">

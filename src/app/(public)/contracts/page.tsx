@@ -17,7 +17,7 @@
  * at /contracts/[id] and require sign-in.
  */
 import Link from "next/link";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { getAllProjects } from "@/lib/readers/projects";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -27,17 +27,33 @@ export const metadata = {
     "Short-term contract opportunities open to Future Modern members and vetted talent. All engagements route through Future Modern until delivery — one team, one point of contact.",
 };
 
+/**
+ * A newly approved RFP has to appear here immediately — this is the
+ * board talent refreshes. Static rendering would freeze the list at
+ * build time and make every new contract invisible until the next
+ * deploy.
+ */
+export const dynamic = "force-dynamic";
+
 export default async function ContractsPage() {
   // Public listing: only admin-vetted, currently-open RFPs. Contracts
   // that are already in progress or completed aren't discoverable here
   // (they'll surface as past-project case studies at #32 instead).
-  const open = MOCK_PROJECTS.filter(
-    (p) =>
-      p.kind === "contract" &&
-      p.isRfp &&
-      p.status === "open" &&
-      p.rfpApprovedAt !== null,
-  ).sort((a, b) => (b.rfpApprovedAt ?? "").localeCompare(a.rfpApprovedAt ?? ""));
+  //
+  // Reader swap 2026-08-28: was MOCK_PROJECTS, so real contracts
+  // created through /contracts/new never showed up on the board.
+  const { projects } = await getAllProjects();
+  const open = projects
+    .filter(
+      (p) =>
+        p.kind === "contract" &&
+        p.isRfp &&
+        p.status === "open" &&
+        p.rfpApprovedAt !== null,
+    )
+    .sort((a, b) =>
+      (b.rfpApprovedAt ?? "").localeCompare(a.rfpApprovedAt ?? ""),
+    );
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">

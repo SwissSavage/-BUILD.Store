@@ -26,6 +26,7 @@ import type { NotificationKind, Notification } from "@/lib/types";
 import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import { notify } from "@/lib/writers/notifications";
 
 export interface FraudSignal {
   id: string;
@@ -91,18 +92,13 @@ function findAdminIds(): string[] {
   return MOCK_USERS.filter((u) => u.isAdmin).map((u) => u.id);
 }
 
-function pushNotification(
+async function pushNotification(
   partial: Omit<Notification, "id" | "createdAt" | "readAt">,
-): void {
-  const id = `ntf_frs_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
-  MOCK_NOTIFICATIONS.push({
-    ...partial,
-    id,
-    createdAt: new Date().toISOString(),
-    readAt: null,
-  });
+): Promise<void> {
+  // Writer swap 2026-08-28: delegates to the shared Postgres writer.
+  // Was an in-memory push, so these notifications never survived a
+  // deploy and the bell icon was effectively decorative.
+  await notify(partial);
 }
 
 /**
@@ -119,6 +115,17 @@ export async function runFraudScan(options: {
   skippedReason?: string;
 }> {
   const now = new Date();
+  // Collected during the synchronous collision walk below, then
+  // flushed in one batched insert once the scan finishes. Keeps the
+  // recordCollisions helper synchronous while still persisting.
+  const pendingNotifications: Array<{
+    userId: string;
+    kind: NotificationKind;
+    title: string;
+    body: string;
+    href: string;
+  }> = [];
+
   if (!options.runEveryDay && now.getUTCDay() !== 0) {
     return { scanned: 0, newSignals: 0, skippedReason: "not_sunday" };
   }
@@ -196,7 +203,7 @@ export async function runFraudScan(options: {
           // Fan a single admin ping per collision. Keeps volume
           // low on Monday morning after the Sunday sweep.
           for (const aid of adminIds) {
-            pushNotification({
+            pendingNotifications.push({
               userId: aid,
               kind: "portfolio_fraud_flag" as NotificationKind,
               title: `Portfolio ${label} duplicate flagged`,
@@ -211,6 +218,12 @@ export async function runFraudScan(options: {
 
   recordCollisions(byImage, "duplicate_image_url", "image");
   recordCollisions(byProject, "duplicate_project_url", "project link");
+
+  // Flush admin pings. One insert regardless of how many collisions
+  // the sweep found.
+  for (const n of pendingNotifications) {
+    await notify(n);
+  }
 
   return {
     scanned: published.length,

@@ -9,7 +9,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { getContracts } from "@/lib/readers/projects";
 import { MOCK_ATTRIBUTION } from "@/lib/mock-data/attribution";
 import { MOCK_SPLITS } from "@/lib/mock-data/splits";
 import {
@@ -20,11 +20,14 @@ import {
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { HubspotStageBadge } from "@/components/HubspotStageBadge";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminContractsIndex() {
   const user = await getCurrentUser();
   if (!user || !user.isAdmin) redirect("/dashboard");
 
-  const contracts = MOCK_PROJECTS.filter((p) => p.kind === "contract");
+  // Reader swap 2026-08-28: was MOCK_PROJECTS.
+  const { projects: contracts } = await getContracts();
 
   // Bucket by lifecycle stage.
   const settled = contracts.filter(

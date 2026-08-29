@@ -8,11 +8,21 @@
  *   - admins   → admins only, compact
  *   - sellers  → members approved to sell on the marketplace
  *
- * Sandbox mutates MOCK_USERS in-memory; REPLACE WITH Drizzle UPDATE.
+ * Reads the live Postgres users table (2026-08-28 swap). Seed profiles
+ * and real signups both come back — the July seed wrote its rows into
+ * the same table, so there's nothing to merge.
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+
+/**
+ * Never statically render this page. Without it Next.js bakes the
+ * member list at build time and new signups never appear — which
+ * looks identical to the DB read being broken. Real-time visibility
+ * of who has joined is the entire point of the page.
+ */
+export const dynamic = "force-dynamic";
 import { MOCK_SELLER_APPLICATIONS } from "@/lib/mock-data/seller-applications";
 import {
   INDUSTRY_LABELS,
@@ -72,8 +82,12 @@ export default async function AdminMembersPage({
     ),
   );
 
-  // Figure out which set of users the current view cares about.
-  let rows: User[] = MOCK_USERS;
+  // Reader swap (2026-08-28): was MOCK_USERS, so real signups were
+  // invisible here. Reads the live table now — seed profiles and real
+  // members both come back, since the seed rows live in Postgres too.
+  const { users: allUsers, source: readSource } = await getAllUsers();
+  let rows: User[] = allUsers;
+
   if (view === "admins") rows = rows.filter((u) => u.isAdmin);
   if (view === "sellers") rows = rows.filter((u) => approvedSellerIds.has(u.id));
 
@@ -89,6 +103,17 @@ export default async function AdminMembersPage({
             {rows.length} {rows.length === 1 ? "member" : "members"} in this
             view
           </p>
+          {readSource === "seed-fallback" && (
+            <p
+              className="mt-2 rounded-lg px-3 py-2 text-xs"
+              style={{ background: "#FDF0D5", color: "#8A5A00" }}
+            >
+              <strong>Showing seed data.</strong> The database didn&apos;t
+              answer, so this is the built-in sample roster, not your real
+              members. Check that DATABASE_URL is set and Postgres is
+              reachable.
+            </p>
+          )}
           <div className="mt-2 flex flex-wrap gap-3 text-xs">
             <Link
               href="/admin/members/invite"

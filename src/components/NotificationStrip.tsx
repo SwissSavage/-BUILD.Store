@@ -10,7 +10,7 @@
  * kinds — this keeps the strip from cluttering pages on quiet days.
  */
 import Link from "next/link";
-import { unreadByKind } from "@/lib/mock-data/notifications";
+import { unreadByKind } from "@/lib/readers/notifications";
 import {
   NOTIFICATION_KIND_LABELS,
   type NotificationKind,
@@ -61,7 +61,7 @@ const KIND_ACCENT: Record<NotificationKind, string> = {
   documenso_account_ready: "#007048",
 };
 
-export function NotificationStrip({
+export async function NotificationStrip({
   userId,
   kinds,
   surfaceLabel,
@@ -71,7 +71,9 @@ export function NotificationStrip({
   /** Friendly label for the surface (e.g. "Projects"). Used in copy. */
   surfaceLabel: string;
 }) {
-  const unread = unreadByKind(userId, kinds);
+  // Async server component as of the 2026-08-28 reader swap — this is
+  // a real query now, not an array filter.
+  const unread = await unreadByKind(userId, kinds);
   if (unread.length === 0) return null;
 
   // Show the most recent 3 inline; rest hide behind the count.

@@ -1,5 +1,5 @@
 /**
- * Live user readers — Postgres first, seed array as cold-start fallback.
+ * Live user readers — Postgres only.
  *
  * ─────────────────────────────────────────────────────────────
  * WHY THIS EXISTS (2026-08-28)
@@ -16,9 +16,10 @@
  * (which we want to keep for display) and every real signup. No
  * filtering needed — the database is already the union.
  *
- * The MOCK_USERS fallback only fires when Postgres is unreachable, so
- * a cold DB degrades to the seed view instead of throwing a 500 on
- * every page. Callers can check `readSource` when they want to warn.
+ * There is deliberately NO seed fallback. Substituting fixtures when
+ * the database is unreachable is precisely the behavior that hid every
+ * real member for weeks. These throw instead; pages wrap in safely()
+ * and render an honest empty state.
  * ─────────────────────────────────────────────────────────────
  *
  * IMPORTANT: pages using these readers must opt out of static
@@ -29,7 +30,6 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users as usersTable } from "@/db/schema";
-import { MOCK_USERS } from "@/lib/mock-data/users";
 import type { User } from "@/lib/types";
 
 export type ReadSource = "postgres" | "seed-fallback";
@@ -54,12 +54,15 @@ export async function getAllUsers(): Promise<UserRead> {
     // environment, seed never run). Don't silently swap in seed data —
     // that would hide a real misconfiguration behind fake members.
     return { users: rows as unknown as User[], source: "postgres" };
-  } catch {
-    return { users: MOCK_USERS, source: "seed-fallback" };
+  } catch (err) {
+    // No seed fallback. Substituting fixtures for real member data is
+    // the exact failure this refactor exists to kill — a page that
+    // can't reach Postgres should say so, not invent members.
+    throw err;
   }
 }
 
-/** One user by id. Falls back to the seed array on DB failure. */
+/** One user by id. Null when absent or unreachable. */
 export async function getUserById(id: string): Promise<User | null> {
   try {
     const [row] = await db
@@ -67,12 +70,9 @@ export async function getUserById(id: string): Promise<User | null> {
       .from(usersTable)
       .where(eq(usersTable.id, id))
       .limit(1);
-    if (row) return row as unknown as User;
-    // Not in Postgres — could be a seed-only id referenced by mock
-    // relational data that hasn't been swapped yet.
-    return MOCK_USERS.find((u) => u.id === id) ?? null;
+    return (row as unknown as User) ?? null;
   } catch {
-    return MOCK_USERS.find((u) => u.id === id) ?? null;
+    return null;
   }
 }
 
@@ -85,14 +85,9 @@ export async function getUserByHandle(handle: string): Promise<User | null> {
       .from(usersTable)
       .where(eq(usersTable.handle, normalized))
       .limit(1);
-    if (row) return row as unknown as User;
-    return (
-      MOCK_USERS.find((u) => u.handle?.toLowerCase() === normalized) ?? null
-    );
+    return (row as unknown as User) ?? null;
   } catch {
-    return (
-      MOCK_USERS.find((u) => u.handle?.toLowerCase() === normalized) ?? null
-    );
+    return null;
   }
 }
 

@@ -25,11 +25,11 @@
 import { notify, notifyMany } from "@/lib/writers/notifications";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
-import {
-  MOCK_PROJECT_MILESTONES,
-  milestonesForProject,
-} from "@/lib/mock-data/project-milestones";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { projectMilestones } from "@/db/schema";
+import { getAllProjects, getProjectById } from "@/lib/readers/projects";
+import { getMilestonesForProject, milestoneReader } from "@/lib/readers";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import {
@@ -73,10 +73,10 @@ function parseDueAt(raw: FormDataEntryValue | null): string {
   return d.toISOString();
 }
 
-function nextSequence(projectId: string): number {
-  const existing = milestonesForProject(projectId);
+async function nextSequence(projectId: string): Promise<number> {
+  const existing = await getMilestonesForProject(projectId);
   if (existing.length === 0) return 10;
-  return existing[existing.length - 1].sequence + 10;
+  return Math.max(...existing.map((m) => m.sequence)) + 10;
 }
 
 function newId(): string {
@@ -85,8 +85,8 @@ function newId(): string {
     .slice(2, 6)}`;
 }
 
-function projectAdminUserIds(projectId: string): string[] {
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+async function projectAdminUserIds(projectId: string): Promise<string[]> {
+  const project = await getProjectById(projectId);
   if (!project) return [];
   return [...project.adminUserIds];
 }
@@ -98,7 +98,7 @@ function projectAdminUserIds(projectId: string): string[] {
 export async function createMilestone(formData: FormData) {
   await requireAdmin();
   const projectId = String(formData.get("projectId") ?? "");
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const project = await getProjectById(projectId);
   if (!project) throw new Error("Project not found");
 
   const title = String(formData.get("title") ?? "").trim();
@@ -114,7 +114,7 @@ export async function createMilestone(formData: FormData) {
   const row: ProjectMilestone = {
     id: newId(),
     projectId,
-    sequence: nextSequence(projectId),
+    sequence: await nextSequence(projectId),
     title,
     description,
     ownerUserId,
@@ -127,7 +127,9 @@ export async function createMilestone(formData: FormData) {
     createdAt: now,
     updatedAt: now,
   };
-  MOCK_PROJECT_MILESTONES.push(row);
+  // Writer swap 2026-08-28: was in-memory, so milestones vanished
+  // from the client tracker on the next deploy.
+  await db.insert(projectMilestones).values(row);
 
   await pushNotification({
     userId: ownerUserId,
@@ -152,10 +154,10 @@ export async function createMilestone(formData: FormData) {
 export async function seedProjectWithTemplate(formData: FormData) {
   await requireAdmin();
   const projectId = String(formData.get("projectId") ?? "");
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const project = await getProjectById(projectId);
   if (!project) throw new Error("Project not found");
 
-  const existing = milestonesForProject(projectId);
+  const existing = await getMilestonesForProject(projectId);
   if (existing.length > 0) {
     throw new Error(
       "Project already has milestones. Seed only runs on empty trackers.",
@@ -203,7 +205,7 @@ export async function seedProjectWithTemplate(formData: FormData) {
       createdAt: nowIso,
       updatedAt: nowIso,
     };
-    MOCK_PROJECT_MILESTONES.push(row);
+    await db.insert(projectMilestones).values(row);
   }
 
   revalidatePath(`/admin/contracts/${projectId}/tracker`);
@@ -214,10 +216,10 @@ export async function seedProjectWithTemplate(formData: FormData) {
 export async function deleteMilestone(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  const idx = MOCK_PROJECT_MILESTONES.findIndex((m) => m.id === id);
-  if (idx === -1) return;
-  const projectId = MOCK_PROJECT_MILESTONES[idx].projectId;
-  MOCK_PROJECT_MILESTONES.splice(idx, 1);
+  const existing = await milestoneReader.byId(id);
+  if (!existing) return;
+  const projectId = existing.projectId;
+  await db.delete(projectMilestones).where(eq(projectMilestones.id, id));
   revalidatePath(`/admin/contracts/${projectId}/tracker`);
   revalidatePath(`/contracts/${projectId}`);
   revalidatePath(`/projects/${projectId}`);
@@ -226,9 +228,9 @@ export async function deleteMilestone(formData: FormData) {
 export async function pingMilestoneOwner(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  const row = MOCK_PROJECT_MILESTONES.find((m) => m.id === id);
+  const row = await milestoneReader.byId(id);
   if (!row) throw new Error("Milestone not found");
-  const project = MOCK_PROJECTS.find((p) => p.id === row.projectId);
+  const project = await getProjectById(row.projectId);
   if (!project) throw new Error("Project not found");
 
   const daysOut = Math.ceil(
@@ -249,6 +251,10 @@ export async function pingMilestoneOwner(formData: FormData) {
     href: `/projects/${row.projectId}`,
   });
   row.lastDueSoonNoticeAt = new Date().toISOString();
+  await db
+    .update(projectMilestones)
+    .set({ lastDueSoonNoticeAt: row.lastDueSoonNoticeAt })
+    .where(eq(projectMilestones.id, row.id));
   row.updatedAt = row.lastDueSoonNoticeAt;
   revalidatePath(`/admin/contracts/${row.projectId}/tracker`);
 }
@@ -256,12 +262,17 @@ export async function pingMilestoneOwner(formData: FormData) {
 export async function resolveBlocker(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  const row = MOCK_PROJECT_MILESTONES.find((m) => m.id === id);
+  const row = await milestoneReader.byId(id);
   if (!row) throw new Error("Milestone not found");
   if (row.status !== "blocked") return;
+  const resolvedAt = new Date().toISOString();
+  await db
+    .update(projectMilestones)
+    .set({ status: "in_progress", blockerNote: null, updatedAt: resolvedAt })
+    .where(eq(projectMilestones.id, id));
   row.status = "in_progress";
   row.blockerNote = null;
-  row.updatedAt = new Date().toISOString();
+  row.updatedAt = resolvedAt;
 
   await pushNotification({
     userId: row.ownerUserId,
@@ -367,11 +378,15 @@ export async function runMilestoneSweep(): Promise<{
   let overduePings = 0;
   let scanned = 0;
 
-  for (const row of MOCK_PROJECT_MILESTONES) {
+  // Reader swap 2026-08-28: sweep now walks live rows, so a cron run
+  // actually sees the milestones members created.
+  const sweepRows = await milestoneReader.all();
+
+  for (const row of sweepRows) {
     if (row.status === "completed") continue;
     scanned += 1;
     const dueMs = new Date(row.dueAt).getTime();
-    const project = MOCK_PROJECTS.find((p) => p.id === row.projectId);
+    const project = await getProjectById(row.projectId);
     if (!project) continue;
 
     // Overdue path — daily admin escalation until resolved.
@@ -381,13 +396,17 @@ export async function runMilestoneSweep(): Promise<{
         : 0;
       if (now - last < debounceMs) continue;
       const daysOver = Math.ceil((now - dueMs) / 86_400_000);
-      await fanOut(projectAdminUserIds(row.projectId), {
+      await fanOut(await projectAdminUserIds(row.projectId), {
         kind: "milestone_overdue",
         title: `Overdue: ${row.title}`,
         body: `${project.title}. ${daysOver} day${daysOver === 1 ? "" : "s"} past due. Owner: ${ownerName(row.ownerUserId)}.`,
         href: `/admin/contracts/${row.projectId}/tracker`,
       });
       row.lastOverdueNoticeAt = new Date(now).toISOString();
+      await db
+        .update(projectMilestones)
+        .set({ lastOverdueNoticeAt: row.lastOverdueNoticeAt })
+        .where(eq(projectMilestones.id, row.id));
       row.updatedAt = row.lastOverdueNoticeAt;
       overduePings += 1;
       continue;
@@ -429,6 +448,10 @@ export async function runMilestoneSweep(): Promise<{
       href: `/projects/${row.projectId}`,
     });
     row.lastDueSoonNoticeAt = `${new Date(now).toISOString()}|${bucket}`;
+    await db
+      .update(projectMilestones)
+      .set({ lastDueSoonNoticeAt: row.lastDueSoonNoticeAt })
+      .where(eq(projectMilestones.id, row.id));
     row.updatedAt = new Date(now).toISOString();
     preDuePings += 1;
   }
@@ -454,9 +477,12 @@ export async function runWeeklyProjectRollup(): Promise<{
   const weekAgoMs = nowMs - 7 * 86_400_000;
   let digestsSent = 0;
 
-  for (const project of MOCK_PROJECTS) {
+  const { projects: allProjects } = await getAllProjects();
+  const allMilestones = await milestoneReader.all();
+
+  for (const project of allProjects) {
     if (project.status !== "in_progress") continue;
-    const milestones = MOCK_PROJECT_MILESTONES.filter(
+    const milestones = allMilestones.filter(
       (m) => m.projectId === project.id,
     );
     if (milestones.length === 0) continue;
@@ -484,7 +510,7 @@ export async function runWeeklyProjectRollup(): Promise<{
 
     const recipients = [
       ...(project.assignedMemberIds ?? []),
-      ...projectAdminUserIds(project.id),
+      ...(await projectAdminUserIds(project.id)),
     ];
     await fanOut(recipients, {
       kind: "project_weekly_rollup",
@@ -512,7 +538,7 @@ export async function updateMilestoneStatus(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
   const id = String(formData.get("id") ?? "");
-  const row = MOCK_PROJECT_MILESTONES.find((m) => m.id === id);
+  const row = await milestoneReader.byId(id);
   if (!row) throw new Error("Milestone not found");
 
   const isOwner = row.ownerUserId === user.id;
@@ -525,30 +551,46 @@ export async function updateMilestoneStatus(formData: FormData) {
     throw new Error("Invalid status");
   }
 
-  const project = MOCK_PROJECTS.find((p) => p.id === row.projectId);
+  const project = await getProjectById(row.projectId);
   if (!project) throw new Error("Project not found");
 
   const prev = row.status;
   if (prev === next) return;
 
-  row.status = next;
-  row.updatedAt = new Date().toISOString();
+  // Writer swap 2026-08-28: these were plain property assignments on
+  // an in-memory object, so a contributor marking a milestone complete
+  // saw it flip and then silently revert.
+  const updatedAt = new Date().toISOString();
+  let completedAt = row.completedAt;
+  let blockerNote = row.blockerNote;
+
   if (next === "completed") {
-    row.completedAt = row.updatedAt;
-    row.blockerNote = null;
+    completedAt = updatedAt;
+    blockerNote = null;
   } else if (next === "blocked") {
-    row.blockerNote =
+    blockerNote =
       String(formData.get("blockerNote") ?? "").trim() ||
       "Owner flagged a blocker. Awaiting admin follow-up.";
   } else if (prev === "blocked") {
-    row.blockerNote = null;
+    blockerNote = null;
   }
   if (next !== "completed" && prev === "completed") {
-    row.completedAt = null;
+    completedAt = null;
   }
 
+  await db
+    .update(projectMilestones)
+    .set({ status: next, completedAt, blockerNote, updatedAt })
+    .where(eq(projectMilestones.id, id));
+
+  // Keep the local object consistent for the notification copy below.
+  row.status = next;
+  row.updatedAt = updatedAt;
+  row.completedAt = completedAt;
+  row.blockerNote = blockerNote;
+
   // Fan-out: notify project admins + the owner if the actor differs.
-  const recipients = projectAdminUserIds(row.projectId);
+  const recipients = await projectAdminUserIds(row.projectId);
   if (row.ownerUserId !== user.id) recipients.push(row.ownerUserId);
 
   await fanOut(recipients, {

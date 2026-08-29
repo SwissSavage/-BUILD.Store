@@ -10,12 +10,15 @@
  */
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
-import { aggregateRating } from "@/lib/mock-data/peer-reviews";
-import { testimonialsForUser } from "@/lib/mock-data/customer-feedback";
-import { epkForUser } from "@/lib/mock-data/artist-epk";
-import { mvpScoreForUser, MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
+import { getAllUsers, getUserByHandle } from "@/lib/readers/users";
+import {
+  aggregateRating,
+  epkForUser,
+  getPortfolioForUser,
+  mvpScoreReader,
+  safely,
+  testimonialsForUser,
+} from "@/lib/readers";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import {
   activeRecognitionsForUser,
@@ -58,15 +61,19 @@ const SITE_URL =
  * for client demos) but stay out of search results. See
  * `lib/profile-visibility.ts` for the matrix.
  */
+/**
+ * Profiles change as members edit them and as recognition windows
+ * open. Static rendering would serve a stale card indefinitely.
+ */
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ handle: string }>;
 }): Promise<Metadata> {
   const { handle } = await params;
-  const user = MOCK_USERS.find(
-    (u) => u.handle.toLowerCase() === handle.toLowerCase(),
-  );
+  const user = await getUserByHandle(handle);
   if (!user) return { robots: { index: false, follow: false } };
   if (!profileShouldIndex(user)) {
     return {
@@ -83,14 +90,17 @@ export default async function PublicProfilePage({
   params: Promise<{ handle: string }>;
 }) {
   const { handle } = await params;
-  const user = MOCK_USERS.find(
-    (u) => u.handle.toLowerCase() === handle.toLowerCase(),
-  );
+  // Reader swap 2026-08-28: was MOCK_USERS, so a real member's public
+  // profile 404'd while seed profiles resolved fine.
+  const user = await getUserByHandle(handle);
   if (!user) notFound();
 
   const pillars = userPillars(user);
-  const items = MOCK_PORTFOLIO
-    .filter((p) => p.userId === user.id)
+  const portfolioRows = await safely(
+    () => getPortfolioForUser(user.id),
+    [],
+  );
+  const items = portfolioRows
     .map(publicPortfolioView)
     .filter((x): x is NonNullable<ReturnType<typeof publicPortfolioView>> => x !== null)
     .sort((a, b) => (a.featured === b.featured ? 0 : a.featured ? -1 : 1));
@@ -100,8 +110,12 @@ export default async function PublicProfilePage({
   // — it's not part of the public-internet face of the cooperative.
   const viewer = await getCurrentUser();
   const isMember = !!viewer;
-  const aggregate = isMember ? aggregateRating(user.id) : null;
-  const testimonials = isMember ? testimonialsForUser(user.id) : [];
+  const aggregate = isMember
+    ? await safely(() => aggregateRating(user.id), null)
+    : null;
+  const testimonials = isMember
+    ? await safely(() => testimonialsForUser(user.id), [])
+    : [];
 
   // DM compose: only members and admins can send (canSendDirectMessage).
   // Self-DM is blocked by the action; we hide the affordance up front so
@@ -111,7 +125,7 @@ export default async function PublicProfilePage({
 
   // EPK rendering: only when the user is flipped to "epk" profileMode AND
   // a published EPK exists. Drafts and submissions never render publicly.
-  const epk = epkForUser(user.id);
+  const epk = await safely(() => epkForUser(user.id), null);
   const showEpk =
     user.profileMode === "epk" && epk !== null && epk.status === "published";
 
@@ -121,8 +135,12 @@ export default async function PublicProfilePage({
   // Partners without an MVP snapshot fall to "standard" — calm brand
   // gradient, falls outside the rarity ladder. Provisional members also
   // get "standard" so unproven track records aren't visually rewarded.
-  const mvpSnapshot = mvpScoreForUser(user.id);
-  const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
+  const [mvpSnapshot, allScores, { users: allUsers }] = await Promise.all([
+    safely(() => mvpScoreReader.byId(user.id), null),
+    safely(() => mvpScoreReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const courtIds = new Set(championsCourtMembers(allScores, allUsers));
   const cardTier = deriveTradingCardTier({
     ovr: mvpSnapshot ? mvpSnapshot.ovr : null,
     isProvisional: mvpSnapshot?.isProvisional ?? false,
@@ -142,7 +160,7 @@ export default async function PublicProfilePage({
   // active cohort (task #31). "Sarah" if unique, "Sarah B." when
   // another Sarah exists. Full name never leaks into structured data
   // or display copy per public-privacy policy.
-  const displayName = publicNameDisambiguated(user, MOCK_USERS);
+  const displayName = publicNameDisambiguated(user, allUsers);
 
   // knowsAbout composes pillar labels + declared skills so long-tail
   // skill searches (e.g. "Solidity contract auditor") can surface
@@ -608,12 +626,12 @@ export default async function PublicProfilePage({
         // a cooperative role). Target must have a published snapshot —
         // Partner-tier members don't get one in the seed.
         if (!isMember || !viewer) return null;
-        const mvpSnapshot = mvpScoreForUser(user.id);
+        // Reuses mvpSnapshot and courtIds computed once above rather
+        // than re-querying inside the render.
         if (!mvpSnapshot) return null;
         const isSelfOrAdmin =
           viewer.id === user.id || viewer.isAdmin === true;
         const mode = isSelfOrAdmin ? "self" : "peer";
-        const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
         const isInCourt = courtIds.has(user.id);
         return (
           <section className="mt-14">

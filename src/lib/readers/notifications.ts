@@ -1,5 +1,5 @@
 /**
- * Notification readers — live Postgres, seed array as fallback.
+ * Notification readers — live Postgres only.
  *
  * Pairs with src/lib/writers/notifications.ts. Reads use the
  * (user_id, created_at DESC) index added in drizzle/0012, which is
@@ -8,7 +8,6 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { notifications as notificationsTable } from "@/db/schema";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import type { Notification } from "@/lib/types";
 
 /** A user's notifications, newest first. */
@@ -25,9 +24,9 @@ export async function getNotificationsForUser(
       .limit(limit);
     return rows as unknown as Notification[];
   } catch {
-    return MOCK_NOTIFICATIONS.filter((n) => n.userId === userId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, limit);
+    // No seed fallback — an unreachable database shows an empty
+    // inbox, not somebody else's fixtures.
+    return [];
   }
 }
 
@@ -49,9 +48,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
       );
     return rows.length;
   } catch {
-    return MOCK_NOTIFICATIONS.filter(
-      (n) => n.userId === userId && !n.readAt,
-    ).length;
+    return 0;
   }
 }
 

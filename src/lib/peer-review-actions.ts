@@ -27,6 +27,7 @@ import { getProjectById } from "@/lib/readers/projects";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import type { Notification, PeerReview, ReviewContextKind } from "@/lib/types";
 import { notify } from "@/lib/writers/notifications";
+import { recomputeMvpScore } from "@/lib/writers/mvp-score";
 
 async function pushNotification(
   partial: Omit<Notification, "id" | "createdAt" | "readAt">,
@@ -146,6 +147,21 @@ export async function submitPeerReview(formData: FormData) {
     prose: review.prose,
     createdAt: review.createdAt,
   });
+
+  // Recompute the reviewee's MVP snapshot now that a new review
+  // exists. This is the link that was missing: reviews were stored
+  // (in memory) and the score that depended on them ignored them
+  // entirely, so an OVR never moved no matter how many people
+  // reviewed you.
+  //
+  // Wrapped so a scoring failure can't roll back a review the member
+  // already submitted. The daily job will pick it up on the next pass.
+  try {
+    await recomputeMvpScore(revieweeId);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[mvp] recompute after peer review failed", err);
+  }
 
   // Notify reviewee — anonymous body (no reviewer identity leaks here).
   await pushNotification({

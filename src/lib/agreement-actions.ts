@@ -2,7 +2,7 @@
  * Signed-agreements admin actions.
  *
  * Compose + edit + remove entries in the paperwork registry at
- * /admin/agreements. Sandbox mutates MOCK_AGREEMENTS in memory;
+ * /admin/agreements. Reads and writes the live agreements table;
  * production persists to the Drizzle `agreements` table (see
  * src/db/schema.ts).
  *
@@ -29,7 +29,10 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_AGREEMENTS } from "@/lib/mock-data/agreements";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { agreements as agreementsTable } from "@/db/schema";
+import { agreementReader } from "@/lib/readers";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   logAuditEvent,
@@ -166,7 +169,9 @@ export async function createAgreement(formData: FormData): Promise<void> {
     createdAt: now,
     updatedAt: now,
   };
-  MOCK_AGREEMENTS.push(row);
+  // Writer swap 2026-08-28: was in-memory, so a signed LOI recorded
+  // by an admin disappeared before the renewal checker ever saw it.
+  await db.insert(agreementsTable).values(row);
 
   logAuditEvent({
     actorUserId: admin.id,
@@ -204,7 +209,7 @@ export async function updateAgreement(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("Agreement id is required.");
 
-  const row = MOCK_AGREEMENTS.find((a) => a.id === id);
+  const row = await agreementReader.byId(id);
   if (!row) throw new Error("Agreement not found.");
 
   const before = {
@@ -232,6 +237,18 @@ export async function updateAgreement(formData: FormData): Promise<void> {
   row.storageUrl = storageUrl;
   row.notes = notes;
   row.updatedAt = new Date().toISOString();
+
+  await db
+    .update(agreementsTable)
+    .set({
+      version,
+      provider: providerRaw,
+      externalRef,
+      storageUrl,
+      notes,
+      updatedAt: row.updatedAt,
+    })
+    .where(eq(agreementsTable.id, id));
 
   logAuditEvent({
     actorUserId: admin.id,
@@ -267,9 +284,9 @@ export async function removeAgreement(formData: FormData): Promise<void> {
   const reason = String(formData.get("reason") ?? "").trim() || null;
   if (!id) throw new Error("Agreement id is required.");
 
-  const idx = MOCK_AGREEMENTS.findIndex((a) => a.id === id);
-  if (idx === -1) throw new Error("Agreement not found.");
-  const [removed] = MOCK_AGREEMENTS.splice(idx, 1);
+  const removed = await agreementReader.byId(id);
+  if (!removed) throw new Error("Agreement not found.");
+  await db.delete(agreementsTable).where(eq(agreementsTable.id, id));
 
   logAuditEvent({
     actorUserId: admin.id,

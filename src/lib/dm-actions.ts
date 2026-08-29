@@ -21,8 +21,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import { getUserById } from "@/lib/readers/users";
 import { adminName, canSendDirectMessage } from "@/lib/types";
 import type { Notification } from "@/lib/types";
 import { notify } from "@/lib/writers/notifications";
@@ -49,7 +48,9 @@ export async function sendDirectMessage(formData: FormData) {
   const subject = String(formData.get("subject") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
 
-  const recipient = MOCK_USERS.find((u) => u.id === recipientId);
+  // Reader swap 2026-08-28: was MOCK_USERS, so DMing a real member
+  // threw "Recipient not found".
+  const recipient = await getUserById(recipientId);
   if (!recipient) throw new Error("Recipient not found");
   if (recipient.id === sender.id) {
     throw new Error("You can't DM yourself.");

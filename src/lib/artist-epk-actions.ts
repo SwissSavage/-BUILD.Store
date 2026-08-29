@@ -22,6 +22,10 @@
 
 import { notify } from "@/lib/writers/notifications";
 import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { artistEpks } from "@/db/schema";
+import { getEpk } from "@/lib/readers";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import {
   MOCK_ARTIST_EPKS,
@@ -52,8 +56,15 @@ async function pushNotification(
   await notify(partial);
 }
 
-function upsertEpk(userId: string): ArtistEpk {
-  const existing = epkForUser(userId);
+/**
+ * Load a member's EPK, creating the draft row on first touch.
+ *
+ * Writer swap 2026-08-28: this used to push onto an in-memory array,
+ * so an artist could fill out their entire press kit and have it
+ * disappear before an admin ever saw it in the curation queue.
+ */
+async function upsertEpk(userId: string): Promise<ArtistEpk> {
+  const existing = await getEpk(userId);
   if (existing) return existing;
   const fresh: ArtistEpk = {
     userId,
@@ -75,12 +86,41 @@ function upsertEpk(userId: string): ArtistEpk {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  MOCK_ARTIST_EPKS.push(fresh);
+  await db.insert(artistEpks).values(fresh);
   return fresh;
 }
 
-function bumpUpdated(epk: ArtistEpk): void {
+/**
+ * Stamp updatedAt and persist the whole row.
+ *
+ * Every EPK mutation ends by calling this, which makes it the single
+ * write point for the domain. The actions above still mutate the
+ * in-memory object first — that keeps their logic readable — and this
+ * flushes the result in one UPDATE.
+ */
+async function bumpUpdated(epk: ArtistEpk): Promise<void> {
   epk.updatedAt = new Date().toISOString();
+  await db
+    .update(artistEpks)
+    .set({
+      status: epk.status,
+      heroImageUrl: epk.heroImageUrl,
+      tagline: epk.tagline,
+      bioShort: epk.bioShort,
+      bioLong: epk.bioLong,
+      featuredWork: epk.featuredWork,
+      press: epk.press,
+      trackRecord: epk.trackRecord,
+      socialHandles: epk.socialHandles,
+      web3Profiles: epk.web3Profiles,
+      metrics: epk.metrics,
+      bookingNote: epk.bookingNote,
+      submittedAt: epk.submittedAt,
+      publishedAt: epk.publishedAt,
+      adminRevisionNote: epk.adminRevisionNote,
+      updatedAt: epk.updatedAt,
+    })
+    .where(eq(artistEpks.userId, epk.userId));
 }
 
 function parseTrackRecord(raw: FormDataEntryValue | null): string[] {
@@ -108,7 +148,7 @@ function newEntryId(prefix: string): string {
 export async function saveEpkCore(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
-  const epk = upsertEpk(user.id);
+  const epk = await upsertEpk(user.id);
 
   epk.heroImageUrl = nullable(formData.get("heroImageUrl"));
   epk.tagline = nullable(formData.get("tagline"));
@@ -126,14 +166,14 @@ export async function saveEpkCore(formData: FormData) {
     epk.status = "draft";
   }
 
-  bumpUpdated(epk);
+  await bumpUpdated(epk);
   revalidatePath("/profile/epk");
 }
 
 export async function addFeaturedWork(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
-  const epk = upsertEpk(user.id);
+  const epk = await upsertEpk(user.id);
 
   const entry: FeaturedWorkEntry = {
     id: newEntryId("fw"),
@@ -150,7 +190,7 @@ export async function addFeaturedWork(formData: FormData) {
   }
 
   epk.featuredWork.push(entry);
-  bumpUpdated(epk);
+  await bumpUpdated(epk);
   revalidatePath("/profile/epk");
 }
 
@@ -161,14 +201,14 @@ export async function removeFeaturedWork(formData: FormData) {
   if (!epk) return;
   const id = String(formData.get("id") ?? "");
   epk.featuredWork = epk.featuredWork.filter((e) => e.id !== id);
-  bumpUpdated(epk);
+  await bumpUpdated(epk);
   revalidatePath("/profile/epk");
 }
 
 export async function addPressClip(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
-  const epk = upsertEpk(user.id);
+  const epk = await upsertEpk(user.id);
 
   const clip: PressClip = {
     id: newEntryId("pr"),
@@ -181,7 +221,7 @@ export async function addPressClip(formData: FormData) {
   if (clip.quote.length === 0) throw new Error("Quote is required");
 
   epk.press.push(clip);
-  bumpUpdated(epk);
+  await bumpUpdated(epk);
   revalidatePath("/profile/epk");
 }
 
@@ -192,7 +232,7 @@ export async function removePressClip(formData: FormData) {
   if (!epk) return;
   const id = String(formData.get("id") ?? "");
   epk.press = epk.press.filter((p) => p.id !== id);
-  bumpUpdated(epk);
+  await bumpUpdated(epk);
   revalidatePath("/profile/epk");
 }
 
@@ -268,7 +308,7 @@ function coerceMetricPlatform(raw: FormDataEntryValue | null): ArtistMetricSnaps
 export async function addSocialHandle(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
-  const epk = upsertEpk(user.id);
+  const epk = await upsertEpk(user.id);
   const url = String(formData.get("url") ?? "").trim();
   if (url.length === 0) throw new Error("URL is required");
   epk.socialHandles.push({
@@ -276,7 +316,7 @@ export async function addSocialHandle(formData: FormData) {
     url,
     handle: nullable(formData.get("handle")),
   });
-  bumpUpdated(epk);
+  await bumpUpdated(epk);
   revalidatePath("/profile/epk");
 }
 
@@ -288,7 +328,7 @@ export async function removeSocialHandle(formData: FormData) {
   const index = Number(formData.get("index") ?? -1);
   if (Number.isInteger(index) && index >= 0 && index < epk.socialHandles.length) {
     epk.socialHandles.splice(index, 1);
-    bumpUpdated(epk);
+    await bumpUpdated(epk);
     revalidatePath("/profile/epk");
   }
 }
@@ -296,7 +336,7 @@ export async function removeSocialHandle(formData: FormData) {
 export async function addWeb3Profile(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
-  const epk = upsertEpk(user.id);
+  const epk = await upsertEpk(user.id);
   const url = String(formData.get("url") ?? "").trim();
   if (url.length === 0) throw new Error("Marketplace URL is required");
   epk.web3Profiles.push({
@@ -306,7 +346,7 @@ export async function addWeb3Profile(formData: FormData) {
     contractAddress: nullable(formData.get("contractAddress")),
     context: nullable(formData.get("context")),
   });
-  bumpUpdated(epk);
+  await bumpUpdated(epk);
   revalidatePath("/profile/epk");
 }
 
@@ -318,7 +358,7 @@ export async function removeWeb3Profile(formData: FormData) {
   const index = Number(formData.get("index") ?? -1);
   if (Number.isInteger(index) && index >= 0 && index < epk.web3Profiles.length) {
     epk.web3Profiles.splice(index, 1);
-    bumpUpdated(epk);
+    await bumpUpdated(epk);
     revalidatePath("/profile/epk");
   }
 }
@@ -326,7 +366,7 @@ export async function removeWeb3Profile(formData: FormData) {
 export async function addMetric(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
-  const epk = upsertEpk(user.id);
+  const epk = await upsertEpk(user.id);
   const metric = String(formData.get("metric") ?? "").trim();
   const value = String(formData.get("value") ?? "").trim();
   if (metric.length === 0 || value.length === 0) {
@@ -338,7 +378,7 @@ export async function addMetric(formData: FormData) {
     value,
     capturedAt: new Date().toISOString(),
   });
-  bumpUpdated(epk);
+  await bumpUpdated(epk);
   revalidatePath("/profile/epk");
 }
 
@@ -350,7 +390,7 @@ export async function removeMetric(formData: FormData) {
   const index = Number(formData.get("index") ?? -1);
   if (Number.isInteger(index) && index >= 0 && index < epk.metrics.length) {
     epk.metrics.splice(index, 1);
-    bumpUpdated(epk);
+    await bumpUpdated(epk);
     revalidatePath("/profile/epk");
   }
 }
@@ -373,7 +413,7 @@ export async function submitEpkForReview() {
   epk.submittedAt = new Date().toISOString();
   // Clear any prior revision note now that the artist has re-submitted.
   epk.adminRevisionNote = null;
-  bumpUpdated(epk);
+  await bumpUpdated(epk);
 
   for (const u of MOCK_USERS) {
     if (!u.isAdmin) continue;
@@ -415,7 +455,7 @@ export async function approveEpk(formData: FormData) {
   epk.status = "published";
   epk.publishedAt = now;
   epk.adminRevisionNote = null;
-  bumpUpdated(epk);
+  await bumpUpdated(epk);
 
   if (target.profileMode !== "epk") {
     target.profileMode = "epk";
@@ -472,7 +512,7 @@ export async function requestEpkRevision(formData: FormData) {
 
   epk.status = "needs_revision";
   epk.adminRevisionNote = note;
-  bumpUpdated(epk);
+  await bumpUpdated(epk);
 
   logAuditEvent({
     actorUserId: admin.id,

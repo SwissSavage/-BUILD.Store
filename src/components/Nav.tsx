@@ -17,7 +17,7 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { viewAsUser } from "@/lib/auth-actions";
 import { cn } from "@/lib/cn";
 import { MOCK_USERS } from "@/lib/mock-data/users";
-import { unreadNotificationCount } from "@/lib/mock-data/notifications";
+import { unreadNotificationCount } from "@/lib/readers/notifications";
 import {
   TIER_LABELS,
   adminName,
@@ -56,7 +56,7 @@ function pickViewAsTargets(self: User): {
 export async function Nav() {
   const user = await getCurrentUser();
   const isLoggedIn = !!user;
-  const unread = isLoggedIn ? unreadNotificationCount(user!.id) : 0;
+  const unread = isLoggedIn ? await unreadNotificationCount(user!.id) : 0;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-[var(--surface-border)] bg-[var(--surface)]/90 backdrop-blur-sm">

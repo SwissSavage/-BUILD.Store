@@ -54,3 +54,41 @@ export async function getUnreadCount(userId: string): Promise<number> {
     ).length;
   }
 }
+
+/**
+ * Drop-in replacements for the mock-data helpers of the same name, so
+ * surfaces swap with a one-line import change.
+ *
+ * These are async where the originals were synchronous — a real query
+ * replaces an array filter. Server components await them; the one
+ * synchronous consumer (NotificationStrip) takes its rows as a prop
+ * from an async parent instead.
+ */
+
+/** All of a user's notifications, newest first. */
+export async function notificationsForUser(
+  userId: string,
+): Promise<Notification[]> {
+  return getNotificationsForUser(userId);
+}
+
+/** Count unread for the nav badge. Runs on every authenticated render. */
+export async function unreadNotificationCount(
+  userId: string,
+): Promise<number> {
+  return getUnreadCount(userId);
+}
+
+/**
+ * Unread notifications narrowed to specific kinds — powers the
+ * contextual strips that sit above a surface ("2 bids waiting on you"
+ * at the top of the RFP page).
+ */
+export async function unreadByKind(
+  userId: string,
+  kinds: Notification["kind"][],
+): Promise<Notification[]> {
+  const set = new Set(kinds);
+  const rows = await getNotificationsForUser(userId, 200);
+  return rows.filter((n) => n.readAt === null && set.has(n.kind));
+}

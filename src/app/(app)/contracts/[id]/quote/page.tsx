@@ -13,8 +13,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_QUOTES } from "@/lib/mock-data/quotes";
+import { getProjectById } from "@/lib/readers/projects";
+import { randomUUID } from "crypto";
+import { db } from "@/db/client";
+import { quoteSheets } from "@/db/schema";
+import { quoteSheetReader, safely } from "@/lib/readers";
 import { INDUSTRY_LABELS, type QuoteSheetSample } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
 
@@ -24,7 +27,7 @@ async function submitQuote(formData: FormData) {
   if (!user) throw new Error("Not signed in");
 
   const projectId = String(formData.get("projectId") ?? "");
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const project = await getProjectById(projectId);
   if (!project) throw new Error("RFP not found");
 
   const price = String(formData.get("price") ?? "").trim();
@@ -42,8 +45,10 @@ async function submitQuote(formData: FormData) {
     .map((url, i) => ({ url: url.trim(), caption: (sampleCaptions[i] ?? "").trim() }))
     .filter((s) => s.url);
 
-  MOCK_QUOTES.push({
-    id: `q_${Date.now()}`,
+  // Writer swap 2026-08-29: was an in-memory push, so a member's bid
+  // on a contract never reached the admin review queue.
+  await db.insert(quoteSheets).values({
+    id: `q_${randomUUID()}`,
     projectId,
     userId: user.id,
     price,
@@ -72,6 +77,8 @@ function statusLabel(q: { approvedAt: string | null; rejectedAt: string | null }
   return { text: "Pending review", color: "#5070F0" };
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function QuoteSubmitPage({
   params,
 }: {
@@ -81,10 +88,11 @@ export default async function QuoteSubmitPage({
   if (!user) redirect("/signin");
 
   const { id } = await params;
-  const project = MOCK_PROJECTS.find((p) => p.id === id);
+  const project = await getProjectById(id);
   if (!project || project.kind !== "contract") notFound();
 
-  const myQuotes = MOCK_QUOTES.filter(
+  const allQuotes = await safely(() => quoteSheetReader.all(), []);
+  const myQuotes = allQuotes.filter(
     (q) => q.projectId === id && q.userId === user.id,
   ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 

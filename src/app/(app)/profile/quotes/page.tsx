@@ -9,16 +9,30 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_QUOTES } from "@/lib/mock-data/quotes";
-import { clientQuoteView } from "@/lib/types";
+import { getQuotesForUser, safely } from "@/lib/readers";
+import { getAllProjects } from "@/lib/readers/projects";
+import {
+  clientQuoteView,
+  type Project,
+  type QuoteSheet,
+} from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 export default async function ProfileQuotesPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
 
-  const mine = MOCK_QUOTES.filter((q) => q.userId === user.id).sort(
+  // Reader swap 2026-08-29: was MOCK_QUOTES/MOCK_PROJECTS.
+  const [allQuotes, { projects }] = await Promise.all([
+    safely(() => getQuotesForUser(user.id), []),
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+  ]);
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+
+  const mine = allQuotes.sort(
     (a, b) => b.createdAt.localeCompare(a.createdAt),
   );
 
@@ -49,7 +63,7 @@ export default async function ProfileQuotesPage() {
         ) : (
           <div className="space-y-3">
             {pending.map((q) => (
-              <QuoteRow key={q.id} sheet={q} />
+              <QuoteRow key={q.id} sheet={q} projectById={projectById} />
             ))}
           </div>
         )}
@@ -61,7 +75,7 @@ export default async function ProfileQuotesPage() {
         ) : (
           <div className="space-y-3">
             {approved.map((q) => (
-              <QuoteRow key={q.id} sheet={q} showOverrides />
+              <QuoteRow key={q.id} sheet={q} showOverrides projectById={projectById} />
             ))}
           </div>
         )}
@@ -71,7 +85,7 @@ export default async function ProfileQuotesPage() {
         <Section title={`Needs revision (${rejected.length})`}>
           <div className="space-y-3">
             {rejected.map((q) => (
-              <QuoteRow key={q.id} sheet={q} />
+              <QuoteRow key={q.id} sheet={q} projectById={projectById} />
             ))}
           </div>
         </Section>
@@ -100,11 +114,13 @@ function Empty({ children }: { children: React.ReactNode }) {
 function QuoteRow({
   sheet,
   showOverrides = false,
+  projectById,
 }: {
-  sheet: (typeof MOCK_QUOTES)[number];
+  sheet: QuoteSheet;
   showOverrides?: boolean;
+  projectById: Map<string, Project>;
 }) {
-  const project = MOCK_PROJECTS.find((p) => p.id === sheet.projectId);
+  const project = projectById.get(sheet.projectId);
   const clientView = showOverrides ? clientQuoteView(sheet) : null;
   const priceScrubbed = Boolean(sheet.approvedPrice);
   const timelineScrubbed = Boolean(sheet.approvedTimeline);

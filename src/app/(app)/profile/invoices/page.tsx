@@ -9,8 +9,8 @@
  */
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_INVOICES } from "@/lib/mock-data/invoices";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { getProjectsForMember } from "@/lib/readers/projects";
+import { invoiceReader, safely } from "@/lib/readers";
 import { createInternalInvoice } from "@/lib/invoice-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -26,17 +26,29 @@ export default async function ProfileInvoicesPage() {
   // Projects the user is on (as assigned member or admin) that they
   // could bill against. Includes past projects for retroactive
   // invoicing.
-  const eligibleProjects = MOCK_PROJECTS.filter(
-    (p) =>
-      p.assignedMemberIds.includes(user.id) ||
-      p.adminUserIds.includes(user.id),
-  ).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  // Reader swap 2026-08-29: was MOCK_PROJECTS/MOCK_INVOICES, so a
+  // member could not bill against a project they were actually on.
+  const [{ projects: memberProjects }, allInvoices] = await Promise.all([
+    safely(() => getProjectsForMember(user.id), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+    safely(() => invoiceReader.all(), []),
+  ]);
 
-  const myInvoices = MOCK_INVOICES.filter(
-    (i) => i.direction === "talent_to_coop" && i.issuerId === user.id,
-  ).sort((a, b) =>
-    (b.issuedAt ?? b.createdAt).localeCompare(a.issuedAt ?? a.createdAt),
+  const projectById = new Map(memberProjects.map((p) => [p.id, p]));
+
+  const eligibleProjects = [...memberProjects].sort((a, b) =>
+    b.updatedAt.localeCompare(a.updatedAt),
   );
+
+  const myInvoices = allInvoices
+    .filter(
+      (i) => i.direction === "talent_to_coop" && i.issuerId === user.id,
+    )
+    .sort((a, b) =>
+      (b.issuedAt ?? b.createdAt).localeCompare(a.issuedAt ?? a.createdAt),
+    );
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
@@ -162,9 +174,9 @@ export default async function ProfileInvoicesPage() {
         ) : (
           <ul className="mt-4 space-y-3">
             {myInvoices.map((inv) => {
-              const project = MOCK_PROJECTS.find(
-                (p) => p.id === inv.contractId,
-              );
+              const project = inv.contractId
+                ? projectById.get(inv.contractId)
+                : undefined;
               return (
                 <li key={inv.id}>
                   <Card>

@@ -14,15 +14,19 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users as usersTable } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { applicationsByUser } from "@/lib/mock-data/project-applications";
-import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
-import { MOCK_QUOTES } from "@/lib/mock-data/quotes";
-import { MOCK_ATTRIBUTION } from "@/lib/mock-data/attribution";
-import { MOCK_SPLITS } from "@/lib/mock-data/splits";
-import { MOCK_ORDERS } from "@/lib/mock-data/orders";
-import { MOCK_SELLER_APPLICATIONS } from "@/lib/mock-data/seller-applications";
+import {
+  getAttributionForUser,
+  mvpScoreReader,
+  getPortfolioForUser,
+  getQuotesForUser,
+  getSplitsForRecipient,
+  orderReader,
+  safely,
+  sellerApplicationReader,
+} from "@/lib/readers";
+import { getAllProjects } from "@/lib/readers/projects";
+import { getAllUsers } from "@/lib/readers/users";
 import { previewOrderSplit } from "@/lib/order-splits";
 import {
   optInDataParticipation,
@@ -35,7 +39,6 @@ import {
   removeMyTalentTag,
   rescanMyTalentTags,
 } from "@/lib/talent-tag-actions";
-import { mvpScoreForUser, MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
 import { agreementsForUser } from "@/lib/mock-data/agreements";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import {
@@ -102,44 +105,31 @@ async function saveProfile(formData: FormData) {
   // (view-as / seeded sandbox accounts that don't have a
   // Postgres row) still get their profile updated via the mock
   // path fallback — no regression for the dev/demo flow.
-  let dbWrote = false;
-  try {
-    const res = await db
-      .update(usersTable)
-      .set({
-        firstName,
-        lastName,
-        bio,
-        tagline,
-        portfolioUrl,
-        profileImageUrl,
-        primaryIndustry,
-        secondaryIndustries,
-        skills,
-        updatedAt,
-      })
-      .where(eq(usersTable.id, uid))
-      .returning({ id: usersTable.id });
-    dbWrote = res.length > 0;
-  } catch {
-    // DB unreachable — fall through to mock update below so local
-    // dev without Postgres still works.
-  }
+  // Writes straight to Postgres. No in-memory fallback: silently
+  // "succeeding" into a mock array meant a member could edit their
+  // profile, see a success state, and have nothing persist. Better to
+  // surface the failure than to lie about it.
+  const res = await db
+    .update(usersTable)
+    .set({
+      firstName,
+      lastName,
+      bio,
+      tagline,
+      portfolioUrl,
+      profileImageUrl,
+      primaryIndustry,
+      secondaryIndustries,
+      skills,
+      updatedAt,
+    })
+    .where(eq(usersTable.id, uid))
+    .returning({ id: usersTable.id });
 
-  if (!dbWrote) {
-    const mock = MOCK_USERS.find((x) => x.id === uid);
-    if (mock) {
-      mock.firstName = firstName;
-      mock.lastName = lastName;
-      mock.bio = bio;
-      mock.tagline = tagline;
-      mock.portfolioUrl = portfolioUrl;
-      mock.profileImageUrl = profileImageUrl;
-      if (primaryIndustry) mock.primaryIndustry = primaryIndustry;
-      mock.secondaryIndustries = secondaryIndustries;
-      mock.skills = skills;
-      mock.updatedAt = updatedAt;
-    }
+  if (res.length === 0) {
+    throw new Error(
+      "Could not save your profile — no matching account was found.",
+    );
   }
 
   revalidatePath("/profile");
@@ -151,14 +141,41 @@ export default async function ProfilePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
 
-  const myPortfolio = MOCK_PORTFOLIO.filter((p) => p.userId === user.id);
+  // Reader swap 2026-08-29: every block below read a MOCK_ array, so
+  // a member's own profile showed seed work, seed quotes, seed
+  // earnings, and seed orders.
+  const [
+    myPortfolio,
+    myQuotes,
+    myAttribution,
+    myPayouts,
+    { projects: allProjects },
+    allOrders,
+    sellerApps,
+    myMvpSnapshot,
+    allScores,
+    { users: roster },
+  ] = await Promise.all([
+    safely(() => getPortfolioForUser(user.id), []),
+    safely(() => getQuotesForUser(user.id), []),
+    safely(() => getAttributionForUser(user.id), []),
+    safely(() => getSplitsForRecipient(user.id), []),
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+    safely(() => orderReader.all(), []),
+    safely(() => sellerApplicationReader.all(), []),
+    safely(() => mvpScoreReader.byId(user.id), null),
+    safely(() => mvpScoreReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
   const portfolioPublished = myPortfolio.filter((p) => p.publishedAt).length;
   const portfolioPending = myPortfolio.filter(
     (p) => !p.publishedAt && !p.rejectedAt,
   ).length;
   const portfolioRejected = myPortfolio.filter((p) => p.rejectedAt).length;
 
-  const myQuotes = MOCK_QUOTES.filter((q) => q.userId === user.id);
   const quotesApproved = myQuotes.filter((q) => q.approvedAt).length;
   const quotesPending = myQuotes.filter(
     (q) => !q.approvedAt && !q.rejectedAt,
@@ -166,8 +183,6 @@ export default async function ProfilePage() {
   const quotesRejected = myQuotes.filter((q) => q.rejectedAt).length;
 
   // Attribution & payout snapshots — Phase 1 surfaces.
-  const myAttribution = MOCK_ATTRIBUTION.filter((a) => a.userId === user.id);
-  const myPayouts = MOCK_SPLITS.filter((s) => s.recipientId === user.id);
   const lifetimePaid = myPayouts
     .filter((s) => s.payoutStatus === "sent")
     .reduce((sum, s) => sum + Number(s.amount), 0);
@@ -185,7 +200,7 @@ export default async function ProfilePage() {
   const myProposalsAccepted = myApplications.filter(
     (a) => a.status === "approved",
   ).length;
-  const myAssignedProjects = MOCK_PROJECTS.filter(
+  const myAssignedProjects = allProjects.filter(
     (p) => Array.isArray(p.assignedMemberIds) && p.assignedMemberIds.includes(user.id),
   );
   const myActiveContracts = myAssignedProjects.filter(
@@ -202,11 +217,11 @@ export default async function ProfilePage() {
   const coopProfitsFromMe = Math.round((lifetimePaid * 15) / 85);
 
   // Marketplace seller posture — drives the fulfillment dashboard card.
-  const sellerApp = [...MOCK_SELLER_APPLICATIONS]
+  const sellerApp = [...sellerApps]
     .filter((a) => a.userId === user.id)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   const isApprovedSeller = sellerApp?.status === "approved";
-  const sellerOrders = MOCK_ORDERS.filter((o) => o.sellerId === user.id);
+  const sellerOrders = allOrders.filter((o) => o.sellerId === user.id);
   const actionableOrders = sellerOrders.filter(
     (o) => o.status === "placed" || o.status === "paid" || o.status === "fulfilling",
   );
@@ -229,7 +244,7 @@ export default async function ProfilePage() {
       value: `$${lifetimePaid.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
     },
   ];
-  const mvp = mvpScoreForUser(user.id);
+  const mvp = myMvpSnapshot;
 
   // Sticky section-jump nav. Each entry maps to an <section id> below.
   const jumpTargets: Array<{ id: string; label: string }> = [
@@ -532,9 +547,9 @@ export default async function ProfilePage() {
       )}
 
       {(() => {
-        const mvpSnapshot = mvpScoreForUser(user.id);
+        const mvpSnapshot = myMvpSnapshot;
         if (!mvpSnapshot) return null;
-        const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
+        const courtIds = new Set(championsCourtMembers(allScores, roster));
         const isInCourt = courtIds.has(user.id);
         return (
           <div className="mt-6">

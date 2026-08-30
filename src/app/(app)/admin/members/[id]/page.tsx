@@ -16,12 +16,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers, getUserById } from "@/lib/readers/users";
+import { getProjectsForMember } from "@/lib/readers/projects";
+import {
+  attributionReader,
+  getAttributionForUser,
+  getTokensForUser,
+  mvpScoreReader,
+  safely,
+} from "@/lib/readers";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { mvpCompliancePenalties } from "@/db/schema";
+import type { MvpCompliancePenalty } from "@/lib/types";
 import { readAuditLog } from "@/lib/mock-data/audit-log";
-import { MOCK_MVP_SCORES, MOCK_MVP_PENALTIES } from "@/lib/mock-data/mvp-scores";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_ATTRIBUTION } from "@/lib/mock-data/attribution";
-import { MOCK_TRANSACTIONS } from "@/lib/mock-data/tokens";
 import { MOCK_FUTURE_MODERNIST_RECOGNITIONS } from "@/lib/mock-data/future-modernist-recognitions";
 import { MOCK_CANONIZATIONS } from "@/lib/mock-data/canonizations";
 import {
@@ -63,22 +71,50 @@ export default async function MemberDrillDown({
 }) {
   const admin = await requireAdmin();
   const { id } = await params;
-  const user = MOCK_USERS.find((u) => u.id === id);
+  // Reader swap 2026-08-29: was MOCK_USERS, so clicking Manage on any
+  // real member 404'd. The list page had already been swapped; this
+  // drill-down had not, which made the list look fixed while every row
+  // in it led nowhere.
+  const user = await getUserById(id);
   if (!user) notFound();
 
+  // Needed to resolve audit-log actor names further down the page.
+  const { users: allUsers } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+
   // Everything about this user, one query per store.
-  const snapshot = MOCK_MVP_SCORES.find((s) => s.userId === user.id) ?? null;
-  const penalties = MOCK_MVP_PENALTIES.filter((p) => p.userId === user.id);
+  const snapshot = await safely(() => mvpScoreReader.byId(user.id), null);
+  const penalties = await safely(
+    async () =>
+      (await db
+        .select()
+        .from(mvpCompliancePenalties)
+        .where(
+          eq(mvpCompliancePenalties.userId, user.id),
+        )) as unknown as MvpCompliancePenalty[],
+    [],
+  );
   const activePenalties = penalties.filter(
     (p) => new Date(p.expiresAt).getTime() > Date.now(),
   );
-  const assignedProjects = MOCK_PROJECTS.filter((p) =>
+  const { projects: memberProjects } = await safely(
+    () => getProjectsForMember(user.id),
+    { projects: [], source: "postgres" as const },
+  );
+  const assignedProjects = memberProjects.filter((p) =>
     p.assignedMemberIds.includes(user.id),
   );
-  const attributions = MOCK_ATTRIBUTION.filter(
+  const allAttributions = await safely(
+    () => getAttributionForUser(user.id),
+    [],
+  );
+  const attributions = allAttributions.filter(
     (a: { userId: string }) => a.userId === user.id,
   );
-  const transactions = MOCK_TRANSACTIONS.filter(
+  const allTransactions = await safely(() => getTokensForUser(user.id), []);
+  const transactions = allTransactions.filter(
     (t) => t.userId === user.id,
   );
   const buildBalance = transactions.reduce(
@@ -532,7 +568,7 @@ export default async function MemberDrillDown({
                 </div>
                 <div className="mt-1 text-ink-muted">
                   {publicName(
-                    MOCK_USERS.find((u) => u.id === e.actorUserId) ?? null,
+                    allUsers.find((u) => u.id === e.actorUserId) ?? null,
                   )}{" "}
                   ({e.actorRoleSnapshot})
                   {e.reason && (

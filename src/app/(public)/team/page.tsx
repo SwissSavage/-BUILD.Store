@@ -16,8 +16,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { mvpScoreForUser, MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
+import { getPublicUsers } from "@/lib/readers/users";
+import { mvpScoreReader, safely } from "@/lib/readers";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import { publicProfileEligible } from "@/lib/profile-visibility";
 import {
@@ -54,6 +54,12 @@ const TIER_RANK: Record<TradingCardTier, number> = {
   standard: 0,
 };
 
+/**
+ * Roster changes whenever someone joins or their recognition window
+ * opens. Static rendering would freeze it at build time.
+ */
+export const dynamic = "force-dynamic";
+
 export default async function TeamPage({
   searchParams,
 }: {
@@ -83,14 +89,23 @@ export default async function TeamPage({
   const { pillar: raw } = await searchParams;
   const activePillar = parsePillar(raw);
 
-  const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
+  // Reader swap 2026-08-28: was MOCK_USERS + MOCK_MVP_SCORES, so the
+  // public roster showed 13 seed profiles and never a real member.
+  const [{ users }, scores] = await Promise.all([
+    safely(() => getPublicUsers(), { users: [], source: "postgres" as const }),
+    safely(() => mvpScoreReader.all(), []),
+  ]);
+  const scoreById = new Map(scores.map((sc) => [sc.userId, sc]));
+
+  const courtIds = new Set(championsCourtMembers(scores, users));
 
   // Roster = discovery-eligible users. Members always qualify; recognized
   // Partners do too during their window.
-  const roster = MOCK_USERS.filter((u) => publicProfileEligible(u))
+  const roster = users
+    .filter((u) => publicProfileEligible(u))
     .map((u) => {
       const pillars = userPillars(u);
-      const snapshot = mvpScoreForUser(u.id);
+      const snapshot = scoreById.get(u.id) ?? null;
       const tier = deriveTradingCardTier({
         ovr: snapshot?.ovr ?? null,
         isProvisional: snapshot?.isProvisional ?? false,

@@ -10,6 +10,7 @@
  *   - Weekly project digest (only fires when today is Monday UTC)
  *   - Agreement renewal escalating pings (60d → 30d → 7d → day-of)
  *     + daily overdue admin escalation for lapsed renewals
+ *   - MVP score recompute across every member
  *
  * Callers are external cron services (Vercel Cron, GitHub Actions
  * cron, Dokploy's scheduled tasks, etc.) that hit this URL once
@@ -31,6 +32,7 @@ import {
 } from "@/lib/milestone-actions";
 import { runAgreementRenewalSweep } from "@/lib/agreement-renewal-actions";
 import { runFraudScan } from "@/lib/fraud-scan";
+import { recomputeAllMvpScores } from "@/lib/writers/mvp-score";
 
 export const runtime = "nodejs";
 // Never cache — every request runs the sweep freshly.
@@ -75,6 +77,23 @@ export async function GET(request: Request) {
   // function no-ops on non-Sunday even though we call it daily,
   // so the cron config stays a single daily job.
   const fraud = await runFraudScan();
+  // MVP recompute. Scores already update the moment a peer review
+  // lands, so this exists for the time-dependent half of the formula:
+  // compliance penalties expire on a 90-day clock, and without a
+  // daily pass an expired penalty keeps depressing someone's OVR
+  // until the next review happens to arrive. Also picks up any member
+  // whose recompute failed mid-request.
+  //
+  // Wrapped because a scoring failure must not abort the sweeps above
+  // it, which have already fired their notifications by this point.
+  let mvp: { recomputed: number } | { error: string };
+  try {
+    mvp = await recomputeAllMvpScores();
+  } catch (err) {
+    mvp = { error: err instanceof Error ? err.message : String(err) };
+    // eslint-disable-next-line no-console
+    console.error("[cron] MVP recompute failed", err);
+  }
 
   return NextResponse.json({
     ok: true,
@@ -83,6 +102,7 @@ export async function GET(request: Request) {
     weeklyRollup: rollup,
     agreementRenewals: renewals,
     fraudScan: fraud,
+    mvpRecompute: mvp,
   });
 }
 

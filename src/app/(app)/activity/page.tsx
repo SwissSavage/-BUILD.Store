@@ -14,13 +14,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_FUTURE_MODERNIST_RECOGNITIONS } from "@/lib/mock-data/future-modernist-recognitions";
-import { MOCK_CANONIZATIONS } from "@/lib/mock-data/canonizations";
-import { MOCK_ARTIST_EPKS } from "@/lib/mock-data/artist-epk";
-import { MOCK_PROJECT_MILESTONES } from "@/lib/mock-data/project-milestones";
-import { MOCK_MVP_PENALTIES } from "@/lib/mock-data/mvp-scores";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { getAllUsers } from "@/lib/readers/users";
+import { getAllProjects } from "@/lib/readers/projects";
+import {
+  canonizationReader,
+  epkReader,
+  milestoneReader,
+  penaltyReader,
+  recognitionReader,
+  safely,
+} from "@/lib/readers";
 import { publicName } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -54,12 +57,42 @@ const KIND_LABEL: Record<ActivityKind, string> = {
   new_member: "New Member",
 };
 
-function collectEvents(): ActivityEvent[] {
+/**
+ * Build the activity feed from live rows.
+ *
+ * Reader swap 2026-08-29: this walked six MOCK_ arrays, so the feed
+ * showed seed history and nothing a real member did.
+ *
+ * Loads every source in parallel up front rather than querying inside
+ * the per-event loops, which would have been one round trip per row.
+ */
+async function collectEvents(): Promise<ActivityEvent[]> {
   const events: ActivityEvent[] = [];
 
+  const [
+    { users: roster },
+    { projects: allProjects },
+    recognitions,
+    canonizations,
+    epks,
+    milestones,
+    penalties,
+  ] = await Promise.all([
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+    safely(() => recognitionReader.all(), []),
+    safely(() => canonizationReader.all(), []),
+    safely(() => epkReader.all(), []),
+    safely(() => milestoneReader.all(), []),
+    safely(() => penaltyReader.all(), []),
+  ]);
+
   // Recognitions.
-  for (const r of MOCK_FUTURE_MODERNIST_RECOGNITIONS) {
-    const target = MOCK_USERS.find((u) => u.id === r.userId);
+  for (const r of recognitions) {
+    const target = roster.find((u) => u.id === r.userId);
     if (!target) continue;
     events.push({
       id: `evt_rec_${r.id}`,
@@ -77,8 +110,8 @@ function collectEvents(): ActivityEvent[] {
   }
 
   // Canonizations.
-  for (const c of MOCK_CANONIZATIONS) {
-    const target = MOCK_USERS.find((u) => u.id === c.userId);
+  for (const c of canonizations) {
+    const target = roster.find((u) => u.id === c.userId);
     if (!target) continue;
     events.push({
       id: `evt_canon_${c.id}`,
@@ -95,10 +128,10 @@ function collectEvents(): ActivityEvent[] {
   }
 
   // Milestone completions.
-  for (const m of MOCK_PROJECT_MILESTONES) {
+  for (const m of milestones) {
     if (m.status !== "completed" || !m.completedAt) continue;
-    const owner = MOCK_USERS.find((u) => u.id === m.ownerUserId);
-    const project = MOCK_PROJECTS.find((p) => p.id === m.projectId);
+    const owner = roster.find((u) => u.id === m.ownerUserId);
+    const project = allProjects.find((p) => p.id === m.projectId);
     events.push({
       id: `evt_ms_${m.id}`,
       kind: "milestone_completed",
@@ -112,9 +145,9 @@ function collectEvents(): ActivityEvent[] {
   }
 
   // EPK publications.
-  for (const epk of MOCK_ARTIST_EPKS) {
+  for (const epk of epks) {
     if (epk.status !== "published" || !epk.publishedAt) continue;
-    const target = MOCK_USERS.find((u) => u.id === epk.userId);
+    const target = roster.find((u) => u.id === epk.userId);
     if (!target) continue;
     events.push({
       id: `evt_epk_${epk.userId}`,
@@ -131,7 +164,7 @@ function collectEvents(): ActivityEvent[] {
   }
 
   // Bonus decisions.
-  for (const p of MOCK_PROJECTS) {
+  for (const p of allProjects) {
     if (!p.bonusDecidedAt) continue;
     if (p.bonusDecision !== "released" && p.bonusDecision !== "reclaimed") {
       continue;
@@ -155,8 +188,8 @@ function collectEvents(): ActivityEvent[] {
   }
 
   // Compliance penalties.
-  for (const pen of MOCK_MVP_PENALTIES) {
-    const target = MOCK_USERS.find((u) => u.id === pen.userId);
+  for (const pen of penalties) {
+    const target = roster.find((u) => u.id === pen.userId);
     if (!target) continue;
     events.push({
       id: `evt_pen_${pen.id}`,
@@ -171,7 +204,7 @@ function collectEvents(): ActivityEvent[] {
   }
 
   // New Members (createdAt within reasonable memory).
-  for (const u of MOCK_USERS) {
+  for (const u of roster) {
     if (u.membershipTier !== "member") continue;
     events.push({
       id: `evt_new_${u.id}`,
@@ -225,7 +258,7 @@ export default async function ActivityPage() {
     );
   }
 
-  const events = collectEvents();
+  const events = await collectEvents();
   const groups = groupByDay(events);
 
   return (

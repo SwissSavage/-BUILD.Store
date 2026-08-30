@@ -10,8 +10,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_MEDIA_ASSETS } from "@/lib/mock-data/media-assets";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { mediaAssetReader, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
 import {
   INDUSTRY_LABELS,
   MEDIA_ASSET_KIND_LABELS,
@@ -21,6 +21,7 @@ import {
   type Industry,
   type MediaAsset,
   type MembershipTier,
+  type User,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
@@ -44,7 +45,16 @@ export default async function LockerPage({
     (k) => k === params.kind,
   );
 
-  const visible = MOCK_MEDIA_ASSETS.filter((a) => a.status === "published")
+  // Reader swap 2026-08-29: was MOCK_MEDIA_ASSETS, so nothing a member
+  // actually uploaded appeared in the locker.
+  const [allAssets, { users: roster }] = await Promise.all([
+    safely(() => mediaAssetReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const uploaderById = new Map(roster.map((u) => [u.id, u]));
+
+  const visible = allAssets
+    .filter((a) => a.status === "published")
     .filter((a) => canViewMediaAsset(user.membershipTier, a.tierGate))
     .filter((a) => !pillarFilter || a.industry === pillarFilter)
     .filter((a) => !kindFilter || a.kind === kindFilter)
@@ -53,7 +63,7 @@ export default async function LockerPage({
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 
-  const myDrafts = MOCK_MEDIA_ASSETS.filter(
+  const myDrafts = allAssets.filter(
     (a) => a.uploaderId === user.id && a.status !== "archived",
   ).sort(
     (a, b) =>
@@ -97,7 +107,11 @@ export default async function LockerPage({
       ) : (
         <div className="mt-8 grid gap-6 md:grid-cols-2">
           {visible.map((asset) => (
-            <AssetCard key={asset.id} asset={asset} />
+            <AssetCard
+              key={asset.id}
+              asset={asset}
+              uploaderById={uploaderById}
+            />
           ))}
         </div>
       )}
@@ -225,8 +239,14 @@ function FilterBar({ params }: { params: SearchParams }) {
   );
 }
 
-function AssetCard({ asset }: { asset: MediaAsset }) {
-  const uploader = MOCK_USERS.find((u) => u.id === asset.uploaderId) ?? null;
+function AssetCard({
+  asset,
+  uploaderById,
+}: {
+  asset: MediaAsset;
+  uploaderById: Map<string, User>;
+}) {
+  const uploader = uploaderById.get(asset.uploaderId) ?? null;
   return (
     <Card>
       <div className="flex items-start justify-between gap-3">

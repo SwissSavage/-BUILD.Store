@@ -15,7 +15,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { safely } from "@/lib/readers";
 import {
   availabilityForUser,
   blocksForUser,
@@ -103,7 +104,13 @@ export default async function ProfileCalendarPage() {
   const availability = availabilityForUser(user.id);
   const blocks = blocksForUser(user.id);
   const meetings = upcomingMeetingsForUser(user.id, 14);
-  const memberPeers = MOCK_USERS.filter(
+  // Reader swap 2026-08-29: was MOCK_USERS, so the peer picker listed
+  // seed members instead of the real cooperative.
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+  const memberPeers = roster.filter(
     (u) => u.membershipTier === "member" && u.id !== user.id,
   );
 
@@ -143,7 +150,7 @@ export default async function ProfileCalendarPage() {
               const hasConfirmed = m.confirmedByAttendeeIds.includes(user.id);
               const otherAttendees = m.attendeeIds
                 .filter((a) => a !== user.id)
-                .map((a) => MOCK_USERS.find((u) => u.id === a))
+                .map((a) => roster.find((u) => u.id === a))
                 .filter(Boolean);
               return (
                 <li

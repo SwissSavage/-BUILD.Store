@@ -17,7 +17,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { safely } from "@/lib/readers";
 import {
   availabilityForUser,
   upcomingCooperativeMeetings,
@@ -89,7 +90,12 @@ export default async function CooperativeCalendarPage() {
     );
   }
 
-  const members = MOCK_USERS.filter((u) => u.membershipTier === "member");
+  // Reader swap 2026-08-29: was MOCK_USERS.
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+  const members = roster.filter((u) => u.membershipTier === "member");
   const meetings = upcomingCooperativeMeetings(14);
   const meetingsByDay = groupByDate(meetings);
 

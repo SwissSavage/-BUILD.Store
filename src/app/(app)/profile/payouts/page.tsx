@@ -42,8 +42,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_SPLITS } from "@/lib/mock-data/splits";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { getSplitsForRecipient, safely } from "@/lib/readers";
+import { getAllProjects } from "@/lib/readers/projects";
 import {
   PAYOUT_STATUS_LABELS,
   type PayoutStatus,
@@ -94,7 +94,18 @@ export default async function PayoutsPage() {
   // Task #63 — rails beyond Stripe. Reads the payout_methods registry.
   const payoutMethods = await listMyPayoutMethods();
 
-  const myPayouts = MOCK_SPLITS.filter((s) => s.recipientId === user.id).sort(
+  // Reader swap 2026-08-29: was MOCK_SPLITS, so a contributor's payout
+  // history showed seed rows rather than what they had actually earned.
+  const [rawPayouts, { projects }] = await Promise.all([
+    safely(() => getSplitsForRecipient(user.id), []),
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+  ]);
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+
+  const myPayouts = [...rawPayouts].sort(
     (a, b) => {
       const aTime = a.payoutSentAt ?? a.decidedAt ?? "";
       const bTime = b.payoutSentAt ?? b.decidedAt ?? "";
@@ -170,9 +181,9 @@ export default async function PayoutsPage() {
             </thead>
             <tbody>
               {myPayouts.map((s) => {
-                const project = MOCK_PROJECTS.find(
-                  (p) => p.id === s.contractId,
-                );
+                const project = s.contractId
+                  ? projectById.get(s.contractId)
+                  : undefined;
                 return (
                   <tr
                     key={s.id}

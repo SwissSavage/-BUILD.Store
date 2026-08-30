@@ -9,10 +9,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_ATTRIBUTION } from "@/lib/mock-data/attribution";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_SPLITS } from "@/lib/mock-data/splits";
-import { MOCK_INVOICES } from "@/lib/mock-data/invoices";
+import {
+  getAttributionForUser,
+  getSplitsForRecipient,
+  invoiceReader,
+  safely,
+} from "@/lib/readers";
+import { getAllProjects } from "@/lib/readers/projects";
 import {
   ATTRIBUTION_ROLE_LABELS,
   INVOICE_STATUS_LABELS,
@@ -41,11 +44,26 @@ export default async function MyAttributionPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
 
-  const entries = MOCK_ATTRIBUTION.filter((a) => a.userId === user.id).sort(
-    (a, b) => b.loggedAt.localeCompare(a.loggedAt),
+  // Reader swap 2026-08-29: was MOCK_ATTRIBUTION/MOCK_SPLITS, so a
+  // contributor's own earnings ledger showed seed rows.
+  const [rawEntries, rawPayouts, { projects }, allInvoices] =
+    await Promise.all([
+      safely(() => getAttributionForUser(user.id), []),
+      safely(() => getSplitsForRecipient(user.id), []),
+      safely(() => getAllProjects(), {
+        projects: [],
+        source: "postgres" as const,
+      }),
+      safely(() => invoiceReader.all(), []),
+    ]);
+
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+
+  const entries = [...rawEntries].sort((a, b) =>
+    b.loggedAt.localeCompare(a.loggedAt),
   );
-  const payouts = MOCK_SPLITS.filter((s) => s.recipientId === user.id).sort(
-    (a, b) => (b.payoutSentAt ?? "").localeCompare(a.payoutSentAt ?? ""),
+  const payouts = [...rawPayouts].sort((a, b) =>
+    (b.payoutSentAt ?? "").localeCompare(a.payoutSentAt ?? ""),
   );
 
   // Group entries by contract for readable rendering.
@@ -93,12 +111,12 @@ export default async function MyAttributionPage() {
         ) : (
           <div className="mt-4 space-y-4">
             {Array.from(grouped.entries()).map(([contractId, items]) => {
-              const project = MOCK_PROJECTS.find((p) => p.id === contractId);
+              const project = projectById.get(contractId);
               const totalWeight = items.reduce((sum, e) => sum + e.weight, 0);
 
               // AR status for transparency — contributors can see whether
               // the client has paid, without exposing anything PII-y.
-              const invoices = MOCK_INVOICES.filter(
+              const invoices = allInvoices.filter(
                 (i) => i.contractId === contractId,
               );
               const totalIssued = invoices
@@ -243,9 +261,9 @@ export default async function MyAttributionPage() {
               </thead>
               <tbody>
                 {payouts.map((s) => {
-                  const project = MOCK_PROJECTS.find(
-                    (p) => p.id === s.contractId,
-                  );
+                  const project = s.contractId
+                    ? projectById.get(s.contractId)
+                    : undefined;
                   return (
                     <tr
                       key={s.id}

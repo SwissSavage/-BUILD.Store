@@ -31,6 +31,8 @@ import {
   communityMessages,
   customerFeedback,
   feedbackEntries,
+  futureModernistRecognitions,
+  mvpCompliancePenalties,
   inboundSubmissions,
   invoices,
   jobApplications,
@@ -46,6 +48,10 @@ import {
   quoteSheets,
   reservePoolLedger,
   revenueSplits,
+  sellerApplications,
+  storeCategories,
+  products,
+  mediaAssets,
   attributionEntries,
   tokenTransactions,
 } from "@/db/schema";
@@ -60,6 +66,8 @@ import type {
   CohortSpotlight,
   CustomerFeedback,
   FeedbackEntry,
+  FutureModernistRecognition,
+  MvpCompliancePenalty,
   InboundSubmission,
   Invoice,
   MeetingMinute,
@@ -74,6 +82,10 @@ import type {
   QuoteSheet,
   ReservePoolLedgerEntry,
   RevenueSplit,
+  SellerApplication,
+  StoreCategory,
+  Product,
+  MediaAsset,
   TokenTransaction,
 } from "@/lib/types";
 
@@ -375,3 +387,148 @@ export function getMeetingsForUser(
 
 /** Re-exported so callers can build their own predicates. */
 export { and, desc, eq, inArray, isNull, not };
+
+// ──────────────────────────────────────────────────────────────
+//  Profile aggregates
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * Aggregate peer rating for one member, computed from live review rows.
+ *
+ * Drop-in replacement for the mock-data helper of the same name, now
+ * async. Returns null when nobody has reviewed them, which the UI
+ * renders as "no reviews yet" rather than an empty five-star row.
+ *
+ * `professionalism` was added to the rubric later than the rest, so
+ * legacy rows carry null. Those are excluded from that average only,
+ * and the count is exposed separately so the UI can say "based on N
+ * of M reviews" honestly.
+ */
+export async function aggregateRating(userId: string): Promise<{
+  mean: number;
+  count: number;
+  collaboration: number;
+  craft: number;
+  reliability: number;
+  professionalism: number | null;
+  professionalismCount: number;
+} | null> {
+  const rs = await getReviewsOf(userId);
+  if (rs.length === 0) return null;
+
+  const mean = (pick: (r: PeerReview) => number) =>
+    rs.reduce((acc, r) => acc + Number(pick(r)), 0) / rs.length;
+
+  const withProf = rs.filter((r) => r.professionalism != null);
+  const professionalism =
+    withProf.length > 0
+      ? withProf.reduce((acc, r) => acc + Number(r.professionalism), 0) /
+        withProf.length
+      : null;
+
+  return {
+    mean: mean((r) => r.stars),
+    count: rs.length,
+    collaboration: mean((r) => r.collaboration),
+    craft: mean((r) => r.craft),
+    reliability: mean((r) => r.reliability),
+    professionalism,
+    professionalismCount: withProf.length,
+  };
+}
+
+/**
+ * Testimonials an admin has published and attributed to this member.
+ * Unpublished feedback never surfaces here.
+ */
+export async function testimonialsForUser(
+  userId: string,
+): Promise<CustomerFeedback[]> {
+  const rows = await customerFeedbackReader.where(
+    and(
+      eq(customerFeedback.publishedForUserId, userId),
+      not(isNull(customerFeedback.publishedAt)),
+    )!,
+  );
+  return rows.sort((a, b) =>
+    (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
+  );
+}
+
+/** One member's EPK regardless of status. Drop-in for epkForUser. */
+export async function epkForUser(userId: string): Promise<ArtistEpk | null> {
+  return getEpk(userId);
+}
+
+// ──────────────────────────────────────────────────────────────
+//  Marketplace: seller applications, store categories, products,
+//  media assets
+// ──────────────────────────────────────────────────────────────
+
+export const sellerApplicationReader = makeReader<SellerApplication>(
+  sellerApplications,
+  { orderBy: sellerApplications.createdAt, idColumn: sellerApplications.id },
+);
+
+/** Has this member been approved to sell on the marketplace? */
+export async function isApprovedSeller(userId: string): Promise<boolean> {
+  const rows = await sellerApplicationReader.where(
+    and(
+      eq(sellerApplications.userId, userId),
+      eq(sellerApplications.status, "approved"),
+    )!,
+  );
+  return rows.length > 0;
+}
+
+export const storeCategoryReader = makeReader<StoreCategory>(storeCategories, {
+  idColumn: storeCategories.id,
+});
+
+export const productReader = makeReader<Product>(products, {
+  orderBy: products.createdAt,
+  idColumn: products.id,
+});
+
+export const mediaAssetReader = makeReader<MediaAsset>(mediaAssets, {
+  orderBy: mediaAssets.id,
+  idColumn: mediaAssets.id,
+});
+
+/** Assets a member uploaded. */
+export function getMediaForUser(userId: string): Promise<MediaAsset[]> {
+  return mediaAssetReader.where(eq(mediaAssets.uploaderId, userId));
+}
+
+/** Published locker assets — what members browse at /locker. */
+export function getPublishedMedia(): Promise<MediaAsset[]> {
+  return mediaAssetReader.where(eq(mediaAssets.status, "published"));
+}
+
+
+// ──────────────────────────────────────────────────────────────
+//  Recognition + penalties (activity feed inputs)
+// ──────────────────────────────────────────────────────────────
+
+export const recognitionReader = makeReader<FutureModernistRecognition>(
+  futureModernistRecognitions,
+  {
+    orderBy: futureModernistRecognitions.selectedAt,
+    idColumn: futureModernistRecognitions.id,
+  },
+);
+
+export const penaltyReader = makeReader<MvpCompliancePenalty>(
+  mvpCompliancePenalties,
+  {
+    orderBy: mvpCompliancePenalties.appliedAt,
+    idColumn: mvpCompliancePenalties.id,
+  },
+);
+
+/** Active + expired penalties for one member. */
+export function getPenaltiesForUser(
+  userId: string,
+): Promise<MvpCompliancePenalty[]> {
+  return penaltyReader.where(eq(mvpCompliancePenalties.userId, userId));
+}

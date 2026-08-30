@@ -29,8 +29,8 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MOCK_INVOICES } from "@/lib/mock-data/invoices";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { findInvoiceByToken, safely } from "@/lib/readers";
+import { getProjectById } from "@/lib/readers/projects";
 import {
   INVOICE_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
@@ -54,19 +54,26 @@ const STATUS_COLOR: Record<InvoiceStatus, string> = {
   void: "#E53E3E",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function ClientInvoicePage({
   params,
 }: {
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const record = MOCK_INVOICES.find((i) => i.clientToken === token);
+  // Reader swap 2026-08-29: token lookup happens in the query, so a
+  // client opening their own invoice never causes a read of anyone
+  // else's row.
+  const record = await safely(() => findInvoiceByToken(token), null);
   if (!record) notFound();
 
   // Drafts aren't visible to clients — that's admin-only preview state.
   if (record.status === "draft") notFound();
 
-  const project = MOCK_PROJECTS.find((p) => p.id === record.contractId);
+  const project = record.contractId
+    ? await getProjectById(record.contractId)
+    : null;
   const invoice = clientInvoiceView(record);
 
   const clientLabel =

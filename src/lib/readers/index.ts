@@ -30,6 +30,7 @@ import {
   cohortSpotlights,
   cooperativeReceipts,
   cooperativeQuotes,
+  clientProposals,
   communityMessages,
   customerFeedback,
   feedbackEntries,
@@ -68,6 +69,7 @@ import type {
   CohortSpotlight,
   CooperativeReceipt,
   CooperativeQuote,
+  ClientProposal,
   CustomerFeedback,
   FeedbackEntry,
   FutureModernistRecognition,
@@ -576,4 +578,29 @@ export function findCooperativeQuote(
 ): Promise<CooperativeQuote | null> {
   if (!token) return Promise.resolve(null);
   return cooperativeQuoteReader.one(eq(cooperativeQuotes.clientToken, token));
+}
+
+/**
+ * Look up an invoice by its client magic-link token.
+ *
+ * Same posture as the receipt lookup: the token comparison is part of
+ * the query, so a client opening their own invoice never causes a read
+ * of anyone else's row.
+ */
+export function findInvoiceByToken(token: string): Promise<Invoice | null> {
+  if (!token) return Promise.resolve(null);
+  return invoiceReader.one(eq(invoices.clientToken, token));
+}
+
+export const clientProposalReader = makeReader<ClientProposal>(
+  clientProposals,
+  { orderBy: clientProposals.sentAt, idColumn: clientProposals.id },
+);
+
+/** Look up a client proposal by its magic-link token. */
+export function findProposalByToken(
+  token: string,
+): Promise<ClientProposal | null> {
+  if (!token) return Promise.resolve(null);
+  return clientProposalReader.one(eq(clientProposals.token, token));
 }

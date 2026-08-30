@@ -14,13 +14,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_FUTURE_MODERNIST_RECOGNITIONS } from "@/lib/mock-data/future-modernist-recognitions";
-import { MOCK_CANONIZATIONS } from "@/lib/mock-data/canonizations";
-import { MOCK_ARTIST_EPKS } from "@/lib/mock-data/artist-epk";
-import { MOCK_PROJECT_MILESTONES } from "@/lib/mock-data/project-milestones";
-import { MOCK_MVP_PENALTIES } from "@/lib/mock-data/mvp-scores";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { getAllUsers } from "@/lib/readers/users";
+import { getAllProjects } from "@/lib/readers/projects";
+import {
+  canonizationReader,
+  epkReader,
+  milestoneReader,
+  penaltyReader,
+  recognitionReader,
+  safely,
+} from "@/lib/readers";
 import { publicName } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -54,8 +57,38 @@ const KIND_LABEL: Record<ActivityKind, string> = {
   new_member: "New Member",
 };
 
-function collectEvents(): ActivityEvent[] {
+/**
+ * Build the activity feed from live rows.
+ *
+ * Reader swap 2026-08-29: this walked six MOCK_ arrays, so the feed
+ * showed seed history and nothing a real member did.
+ *
+ * Loads every source in parallel up front rather than querying inside
+ * the per-event loops, which would have been one round trip per row.
+ */
+async function collectEvents(): Promise<ActivityEvent[]> {
   const events: ActivityEvent[] = [];
+
+  const [
+    { users: MOCK_USERS },
+    { projects: MOCK_PROJECTS },
+    MOCK_FUTURE_MODERNIST_RECOGNITIONS,
+    MOCK_CANONIZATIONS,
+    MOCK_ARTIST_EPKS,
+    MOCK_PROJECT_MILESTONES,
+    MOCK_MVP_PENALTIES,
+  ] = await Promise.all([
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+    safely(() => recognitionReader.all(), []),
+    safely(() => canonizationReader.all(), []),
+    safely(() => epkReader.all(), []),
+    safely(() => milestoneReader.all(), []),
+    safely(() => penaltyReader.all(), []),
+  ]);
 
   // Recognitions.
   for (const r of MOCK_FUTURE_MODERNIST_RECOGNITIONS) {
@@ -225,7 +258,7 @@ export default async function ActivityPage() {
     );
   }
 
-  const events = collectEvents();
+  const events = await collectEvents();
   const groups = groupByDay(events);
 
   return (

@@ -31,6 +31,8 @@ import {
   communityMessages,
   customerFeedback,
   feedbackEntries,
+  futureModernistRecognitions,
+  mvpCompliancePenalties,
   inboundSubmissions,
   invoices,
   jobApplications,
@@ -46,6 +48,10 @@ import {
   quoteSheets,
   reservePoolLedger,
   revenueSplits,
+  sellerApplications,
+  storeCategories,
+  products,
+  mediaAssets,
   attributionEntries,
   tokenTransactions,
 } from "@/db/schema";
@@ -60,6 +66,8 @@ import type {
   CohortSpotlight,
   CustomerFeedback,
   FeedbackEntry,
+  FutureModernistRecognition,
+  MvpCompliancePenalty,
   InboundSubmission,
   Invoice,
   MeetingMinute,
@@ -74,6 +82,10 @@ import type {
   QuoteSheet,
   ReservePoolLedgerEntry,
   RevenueSplit,
+  SellerApplication,
+  StoreCategory,
+  Product,
+  MediaAsset,
   TokenTransaction,
 } from "@/lib/types";
 
@@ -446,4 +458,77 @@ export async function testimonialsForUser(
 /** One member's EPK regardless of status. Drop-in for epkForUser. */
 export async function epkForUser(userId: string): Promise<ArtistEpk | null> {
   return getEpk(userId);
+}
+
+// ──────────────────────────────────────────────────────────────
+//  Marketplace: seller applications, store categories, products,
+//  media assets
+// ──────────────────────────────────────────────────────────────
+
+export const sellerApplicationReader = makeReader<SellerApplication>(
+  sellerApplications,
+  { orderBy: sellerApplications.createdAt, idColumn: sellerApplications.id },
+);
+
+/** Has this member been approved to sell on the marketplace? */
+export async function isApprovedSeller(userId: string): Promise<boolean> {
+  const rows = await sellerApplicationReader.where(
+    and(
+      eq(sellerApplications.userId, userId),
+      eq(sellerApplications.status, "approved"),
+    )!,
+  );
+  return rows.length > 0;
+}
+
+export const storeCategoryReader = makeReader<StoreCategory>(storeCategories, {
+  idColumn: storeCategories.id,
+});
+
+export const productReader = makeReader<Product>(products, {
+  orderBy: products.createdAt,
+  idColumn: products.id,
+});
+
+export const mediaAssetReader = makeReader<MediaAsset>(mediaAssets, {
+  orderBy: mediaAssets.id,
+  idColumn: mediaAssets.id,
+});
+
+/** Assets a member uploaded. */
+export function getMediaForUser(userId: string): Promise<MediaAsset[]> {
+  return mediaAssetReader.where(eq(mediaAssets.uploaderId, userId));
+}
+
+/** Published locker assets — what members browse at /locker. */
+export function getPublishedMedia(): Promise<MediaAsset[]> {
+  return mediaAssetReader.where(eq(mediaAssets.status, "published"));
+}
+
+
+// ──────────────────────────────────────────────────────────────
+//  Recognition + penalties (activity feed inputs)
+// ──────────────────────────────────────────────────────────────
+
+export const recognitionReader = makeReader<FutureModernistRecognition>(
+  futureModernistRecognitions,
+  {
+    orderBy: futureModernistRecognitions.selectedAt,
+    idColumn: futureModernistRecognitions.id,
+  },
+);
+
+export const penaltyReader = makeReader<MvpCompliancePenalty>(
+  mvpCompliancePenalties,
+  {
+    orderBy: mvpCompliancePenalties.appliedAt,
+    idColumn: mvpCompliancePenalties.id,
+  },
+);
+
+/** Active + expired penalties for one member. */
+export function getPenaltiesForUser(
+  userId: string,
+): Promise<MvpCompliancePenalty[]> {
+  return penaltyReader.where(eq(mvpCompliancePenalties.userId, userId));
 }

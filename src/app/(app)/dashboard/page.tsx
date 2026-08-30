@@ -11,10 +11,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getBalance, getTransactions } from "@/lib/wallet-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { getAllProjects } from "@/lib/readers/projects";
+import { orderReader, safely } from "@/lib/readers";
 import { applicationsByUser } from "@/lib/mock-data/project-applications";
-import { MOCK_ORDERS } from "@/lib/mock-data/orders";
-import { MOCK_SELLER_APPLICATIONS } from "@/lib/mock-data/seller-applications";
+import { isApprovedSeller as checkApprovedSeller } from "@/lib/readers";
 import {
   notificationsForUser,
   unreadNotificationCount,
@@ -57,7 +57,15 @@ export default async function DashboardPage() {
   ).length;
   const showWalkthroughCallout =
     walkthroughTotal > 0 && walkthroughDoneCount < walkthroughTotal;
-  const openMatching = MOCK_PROJECTS.filter(
+  // Reader swap 2026-08-29: was MOCK_PROJECTS/MOCK_ORDERS, so the
+  // dashboard showed seed work regardless of what the member actually
+  // had going on.
+  const { projects: allProjects } = await safely(() => getAllProjects(), {
+    projects: [],
+    source: "postgres" as const,
+  });
+
+  const openMatching = allProjects.filter(
     (p) =>
       p.kind === "contract" &&
       p.isRfp &&
@@ -67,7 +75,7 @@ export default async function DashboardPage() {
   );
   // Contracts the member is actually on — surfaces the HubSpot funnel stage
   // so they know where the client is without needing to ping admin.
-  const myContracts = MOCK_PROJECTS.filter(
+  const myContracts = allProjects.filter(
     (p) =>
       p.kind === "contract" &&
       p.assignedMemberIds.includes(user.id) &&
@@ -90,11 +98,14 @@ export default async function DashboardPage() {
   // Seller fulfillment alert — only renders for approved sellers with
   // orders waiting on them. Prominent because miss-shipping a placed
   // order is the highest-cost failure mode for a marketplace member.
-  const isApprovedSeller = MOCK_SELLER_APPLICATIONS.some(
-    (a) => a.userId === user.id && a.status === "approved",
+  const isApprovedSeller = await safely(
+    () => checkApprovedSeller(user.id),
+    false,
   );
   const sellerOrders = isApprovedSeller
-    ? MOCK_ORDERS.filter((o) => o.sellerId === user.id)
+    ? (await safely(() => orderReader.all(), [])).filter(
+        (o) => o.sellerId === user.id,
+      )
     : [];
   const actionableSellerOrders = sellerOrders.filter(
     (o) =>
@@ -346,7 +357,7 @@ export default async function DashboardPage() {
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {activeApplications.map((a) => {
-              const project = MOCK_PROJECTS.find((p) => p.id === a.projectId);
+              const project = allProjects.find((p) => p.id === a.projectId);
               if (!project) return null;
               const accent =
                 a.status === "approved" ? "#007048" : "#5070F0";

@@ -14,10 +14,10 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users as usersTable } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
 import { applicationsByUser } from "@/lib/mock-data/project-applications";
 import {
   getAttributionForUser,
+  mvpScoreReader,
   getPortfolioForUser,
   getQuotesForUser,
   getSplitsForRecipient,
@@ -26,6 +26,7 @@ import {
   sellerApplicationReader,
 } from "@/lib/readers";
 import { getAllProjects } from "@/lib/readers/projects";
+import { getAllUsers } from "@/lib/readers/users";
 import { previewOrderSplit } from "@/lib/order-splits";
 import {
   optInDataParticipation,
@@ -38,7 +39,6 @@ import {
   removeMyTalentTag,
   rescanMyTalentTags,
 } from "@/lib/talent-tag-actions";
-import { mvpScoreForUser, MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
 import { agreementsForUser } from "@/lib/mock-data/agreements";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import {
@@ -105,44 +105,31 @@ async function saveProfile(formData: FormData) {
   // (view-as / seeded sandbox accounts that don't have a
   // Postgres row) still get their profile updated via the mock
   // path fallback — no regression for the dev/demo flow.
-  let dbWrote = false;
-  try {
-    const res = await db
-      .update(usersTable)
-      .set({
-        firstName,
-        lastName,
-        bio,
-        tagline,
-        portfolioUrl,
-        profileImageUrl,
-        primaryIndustry,
-        secondaryIndustries,
-        skills,
-        updatedAt,
-      })
-      .where(eq(usersTable.id, uid))
-      .returning({ id: usersTable.id });
-    dbWrote = res.length > 0;
-  } catch {
-    // DB unreachable — fall through to mock update below so local
-    // dev without Postgres still works.
-  }
+  // Writes straight to Postgres. No in-memory fallback: silently
+  // "succeeding" into a mock array meant a member could edit their
+  // profile, see a success state, and have nothing persist. Better to
+  // surface the failure than to lie about it.
+  const res = await db
+    .update(usersTable)
+    .set({
+      firstName,
+      lastName,
+      bio,
+      tagline,
+      portfolioUrl,
+      profileImageUrl,
+      primaryIndustry,
+      secondaryIndustries,
+      skills,
+      updatedAt,
+    })
+    .where(eq(usersTable.id, uid))
+    .returning({ id: usersTable.id });
 
-  if (!dbWrote) {
-    const mock = MOCK_USERS.find((x) => x.id === uid);
-    if (mock) {
-      mock.firstName = firstName;
-      mock.lastName = lastName;
-      mock.bio = bio;
-      mock.tagline = tagline;
-      mock.portfolioUrl = portfolioUrl;
-      mock.profileImageUrl = profileImageUrl;
-      if (primaryIndustry) mock.primaryIndustry = primaryIndustry;
-      mock.secondaryIndustries = secondaryIndustries;
-      mock.skills = skills;
-      mock.updatedAt = updatedAt;
-    }
+  if (res.length === 0) {
+    throw new Error(
+      "Could not save your profile — no matching account was found.",
+    );
   }
 
   revalidatePath("/profile");
@@ -165,6 +152,9 @@ export default async function ProfilePage() {
     { projects: allProjects },
     allOrders,
     sellerApps,
+    myMvpSnapshot,
+    allScores,
+    { users: roster },
   ] = await Promise.all([
     safely(() => getPortfolioForUser(user.id), []),
     safely(() => getQuotesForUser(user.id), []),
@@ -176,6 +166,9 @@ export default async function ProfilePage() {
     }),
     safely(() => orderReader.all(), []),
     safely(() => sellerApplicationReader.all(), []),
+    safely(() => mvpScoreReader.byId(user.id), null),
+    safely(() => mvpScoreReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
   ]);
   const portfolioPublished = myPortfolio.filter((p) => p.publishedAt).length;
   const portfolioPending = myPortfolio.filter(
@@ -251,7 +244,7 @@ export default async function ProfilePage() {
       value: `$${lifetimePaid.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
     },
   ];
-  const mvp = mvpScoreForUser(user.id);
+  const mvp = myMvpSnapshot;
 
   // Sticky section-jump nav. Each entry maps to an <section id> below.
   const jumpTargets: Array<{ id: string; label: string }> = [
@@ -554,9 +547,9 @@ export default async function ProfilePage() {
       )}
 
       {(() => {
-        const mvpSnapshot = mvpScoreForUser(user.id);
+        const mvpSnapshot = myMvpSnapshot;
         if (!mvpSnapshot) return null;
-        const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
+        const courtIds = new Set(championsCourtMembers(allScores, roster));
         const isInCourt = courtIds.has(user.id);
         return (
           <div className="mt-6">

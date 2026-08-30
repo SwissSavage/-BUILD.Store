@@ -70,13 +70,13 @@ async function collectEvents(): Promise<ActivityEvent[]> {
   const events: ActivityEvent[] = [];
 
   const [
-    { users: MOCK_USERS },
-    { projects: MOCK_PROJECTS },
-    MOCK_FUTURE_MODERNIST_RECOGNITIONS,
-    MOCK_CANONIZATIONS,
-    MOCK_ARTIST_EPKS,
-    MOCK_PROJECT_MILESTONES,
-    MOCK_MVP_PENALTIES,
+    { users: roster },
+    { projects: allProjects },
+    recognitions,
+    canonizations,
+    epks,
+    milestones,
+    penalties,
   ] = await Promise.all([
     safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
     safely(() => getAllProjects(), {
@@ -91,8 +91,8 @@ async function collectEvents(): Promise<ActivityEvent[]> {
   ]);
 
   // Recognitions.
-  for (const r of MOCK_FUTURE_MODERNIST_RECOGNITIONS) {
-    const target = MOCK_USERS.find((u) => u.id === r.userId);
+  for (const r of recognitions) {
+    const target = roster.find((u) => u.id === r.userId);
     if (!target) continue;
     events.push({
       id: `evt_rec_${r.id}`,
@@ -110,8 +110,8 @@ async function collectEvents(): Promise<ActivityEvent[]> {
   }
 
   // Canonizations.
-  for (const c of MOCK_CANONIZATIONS) {
-    const target = MOCK_USERS.find((u) => u.id === c.userId);
+  for (const c of canonizations) {
+    const target = roster.find((u) => u.id === c.userId);
     if (!target) continue;
     events.push({
       id: `evt_canon_${c.id}`,
@@ -128,10 +128,10 @@ async function collectEvents(): Promise<ActivityEvent[]> {
   }
 
   // Milestone completions.
-  for (const m of MOCK_PROJECT_MILESTONES) {
+  for (const m of milestones) {
     if (m.status !== "completed" || !m.completedAt) continue;
-    const owner = MOCK_USERS.find((u) => u.id === m.ownerUserId);
-    const project = MOCK_PROJECTS.find((p) => p.id === m.projectId);
+    const owner = roster.find((u) => u.id === m.ownerUserId);
+    const project = allProjects.find((p) => p.id === m.projectId);
     events.push({
       id: `evt_ms_${m.id}`,
       kind: "milestone_completed",
@@ -145,9 +145,9 @@ async function collectEvents(): Promise<ActivityEvent[]> {
   }
 
   // EPK publications.
-  for (const epk of MOCK_ARTIST_EPKS) {
+  for (const epk of epks) {
     if (epk.status !== "published" || !epk.publishedAt) continue;
-    const target = MOCK_USERS.find((u) => u.id === epk.userId);
+    const target = roster.find((u) => u.id === epk.userId);
     if (!target) continue;
     events.push({
       id: `evt_epk_${epk.userId}`,
@@ -164,7 +164,7 @@ async function collectEvents(): Promise<ActivityEvent[]> {
   }
 
   // Bonus decisions.
-  for (const p of MOCK_PROJECTS) {
+  for (const p of allProjects) {
     if (!p.bonusDecidedAt) continue;
     if (p.bonusDecision !== "released" && p.bonusDecision !== "reclaimed") {
       continue;
@@ -188,8 +188,8 @@ async function collectEvents(): Promise<ActivityEvent[]> {
   }
 
   // Compliance penalties.
-  for (const pen of MOCK_MVP_PENALTIES) {
-    const target = MOCK_USERS.find((u) => u.id === pen.userId);
+  for (const pen of penalties) {
+    const target = roster.find((u) => u.id === pen.userId);
     if (!target) continue;
     events.push({
       id: `evt_pen_${pen.id}`,
@@ -204,7 +204,7 @@ async function collectEvents(): Promise<ActivityEvent[]> {
   }
 
   // New Members (createdAt within reasonable memory).
-  for (const u of MOCK_USERS) {
+  for (const u of roster) {
     if (u.membershipTier !== "member") continue;
     events.push({
       id: `evt_new_${u.id}`,

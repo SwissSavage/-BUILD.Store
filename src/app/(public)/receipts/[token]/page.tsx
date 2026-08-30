@@ -26,8 +26,9 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { findCooperativeReceipt } from "@/lib/mock-data/cooperative-receipts";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { findCooperativeReceipt, safely } from "@/lib/readers";
+import { getProjectById } from "@/lib/readers/projects";
+import type { Project } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 /** Static-rendered by token — Next builds one page per known token. */
@@ -37,12 +38,15 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
  * Next builds a page for each at build time. Production replaces with
  * a Drizzle lookup on `cooperative_receipts.client_token`.
  */
-export async function generateStaticParams() {
-  const { MOCK_COOPERATIVE_RECEIPTS } = await import(
-    "@/lib/mock-data/cooperative-receipts"
-  );
-  return MOCK_COOPERATIVE_RECEIPTS.map((r) => ({ token: r.clientToken }));
-}
+/**
+ * Rendered on demand, never pre-generated.
+ *
+ * This page used to export generateStaticParams that enumerated every
+ * receipt token at build time. On a token-gated surface that is worse
+ * than a staleness problem: it bakes a page for every client's private
+ * link into the build output. Receipts are looked up per request now.
+ */
+export const dynamic = "force-dynamic";
 
 const CLIENT_LABELS: Record<string, string> = {
   client_url_media: "URL Media",
@@ -56,18 +60,20 @@ export default async function CooperativeReceiptPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const receipt = findCooperativeReceipt(token);
+  const receipt = await safely(() => findCooperativeReceipt(token), null);
   if (!receipt) notFound();
 
-  const project = MOCK_PROJECTS.find((p) => p.id === receipt.projectId);
+  const project = await getProjectById(receipt.projectId);
   if (!project) notFound();
 
   const clientLabel =
     CLIENT_LABELS[project.clientId] ?? "the client team";
 
-  const subsequentProjects = receipt.subsequentProjectIds
-    .map((id) => MOCK_PROJECTS.find((p) => p.id === id))
-    .filter((p): p is (typeof MOCK_PROJECTS)[number] => !!p);
+  const subsequentProjects = (
+    await Promise.all(
+      receipt.subsequentProjectIds.map((id) => getProjectById(id)),
+    )
+  ).filter((p): p is Project => p !== null);
 
   const generatedDate = new Date(receipt.generatedAt).toLocaleDateString(
     undefined,

@@ -28,6 +28,8 @@ import {
   chatMessages,
   chatThreads,
   cohortSpotlights,
+  cooperativeReceipts,
+  cooperativeQuotes,
   communityMessages,
   customerFeedback,
   feedbackEntries,
@@ -64,6 +66,8 @@ import type {
   ChatMessage,
   ChatThread,
   CohortSpotlight,
+  CooperativeReceipt,
+  CooperativeQuote,
   CustomerFeedback,
   FeedbackEntry,
   FutureModernistRecognition,
@@ -531,4 +535,45 @@ export function getPenaltiesForUser(
   userId: string,
 ): Promise<MvpCompliancePenalty[]> {
   return penaltyReader.where(eq(mvpCompliancePenalties.userId, userId));
+}
+
+// ──────────────────────────────────────────────────────────────
+//  Cooperative receipts + quotes (client magic-link surfaces)
+// ──────────────────────────────────────────────────────────────
+
+export const cooperativeReceiptReader = makeReader<CooperativeReceipt>(
+  cooperativeReceipts,
+  {
+    orderBy: cooperativeReceipts.generatedAt,
+    idColumn: cooperativeReceipts.id,
+  },
+);
+
+/**
+ * Look up a receipt by its client magic-link token.
+ *
+ * Token comparison happens in the WHERE clause rather than by loading
+ * every receipt and scanning — a client should never cause the app to
+ * read other clients' rows just to find their own.
+ */
+export function findCooperativeReceipt(
+  token: string,
+): Promise<CooperativeReceipt | null> {
+  if (!token) return Promise.resolve(null);
+  return cooperativeReceiptReader.one(
+    eq(cooperativeReceipts.clientToken, token),
+  );
+}
+
+export const cooperativeQuoteReader = makeReader<CooperativeQuote>(
+  cooperativeQuotes,
+  { orderBy: cooperativeQuotes.createdAt, idColumn: cooperativeQuotes.id },
+);
+
+/** Look up a cooperative quote by its client magic-link token. */
+export function findCooperativeQuote(
+  token: string,
+): Promise<CooperativeQuote | null> {
+  if (!token) return Promise.resolve(null);
+  return cooperativeQuoteReader.one(eq(cooperativeQuotes.clientToken, token));
 }

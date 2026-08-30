@@ -18,7 +18,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
 import { listInboundSubmissions } from "@/lib/mock-data/inbound-submissions";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAdminUsers } from "@/lib/readers/users";
+import { safely } from "@/lib/readers";
 import { scoreTalentMatch } from "@/lib/talent-match";
 import {
   setInboundStatus,
@@ -42,6 +43,7 @@ import {
   type InboundSubmission,
   type InboundSubmissionKind,
   type InboundSubmissionStatus,
+  type User,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -65,6 +67,8 @@ const STATUS_OPTIONS: InboundSubmissionStatus[] = [
   "closed_no_action",
 ];
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminInboundPage({
   searchParams,
 }: {
@@ -85,7 +89,11 @@ export default async function AdminInboundPage({
     status,
     assignedAdminId: assignee,
   });
-  const admins = MOCK_USERS.filter((u) => u.isAdmin);
+  // Reader swap 2026-08-29: assignment dropdown listed seed admins.
+  const { users: admins } = await safely(() => getAdminUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
 
   // Top-of-page counts.
   const allRows = listInboundSubmissions();
@@ -205,7 +213,7 @@ function SubmissionRow({
   admins,
 }: {
   row: InboundSubmission;
-  admins: typeof MOCK_USERS;
+  admins: User[];
 }) {
   const matches = scoreTalentMatch(
     { pillars: row.pillarTags, keywordTags: row.keywordTags },

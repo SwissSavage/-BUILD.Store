@@ -31,8 +31,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { cooperativeQuotes as cooperativeQuotesTable } from "@/db/schema";
 import type { ProposedBuilder, CooperativeQuote } from "@/lib/types";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_MVP_SCORES, mvpScoreForUser } from "@/lib/mock-data/mvp-scores";
+import { getAllUsers } from "@/lib/readers/users";
+import { mvpScoreReader, safely } from "@/lib/readers";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import { deriveTradingCardTier } from "@/components/TradingCard";
 import { CardEyebrow, CardTitle } from "@/components/Card";
@@ -124,12 +124,22 @@ export default async function CooperativeQuotePage({
   // Build crew members. Resolve users, derive tiers, denormalize
   // per-Builder pricing into a display quoteLine so the client
   // component stays free of pricing-domain imports.
-  const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
+  // Reader swap 2026-08-29: was MOCK_USERS/MOCK_MVP_SCORES. This page
+  // is what a CLIENT sees when they open the quote magic-link, so the
+  // proposed crew showing seed people rather than the actual builders
+  // is the worst-facing version of this bug.
+  const [{ users: roster }, allScores] = await Promise.all([
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => mvpScoreReader.all(), []),
+  ]);
+  const scoreById = new Map(allScores.map((sc) => [sc.userId, sc]));
+
+  const courtIds = new Set(championsCourtMembers(allScores, roster));
   const crew: QuoteFlipReveaCrewMember[] = quote.proposedBuilders
     .map((b): QuoteFlipReveaCrewMember | null => {
-      const user = MOCK_USERS.find((u) => u.id === b.userId);
+      const user = roster.find((u) => u.id === b.userId);
       if (!user) return null;
-      const mvpSnapshot = mvpScoreForUser(user.id);
+      const mvpSnapshot = scoreById.get(user.id) ?? null;
       const tier = deriveTradingCardTier({
         ovr: mvpSnapshot ? mvpSnapshot.ovr : null,
         isProvisional: mvpSnapshot?.isProvisional ?? false,

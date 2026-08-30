@@ -15,7 +15,7 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { getProjectById } from "@/lib/readers/projects";
 import { hasFeedbackForContext } from "@/lib/mock-data/customer-feedback";
 import { submitCustomerFeedbackByLink } from "@/lib/customer-feedback-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
@@ -42,6 +42,8 @@ const CLIENT_LABELS: Record<string, string> = {
   client_bk_greenroots: "Brooklyn GreenRoots",
   client_arborai: "ArborAI",
 };
+
+export const dynamic = "force-dynamic";
 
 export default async function ContractFeedbackPage({
   params,
@@ -74,7 +76,7 @@ export default async function ContractFeedbackPage({
     );
   }
 
-  const project = MOCK_PROJECTS.find((p) => p.id === id);
+  const project = await getProjectById(id);
   if (!project) notFound();
 
   const clientLabel = CLIENT_LABELS[project.clientId] ?? project.clientId;

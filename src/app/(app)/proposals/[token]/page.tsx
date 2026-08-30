@@ -34,10 +34,13 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MOCK_PROPOSALS } from "@/lib/mock-data/proposals";
-import { MOCK_QUOTES } from "@/lib/mock-data/quotes";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import {
+  findProposalByToken,
+  quoteSheetReader,
+  safely,
+} from "@/lib/readers";
+import { getProjectById } from "@/lib/readers/projects";
+import { getUserById } from "@/lib/readers/users";
 import {
   INDUSTRY_LABELS,
   clientQuoteView,
@@ -51,20 +54,25 @@ const CLIENT_LABELS: Record<string, string> = {
   client_url_media: "URL Media",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function ClientProposalPage({
   params,
 }: {
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const proposal = MOCK_PROPOSALS.find((p) => p.token === token);
+  const proposal = await safely(() => findProposalByToken(token), null);
   if (!proposal) notFound();
 
   const expired = new Date(proposal.expiresAt).getTime() < Date.now();
   if (expired) return <ExpiredView />;
 
-  const quote = MOCK_QUOTES.find((q) => q.id === proposal.quoteSheetId);
-  const project = MOCK_PROJECTS.find((p) => p.id === proposal.contractId);
+  const quote = await safely(
+    () => quoteSheetReader.byId(proposal.quoteSheetId),
+    null,
+  );
+  const project = await getProjectById(proposal.contractId);
   const clientView = quote ? clientQuoteView(quote) : null;
   if (!quote || !project || !clientView) notFound();
 
@@ -75,7 +83,7 @@ export default async function ClientProposalPage({
   proposal.lastViewedAt = new Date().toISOString();
 
   // Pillar for the contributor (used as the only identity surface — no name).
-  const contributor = MOCK_USERS.find((u) => u.id === clientView.userId);
+  const contributor = await getUserById(clientView.userId);
   const contributorPillars = contributor ? userPillars(contributor) : [];
   const primaryPillar = contributorPillars[0] ?? project.industry;
   const contributorLabel = `Cooperative member · ${INDUSTRY_LABELS[primaryPillar]}`;

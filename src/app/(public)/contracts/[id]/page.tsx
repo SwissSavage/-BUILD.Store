@@ -12,7 +12,7 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { getProjectById } from "@/lib/readers/projects";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
@@ -31,7 +31,7 @@ interface Params {
 
 export async function generateMetadata({ params }: { params: Promise<Params> }) {
   const { id } = await params;
-  const p = MOCK_PROJECTS.find((x) => x.id === id);
+  const p = await getProjectById(id);
   if (!p || p.kind !== "contract") {
     return { title: "Contract not found — Future Modern" };
   }
@@ -42,13 +42,15 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
   };
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function ContractDetailPage({
   params,
 }: {
   params: Promise<Params>;
 }) {
   const { id } = await params;
-  const project = MOCK_PROJECTS.find((p) => p.id === id);
+  const project = await getProjectById(id);
 
   if (
     !project ||

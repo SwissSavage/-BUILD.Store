@@ -11,12 +11,10 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import {
-  milestonesForProject,
-  projectProgress,
-} from "@/lib/mock-data/project-milestones";
+import { getProjectById } from "@/lib/readers/projects";
+import { getAllUsers } from "@/lib/readers/users";
+import { getMilestonesForProject, safely } from "@/lib/readers";
+import { projectProgress } from "@/lib/mock-data/project-milestones";
 import { publicName } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
@@ -40,6 +38,8 @@ const CLIENT_LABELS: Record<string, string> = {
   client_arborai: "ArborAI",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function ClientTrackerPage({
   params,
   searchParams,
@@ -50,8 +50,16 @@ export default async function ClientTrackerPage({
   const { id } = await params;
   const { token } = await searchParams;
   const validToken = token ? tokenAuthorizesContract(token, id) : false;
-  const project = MOCK_PROJECTS.find((p) => p.id === id);
+  // Reader swap 2026-08-29: was MOCK_PROJECTS/MOCK_USERS. This is the
+  // page a CLIENT opens from a magic link, so stale data here is the
+  // most externally visible version of the bug.
+  const project = await getProjectById(id);
   if (!project) notFound();
+
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
 
   if (!validToken) {
     return (
@@ -74,7 +82,7 @@ export default async function ClientTrackerPage({
     );
   }
 
-  const milestones = milestonesForProject(id);
+  const milestones = await safely(() => getMilestonesForProject(id), []);
   const progress = projectProgress(id);
   const clientLabel = CLIENT_LABELS[project.clientId] ?? project.clientId;
   // Freshness signal — latest milestone touch anywhere on the project.
@@ -188,7 +196,7 @@ export default async function ClientTrackerPage({
             </h2>
             <div className="mt-4 space-y-3">
               {milestones.map((m) => {
-                const owner = MOCK_USERS.find((u) => u.id === m.ownerUserId);
+                const owner = roster.find((u) => u.id === m.ownerUserId);
                 return (
                   <Card key={m.id}>
                     <div className="flex flex-wrap items-baseline justify-between gap-2">

@@ -27,8 +27,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getProjectById } from "@/lib/readers/projects";
+import { getAllUsers } from "@/lib/readers/users";
+import { mvpScoreReader, safely } from "@/lib/readers";
 import {
   applicationsForProject,
   latestApplication,
@@ -56,8 +57,8 @@ import { TalentHand, type TalentHandEntry } from "@/components/TalentHand";
 import {
   deriveTradingCardTier,
 } from "@/components/TradingCard";
-import { mvpScoreForUser, MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
 import { championsCourtMembers } from "@/lib/mvp-score";
+import type { MvpScore } from "@/lib/types";
 import { milestonesForProject } from "@/lib/mock-data/project-milestones";
 import { updateMilestoneStatus } from "@/lib/milestone-actions";
 
@@ -75,8 +76,13 @@ const STATUS_ACCENT: Record<ProjectApplication["status"], string> = {
   withdrawn: "#666666",
 };
 
-function userById(id: string): User | undefined {
-  return MOCK_USERS.find((u) => u.id === id);
+/**
+ * Roster lookup. Takes the already-loaded user list rather than
+ * reaching for a module-level array, so the page runs one query
+ * instead of one per row.
+ */
+function userById(roster: User[], id: string): User | undefined {
+  return roster.find((u) => u.id === id);
 }
 
 function formatDate(iso: string): string {
@@ -95,8 +101,16 @@ export default async function ProjectDetailPage({
   const { id } = await params;
   const user = await getCurrentUser();
 
-  const project = MOCK_PROJECTS.find((p) => p.id === id);
+  // Reader swap 2026-08-29: was MOCK_PROJECTS, so a real project's
+  // detail page 404'd.
+  const project = await getProjectById(id);
   if (!project) notFound();
+
+  const [{ users: roster }, allScores] = await Promise.all([
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => mvpScoreReader.all(), []),
+  ]);
+  const scoreById = new Map(allScores.map((sc) => [sc.userId, sc]));
 
   const isInternal = project.kind === "internal";
   // External contracts are not a public surface — bounce logged-out
@@ -221,7 +235,8 @@ export default async function ProjectDetailPage({
           {/* ── Application queue (admins see all, members see their own) */}
           {isInternal && user && (
             <ApplicationQueue
-              applications={allApps}
+                  roster={roster}
+                  applications={allApps}
               isAdmin={isAdmin}
               currentUserId={user.id}
             />
@@ -237,7 +252,12 @@ export default async function ProjectDetailPage({
               </p>
             ) : (
               <div className="mt-3">
-                <TeamHand project={project} />
+                <TeamHand
+                  project={project}
+                  roster={roster}
+                  scoreById={scoreById}
+                  allScores={allScores}
+                />
               </div>
             )}
           </Card>
@@ -283,7 +303,7 @@ function ApplySection({
   onTeam,
   acceptingApplicants,
 }: {
-  project: (typeof MOCK_PROJECTS)[number];
+  project: Project;
   user: User;
   myPending: ProjectApplication | null;
   myLatest: ProjectApplication | null;
@@ -481,7 +501,7 @@ function ProspectiveOfferSection({
   project,
   accepting,
 }: {
-  project: (typeof MOCK_PROJECTS)[number];
+  project: Project;
   accepting: boolean;
 }) {
   if (!accepting) {
@@ -645,10 +665,12 @@ function ApplicationQueue({
   applications,
   isAdmin,
   currentUserId,
+  roster,
 }: {
   applications: ProjectApplication[];
   isAdmin: boolean;
   currentUserId: string;
+  roster: User[];
 }) {
   // Members only see their own rows; admins see everyone.
   const visible = isAdmin
@@ -664,7 +686,7 @@ function ApplicationQueue({
       </CardEyebrow>
       <ul className="mt-3 divide-y divide-[var(--surface-border)] text-sm">
         {visible.map((a) => {
-          const applicant = userById(a.userId);
+          const applicant = userById(roster, a.userId);
           const accent = STATUS_ACCENT[a.status];
           return (
             <li key={a.id} className="py-3">
@@ -843,14 +865,24 @@ function ProjectMilestonesSection({
  * client-facing quote surface where the same shape gets selection
  * actions layered on.
  */
-function TeamHand({ project }: { project: Project }) {
-  const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
+function TeamHand({
+  project,
+  roster,
+  scoreById,
+  allScores,
+}: {
+  project: Project;
+  roster: User[];
+  scoreById: Map<string, MvpScore>;
+  allScores: MvpScore[];
+}) {
+  const courtIds = new Set(championsCourtMembers(allScores, roster));
 
   const entries: TalentHandEntry[] = project.assignedMemberIds
     .map((memberId): TalentHandEntry | null => {
-      const user = MOCK_USERS.find((u) => u.id === memberId);
+      const user = roster.find((u) => u.id === memberId);
       if (!user) return null;
-      const mvpSnapshot = mvpScoreForUser(user.id);
+      const mvpSnapshot = scoreById.get(user.id) ?? null;
       const tier = deriveTradingCardTier({
         ovr: mvpSnapshot ? mvpSnapshot.ovr : null,
         isProvisional: mvpSnapshot?.isProvisional ?? false,

@@ -13,15 +13,25 @@
  */
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { INDUSTRY_LABELS } from "@/lib/types";
+import { getAllProjects } from "@/lib/readers/projects";
+import { safely } from "@/lib/readers";
+import { INDUSTRY_LABELS, type Project } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { NotificationStrip } from "@/components/NotificationStrip";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
   const user = await getCurrentUser();
 
-  const internal = MOCK_PROJECTS.filter((p) => p.kind === "internal");
+  // Reader swap 2026-08-29: was MOCK_PROJECTS, so an initiative a
+  // member proposed through /projects/new saved to Postgres and then
+  // never appeared on the board it was supposed to land on.
+  const { projects } = await safely(() => getAllProjects(), {
+    projects: [],
+    source: "postgres" as const,
+  });
+  const internal = projects.filter((p) => p.kind === "internal");
 
   const openHere = internal.filter((p) => p.status === "open");
   const active = internal.filter((p) => p.status === "in_progress");
@@ -134,7 +144,7 @@ function Section({
   );
 }
 
-function Grid({ items }: { items: typeof MOCK_PROJECTS }) {
+function Grid({ items }: { items: Project[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {items.map((p) => (

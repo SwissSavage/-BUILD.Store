@@ -16,6 +16,7 @@
  */
 
 import { revalidatePath } from "next/cache";
+import { notify } from "@/lib/writers/notifications";
 import { redirect } from "next/navigation";
 import { randomBytes } from "crypto";
 import { eq, and, sql } from "drizzle-orm";
@@ -282,10 +283,7 @@ export async function reviewJobApplication(formData: FormData): Promise<void> {
   // review / status change family since we don't have a dedicated
   // job_application_decision kind yet — the title + body carry the
   // context. Follow-up: introduce a distinct NotificationKind.
-  MOCK_NOTIFICATIONS.push({
-    id: `ntf_ja_${Date.now().toString(36)}_${Math.random()
-      .toString(36)
-      .slice(2, 5)}`,
+  await notify({
     userId: existing.userId,
     kind: "project_application_decision",
     title:
@@ -299,8 +297,6 @@ export async function reviewJobApplication(formData: FormData): Promise<void> {
           ? `Not this round. Note from admin: ${note}`
           : "Not this round. Admin didn't leave a note — feel free to apply to other open roles.",
     href: `/jobs/${existing.jobId}`,
-    createdAt: now,
-    readAt: null,
   });
 
   revalidatePath("/admin/jobs/applications");

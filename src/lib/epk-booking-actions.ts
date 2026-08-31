@@ -29,7 +29,7 @@ import {
   MOCK_INBOUND_SUBMISSIONS,
   pushInboundSubmission,
 } from "@/lib/mock-data/inbound-submissions";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import { notify } from "@/lib/writers/notifications";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { CalendarMeeting, Notification, NotificationKind } from "@/lib/types";
 
@@ -39,24 +39,17 @@ function newId(prefix: string): string {
     .slice(2, 5)}`;
 }
 
-function pushNotification(
+async function pushNotification(
   kind: NotificationKind,
   userId: string,
   title: string,
   body: string,
   href: string,
-): void {
-  const ntf: Notification = {
-    id: newId(`ntf_${kind}`),
-    userId,
-    kind,
-    title,
-    body,
-    href,
-    createdAt: new Date().toISOString(),
-    readAt: null,
-  };
-  MOCK_NOTIFICATIONS.push(ntf);
+): Promise<void> {
+  // Shared writer — booking notifications were pushed to the
+  // in-memory array, so an artist never heard that a booking had been
+  // requested, confirmed or declined.
+  await notify({ userId, kind, title, body, href });
 }
 
 /**
@@ -153,7 +146,7 @@ export async function createEpkBookingRequest(formData: FormData) {
 
   // Notify all admins that a booking request landed.
   for (const admin of MOCK_USERS.filter((u) => u.isAdmin)) {
-    pushNotification(
+    await pushNotification(
       "booking_request_received",
       admin.id,
       `Booking request for ${artist.firstName ?? artist.handle}`,
@@ -229,7 +222,7 @@ export async function approveBookingRequest(formData: FormData) {
   // Notify the artist attendee(s) — anyone in the meeting except the PM.
   for (const attendeeId of meeting.attendeeIds) {
     if (attendeeId === meeting.pmUserId) continue;
-    pushNotification(
+    await pushNotification(
       "booking_request_approved",
       attendeeId,
       `Booking request forwarded to you`,
@@ -291,7 +284,7 @@ export async function declineBookingRequest(formData: FormData) {
   // dispatches a decline email to submission.submitterEmail with the
   // reason (or a generic decline copy if no reason provided).
   for (const a of MOCK_USERS.filter((u) => u.isAdmin)) {
-    pushNotification(
+    await pushNotification(
       "booking_request_declined",
       a.id,
       `Booking declined: ${submission.submitter}`,
@@ -347,7 +340,7 @@ export async function confirmBookingMeeting(formData: FormData) {
   // booking-shape meeting (external_client with a linked inbound row).
   if (meeting.kind === "external_client" && meeting.externalClientEmail) {
     for (const a of MOCK_USERS.filter((u) => u.isAdmin)) {
-      pushNotification(
+      await pushNotification(
         "booking_confirmed",
         a.id,
         `Booking confirmed with ${meeting.externalClientName ?? "client"}`,

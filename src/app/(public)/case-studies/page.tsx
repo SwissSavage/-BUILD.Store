@@ -18,9 +18,12 @@
  */
 import Link from "next/link";
 import type { Metadata } from "next";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { getAllProjects } from "@/lib/readers/projects";
+import { safely } from "@/lib/readers";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 // NOTE: intentionally NOT `force-static`. Force-static evaluates
 // cookies() as empty at build time, which propagates up into the
@@ -40,8 +43,12 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/case-studies` },
 };
 
-export default function CaseStudiesIndex() {
-  const completed = MOCK_PROJECTS.filter(
+export default async function CaseStudiesIndex() {
+  const { projects: allProjects } = await safely(() => getAllProjects(), {
+    projects: [],
+    source: "postgres" as const,
+  });
+  const completed = allProjects.filter(
     (p) =>
       p.kind === "contract" &&
       p.status === "completed" &&

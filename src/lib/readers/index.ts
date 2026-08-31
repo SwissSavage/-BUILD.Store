@@ -39,6 +39,7 @@ import {
   inboundSubmissions,
   invoices,
   jobApplications,
+  jobs,
   meetingMinutes,
   memberCanonizations,
   membershipApplications,
@@ -373,6 +374,17 @@ export const inboundReader = makeReader<InboundSubmission>(
 /** Untriaged inbound — the queue light on /admin. */
 export function getOpenInbound(): Promise<InboundSubmission[]> {
   return inboundReader.where(eq(inboundSubmissions.status, "new"));
+}
+
+type JobRow = typeof jobs.$inferSelect;
+export const jobReader = makeReader<JobRow>(jobs, {
+  orderBy: jobs.createdAt,
+  idColumn: jobs.id,
+});
+
+/** Open roles only — what the public /jobs board lists. */
+export function getOpenJobs(): Promise<JobRow[]> {
+  return jobReader.where(eq(jobs.status, "open"));
 }
 
 type JobApplicationRow = typeof jobApplications.$inferSelect;

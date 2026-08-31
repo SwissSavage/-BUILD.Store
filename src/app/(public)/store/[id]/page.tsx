@@ -14,8 +14,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PRODUCTS } from "@/lib/mock-data/products";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { productReader } from "@/lib/readers";
+import { getUserById } from "@/lib/readers/users";
 import {
   INDUSTRY_LABELS,
   MARKETPLACE_CATEGORY_LABELS,
@@ -26,6 +26,8 @@ import {
 import { previewOrderSplit } from "@/lib/order-splits";
 import { placeOrder } from "@/lib/order-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 const CATEGORY_ACCENT: Record<MarketplaceCategory, string> = {
   goods: "#D828A0",
@@ -43,7 +45,7 @@ export default async function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = MOCK_PRODUCTS.find((p) => p.id === id);
+  const product = await productReader.byId(id);
   if (!product) notFound();
   if (product.status !== "active") {
     return (
@@ -65,7 +67,7 @@ export default async function ProductDetailPage({
     );
   }
 
-  const seller = MOCK_USERS.find((u) => u.id === product.sellerId);
+  const seller = await getUserById(product.sellerId);
   const split = previewOrderSplit(Number(product.price));
   const accent = CATEGORY_ACCENT[product.category];
   const shipped = SHIPPED_CATEGORIES.includes(product.category);

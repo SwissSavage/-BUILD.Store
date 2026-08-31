@@ -13,10 +13,11 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MOCK_CUSTOMER_FEEDBACK } from "@/lib/mock-data/customer-feedback";
-import { MOCK_MEETING_MINUTES } from "@/lib/mock-data/meeting-minutes";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { eq } from "drizzle-orm";
+import { customerFeedback as customerFeedbackTable } from "@/db/schema";
+import { customerFeedbackReader, minutesReader } from "@/lib/readers";
+import { getProjectById } from "@/lib/readers/projects";
+import { getUserById } from "@/lib/readers/users";
 import {
   confirmClientFeedback,
   disputeClientFeedback,
@@ -33,20 +34,25 @@ export default async function ClientFeedbackConfirmPage({
 }) {
   const { token } = await params;
 
-  const row = MOCK_CUSTOMER_FEEDBACK.find(
-    (f) => f.clientConfirmationToken === token,
+  // Token comparison in the WHERE clause. A client opening their own
+  // confirmation link must not cause a read of every other client's
+  // feedback row to find it.
+  const row = await customerFeedbackReader.one(
+    eq(customerFeedbackTable.clientConfirmationToken, token),
   );
   if (!row) notFound();
 
-  const project = row.contextKind === "contract"
-    ? MOCK_PROJECTS.find((p) => p.id === row.contextId)
-    : null;
-  const capturedByAdmin = row.capturedByAdminUserId
-    ? MOCK_USERS.find((u) => u.id === row.capturedByAdminUserId)
-    : null;
-  const meetingMinute = row.meetingMinuteId
-    ? MOCK_MEETING_MINUTES.find((m) => m.id === row.meetingMinuteId)
-    : null;
+  const [project, capturedByAdmin, meetingMinute] = await Promise.all([
+    row.contextKind === "contract"
+      ? getProjectById(row.contextId)
+      : Promise.resolve(null),
+    row.capturedByAdminUserId
+      ? getUserById(row.capturedByAdminUserId)
+      : Promise.resolve(null),
+    row.meetingMinuteId
+      ? minutesReader.byId(row.meetingMinuteId)
+      : Promise.resolve(null),
+  ]);
 
   const isSettled =
     row.clientConfirmationStatus === "confirmed" ||

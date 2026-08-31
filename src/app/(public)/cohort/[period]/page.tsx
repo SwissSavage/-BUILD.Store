@@ -12,13 +12,18 @@ import {
   cohortSpotlightsByRecency,
   findCohortSpotlight,
 } from "@/lib/mock-data/cohort-spotlights";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { eq } from "drizzle-orm";
+import { cohortSpotlights } from "@/db/schema";
+import { getAllUsers } from "@/lib/readers/users";
+import { spotlightReader } from "@/lib/readers";
 import { publicName, type User } from "@/lib/types";
 import { publicProfileEligible } from "@/lib/profile-visibility";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
 import { OnChainBadge } from "@/components/OnChainBadge";
 import { PARAGRAPH_BASE } from "@/lib/mock-data/articles";
+
+export const dynamic = "force-dynamic";
 
 /** Static-rendered — reads build-time arrays. */
 
@@ -38,7 +43,9 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { period } = await params;
-  const spotlight = findCohortSpotlight(period);
+  const spotlight = await spotlightReader.one(
+    eq(cohortSpotlights.periodKey, period),
+  );
   if (!spotlight) {
     return { title: "Cohort spotlight" };
   }
@@ -50,11 +57,14 @@ export async function generateMetadata({
 
 export default async function CohortSpotlightPage({ params }: PageProps) {
   const { period } = await params;
-  const spotlight = findCohortSpotlight(period);
+  const spotlight = await spotlightReader.one(
+    eq(cohortSpotlights.periodKey, period),
+  );
   if (!spotlight) notFound();
 
+  const { users: roster } = await getAllUsers();
   const spotlightUsers = spotlight.userIds
-    .map((id) => MOCK_USERS.find((u) => u.id === id))
+    .map((id) => roster.find((u) => u.id === id))
     .filter((u): u is User => !!u);
 
   return (

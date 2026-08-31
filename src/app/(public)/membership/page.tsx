@@ -6,11 +6,17 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_APPLICATIONS } from "@/lib/mock-data/applications";
+import { randomUUID } from "crypto";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { membershipApplications } from "@/db/schema";
+import { membershipApplicationReader, safely } from "@/lib/readers";
 import { TIER_LABELS, type MembershipTier } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { TierBadge } from "@/components/TierBadge";
 import { cn } from "@/lib/cn";
+
+export const dynamic = "force-dynamic";
 
 const TIER_ORDER: MembershipTier[] = ["viewer", "partner", "member"];
 
@@ -29,8 +35,11 @@ async function applyForTier(formData: FormData) {
   const requestedTier = String(formData.get("requestedTier") ?? "") as Exclude<MembershipTier, "viewer">;
   const why = String(formData.get("why") ?? "");
 
-  MOCK_APPLICATIONS.push({
-    id: `app_${Date.now()}`,
+  // Persisted. This pushed to an in-memory array, so a member applied
+  // to move up a tier, saw a pending state, and /admin/applications
+  // never received it.
+  await db.insert(membershipApplications).values({
+    id: `app_${randomUUID()}`,
     userId: uid,
     requestedTier,
     currentTier,
@@ -49,8 +58,17 @@ export default async function MembershipPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
 
-  const myPending = MOCK_APPLICATIONS.find(
-    (a) => a.userId === user.id && a.status === "pending",
+  // Scoped to this member in SQL — nobody's tier application should
+  // cause a read of anyone else's.
+  const myPending = await safely(
+    () =>
+      membershipApplicationReader.one(
+        and(
+          eq(membershipApplications.userId, user.id),
+          eq(membershipApplications.status, "pending"),
+        )!,
+      ),
+    null,
   );
   const currentIdx = TIER_ORDER.indexOf(user.membershipTier);
   const nextTier = TIER_ORDER[currentIdx + 1] as Exclude<MembershipTier, "viewer"> | undefined;

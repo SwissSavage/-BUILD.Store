@@ -10,12 +10,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getContracts } from "@/lib/readers/projects";
-import { MOCK_ATTRIBUTION } from "@/lib/mock-data/attribution";
-import { MOCK_SPLITS } from "@/lib/mock-data/splits";
+import { attributionReader, splitReader, safely } from "@/lib/readers";
 import {
   HUBSPOT_STAGE_LABELS,
   INDUSTRY_LABELS,
   type Project,
+  type AttributionEntry,
+  type RevenueSplit,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { HubspotStageBadge } from "@/components/HubspotStageBadge";
@@ -26,13 +27,35 @@ export default async function AdminContractsIndex() {
   const user = await getCurrentUser();
   if (!user || !user.isAdmin) redirect("/dashboard");
 
-  // Reader swap 2026-08-28: was MOCK_PROJECTS.
-  const { projects: contracts } = await getContracts();
+  const [{ projects: contracts }, splits, attributions] = await Promise.all([
+    getContracts(),
+    safely(() => splitReader.all(), []),
+    safely(() => attributionReader.all(), []),
+  ]);
 
   // Bucket by lifecycle stage.
-  const settled = contracts.filter(
-    (p) => MOCK_SPLITS.some((s) => s.contractId === p.id),
+  // Grouped by contract so each card gets its own slice without a
+  // query per row — this page renders every contract the cooperative
+  // has.
+  const attributionsBy = new Map<string, AttributionEntry[]>();
+  for (const a of attributions) {
+    const list = attributionsBy.get(a.contractId) ?? [];
+    list.push(a);
+    attributionsBy.set(a.contractId, list);
+  }
+  const splitsBy = new Map<string, RevenueSplit[]>();
+  for (const sp of splits) {
+    if (!sp.contractId) continue;
+    const list = splitsBy.get(sp.contractId) ?? [];
+    list.push(sp);
+    splitsBy.set(sp.contractId, list);
+  }
+
+  // Which contracts have been settled, from the splits themselves.
+  const settledContractIds = new Set(
+    splits.map((s) => s.contractId).filter((id): id is string => Boolean(id)),
   );
+  const settled = contracts.filter((p) => settledContractIds.has(p.id));
   const collectedUnsettled = contracts.filter(
     (p) => p.collectedRevenue && !settled.includes(p),
   );
@@ -58,6 +81,8 @@ export default async function AdminContractsIndex() {
           subtitle="Revenue has landed — run the split engine."
           accent="#D828A0"
           contracts={collectedUnsettled}
+          attributionsBy={attributionsBy}
+          splitsBy={splitsBy}
         />
       )}
 
@@ -67,6 +92,8 @@ export default async function AdminContractsIndex() {
           subtitle="Open or active contracts. Log attribution as the work happens."
           accent="#5070F0"
           contracts={inFlight}
+          attributionsBy={attributionsBy}
+          splitsBy={splitsBy}
         />
       )}
 
@@ -76,6 +103,8 @@ export default async function AdminContractsIndex() {
           subtitle="Splits dispatched. Read-only audit view."
           accent="#007048"
           contracts={settled}
+          attributionsBy={attributionsBy}
+          splitsBy={splitsBy}
         />
       )}
 
@@ -85,6 +114,8 @@ export default async function AdminContractsIndex() {
           subtitle="Vet these in /admin/rfps before they show up here."
           accent="#5070F0"
           contracts={pending}
+          attributionsBy={attributionsBy}
+          splitsBy={splitsBy}
           hideActions
         />
       )}
@@ -98,12 +129,16 @@ function Section({
   accent,
   contracts,
   hideActions = false,
+  attributionsBy,
+  splitsBy,
 }: {
   title: string;
   subtitle: string;
   accent: string;
   contracts: Project[];
   hideActions?: boolean;
+  attributionsBy: Map<string, AttributionEntry[]>;
+  splitsBy: Map<string, RevenueSplit[]>;
 }) {
   return (
     <section className="mt-10">
@@ -116,7 +151,13 @@ function Section({
       <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {contracts.map((p) => (
-          <ContractRow key={p.id} project={p} hideActions={hideActions} />
+          <ContractRow
+            key={p.id}
+            project={p}
+            hideActions={hideActions}
+            attributions={attributionsBy.get(p.id) ?? []}
+            splits={splitsBy.get(p.id) ?? []}
+          />
         ))}
       </div>
     </section>
@@ -126,14 +167,14 @@ function Section({
 function ContractRow({
   project,
   hideActions,
+  attributions,
+  splits,
 }: {
   project: Project;
   hideActions: boolean;
+  attributions: AttributionEntry[];
+  splits: RevenueSplit[];
 }) {
-  const attributions = MOCK_ATTRIBUTION.filter(
-    (a) => a.contractId === project.id,
-  );
-  const splits = MOCK_SPLITS.filter((s) => s.contractId === project.id);
 
   return (
     <Card>

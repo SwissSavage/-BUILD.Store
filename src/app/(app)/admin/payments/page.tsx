@@ -12,7 +12,11 @@
  *      records the reference. This is where that happens. Without
  *      this surface those payouts would silently never go out.
  *
- * The queue currently reads MOCK_SPLITS because the settlement engine
+ * The queue reads revenue_splits. It read a fixture array until
+ * 2026-08-30, so the manual-send queue showed the seed cooperative's
+ * payouts and never a real one.
+ *
+ * Historical note: the settlement engine
  * hasn't been swapped to Drizzle yet (production-swap-checklist §2,
  * Tolgay). When it is, swap the filter for a db.select on
  * revenue_splits where payout_status = 'queued' and the method's rail
@@ -28,8 +32,8 @@ import {
   type RailHealth,
 } from "@/lib/payments";
 import { confirmManualPayout } from "@/lib/payout-method-actions";
-import { MOCK_SPLITS } from "@/lib/mock-data/splits";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getPendingSplits, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 const STATUS_COLOR: Record<RailHealth["status"], string> = {
@@ -100,9 +104,14 @@ export default async function AdminPaymentsPage() {
   // Assisted-rail queue. Reads splits that are queued but whose
   // dispatch can't happen without a human. See file header for the
   // Drizzle swap note.
-  const awaitingManual = MOCK_SPLITS.filter(
-    (s) => s.payoutStatus === "queued" || s.payoutStatus === "pending",
-  ).slice(0, 25);
+  // The status filter is in the query — the splits table grows with
+  // every settlement and this page only ever wants the undispatched
+  // tail of it.
+  const [pending, { users: roster }] = await Promise.all([
+    safely(() => getPendingSplits(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const awaitingManual = pending.slice(0, 25);
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -163,7 +172,7 @@ export default async function AdminPaymentsPage() {
         ) : (
           <ul className="mt-4">
             {awaitingManual.map((split) => {
-              const recipient = MOCK_USERS.find(
+              const recipient = roster.find(
                 (u) => u.id === split.recipientId,
               );
               return (

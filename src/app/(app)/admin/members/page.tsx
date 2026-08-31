@@ -23,7 +23,7 @@ import { getAllUsers } from "@/lib/readers/users";
  * of who has joined is the entire point of the page.
  */
 export const dynamic = "force-dynamic";
-import { MOCK_SELLER_APPLICATIONS } from "@/lib/mock-data/seller-applications";
+import { sellerApplicationReader, safely } from "@/lib/readers";
 import {
   INDUSTRY_LABELS,
   TIER_LABELS,
@@ -75,14 +75,15 @@ export default async function AdminMembersPage({
   const { view: rawView } = await searchParams;
   const view = normalizeView(rawView);
 
-  // Derive seller-approved user ids for the sellers view.
+  // Derive seller-approved user ids for the sellers view. Reads the
+  // live applications — approvals granted through /admin/marketplace
+  // were invisible here.
+  const sellerApps = await safely(() => sellerApplicationReader.all(), []);
   const approvedSellerIds = new Set(
-    MOCK_SELLER_APPLICATIONS.filter((a) => a.status === "approved").map(
-      (a) => a.userId,
-    ),
+    sellerApps.filter((a) => a.status === "approved").map((a) => a.userId),
   );
 
-  // Reader swap (2026-08-28): was MOCK_USERS, so real signups were
+  // Reader swap (2026-08-28): was a fixture array, so real signups were
   // invisible here. Reads the live table now — seed profiles and real
   // members both come back, since the seed rows live in Postgres too.
   const { users: allUsers, source: readSource } = await getAllUsers();

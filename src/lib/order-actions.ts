@@ -287,7 +287,7 @@ export async function distributeOrderSplit(formData: FormData) {
   // LP. Same shape as the cash split, different weights, different
   // basis (network fees only, per the master spreadsheet).
   try {
-    issueBuildFromSettlement({
+    await issueBuildFromSettlement({
       gross: Number(order.subtotal),
       cashSourceKind: "order_settlement",
       sourceId: order.id,

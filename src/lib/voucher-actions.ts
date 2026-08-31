@@ -152,7 +152,7 @@ export async function issueVoucher(formData: FormData): Promise<void> {
   // This admin action just wraps it with requireAdmin + form-level
   // validation. Automated earning-event handlers (bonus release,
   // order split, etc.) call the same helper directly.
-  issueVoucherInternal({
+  await issueVoucherInternal({
     userId,
     amount,
     sourceType,

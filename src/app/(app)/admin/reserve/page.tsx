@@ -12,16 +12,22 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_PEER_REVIEWS } from "@/lib/mock-data/peer-reviews";
-import { MOCK_CUSTOMER_FEEDBACK } from "@/lib/mock-data/customer-feedback";
+import { eq } from "drizzle-orm";
+import { customerFeedback, peerReviews } from "@/db/schema";
+import { getAllProjects } from "@/lib/readers/projects";
+import { getAllUsers } from "@/lib/readers/users";
 import {
-  MOCK_RESERVE_POOL_LEDGER,
+  customerFeedbackReader,
+  minutesReader,
+  peerReviewReader,
+  safely,
+} from "@/lib/readers";
+import {
+  allReserveEntries,
+  getCompositesForProject,
   reservePoolBalance,
   reservePoolLedgerForProject,
-  compositesForProject,
-} from "@/lib/mock-data/reserve-pool";
+} from "@/lib/readers/reserve-pool";
 import {
   executeGraduatedBonusRelease,
   issueClientRebate,
@@ -32,7 +38,6 @@ import {
   remindPeersForRating,
   remindPmForRating,
 } from "@/lib/chase-actions";
-import { MOCK_MEETING_MINUTES } from "@/lib/mock-data/meeting-minutes";
 import {
   aggregatePeerCompositeForContributor,
   extractClientRatingForProject,
@@ -43,8 +48,11 @@ import {
   publicName,
   type Project,
 } from "@/lib/types";
+import type { MeetingMinute, User } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
+
+export const dynamic = "force-dynamic";
 
 const USD_FMT = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -93,9 +101,16 @@ function RatingChip({
   );
 }
 
-function projectsWithActivity(): Project[] {
-  const projectIds = new Set(MOCK_RESERVE_POOL_LEDGER.map((e) => e.projectId));
-  return MOCK_PROJECTS.filter(
+async function projectsWithActivity(): Promise<Project[]> {
+  const [entries, { projects }] = await Promise.all([
+    safely(() => allReserveEntries(), []),
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+  ]);
+  const projectIds = new Set(entries.map((e) => e.projectId));
+  return projects.filter(
     (p) => projectIds.has(p.id) || p.talentBonusAmount !== null,
   );
 }
@@ -104,7 +119,11 @@ export default async function AdminReservePage() {
   const viewer = await getCurrentUser();
   if (!viewer || !viewer.isAdmin) redirect("/signin?next=/admin/reserve");
 
-  const projects = projectsWithActivity();
+  const [projects, { users: roster }, minutes] = await Promise.all([
+    projectsWithActivity(),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => minutesReader.all(), []),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
@@ -141,7 +160,12 @@ export default async function AdminReservePage() {
           </Card>
         ) : (
           projects.map((project) => (
-            <ReserveCard key={project.id} project={project} />
+            <ReserveCard
+              key={project.id}
+              project={project}
+              roster={roster}
+              minutes={minutes}
+            />
           ))
         )}
       </section>
@@ -149,14 +173,40 @@ export default async function AdminReservePage() {
   );
 }
 
-function ReserveCard({ project }: { project: Project }) {
-  const balance = reservePoolBalance(project.id);
-  const ledger = reservePoolLedgerForProject(project.id);
-  const composites = compositesForProject(project.id);
+async function ReserveCard({
+  project,
+  roster,
+  minutes,
+}: {
+  project: Project;
+  roster: User[];
+  minutes: MeetingMinute[];
+}) {
+  // Ledger, composites and the ratings behind the release decision,
+  // all scoped to this project in SQL. The card renders per project,
+  // so an unscoped read here would multiply by the project count.
+  const [balance, ledger, composites, projectReviews, projectFeedback] =
+    await Promise.all([
+      safely(() => reservePoolBalance(project.id), 0),
+      safely(() => reservePoolLedgerForProject(project.id), []),
+      safely(() => getCompositesForProject(project.id), []),
+      safely(
+        () => peerReviewReader.where(eq(peerReviews.contextId, project.id)),
+        [],
+      ),
+      safely(
+        () =>
+          customerFeedbackReader.where(
+            eq(customerFeedback.contextId, project.id),
+          ),
+        [],
+      ),
+    ]);
+
   const bonusPending =
     project.bonusDecision === null || project.bonusDecision === "pending";
   const contribs = project.assignedMemberIds
-    .map((id) => MOCK_USERS.find((u) => u.id === id))
+    .map((id) => roster.find((u) => u.id === id))
     .filter((u): u is NonNullable<typeof u> => !!u);
 
   return (
@@ -231,7 +281,7 @@ function ReserveCard({ project }: { project: Project }) {
           </summary>
           <ul className="mt-2 divide-y divide-[var(--surface-border)]">
             {composites.map((c) => {
-              const user = MOCK_USERS.find((u) => u.id === c.contributorUserId);
+              const user = roster.find((u) => u.id === c.contributorUserId);
               return (
                 <li key={c.id} className="py-2 text-[11px]">
                   <div className="flex items-baseline justify-between gap-3">
@@ -257,7 +307,7 @@ function ReserveCard({ project }: { project: Project }) {
       {bonusPending && project.talentBonusAmount && contribs.length > 0 && (() => {
         const adminRating = project.pmEngagementRating ?? null;
         const clientRating = extractClientRatingForProject({
-          feedback: MOCK_CUSTOMER_FEEDBACK,
+          feedback: projectFeedback,
           projectId: project.id,
         });
         type ChaseItem =
@@ -279,7 +329,7 @@ function ReserveCard({ project }: { project: Project }) {
         }
         const perContribData = contribs.map((u) => {
           const peer = aggregatePeerCompositeForContributor({
-            reviews: MOCK_PEER_REVIEWS,
+            reviews: projectReviews,
             projectId: project.id,
             contributorUserId: u.id,
           });
@@ -457,7 +507,7 @@ function ReserveCard({ project }: { project: Project }) {
                       className="mt-1 w-full rounded border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-xs"
                     >
                       <option value="">Pick a meeting-minute row</option>
-                      {MOCK_MEETING_MINUTES.map((m) => (
+                      {minutes.map((m) => (
                         <option key={m.id} value={m.id}>
                           {m.id} · {(m.body ?? "").slice(0, 60) || m.format}
                         </option>

@@ -22,7 +22,7 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { feedbackForContext } from "@/lib/mock-data/customer-feedback";
 import { MOCK_PEER_REVIEWS } from "@/lib/mock-data/peer-reviews";
-import { creditPool, ensurePoolForProject } from "@/lib/mock-data/engagement-recovery-pools";
+import { creditRecoveryPool } from "@/lib/writers/reserve-pool";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { evaluateBonusGate } from "@/lib/bonus-gate";
 import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
@@ -97,7 +97,7 @@ export async function executeBonusDecision(formData: FormData) {
   });
 
   if (decision.outcome === "reclaim") {
-    creditPool(projectId, project.talentBonusAmount);
+    await creditRecoveryPool(projectId, project.talentBonusAmount);
     project.bonusDecision = "reclaimed";
   } else {
     // Release or release-by-default both pay talent. In sandbox
@@ -159,7 +159,7 @@ export async function executeBonusDecision(formData: FormData) {
       // share allocation from equal split to per-member weighting
       // when internal invoices are attached to the bonus release.
       try {
-        issueBuildFromSettlement({
+        await issueBuildFromSettlement({
           gross: bonusAmount,
           cashSourceKind: "bonus_release",
           sourceId: project.id,
@@ -181,7 +181,10 @@ export async function executeBonusDecision(formData: FormData) {
   project.updatedAt = new Date().toISOString();
   // Initialize the pool row regardless so the surface has something to
   // render even on the release path (it'll just sit at $0).
-  ensurePoolForProject(projectId);
+  // Opening the pool is the same upsert as crediting it with zero —
+  // one code path, so a pool can never be created by one route with a
+  // shape the other doesn't expect.
+  await creditRecoveryPool(projectId, "0");
 
   await logAuditEvent({
     actorUserId: admin.id,

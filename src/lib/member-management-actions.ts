@@ -7,14 +7,21 @@
  * the /admin/access-review surface handles the quarterly ritual; this
  * module handles the individual state changes.
  *
- * Sandbox: mutates MOCK_USERS in place. Production: Drizzle UPDATE
+ * Every action here writes to `users`. They mutated an in-memory
+ * fixture until 2026-08-31, which meant tier changes, admin grants,
+ * profile visibility and — worst — suspensions all reverted on the
+ * next deploy. A suspended member came back with access, and the
+ * audit log said they were still suspended.
  * with row-level security enforcing the actor's admin scope.
  */
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { sessions, users } from "@/db/schema";
+import { getUserById } from "@/lib/readers/users";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { MembershipTier } from "@/lib/types";
 
@@ -44,15 +51,17 @@ export async function setMembershipTier(formData: FormData) {
   if (!VALID_TIERS.includes(rawTier)) {
     throw new Error(`Unknown tier: ${rawTier}`);
   }
-  const user = MOCK_USERS.find((u) => u.id === uid);
+  const user = await getUserById(uid);
   if (!user) throw new Error("User not found");
   const previous = user.membershipTier;
   if (previous === rawTier) {
     // No-op — don't pollute the audit log with unchanged writes.
     return;
   }
-  user.membershipTier = rawTier;
-  user.updatedAt = new Date().toISOString();
+  await db
+    .update(users)
+    .set({ membershipTier: rawTier, updatedAt: new Date().toISOString() })
+    .where(eq(users.id, uid));
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -82,11 +91,14 @@ export async function toggleAdminFlag(formData: FormData) {
       "You cannot flip your own admin flag. Ask another admin to change yours if that's the intent.",
     );
   }
-  const user = MOCK_USERS.find((u) => u.id === uid);
+  const user = await getUserById(uid);
   if (!user) throw new Error("User not found");
   const previous = user.isAdmin;
-  user.isAdmin = !previous;
-  user.updatedAt = new Date().toISOString();
+  const next = !previous;
+  await db
+    .update(users)
+    .set({ isAdmin: next, updatedAt: new Date().toISOString() })
+    .where(eq(users.id, uid));
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -95,7 +107,7 @@ export async function toggleAdminFlag(formData: FormData) {
     resourceKind: "user",
     resourceId: user.id,
     before: { isAdmin: previous },
-    after: { isAdmin: user.isAdmin },
+    after: { isAdmin: next },
   });
 
   revalidateMemberPaths(user.handle);
@@ -110,11 +122,14 @@ export async function toggleProfilePublic(formData: FormData) {
   const admin = await requireAdmin();
   const uid = String(formData.get("uid") ?? "").trim();
   if (!uid) throw new Error("uid is required");
-  const user = MOCK_USERS.find((u) => u.id === uid);
+  const user = await getUserById(uid);
   if (!user) throw new Error("User not found");
   const previous = user.profilePublic;
-  user.profilePublic = !previous;
-  user.updatedAt = new Date().toISOString();
+  const nextPublic = !previous;
+  await db
+    .update(users)
+    .set({ profilePublic: nextPublic, updatedAt: new Date().toISOString() })
+    .where(eq(users.id, uid));
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -123,7 +138,7 @@ export async function toggleProfilePublic(formData: FormData) {
     resourceKind: "user",
     resourceId: user.id,
     before: { profilePublic: previous },
-    after: { profilePublic: user.profilePublic },
+    after: { profilePublic: nextPublic },
   });
 
   revalidateMemberPaths(user.handle);
@@ -151,7 +166,7 @@ export async function suspendUser(formData: FormData) {
       "Suspension reason must be at least 10 characters — recorded on the audit log.",
     );
   }
-  const user = MOCK_USERS.find((u) => u.id === uid);
+  const user = await getUserById(uid);
   if (!user) throw new Error("User not found");
   if (user.isAdmin) {
     throw new Error(
@@ -162,9 +177,20 @@ export async function suspendUser(formData: FormData) {
     throw new Error("User is already suspended.");
   }
   const now = new Date().toISOString();
-  user.suspendedAt = now;
-  user.suspensionReason = reason;
-  user.updatedAt = now;
+  // Guarded on still-unsuspended. Suspension blocks sign-in via the
+  // Auth.js signIn callback, so a lost write here means a member the
+  // cooperative believes is locked out can still sign in.
+  const suspended = await db
+    .update(users)
+    .set({ suspendedAt: now, suspensionReason: reason, updatedAt: now })
+    .where(eq(users.id, uid))
+    .returning({ id: users.id });
+  if (suspended.length === 0) throw new Error("User not found");
+
+  // Kill their live sessions too. Strategy is "database", so a
+  // suspended member with an open session stays signed in until it
+  // expires unless the rows go.
+  await db.delete(sessions).where(eq(sessions.userId, uid));
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -189,16 +215,21 @@ export async function reactivateUser(formData: FormData) {
   const uid = String(formData.get("uid") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
   if (!uid) throw new Error("uid is required");
-  const user = MOCK_USERS.find((u) => u.id === uid);
+  const user = await getUserById(uid);
   if (!user) throw new Error("User not found");
   if (!user.suspendedAt) {
     throw new Error("User is not currently suspended.");
   }
   const previousReason = user.suspensionReason;
   const previousSuspendedAt = user.suspendedAt;
-  user.suspendedAt = null;
-  user.suspensionReason = null;
-  user.updatedAt = new Date().toISOString();
+  await db
+    .update(users)
+    .set({
+      suspendedAt: null,
+      suspensionReason: null,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(users.id, uid));
 
   await logAuditEvent({
     actorUserId: admin.id,

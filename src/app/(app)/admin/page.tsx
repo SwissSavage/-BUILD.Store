@@ -21,6 +21,9 @@ import {
   safely,
   sellerApplicationReader,
   splitReader,
+  servicePartnerReader,
+  ecosystemPartnerReader,
+  productAffiliateReader,
   tokenReader,
   whitelistPurchaseReader,
 } from "@/lib/readers";
@@ -53,6 +56,9 @@ export default async function AdminHome() {
     auditRows,
     scores,
     splits,
+    servicePartnerRows,
+    ecosystemPartnerRows,
+    affiliateRows,
   ] = await Promise.all([
     safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
     safely(() => getAllProjects(), {
@@ -74,7 +80,15 @@ export default async function AdminHome() {
     safely(() => auditLogReader.all(), []),
     safely(() => mvpScoreReader.all(), []),
     safely(() => splitReader.all(), []),
+    safely(() => servicePartnerReader.all(), []),
+    safely(() => ecosystemPartnerReader.all(), []),
+    safely(() => productAffiliateReader.all(), []),
   ]);
+
+  const partnerCount =
+    servicePartnerRows.length +
+    ecosystemPartnerRows.length +
+    affiliateRows.length;
 
   const pending = applications.filter((a) => a.status === "pending").length;
   const openProjects = allProjects.filter((p) => p.status === "open").length;
@@ -179,6 +193,12 @@ export default async function AdminHome() {
       title: "Whitelist",
       count: whitelistQueue,
       sub: `${whitelistOpen} donations open · ${consultNew} consults new · access not for sale`,
+    },
+    {
+      href: "/admin/partners",
+      title: "Partners",
+      count: partnerCount,
+      sub: "Service + SaaS partners and affiliates · all public-facing",
     },
     {
       href: "/admin/team",

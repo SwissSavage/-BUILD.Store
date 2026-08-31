@@ -12,16 +12,20 @@ import { Faq, type FaqItem } from "@/components/Faq";
 import { Avatar } from "@/components/Avatar";
 
 /**
- * Statically rendered, revalidated hourly.
+ * Rendered per request.
  *
- * The roster and cohort rails read Postgres now rather than fixtures,
- * but this page is the marketing front door and should still serve as
- * cached HTML — so it stays static with ISR instead of going
- * force-dynamic like the rest of the app. An hour of staleness on a
- * curated showcase costs nothing; a per-request database round trip on
- * the landing page does.
+ * This page was ISR-with-revalidate for one deploy and it was wrong:
+ * CI builds the image with a dummy DATABASE_URL, so every read at
+ * build time throws, `safely` returns empty, and the roster and
+ * cohort rails render nothing. That empty output is then what gets
+ * served and cached.
+ *
+ * A marketing page that can't reach the database at build time cannot
+ * be statically generated from database content. If the request-time
+ * cost ever matters, the fix is a cache around the two reads, not
+ * static generation.
  */
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
   return (
@@ -131,7 +135,19 @@ async function Roster() {
       row !== null,
   );
 
-  if (preview.length === 0) return null;
+  // Unlike the partner list, an empty result here is a fault rather
+  // than a fact — these five are seeded rows that exist. If they come
+  // back empty the database read failed, and silently dropping the
+  // section is how this disappeared in the first place. Log it so it
+  // shows up as a cause instead of an absence.
+  if (preview.length === 0) {
+    // eslint-disable-next-line no-console
+    console.error(
+      "[home] roster preview empty — expected seeded members not found",
+      { rosterSize: roster.length },
+    );
+    return null;
+  }
 
   return (
     <section className="fm-below-fold border-b border-[var(--surface-border)] bg-[var(--surface)]">

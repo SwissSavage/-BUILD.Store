@@ -1,7 +1,7 @@
 /**
  * Admin: beta feedback triage.
  *
- * Slice-and-dice over MOCK_FEEDBACK by:
+ * Slice-and-dice over live feedback entries by:
  *   - sentiment (positive / confused / blocker)
  *   - status (new / triaged / resolved)
  *   - surface (the URL they were on)
@@ -14,8 +14,8 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_FEEDBACK } from "@/lib/mock-data/feedback";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { feedbackReader, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
 import { triageFeedback } from "@/lib/walkthrough-actions";
 import {
   FEEDBACK_SENTIMENT_LABELS,
@@ -38,6 +38,8 @@ type SearchParams = {
   tier?: string;
   pillar?: string;
 };
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminFeedbackPage({
   searchParams,
@@ -68,7 +70,15 @@ export default async function AdminFeedbackPage({
   const surfaceFilter = params.surface?.trim() || null;
 
   // Newest first.
-  const filtered = [...MOCK_FEEDBACK]
+  // Reader swap 2026-08-29: triage board read seed feedback, so real
+  // beta reports would not have appeared here at all.
+  const [allFeedback, { users: roster }] = await Promise.all([
+    safely(() => feedbackReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const userById = new Map(roster.map((u) => [u.id, u]));
+
+  const filtered = [...allFeedback]
     .filter((f) => !sentimentFilter || f.sentiment === sentimentFilter)
     .filter((f) => !statusFilter || f.status === statusFilter)
     .filter((f) => !surfaceFilter || f.surface === surfaceFilter)
@@ -79,15 +89,15 @@ export default async function AdminFeedbackPage({
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 
-  const totalNew = MOCK_FEEDBACK.filter((f) => f.status === "new").length;
-  const totalBlockers = MOCK_FEEDBACK.filter(
+  const totalNew = allFeedback.filter((f) => f.status === "new").length;
+  const totalBlockers = allFeedback.filter(
     (f) => f.sentiment === "blocker" && f.status !== "resolved",
   ).length;
 
   // Surface options derived from data so the dropdown stays in sync.
   const surfaceOptions = Array.from(
     new Map(
-      MOCK_FEEDBACK.map((f) => [f.surface, f.surfaceLabel] as const),
+      allFeedback.map((f) => [f.surface, f.surfaceLabel] as const),
     ).entries(),
   ).sort((a, b) => a[1].localeCompare(b[1]));
 
@@ -100,7 +110,7 @@ export default async function AdminFeedbackPage({
             Feedback triage
           </h1>
           <p className="mt-2 text-sm text-ink-muted">
-            {MOCK_FEEDBACK.length} total entries · {totalNew} untriaged ·{" "}
+            {allFeedback.length} total entries · {totalNew} untriaged ·{" "}
             <span className="text-brand-magenta">{totalBlockers} open blockers</span>
           </p>
         </div>
@@ -135,7 +145,7 @@ export default async function AdminFeedbackPage({
           </Card>
         ) : (
           filtered.map((entry) => {
-            const submitter = MOCK_USERS.find((u) => u.id === entry.userId);
+            const submitter = userById.get(entry.userId);
             return (
               <Card key={entry.id}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -185,7 +195,7 @@ export default async function AdminFeedbackPage({
                     {entry.triagedBy && (
                       <span className="ml-2 text-ink-faint">
                         — {adminName(
-                          MOCK_USERS.find((u) => u.id === entry.triagedBy) ??
+                          userById.get(entry.triagedBy) ??
                             null,
                         )}
                       </span>

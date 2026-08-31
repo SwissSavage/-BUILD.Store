@@ -23,10 +23,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_AGREEMENTS } from "@/lib/mock-data/agreements";
+import { getAllUsers } from "@/lib/readers/users";
+import { agreementReader, safely } from "@/lib/readers";
 import { publicName } from "@/lib/types";
-import type { Agreement } from "@/lib/types";
+import type { Agreement, User } from "@/lib/types";
 import {
   AGREEMENT_PROVIDER_LABELS,
   AGREEMENT_TYPE_LABELS,
@@ -43,8 +43,8 @@ import { Avatar } from "@/components/Avatar";
  * paperwork to themselves (founder covenant, self-signed talent
  * releases).
  */
-function agreementCandidates() {
-  return [...MOCK_USERS]
+function agreementCandidates(roster: User[]) {
+  return [...roster]
     .filter(
       (u) =>
         u.membershipTier === "member" ||
@@ -96,15 +96,25 @@ function formatSignedAt(iso: string): string {
   return iso.slice(0, 10);
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminAgreementsPage() {
   const viewer = await getCurrentUser();
   if (!viewer || !viewer.isAdmin) redirect("/signin?next=/admin/agreements");
 
-  const rows = [...MOCK_AGREEMENTS].sort((a, b) =>
+  // Reader swap 2026-08-29: signed agreements and the candidate list
+  // both read seed data, so a real member's signed LOI never appeared.
+  const [allAgreements, { users: roster }] = await Promise.all([
+    safely(() => agreementReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const userById = new Map(roster.map((u) => [u.id, u]));
+
+  const rows = [...allAgreements].sort((a, b) =>
     b.signedAt.localeCompare(a.signedAt),
   );
   const grouped = groupAgreementsByUser(rows);
-  const candidates = agreementCandidates();
+  const candidates = agreementCandidates(roster);
 
   const totalRows = rows.length;
   const totalWarnings = rows.filter((r) => warningFor(r) !== null).length;
@@ -567,7 +577,7 @@ export default async function AdminAgreementsPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {Array.from(grouped.entries()).map(([userId, userRows]) => {
-              const user = MOCK_USERS.find((u) => u.id === userId);
+              const user = userById.get(userId);
               if (!user) return null;
               return (
                 <li key={userId}>

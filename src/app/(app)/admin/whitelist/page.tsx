@@ -21,12 +21,20 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
+import { eq, sql } from "drizzle-orm";
+import { db } from "@/db/client";
 import {
-  MOCK_WHITELIST_TIERS,
-  MOCK_WHITELIST_PURCHASES,
-  MOCK_CONSULTATION_REQUESTS,
-} from "@/lib/mock-data/whitelist";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+  whitelistPurchases as whitelistPurchasesTable,
+  whitelistTiers as whitelistTiersTable,
+  consultationRequests as consultationRequestsTable,
+} from "@/db/schema";
+import { getAdminUsers } from "@/lib/readers/users";
+import {
+  consultationRequestReader,
+  safely,
+  whitelistPurchaseReader,
+  whitelistTierReader,
+} from "@/lib/readers";
 import {
   CONSULTATION_STATUS_LABELS,
   INDUSTRY_LABELS,
@@ -43,15 +51,28 @@ async function markPurchasePaid(formData: FormData) {
   "use server";
   await requireAdmin();
   const id = String(formData.get("id"));
-  const purchase = MOCK_WHITELIST_PURCHASES.find((p) => p.id === id);
+  const purchase = await whitelistPurchaseReader.byId(id);
   if (!purchase) return;
   if (purchase.status === "initiated") {
-    purchase.status = "paid";
-    purchase.paidAt = new Date().toISOString();
-    // Increment donation count on the tier (tracks lifetime donations,
-    // not "seats" — there are no access seats to claim).
-    const tier = MOCK_WHITELIST_TIERS.find((t) => t.id === purchase.tierId);
-    if (tier) tier.seatsClaimed += 1;
+    // Writer swap 2026-08-29: recording a donation as paid was an
+    // in-memory mutation, so war-chest contributions never persisted.
+    //
+    // Both statements run in one transaction: a donation marked paid
+    // without the matching tier increment would leave the lifetime
+    // count permanently wrong, and there is no way to detect it later.
+    await db.transaction(async (tx) => {
+      await tx
+        .update(whitelistPurchasesTable)
+        .set({ status: "paid", paidAt: new Date().toISOString() })
+        .where(eq(whitelistPurchasesTable.id, id));
+
+      // Tracks lifetime donations, not "seats" — there are no access
+      // seats to claim.
+      await tx
+        .update(whitelistTiersTable)
+        .set({ seatsClaimed: sql`${whitelistTiersTable.seatsClaimed} + 1` })
+        .where(eq(whitelistTiersTable.id, purchase.tierId));
+    });
   }
   revalidatePath("/admin/whitelist");
 }
@@ -60,11 +81,16 @@ async function distributeSplit(formData: FormData) {
   "use server";
   await requireAdmin();
   const id = String(formData.get("id"));
-  const purchase = MOCK_WHITELIST_PURCHASES.find((p) => p.id === id);
+  const purchase = await whitelistPurchaseReader.byId(id);
   if (!purchase) return;
   if (purchase.status === "paid") {
-    purchase.status = "split_distributed";
-    purchase.splitDistributedAt = new Date().toISOString();
+    await db
+      .update(whitelistPurchasesTable)
+      .set({
+        status: "split_distributed",
+        splitDistributedAt: new Date().toISOString(),
+      })
+      .where(eq(whitelistPurchasesTable.id, id));
   }
   revalidatePath("/admin/whitelist");
 }
@@ -73,14 +99,28 @@ async function refundPurchase(formData: FormData) {
   "use server";
   await requireAdmin();
   const id = String(formData.get("id"));
-  const purchase = MOCK_WHITELIST_PURCHASES.find((p) => p.id === id);
+  const purchase = await whitelistPurchaseReader.byId(id);
   if (!purchase) return;
-  const wasPaid = purchase.status === "paid" || purchase.status === "split_distributed";
-  purchase.status = "refunded";
-  if (wasPaid) {
-    const tier = MOCK_WHITELIST_TIERS.find((t) => t.id === purchase.tierId);
-    if (tier && tier.seatsClaimed > 0) tier.seatsClaimed -= 1;
-  }
+  const wasPaid =
+    purchase.status === "paid" || purchase.status === "split_distributed";
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(whitelistPurchasesTable)
+      .set({ status: "refunded" })
+      .where(eq(whitelistPurchasesTable.id, id));
+
+    if (wasPaid) {
+      // GREATEST guards the floor in SQL rather than in a read-then-
+      // write check, which two concurrent refunds could both pass.
+      await tx
+        .update(whitelistTiersTable)
+        .set({
+          seatsClaimed: sql`GREATEST(${whitelistTiersTable.seatsClaimed} - 1, 0)`,
+        })
+        .where(eq(whitelistTiersTable.id, purchase.tierId));
+    }
+  });
   revalidatePath("/admin/whitelist");
 }
 
@@ -88,8 +128,10 @@ async function toggleTierActive(formData: FormData) {
   "use server";
   await requireAdmin();
   const id = String(formData.get("id"));
-  const tier = MOCK_WHITELIST_TIERS.find((t) => t.id === id);
-  if (tier) tier.active = !tier.active;
+  await db
+    .update(whitelistTiersTable)
+    .set({ active: sql`NOT ${whitelistTiersTable.active}` })
+    .where(eq(whitelistTiersTable.id, id));
   revalidatePath("/admin/whitelist");
   revalidatePath("/whitelist");
 }
@@ -101,11 +143,10 @@ async function setConsultationStatus(formData: FormData) {
   const status = String(formData.get("status")) as ConsultationStatus;
   const assigned = String(formData.get("assignedTo") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
-  const r = MOCK_CONSULTATION_REQUESTS.find((x) => x.id === id);
-  if (!r) return;
-  r.status = status;
-  r.assignedTo = assigned;
-  r.adminNote = note;
+  await db
+    .update(consultationRequestsTable)
+    .set({ status, assignedTo: assigned, adminNote: note })
+    .where(eq(consultationRequestsTable.id, id));
   revalidatePath("/admin/whitelist");
 }
 
@@ -131,18 +172,29 @@ function tierLane(t: { isDonation: boolean; isConsultation: boolean }): string {
   return "Other";
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminWhitelistPage() {
   await requireAdmin();
 
-  const purchases = [...MOCK_WHITELIST_PURCHASES].sort(
-    (a, b) => b.createdAt.localeCompare(a.createdAt),
-  );
-  const requests = [...MOCK_CONSULTATION_REQUESTS].sort(
-    (a, b) => b.createdAt.localeCompare(a.createdAt),
-  );
-  const admins = MOCK_USERS.filter((u) => u.isAdmin);
+  // Reader swap 2026-08-29: donations, tiers, and consults all read
+  // seed data.
+  const [allPurchases, allRequests, { users: admins }, allTiers] =
+    await Promise.all([
+      safely(() => whitelistPurchaseReader.all(), []),
+      safely(() => consultationRequestReader.all(), []),
+      safely(() => getAdminUsers(), { users: [], source: "postgres" as const }),
+      safely(() => whitelistTierReader.all(), []),
+    ]);
 
-  const totalDonated = MOCK_WHITELIST_PURCHASES.filter(
+  const purchases = [...allPurchases].sort(
+    (a, b) => b.createdAt.localeCompare(a.createdAt),
+  );
+  const requests = [...allRequests].sort(
+    (a, b) => b.createdAt.localeCompare(a.createdAt),
+  );
+
+  const totalDonated = allPurchases.filter(
     (p) => p.status === "paid" || p.status === "split_distributed",
   ).reduce((sum, p) => sum + Number(p.amountUsd), 0);
 
@@ -210,7 +262,7 @@ export default async function AdminWhitelistPage() {
               </tr>
             </thead>
             <tbody>
-              {MOCK_WHITELIST_TIERS.map((t) => (
+              {allTiers.map((t) => (
                 <tr
                   key={t.id}
                   className="border-t border-[var(--surface-border)]"
@@ -274,7 +326,7 @@ export default async function AdminWhitelistPage() {
                   </thead>
                   <tbody>
                     {rows.map((p) => {
-                      const tier = MOCK_WHITELIST_TIERS.find(
+                      const tier = allTiers.find(
                         (t) => t.id === p.tierId,
                       );
                       const split = previewDonationSplit(Number(p.amountUsd));

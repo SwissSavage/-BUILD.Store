@@ -65,6 +65,7 @@ export default async function PartnersPage() {
         </p>
       </header>
 
+      {ecosystem.length > 0 && (
       <section className="mt-14">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -105,7 +106,9 @@ export default async function PartnersPage() {
           ))}
         </div>
       </section>
+      )}
 
+      {affiliates.length > 0 && (
       <section className="mt-16">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -144,6 +147,7 @@ export default async function PartnersPage() {
           ))}
         </div>
       </section>
+      )}
 
       <Card className="mt-16 border-[#D828A0]/40">
         <CardEyebrow>Have a product?</CardEyebrow>

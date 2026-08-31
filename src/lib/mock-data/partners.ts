@@ -66,8 +66,15 @@ export const ECOSYSTEM_PARTNERS: EcosystemPartner[] = [];
  * entry here without a relationship that actually exists; this
  * renders publicly on /partners.
  */
+/**
+ * Product affiliates — products only.
+ *
+ * The bar is that the entry is a product someone can go use. Talent
+ * groups do not belong here even when the relationship is real:
+ * routing work to another talent group goes through the cooperative,
+ * not through a public link that lets someone bypass it. Giver
+ * Marketing and Reach were removed on that basis (Jamar 2026-08-31).
+ */
 export const PRODUCT_AFFILIATES: ProductAffiliate[] = [
   { id: "pa_viim", name: "ViiM", websiteUrl: null, affiliateUrl: null },
-  { id: "pa_reach", name: "Reach", websiteUrl: null, affiliateUrl: null },
-  { id: "pa_giver", name: "Giver Marketing", websiteUrl: null, affiliateUrl: null },
 ];

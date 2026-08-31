@@ -6,8 +6,12 @@
 -- that Future Modern has a signed relationship with that org.
 --
 -- Jamar 2026-08-31: nobody should be on the service-partner or SaaS
--- list right now. Keep ViiM and Reach, plus Giver Marketing — which
--- moves out of SaaS partners because it isn't a SaaS product.
+-- list right now. ViiM is the only affiliate that stays.
+--
+-- Reach and Giver Marketing were removed on a second pass: they are
+-- talent groups, not products. Routing work to another talent group
+-- goes through the cooperative, not through a public link that lets
+-- someone tap that network directly.
 --
 -- Idempotent. Picked up by the auto-migration runner on deploy.
 
@@ -15,8 +19,4 @@
 -- empty table, so rows already there have to be removed explicitly.
 DELETE FROM service_partners;
 DELETE FROM ecosystem_partners;
-DELETE FROM product_affiliates
-  WHERE id NOT IN ('pa_viim', 'pa_reach', 'pa_giver');
-INSERT INTO product_affiliates (id, name, website_url, affiliate_url)
-VALUES ('pa_giver', 'Giver Marketing', NULL, NULL)
-ON CONFLICT (id) DO NOTHING;
+DELETE FROM product_affiliates WHERE id <> 'pa_viim';

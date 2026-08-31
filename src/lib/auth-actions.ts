@@ -11,7 +11,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { REAL_SESSION_COOKIE, SESSION_COOKIE } from "@/lib/auth-stub";
 import { signOut as authJsSignOut } from "@/lib/auth";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getUserById } from "@/lib/readers/users";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
@@ -28,7 +28,7 @@ function sessionCookieOptions() {
 
 export async function signIn(formData: FormData) {
   const uid = String(formData.get("uid") ?? "");
-  const user = MOCK_USERS.find((u) => u.id === uid);
+  const user = await getUserById(uid);
   if (!user) {
     // Log the failed attempt without leaking the (nonexistent) uid.
     await logAuditEvent({
@@ -62,7 +62,7 @@ export async function signIn(formData: FormData) {
 export async function signOut() {
   const jar = await cookies();
   const uid = jar.get(SESSION_COOKIE)?.value;
-  const user = uid ? MOCK_USERS.find((u) => u.id === uid) : null;
+  const user = uid ? await getUserById(uid) : null;
 
   // Clear the sandbox cookies (bs_uid + bs_uid_real) — these are
   // ours and Auth.js doesn't touch them.
@@ -123,7 +123,7 @@ export async function viewAsUser(formData: FormData) {
   // either the breadcrumb (already in a view-as session) or the current
   // session if we're starting a view-as fresh.
   const adminUid = realUid ?? currentUid ?? "";
-  const admin = MOCK_USERS.find((u) => u.id === adminUid);
+  const admin = await getUserById(adminUid);
   if (!admin || !admin.isAdmin) {
     // No-op: only admins can use this.
     redirect("/");
@@ -140,7 +140,7 @@ export async function viewAsUser(formData: FormData) {
     // shows on public pages.
     jar.delete(SESSION_COOKIE);
   } else {
-    if (!MOCK_USERS.some((u) => u.id === target)) {
+    if (!(await getUserById(target))) {
       throw new Error("Unknown view-as target");
     }
     jar.set(SESSION_COOKIE, target, sessionCookieOptions());
@@ -158,7 +158,7 @@ export async function viewAsUser(formData: FormData) {
 export async function returnToOriginalUser() {
   const jar = await cookies();
   const realUid = jar.get(REAL_SESSION_COOKIE)?.value;
-  if (realUid && MOCK_USERS.some((u) => u.id === realUid)) {
+  if (realUid && (await getUserById(realUid))) {
     jar.set(SESSION_COOKIE, realUid, sessionCookieOptions());
   }
   jar.delete(REAL_SESSION_COOKIE);

@@ -17,11 +17,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { safely } from "@/lib/readers";
 import {
   cohortSpotlightsByRecency,
 } from "@/lib/mock-data/cohort-spotlights";
-import { publicName } from "@/lib/types";
+import { publicName, type User } from "@/lib/types";
 import {
   createCohortSpotlight,
   removeCohortSpotlight,
@@ -36,8 +37,8 @@ import { Avatar } from "@/components/Avatar";
  * useful when a founding Member wants to acknowledge their own
  * onboarding period.
  */
-function spotlightCandidates() {
-  return [...MOCK_USERS]
+function spotlightCandidates(roster: User[]) {
+  return [...roster]
     .filter(
       (u) =>
         u.membershipTier === "member" || u.membershipTier === "partner",
@@ -58,12 +59,22 @@ function currentPeriodKey(): string {
   return `${yyyy}-${mm}`;
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminCohortPage() {
   const viewer = await getCurrentUser();
   if (!viewer || !viewer.isAdmin) redirect("/signin?next=/admin/cohort");
 
+  // Reader swap 2026-08-29: candidate list and spotlight member
+  // lookups both read MOCK_USERS.
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+  const userById = new Map(roster.map((u) => [u.id, u]));
+
   const spotlights = cohortSpotlightsByRecency();
-  const candidates = spotlightCandidates();
+  const candidates = spotlightCandidates(roster);
   const defaultPeriod = currentPeriodKey();
 
   return (
@@ -257,8 +268,8 @@ export default async function AdminCohortPage() {
           <ul className="mt-6 space-y-4">
             {spotlights.map((spotlight) => {
               const spotlightUsers = spotlight.userIds
-                .map((id) => MOCK_USERS.find((u) => u.id === id))
-                .filter((u): u is (typeof MOCK_USERS)[number] => !!u);
+                .map((id) => userById.get(id))
+                .filter((u): u is User => !!u);
 
               return (
                 <li key={spotlight.id}>

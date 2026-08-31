@@ -15,7 +15,8 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { mvpScoreReader, safely } from "@/lib/readers";
 import {
   MOCK_MVP_SCORES,
   rankedSnapshots,
@@ -28,11 +29,20 @@ import {
 import { MVP_STANDING_LABELS, publicName, type MvpStandingBand } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminMvpPage() {
   await requireAdmin();
 
+  // Reader swap 2026-08-29: was MOCK_USERS.
+  const [{ users: roster }, allScores] = await Promise.all([
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => mvpScoreReader.all(), []),
+  ]);
+  const userById = new Map(roster.map((u) => [u.id, u]));
+
   const ranked = rankedSnapshots();
-  const championIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
+  const championIds = new Set(championsCourtMembers(allScores, roster));
 
   // Band distribution for the header summary.
   const bandCounts: Record<MvpStandingBand, number> = {
@@ -121,7 +131,7 @@ export default async function AdminMvpPage() {
             </thead>
             <tbody>
               {ranked.map((s, i) => {
-                const user = MOCK_USERS.find((u) => u.id === s.userId);
+                const user = userById.get(s.userId);
                 if (!user) return null;
                 const band = standingBand(s.ovr);
                 const inCourt = championIds.has(s.userId);

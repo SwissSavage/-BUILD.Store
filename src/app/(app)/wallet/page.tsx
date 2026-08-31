@@ -28,8 +28,10 @@ export default async function WalletPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
 
-  const balance = getBalance(user.id);
-  const txs = getTransactions(user.id);
+  const [balance, txs] = await Promise.all([
+    getBalance(user.id),
+    getTransactions(user.id),
+  ]);
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">

@@ -27,7 +27,7 @@ import {
   verifyPayoutMethod,
 } from "@/lib/payments";
 import type { PayoutMethod, PayoutRail } from "@/lib/payments";
-import { logAuditEvent, snapshotActorRole } from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 /** Field keys that are safe to persist in the metadata jsonb column. */
 const METADATA_SAFE_KEYS = new Set([
@@ -144,7 +144,7 @@ export async function addPayoutMethod(formData: FormData): Promise<void> {
     updatedAt: now,
   });
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: "payout_method.added",
@@ -199,7 +199,7 @@ export async function setDefaultPayoutMethod(
       .where(eq(payoutMethods.id, methodId));
   });
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: "payout_method.default_changed",
@@ -288,7 +288,7 @@ export async function removePayoutMethod(formData: FormData): Promise<void> {
     }
   });
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: "payout_method.removed",
@@ -326,7 +326,7 @@ export async function confirmManualPayout(formData: FormData): Promise<void> {
     );
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "payout.manual_confirmed",

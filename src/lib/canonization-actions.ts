@@ -26,10 +26,7 @@ import {
 import {
   MOCK_FUTURE_MODERNIST_RECOGNITIONS,
 } from "@/lib/mock-data/future-modernist-recognitions";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import { deriveTradingCardTier } from "@/components/TradingCard";
 import type { MemberCanonization } from "@/lib/types";
@@ -111,7 +108,7 @@ export async function canonizeYear(formData: FormData) {
     MOCK_CANONIZATIONS.push(row);
     createdCount++;
 
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: admin.id,
       actorRoleSnapshot: snapshotActorRole(admin),
       action: "canonization.frozen",
@@ -150,7 +147,7 @@ export async function setCanonizationCaption(formData: FormData) {
   const before = row.caption;
   row.caption = caption.length === 0 ? null : caption;
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "canonization.caption_updated",

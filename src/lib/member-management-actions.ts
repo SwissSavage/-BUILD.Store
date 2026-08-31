@@ -15,10 +15,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_USERS } from "@/lib/mock-data/users";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { MembershipTier } from "@/lib/types";
 
 const VALID_TIERS: MembershipTier[] = [
@@ -57,7 +54,7 @@ export async function setMembershipTier(formData: FormData) {
   user.membershipTier = rawTier;
   user.updatedAt = new Date().toISOString();
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "user.membership_tier_changed",
@@ -91,7 +88,7 @@ export async function toggleAdminFlag(formData: FormData) {
   user.isAdmin = !previous;
   user.updatedAt = new Date().toISOString();
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "user.admin_flag_changed",
@@ -119,7 +116,7 @@ export async function toggleProfilePublic(formData: FormData) {
   user.profilePublic = !previous;
   user.updatedAt = new Date().toISOString();
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "user.profile_public_toggled",
@@ -169,7 +166,7 @@ export async function suspendUser(formData: FormData) {
   user.suspensionReason = reason;
   user.updatedAt = now;
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "user.suspended",
@@ -203,7 +200,7 @@ export async function reactivateUser(formData: FormData) {
   user.suspensionReason = null;
   user.updatedAt = new Date().toISOString();
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "user.reactivated",

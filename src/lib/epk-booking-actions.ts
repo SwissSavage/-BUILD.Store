@@ -30,10 +30,7 @@ import {
   pushInboundSubmission,
 } from "@/lib/mock-data/inbound-submissions";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { CalendarMeeting, Notification, NotificationKind } from "@/lib/types";
 
 function newId(prefix: string): string {
@@ -170,7 +167,7 @@ export async function createEpkBookingRequest(formData: FormData) {
   // the meeting row + notification body (not in audit `after` to avoid
   // duplicating PII into the audit store; audit tracks the platform
   // event, not the requester profile).
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: null,
     actorRoleSnapshot: "system",
     action: "booking.request_created",
@@ -241,7 +238,7 @@ export async function approveBookingRequest(formData: FormData) {
     );
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "booking.request_approved",
@@ -303,7 +300,7 @@ export async function declineBookingRequest(formData: FormData) {
     );
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "booking.request_declined",
@@ -360,7 +357,7 @@ export async function confirmBookingMeeting(formData: FormData) {
     }
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: me.id,
     actorRoleSnapshot: snapshotActorRole(me),
     action: allConfirmed ? "booking.confirmed" : "booking.request_approved",

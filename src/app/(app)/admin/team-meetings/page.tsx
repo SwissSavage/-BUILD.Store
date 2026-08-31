@@ -12,9 +12,8 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { meetingById } from "@/lib/mock-data/calendar";
-import { MOCK_MEETING_MINUTES } from "@/lib/mock-data/meeting-minutes";
+import { getAllUsers } from "@/lib/readers/users";
+import { meetingReader, minutesReader, safely } from "@/lib/readers";
 import {
   MEETING_MINUTE_FORMAT_LABELS,
   MEETING_MINUTE_ROUTING_LABELS,
@@ -23,6 +22,8 @@ import {
   type MeetingMinuteRouting,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 const ROUTING_ORDER: MeetingMinuteRouting[] = [
   "team_governance",
@@ -33,12 +34,24 @@ const ROUTING_ORDER: MeetingMinuteRouting[] = [
 export default async function AdminTeamMeetingsPage() {
   await requireAdmin();
 
+  // Minutes, the meetings they belong to, and the roster that names
+  // the capturer and attendees. Loaded together — the meeting lookup
+  // below was a synchronous fixture scan, so doing it per row would
+  // now be one query per minute.
+  const [minutes, meetings, { users: roster }] = await Promise.all([
+    safely(() => minutesReader.all(), []),
+    safely(() => meetingReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const meetingById = (id: string) =>
+    meetings.find((m) => m.id === id) ?? null;
+
   const minutesByRouting: Record<MeetingMinuteRouting, MeetingMinute[]> = {
     project_scoped: [],
     team_governance: [],
     peer_one_on_one: [],
   };
-  for (const m of MOCK_MEETING_MINUTES) {
+  for (const m of minutes) {
     minutesByRouting[m.routing].push(m);
   }
   for (const k of ROUTING_ORDER) {
@@ -79,7 +92,7 @@ export default async function AdminTeamMeetingsPage() {
               <ul className="mt-4 space-y-3">
                 {rows.map((min) => {
                   const meeting = meetingById(min.meetingId);
-                  const capturer = MOCK_USERS.find(
+                  const capturer = roster.find(
                     (u) => u.id === min.capturedByUserId,
                   );
                   return (
@@ -108,7 +121,7 @@ export default async function AdminTeamMeetingsPage() {
                         <p className="mt-1 text-[11px] text-ink-faint">
                           {new Date(meeting.startsAt).toLocaleString()} ·{" "}
                           {meeting.attendeeIds
-                            .map((a) => MOCK_USERS.find((u) => u.id === a))
+                            .map((a) => roster.find((u) => u.id === a))
                             .filter(Boolean)
                             .map((u) => publicName(u!))
                             .join(", ")}
@@ -162,7 +175,7 @@ export default async function AdminTeamMeetingsPage() {
                           </span>
                           <ul className="mt-2 space-y-1">
                             {min.corrections.map((c) => {
-                              const author = MOCK_USERS.find(
+                              const author = roster.find(
                                 (u) => u.id === c.byUserId,
                               );
                               return (

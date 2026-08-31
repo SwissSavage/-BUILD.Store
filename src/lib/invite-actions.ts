@@ -29,10 +29,7 @@ import { createDirectSession, createFmUser } from "@/lib/auth";
 import { db } from "@/db/client";
 import { inviteLinks, users } from "@/db/schema";
 import { MOCK_INVITE_LINKS } from "@/lib/mock-data/invite-links";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { MembershipTier } from "@/lib/types";
 import {
   DOCUMENSO_TEMPLATES,
@@ -120,7 +117,7 @@ export async function generateInviteLink(formData: FormData) {
 
   await db.insert(inviteLinks).values(invite);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "user.invited",
@@ -285,7 +282,7 @@ export async function resendInviteLink(formData: FormData) {
     senderName: adminSenderName(admin),
   });
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "user.invited",
@@ -330,7 +327,7 @@ export async function extendInviteExpiry(formData: FormData) {
     .set({ expiresAt: newExpiry })
     .where(eq(inviteLinks.id, invite.id));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "user.invited",
@@ -374,7 +371,7 @@ export async function revokeInviteLink(formData: FormData) {
     .set({ revokedAt, revokedReason })
     .where(eq(inviteLinks.id, invite.id));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "user.invite_revoked",

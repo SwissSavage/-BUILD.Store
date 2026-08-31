@@ -15,20 +15,23 @@ import {
   requestDataExport,
   requestDataErasure,
 } from "@/lib/data-rights-actions";
-import { readAuditLog } from "@/lib/mock-data/audit-log";
+import { readAuditLog } from "@/lib/readers/audit-log";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 export default async function DataRightsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin?next=/profile/data-rights");
 
-  const priorRequests = readAuditLog({
+  // Both the actor scope and the action set go into the query. A member
+  // opening their own data-rights page must not cause a read of anyone
+  // else's audit entries.
+  const priorRequests = await readAuditLog({
     actorUserId: user.id,
-  }).filter(
-    (e) =>
-      e.action === "data.subject_export_requested" ||
-      e.action === "data.subject_erasure_requested",
-  );
+    actions: [
+      "data.subject_export_requested",
+      "data.subject_erasure_requested",
+    ],
+  });
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">

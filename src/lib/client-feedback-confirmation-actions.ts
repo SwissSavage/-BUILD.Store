@@ -22,10 +22,7 @@
 
 import { revalidatePath } from "next/cache";
 import { MOCK_CUSTOMER_FEEDBACK } from "@/lib/mock-data/customer-feedback";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 /**
  * Client confirms the captured rating is accurate. Row status flips
@@ -51,7 +48,7 @@ export async function confirmClientFeedback(formData: FormData): Promise<void> {
   row.clientConfirmationStatus = "confirmed";
   row.clientConfirmedAt = new Date().toISOString();
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: null,
     actorRoleSnapshot: snapshotActorRole(null),
     action: "quote.approved",
@@ -107,7 +104,7 @@ export async function disputeClientFeedback(formData: FormData): Promise<void> {
     row.prose = `${row.prose}\n\n[Client dispute reason]: ${disputeReason}`;
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: null,
     actorRoleSnapshot: snapshotActorRole(null),
     action: "quote.declined",

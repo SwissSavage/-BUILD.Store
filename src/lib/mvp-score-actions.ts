@@ -28,10 +28,7 @@ import {
   setSubRating as writeSubRating,
 } from "@/lib/writers/mvp-score";
 import { mvpScoreReader } from "@/lib/readers";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { buildSnapshot } from "@/lib/mvp-score";
 import {
   MVP_VIOLATION_DURATION_DAYS,
@@ -94,7 +91,7 @@ export async function applyCompliancePenalty(formData: FormData) {
   await db.insert(mvpCompliancePenalties).values(penalty);
   await recomputeMvpScore(userId);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "mvp.compliance_penalty_applied",
@@ -157,7 +154,7 @@ export async function setSubRating(formData: FormData) {
   const rounded = Math.round(raw);
   await writeSubRating(userId, key, rounded);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "mvp.sub_rating_set",
@@ -192,7 +189,7 @@ export async function promoteFromProvisional(formData: FormData) {
   }
   await setProvisional(userId, false);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "mvp.provisional_promoted",
@@ -224,7 +221,7 @@ export async function demoteToProvisional(formData: FormData) {
   const wasProvisional = snapshot.isProvisional;
   await setProvisional(userId, true);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "mvp.provisional_demoted",
@@ -266,7 +263,7 @@ export async function rescindCompliancePenalty(formData: FormData) {
     .where(eq(mvpCompliancePenalties.id, penaltyId));
   await recomputeMvpScore(userId);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "mvp.compliance_penalty_rescinded",

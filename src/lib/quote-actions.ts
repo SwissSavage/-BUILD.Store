@@ -44,10 +44,7 @@ import {
   DOCUMENSO_TEMPLATES,
   inviteRecipientToTemplate,
 } from "@/lib/documenso";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type {
   CooperativeQuote,
   CooperativeQuotePricing,
@@ -365,7 +362,7 @@ export async function createCooperativeQuote(formData: FormData) {
   };
   await db.insert(cooperativeQuotes).values(row);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "quote.created",
@@ -405,7 +402,7 @@ export async function removeCooperativeQuote(formData: FormData) {
 
   await db.delete(cooperativeQuotes).where(eq(cooperativeQuotes.id, id));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "quote.removed",
@@ -538,7 +535,7 @@ export async function approveCooperativeQuote(formData: FormData) {
     );
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: quote.createdByUserId,
     actorRoleSnapshot: "system",
     action: "quote.approved",
@@ -709,7 +706,7 @@ async function dispatchSowDualEnvelope(input: {
     .where(eq(cooperativeQuotes.id, quoteId));
 
   if (failures.length > 0) {
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId,
       actorRoleSnapshot: "system",
       action: "sow.dispatch_failed",
@@ -727,7 +724,7 @@ async function dispatchSowDualEnvelope(input: {
       reason: failures.join(" | "),
     });
   } else {
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId,
       actorRoleSnapshot: "system",
       action: "sow.dispatched",
@@ -814,7 +811,7 @@ export async function declineCooperativeQuote(formData: FormData) {
     );
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: quote.createdByUserId,
     actorRoleSnapshot: "system",
     action: "quote.declined",
@@ -902,7 +899,7 @@ export async function undoCooperativeQuoteDecision(formData: FormData) {
     .limit(1);
   const projectTitle = project?.title ?? quote.projectId;
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: quote.createdByUserId,
     actorRoleSnapshot: "system",
     action:

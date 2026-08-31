@@ -21,10 +21,7 @@ import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { MOCK_PARTNER_REFERRALS } from "@/lib/mock-data/partner-referrals";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { ECOSYSTEM_PARTNERS, PRODUCT_AFFILIATES } from "@/lib/mock-data/partners";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { PartnerReferral, PartnerReferralKind } from "@/lib/types";
 
 const KINDS: readonly PartnerReferralKind[] = [
@@ -107,7 +104,7 @@ export async function logReferral(formData: FormData): Promise<void> {
   };
   MOCK_PARTNER_REFERRALS.push(row);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: "partner_referral.logged",
@@ -179,7 +176,7 @@ export async function markReferralConverted(
   row.convertedAt = now;
   row.updatedAt = now;
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "partner_referral.converted",
@@ -226,7 +223,7 @@ export async function markReferralDeclined(
   row.declinedAt = now;
   row.updatedAt = now;
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "partner_referral.declined",

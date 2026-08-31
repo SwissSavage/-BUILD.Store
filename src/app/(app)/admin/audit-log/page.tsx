@@ -2,9 +2,11 @@
  * /admin/audit-log — reverse-chronological audit log viewer.
  *
  * Every security/financial/compliance-adjacent action writes here via
- * `logAuditEvent()`. Sandbox reads from MOCK_AUDIT_LOG; production reads
- * from a Drizzle `audit_log` table where the app role has been stripped
- * of UPDATE and DELETE grants.
+ * `logAuditEvent()`, which appends to the `audit_log_entries` table.
+ *
+ * Append-only is currently a convention in the writer, not a grant.
+ * Revoking UPDATE and DELETE from the app's database role is still
+ * outstanding and is the remaining gap on CC7.2.
  *
  * Admin-only. Read-only — this surface intentionally does not expose any
  * mutation controls (SOC 2 CC7.2 evidence: log integrity is enforced at
@@ -12,11 +14,9 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import {
-  MOCK_AUDIT_LOG,
-  readAuditLog,
-} from "@/lib/mock-data/audit-log";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { distinctAuditActors, readAuditLog } from "@/lib/readers/audit-log";
+import { getAllUsers } from "@/lib/readers/users";
+import { safely } from "@/lib/readers";
 import {
   AUDIT_LOG_ACTION_LABELS,
   publicName,
@@ -24,6 +24,8 @@ import {
   type AuditLogResourceKind,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 const RESOURCE_KINDS: AuditLogResourceKind[] = [
   "user",
@@ -38,9 +40,18 @@ const RESOURCE_KINDS: AuditLogResourceKind[] = [
   "config",
 ];
 
-function actorLabel(userId: string | null): string {
+/**
+ * Resolve an actor id to a display name against the roster loaded for
+ * this request. Entries whose actor is no longer a member still render
+ * — the id truncated — because an audit entry must never disappear
+ * just because the person it describes left.
+ */
+function actorLabel(
+  roster: Awaited<ReturnType<typeof getAllUsers>>["users"],
+  userId: string | null,
+): string {
   if (userId === null) return "System";
-  const user = MOCK_USERS.find((u) => u.id === userId);
+  const user = roster.find((u) => u.id === userId);
   return user ? publicName(user) : userId.slice(0, 12);
 }
 
@@ -88,16 +99,21 @@ export default async function AuditLogPage({
   const actionFilter = safeAction(params.action?.trim());
   const resourceFilter = safeResourceKind(params.resource?.trim());
 
-  const entries = readAuditLog({
-    actorUserId: actorFilter,
-    action: actionFilter,
-    resourceKind: resourceFilter,
-    limit: 500,
-  });
+  const [{ users: roster }, entries] = await Promise.all([
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(
+      () =>
+        readAuditLog({
+          actorUserId: actorFilter,
+          action: actionFilter,
+          resourceKind: resourceFilter,
+          limit: 500,
+        }),
+      [],
+    ),
+  ]);
 
-  const uniqueActors = Array.from(
-    new Set(MOCK_AUDIT_LOG.map((e) => e.actorUserId).filter(Boolean)),
-  ) as string[];
+  const uniqueActors = await safely(() => distinctAuditActors(), []);
   const actions = Object.keys(AUDIT_LOG_ACTION_LABELS) as AuditLogAction[];
 
   return (
@@ -107,9 +123,9 @@ export default async function AuditLogPage({
       <p className="mt-2 max-w-2xl text-sm text-ink-muted">
         Append-only record of every security, financial, and
         compliance-adjacent action. SOC 2 CC7.2 / ISO 27001 A.12.4
-        evidence. Sandbox stores entries in-memory; production stores in
-        a Drizzle table with UPDATE and DELETE grants revoked at the
-        database role level.
+        evidence. Entries persist in Postgres. Revoking UPDATE and
+        DELETE at the database role is still outstanding, so
+        append-only is enforced by convention rather than by grant.
       </p>
 
       <Card className="mt-6">
@@ -125,7 +141,7 @@ export default async function AuditLogPage({
               <option value="">All actors</option>
               {uniqueActors.map((uid) => (
                 <option key={uid} value={uid}>
-                  {actorLabel(uid)}
+                  {actorLabel(roster, uid)}
                 </option>
               ))}
             </select>
@@ -202,7 +218,7 @@ export default async function AuditLogPage({
                 </span>
               </div>
               <CardTitle className="mt-1 text-sm">
-                {actorLabel(e.actorUserId)}{" "}
+                {actorLabel(roster, e.actorUserId)}{" "}
                 <span className="text-ink-muted">
                   ({e.actorRoleSnapshot})
                 </span>{" "}

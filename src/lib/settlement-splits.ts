@@ -36,10 +36,7 @@
  */
 import { db } from "@/db/client";
 import { revenueSplits } from "@/db/schema";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { getUserById } from "@/lib/readers/users";
 import type {
   RevenueSplit,
@@ -266,7 +263,7 @@ export async function writeStandardSettlementSplits(
     await tx.insert(revenueSplits).values(rows);
   });
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: input.actorUserId,
     actorRoleSnapshot: snapshotActorRole(actor),
     action: "contract.revenue_split_recorded",
@@ -381,7 +378,7 @@ export async function writeDonationSplit(
     await tx.insert(revenueSplits).values(rows);
   });
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: input.actorUserId,
     actorRoleSnapshot: snapshotActorRole(actor),
     action: "contract.revenue_split_recorded",

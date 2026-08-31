@@ -17,20 +17,22 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { eq } from "drizzle-orm";
+import { customerFeedback, peerReviews } from "@/db/schema";
+import { getProjectById } from "@/lib/readers/projects";
+import { getUserById } from "@/lib/readers/users";
+import { customerFeedbackReader, peerReviewReader } from "@/lib/readers";
 import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_PEER_REVIEWS } from "@/lib/mock-data/peer-reviews";
-import { MOCK_CUSTOMER_FEEDBACK } from "@/lib/mock-data/customer-feedback";
-import {
-  MOCK_RESERVE_POOL_LEDGER,
-  MOCK_TRIANGULATED_COMPOSITES,
+  getComposite,
+  hasReserveCredit,
   reservePoolBalance,
-} from "@/lib/mock-data/reserve-pool";
-import { creditPool as creditRecoveryPool } from "@/lib/mock-data/engagement-recovery-pools";
+} from "@/lib/readers/reserve-pool";
+import {
+  appendReserveEntry,
+  creditRecoveryPool,
+  insertComposite,
+} from "@/lib/writers/reserve-pool";
 import {
   aggregatePeerCompositeForContributor,
   computeRebateMultiplier,
@@ -50,51 +52,6 @@ import type {
 //  Internal (non-server-action) helpers
 // ────────────────────────────────────────────────────────────────
 
-function nextLedgerId(prefix: string): string {
-  return `rpl_${prefix}_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 5)}`;
-}
-
-function nextCompositeId(): string {
-  return `tc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`;
-}
-
-/**
- * Append a credit or debit entry to the reserve pool ledger. Not a
- * server action — callable from any server context that has already
- * validated the caller. Returns the created row.
- */
-function appendReserveEntry(input: {
-  projectId: string;
-  amount: number;
-  direction: "credit" | "debit";
-  creditReason: ReserveCreditReason | null;
-  debitReason: ReserveDebitReason | null;
-  recipientId: string | null;
-  actorUserId: string | null;
-  rationale: string | null;
-}): ReservePoolLedgerEntry {
-  const signedAmount =
-    input.direction === "credit"
-      ? Math.abs(input.amount)
-      : -Math.abs(input.amount);
-  const row: ReservePoolLedgerEntry = {
-    id: nextLedgerId(input.direction === "credit" ? "c" : "d"),
-    projectId: input.projectId,
-    amount: signedAmount.toFixed(2),
-    direction: input.direction,
-    creditReason: input.creditReason,
-    debitReason: input.debitReason,
-    recipientId: input.recipientId,
-    actorUserId: input.actorUserId,
-    rationale: input.rationale,
-    createdAt: new Date().toISOString(),
-  };
-  MOCK_RESERVE_POOL_LEDGER.push(row);
-  return row;
-}
-
 /**
  * Credit the reserve pool when an external invoice is fully paid.
  * Called from the invoice-payment path — no separate admin gate
@@ -110,21 +67,21 @@ export async function creditReserveOnInvoiceCollection(input: {
   projectId: string;
   actorUserId: string | null;
 }): Promise<ReservePoolLedgerEntry | null> {
-  const project = MOCK_PROJECTS.find((p) => p.id === input.projectId);
+  const project = await getProjectById(input.projectId);
   if (!project) return null;
   if (!project.talentBonusAmount) return null;
   const amount = Number(project.talentBonusAmount);
   if (amount <= 0) return null;
 
-  const alreadyCredited = MOCK_RESERVE_POOL_LEDGER.some(
-    (e) =>
-      e.projectId === input.projectId &&
-      e.direction === "credit" &&
-      e.creditReason === "invoice_collection",
-  );
-  if (alreadyCredited) return null;
+  // Idempotency guard. Also enforced by a partial unique index in
+  // 0015 — two invoice-payment webhooks arriving together can both
+  // pass this check, and double-funding the reserve inflates every
+  // contributor's bonus release downstream.
+  if (await hasReserveCredit(input.projectId, "invoice_collection")) {
+    return null;
+  }
 
-  const row = appendReserveEntry({
+  const row = await appendReserveEntry({
     projectId: input.projectId,
     amount,
     direction: "credit",
@@ -136,9 +93,9 @@ export async function creditReserveOnInvoiceCollection(input: {
   });
 
   const actor = input.actorUserId
-    ? MOCK_USERS.find((u) => u.id === input.actorUserId) ?? null
+    ? await getUserById(input.actorUserId)
     : null;
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: input.actorUserId,
     actorRoleSnapshot: snapshotActorRole(actor),
     action: "reserve.credited",
@@ -157,21 +114,20 @@ export async function creditReserveOnInvoiceCollection(input: {
  * a specific contract. Freezes the current ratings so the historical
  * decision stays auditable even if underlying ratings change later.
  */
-function snapshotComposite(input: {
+async function snapshotComposite(input: {
   projectId: string;
   contributorUserId: string;
   adminRating: number | null;
   peerRating: number | null;
   clientRating: number | null;
   actorUserId: string | null;
-}): TriangulatedComposite {
+}): Promise<TriangulatedComposite> {
   const result = computeTriangulatedComposite({
     adminRating: input.adminRating,
     peerRating: input.peerRating,
     clientRating: input.clientRating,
   });
-  const row: TriangulatedComposite = {
-    id: nextCompositeId(),
+  const row = await insertComposite({
     projectId: input.projectId,
     contributorUserId: input.contributorUserId,
     adminRating: result.adminRating,
@@ -181,13 +137,12 @@ function snapshotComposite(input: {
     weightedComposite: result.weightedComposite,
     bonusReleaseFraction: result.bonusReleaseFraction,
     computedAt: new Date().toISOString(),
-  };
-  MOCK_TRIANGULATED_COMPOSITES.push(row);
+  });
 
   const actor = input.actorUserId
-    ? MOCK_USERS.find((u) => u.id === input.actorUserId) ?? null
+    ? await getUserById(input.actorUserId)
     : null;
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: input.actorUserId,
     actorRoleSnapshot: snapshotActorRole(actor),
     action: "composite.computed",
@@ -249,7 +204,7 @@ export async function executeGraduatedBonusRelease(
 
   const projectId = String(formData.get("projectId") ?? "").trim();
   if (!projectId) throw new Error("Project id is required.");
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const project = await getProjectById(projectId);
   if (!project) throw new Error("Project not found.");
   if (!project.talentBonusAmount) {
     throw new Error(
@@ -267,11 +222,20 @@ export async function executeGraduatedBonusRelease(
     throw new Error("At least one contributor required.");
   }
 
+  // Ratings for this project only. Loaded once and scoped in SQL —
+  // a bonus release must not read every project's peer reviews to
+  // find the handful that belong to this one, and the loops below
+  // would otherwise re-query per contributor.
+  const [projectReviews, projectFeedback] = await Promise.all([
+    peerReviewReader.where(eq(peerReviews.contextId, projectId)),
+    customerFeedbackReader.where(eq(customerFeedback.contextId, projectId)),
+  ]);
+
   // Read admin/PM rating from the project row (source of truth).
   const adminRating = project.pmEngagementRating ?? null;
   // Read client rating from customer_feedback (most recent wins).
   const clientRating = extractClientRatingForProject({
-    feedback: MOCK_CUSTOMER_FEEDBACK,
+    feedback: projectFeedback,
     projectId,
   });
 
@@ -319,7 +283,7 @@ export async function executeGraduatedBonusRelease(
   const missingPeerContribs: string[] = [];
   for (const contribId of contributorIds) {
     const peer = aggregatePeerCompositeForContributor({
-      reviews: MOCK_PEER_REVIEWS,
+      reviews: projectReviews,
       projectId,
       contributorUserId: contribId,
     });
@@ -346,9 +310,9 @@ export async function executeGraduatedBonusRelease(
     unreleasedAmount: number;
   }> = [];
 
-  contributorIds.forEach((contribId, idx) => {
+  for (const [idx, contribId] of contributorIds.entries()) {
     const peerRating = aggregatePeerCompositeForContributor({
-      reviews: MOCK_PEER_REVIEWS,
+      reviews: projectReviews,
       projectId,
       contributorUserId: contribId,
     });
@@ -358,7 +322,7 @@ export async function executeGraduatedBonusRelease(
         ? String(invoiceAmounts[idx])
         : contribBonusShare.toFixed(2);
 
-    const composite = snapshotComposite({
+    const composite = await snapshotComposite({
       projectId,
       contributorUserId: contribId,
       adminRating,
@@ -377,7 +341,7 @@ export async function executeGraduatedBonusRelease(
       releasedAmount,
       unreleasedAmount,
     });
-  });
+  }
 
   // 2. Debit reserve for each contributor's graduated release
   //    (share weighted by their internal invoice amount, composite
@@ -385,7 +349,7 @@ export async function executeGraduatedBonusRelease(
   for (const c of composites) {
     if (c.releasedAmount <= 0) continue;
     const contribShare = c.releasedAmount + c.unreleasedAmount;
-    appendReserveEntry({
+    await appendReserveEntry({
       projectId,
       amount: c.releasedAmount,
       direction: "debit",
@@ -395,7 +359,7 @@ export async function executeGraduatedBonusRelease(
       actorUserId: admin.id,
       rationale: `Composite ${c.composite.weightedComposite}/5 → released ${(c.composite.bonusReleaseFraction * 100).toFixed(1)}% of ${contribShare.toFixed(2)} bonus share (weighted by ${c.internalInvoiceAmount} internal invoice).`,
     });
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: admin.id,
       actorRoleSnapshot: snapshotActorRole(admin),
       action: "reserve.bonus_released",
@@ -432,7 +396,7 @@ export async function executeGraduatedBonusRelease(
 
     let distributed = 0;
     for (const d of distributions) {
-      appendReserveEntry({
+      await appendReserveEntry({
         projectId,
         amount: d.amount,
         direction: "debit",
@@ -442,7 +406,7 @@ export async function executeGraduatedBonusRelease(
         actorUserId: admin.id,
         rationale: `Peer-coverage bonus: ${d.sharePct.toFixed(2)}% of ${unreleasedPool.toFixed(2)} unreleased pool.`,
       });
-      logAuditEvent({
+      await logAuditEvent({
         actorUserId: admin.id,
         actorRoleSnapshot: snapshotActorRole(admin),
         action: "reserve.peer_coverage_distributed",
@@ -461,7 +425,7 @@ export async function executeGraduatedBonusRelease(
     // 5. Any remaining residual → Engagement Recovery Pool
     const residual = unreleasedPool - distributed;
     if (residual > 0.01) {
-      appendReserveEntry({
+      await appendReserveEntry({
         projectId,
         amount: residual,
         direction: "debit",
@@ -471,8 +435,8 @@ export async function executeGraduatedBonusRelease(
         actorUserId: admin.id,
         rationale: `Residual after peer-coverage distribution — routed to Engagement Recovery Pool.`,
       });
-      creditRecoveryPool(projectId, residual.toFixed(2));
-      logAuditEvent({
+      await creditRecoveryPool(projectId, residual.toFixed(2));
+      await logAuditEvent({
         actorUserId: admin.id,
         actorRoleSnapshot: snapshotActorRole(admin),
         action: "reserve.recovery_routed",
@@ -491,7 +455,7 @@ export async function executeGraduatedBonusRelease(
 
   // Log a summary of what the release fired against — including
   // any missing sources — so the audit trail captures the state.
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "reserve.bonus_released",
@@ -539,7 +503,7 @@ export async function issueClientRebate(formData: FormData): Promise<void> {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error("Rebate amount must be a positive number.");
   }
-  const balance = reservePoolBalance(projectId);
+  const balance = await reservePoolBalance(projectId);
   if (amount > balance) {
     throw new Error(
       `Rebate ${amount.toFixed(2)} exceeds current reserve balance ${balance.toFixed(2)}.`,
@@ -552,10 +516,7 @@ export async function issueClientRebate(formData: FormData): Promise<void> {
   // a hard block (admin discretion may exceed the algorithm), but
   // captured in the audit trail.
   const composite = contributorUserId
-    ? MOCK_TRIANGULATED_COMPOSITES.find(
-        (c) =>
-          c.projectId === projectId && c.contributorUserId === contributorUserId,
-      )
+    ? await getComposite(projectId, contributorUserId)
     : null;
   let multiplierNote = "";
   if (composite) {
@@ -567,7 +528,7 @@ export async function issueClientRebate(formData: FormData): Promise<void> {
     multiplierNote = ` (triangulation supports up to ${supported.toFixed(2)} at multiplier ${multiplier})`;
   }
 
-  appendReserveEntry({
+  await appendReserveEntry({
     projectId,
     amount,
     direction: "debit",
@@ -578,7 +539,7 @@ export async function issueClientRebate(formData: FormData): Promise<void> {
     rationale: rationale + multiplierNote,
   });
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "reserve.rebate_issued",

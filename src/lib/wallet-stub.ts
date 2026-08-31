@@ -9,11 +9,16 @@
  *   - ERC-6551 helpers to derive token-bound account addresses
  *     from member identity
  *
- * Sandbox behavior:
- *   - Reads `buildTokenBalance` and `walletAddress` from MOCK_USERS.
- *   - "Distribute $BUILD" admin action appends a synthetic
- *     TokenTransaction to the in-memory ledger and bumps the
- *     recipient's balance. Resets when the dev server restarts.
+ * Off-chain behavior (2026-08-30):
+ *   - Reads `buildTokenBalance` and `walletAddress` from the users
+ *     table.
+ *   - "Distribute $BUILD" writes a TokenTransaction row and bumps the
+ *     recipient's balance in the same transaction, and issues the
+ *     matching voucher first.
+ *
+ * Previously all three of those were in-memory, so an admin
+ * distribution showed a success state, moved a balance that reset on
+ * the next deploy, and left no ledger row behind.
  *
  * The shape of `distributeBuild()` matches what a real multisig
  * `proposeTransaction()` call would look like — params first,
@@ -21,21 +26,28 @@
  * without touching the admin UI.
  * ============================================================
  */
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_TRANSACTIONS } from "@/lib/mock-data/tokens";
+import { eq, sql } from "drizzle-orm";
+import { randomUUID } from "crypto";
+import { db } from "@/db/client";
+import { tokenTransactions, users } from "@/db/schema";
+import { getUserById } from "@/lib/readers/users";
+import { getTokensForUser } from "@/lib/readers";
 import { issueVoucherInternal } from "@/lib/voucher-issuance";
 import type {
   BuildVoucherSourceType,
   TokenTransaction,
 } from "@/lib/types";
 
-export function getBalance(userId: string): string {
-  const u = MOCK_USERS.find((x) => x.id === userId);
+export async function getBalance(userId: string): Promise<string> {
+  const u = await getUserById(userId);
   return u?.buildTokenBalance ?? "0.00000000";
 }
 
-export function getTransactions(userId: string): TokenTransaction[] {
-  return MOCK_TRANSACTIONS.filter((tx) => tx.userId === userId).sort(
+export async function getTransactions(
+  userId: string,
+): Promise<TokenTransaction[]> {
+  const rows = await getTokensForUser(userId);
+  return [...rows].sort(
     (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
   );
 }
@@ -65,22 +77,27 @@ export interface DistributeBuildParams {
  * lockstep with $BUILD movement.
  *
  * Supply-cap enforcement lives inside issueVoucherInternal — if the
- * distribution would push above the 10M voucher cap, it throws
- * BEFORE mutating MOCK_TRANSACTIONS or the recipient balance, so
- * the whole distribution is transactional. Callers get a clear
- * error rather than a silent over-issuance.
+ * distribution would push above the 10M voucher cap, it throws BEFORE
+ * the ledger row or the balance move, so the whole distribution is
+ * all-or-nothing. Callers get a clear error rather than a silent
+ * over-issuance.
  *
  * Production: this becomes a Safe multisig propose -> sign ->
  * execute flow, and the voucher issuance still fires alongside
  * (voucher is the off-chain accounting mirror; both must move
  * together).
  */
-export function distributeBuild(params: DistributeBuildParams): TokenTransaction {
-  const recipient = MOCK_USERS.find((u) => u.id === params.toUserId);
+export async function distributeBuild(
+  params: DistributeBuildParams,
+): Promise<TokenTransaction> {
+  // Real lookup. The fixture scan here threw "Unknown recipient" for
+  // anyone who signed up through the live flow, which made every
+  // distribution to a real member impossible.
+  const recipient = await getUserById(params.toUserId);
   if (!recipient) throw new Error(`Unknown recipient: ${params.toUserId}`);
 
   const tx: TokenTransaction = {
-    id: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    id: `tx_${randomUUID()}`,
     userId: params.toUserId,
     amount: params.amount,
     type: params.type,
@@ -97,7 +114,7 @@ export function distributeBuild(params: DistributeBuildParams): TokenTransaction
   // The TokenTransaction type maps 1:1 to BuildVoucherSourceType
   // (both are the same enum — project_completion / referral /
   // collaboration / governance / admin_grant).
-  issueVoucherInternal({
+  await issueVoucherInternal({
     userId: params.toUserId,
     amount: params.amount,
     sourceType: params.type as BuildVoucherSourceType,
@@ -108,11 +125,34 @@ export function distributeBuild(params: DistributeBuildParams): TokenTransaction
     issuedByUserId: params.initiatedByUserId ?? null,
   });
 
-  MOCK_TRANSACTIONS.push(tx);
-  // Balance mutation — fine for in-memory sandbox; real implementation
-  // would be a chain-side balance read after settlement.
-  const next = (Number(recipient.buildTokenBalance) + Number(params.amount)).toFixed(8);
-  recipient.buildTokenBalance = next;
+  // Ledger row and balance move together. A distribution recorded
+  // without the balance change, or the reverse, is not detectable
+  // afterwards — there is no third source to reconcile against.
+  //
+  // The increment is computed in SQL rather than read-then-write, so
+  // two distributions to the same member cannot both read the same
+  // starting balance and one overwrite the other.
+  await db.transaction(async (dbTx) => {
+    await dbTx.insert(tokenTransactions).values({
+      id: tx.id,
+      userId: tx.userId,
+      amount: tx.amount,
+      type: tx.type,
+      projectId: tx.projectId,
+      description: tx.description,
+      transactionHash: tx.transactionHash,
+      compStage: tx.compStage,
+      withholdReason: tx.withholdReason,
+      createdAt: tx.createdAt,
+    });
+
+    await dbTx
+      .update(users)
+      .set({
+        buildTokenBalance: sql`COALESCE(${users.buildTokenBalance}, 0) + ${params.amount}::numeric`,
+      })
+      .where(eq(users.id, params.toUserId));
+  });
 
   return tx;
 }

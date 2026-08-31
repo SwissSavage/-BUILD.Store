@@ -28,10 +28,7 @@ import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { Notification } from "@/lib/types";
 
 const DOCUMENSO_BASE =
@@ -89,7 +86,7 @@ export async function inviteMemberToDocumenso(formData: FormData) {
   };
   MOCK_NOTIFICATIONS.push(ntf);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "config.setting_changed",
@@ -140,7 +137,7 @@ export async function claimDocumensoAccount() {
     .set({ documensoAccountLinkedAt: now })
     .where(eq(users.id, user.id));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: "config.setting_changed",

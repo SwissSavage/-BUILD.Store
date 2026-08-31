@@ -29,7 +29,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { mvpCompliancePenalties } from "@/db/schema";
 import type { MvpCompliancePenalty } from "@/lib/types";
-import { readAuditLog } from "@/lib/mock-data/audit-log";
+import { readAuditLog } from "@/lib/readers/audit-log";
 import { MOCK_FUTURE_MODERNIST_RECOGNITIONS } from "@/lib/mock-data/future-modernist-recognitions";
 import { MOCK_CANONIZATIONS } from "@/lib/mock-data/canonizations";
 import {
@@ -127,7 +127,7 @@ export default async function MemberDrillDown({
   const canonizations = MOCK_CANONIZATIONS.filter(
     (c) => c.userId === user.id,
   );
-  const auditEntries = readAuditLog({
+  const auditEntries = await readAuditLog({
     resourceKind: "user",
     resourceId: user.id,
     limit: 30,

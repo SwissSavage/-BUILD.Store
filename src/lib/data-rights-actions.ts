@@ -22,10 +22,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { Notification } from "@/lib/types";
 
 function newNotificationId(kind: string): string {
@@ -59,7 +56,7 @@ export async function requestDataExport(formData: FormData) {
   if (!user) throw new Error("Sign in required");
   const note = String(formData.get("note") ?? "").trim();
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: "data.subject_export_requested",
@@ -91,7 +88,7 @@ export async function requestDataErasure(formData: FormData) {
     );
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: "data.subject_erasure_requested",

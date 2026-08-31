@@ -25,10 +25,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { MOCK_ORDERS } from "@/lib/mock-data/orders";
 import { MOCK_PRODUCTS } from "@/lib/mock-data/products";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { grossUpForCard } from "@/lib/payments-fees";
 import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
 import { createMarketplaceReceiptInternal } from "@/lib/invoice-actions";
@@ -248,7 +245,7 @@ export async function distributeOrderSplit(formData: FormData) {
   if (platformAdmins.length === 0) {
     // Fall back to the marking-only path so the order still closes
     // even if the admin roster is empty — extreme edge case.
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: admin.id,
       actorRoleSnapshot: snapshotActorRole(admin),
       action: "contract.revenue_split_recorded",
@@ -290,7 +287,7 @@ export async function distributeOrderSplit(formData: FormData) {
   // LP. Same shape as the cash split, different weights, different
   // basis (network fees only, per the master spreadsheet).
   try {
-    issueBuildFromSettlement({
+    await issueBuildFromSettlement({
       gross: Number(order.subtotal),
       cashSourceKind: "order_settlement",
       sourceId: order.id,

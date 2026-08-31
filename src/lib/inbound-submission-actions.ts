@@ -21,10 +21,7 @@ import {
   MOCK_INBOUND_SUBMISSIONS,
   findInboundSubmission,
 } from "@/lib/mock-data/inbound-submissions";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { InboundSubmissionStatus } from "@/lib/types";
 
 const ALLOWED_STATUSES = new Set<InboundSubmissionStatus>([
@@ -57,7 +54,7 @@ export async function setInboundStatus(formData: FormData) {
   // config verb since inbound triage isn't itself security-material.
   if (row.kind === "rfp_intake") {
     if (status === "converted" && previous !== "converted") {
-      logAuditEvent({
+      await logAuditEvent({
         actorUserId: admin.id,
         actorRoleSnapshot: snapshotActorRole(admin),
         action: "rfp.approved",
@@ -70,7 +67,7 @@ export async function setInboundStatus(formData: FormData) {
       status === "closed_no_action" &&
       previous !== "closed_no_action"
     ) {
-      logAuditEvent({
+      await logAuditEvent({
         actorUserId: admin.id,
         actorRoleSnapshot: snapshotActorRole(admin),
         action: "rfp.rejected",
@@ -177,7 +174,7 @@ export async function promoteInboundToInvite(formData: FormData) {
     const previous = row.status;
     row.status = "in_triage";
     row.updatedAt = new Date().toISOString();
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: admin.id,
       actorRoleSnapshot: snapshotActorRole(admin),
       action: "inbound.promoted_to_invite",
@@ -235,7 +232,7 @@ export async function acceptProposedInboundTag(formData: FormData) {
   row.keywordTags = Array.from(nextCanonical).slice(0, 50);
   row.updatedAt = new Date().toISOString();
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "inbound.tag_accepted",
@@ -268,7 +265,7 @@ export async function rejectProposedInboundTag(formData: FormData) {
   row.proposedKeywordTags = proposed.filter((t) => t !== tag);
   row.updatedAt = new Date().toISOString();
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "inbound.tag_rejected",

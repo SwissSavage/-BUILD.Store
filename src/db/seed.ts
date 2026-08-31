@@ -32,7 +32,6 @@ import { MOCK_MVP_SCORES, MOCK_MVP_PENALTIES } from "../lib/mock-data/mvp-scores
 import { MOCK_APPLICATIONS } from "../lib/mock-data/applications";
 import { MOCK_TRANSACTIONS } from "../lib/mock-data/tokens";
 import { MOCK_NOTIFICATIONS } from "../lib/mock-data/notifications";
-import { MOCK_AUDIT_LOG } from "../lib/mock-data/audit-log";
 import { MOCK_JOBS } from "../lib/mock-data/jobs";
 import {
   MOCK_WHITELIST_TIERS,
@@ -153,7 +152,9 @@ async function main() {
   await seedTable("mvp_compliance_penalties", schema.mvpCompliancePenalties, MOCK_MVP_PENALTIES);
   await seedTable("membership_applications", schema.membershipApplications, MOCK_APPLICATIONS);
   await seedTable("notifications", schema.notifications, MOCK_NOTIFICATIONS);
-  await seedTable("audit_log_entries", schema.auditLogEntries, MOCK_AUDIT_LOG);
+  // audit_log_entries is deliberately NOT seeded. Fixture rows in an
+  // audit table are fabricated compliance evidence — the log should
+  // contain exactly what the application actually did, starting empty.
   await seedTable("media_assets", schema.mediaAssets, MOCK_MEDIA_ASSETS);
   await seedTable("products", schema.products, MOCK_PRODUCTS);
   await seedTable("seller_applications", schema.sellerApplications, MOCK_SELLER_APPLICATIONS);

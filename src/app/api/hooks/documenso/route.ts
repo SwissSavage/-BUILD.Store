@@ -57,9 +57,7 @@ import {
   type DocumensoWebhookEventType,
 } from "@/lib/documenso";
 import { dispatchInviteEmail } from "@/lib/invite-email";
-import {
-  logAuditEvent,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent } from "@/lib/writers/audit-log";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import type {
   Agreement,
@@ -517,7 +515,7 @@ export async function POST(request: Request) {
           .set({ [stampField]: now })
           .where(eq(cooperativeQuotesTable.id, quoteId));
 
-        logAuditEvent({
+        await logAuditEvent({
           actorUserId: null,
           actorRoleSnapshot: "system",
           action: "document.signature_completed",
@@ -591,7 +589,7 @@ export async function POST(request: Request) {
       })
       .where(eq(invoicesTable.id, invoice.id));
 
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: null,
       actorRoleSnapshot: "system",
       action: auditVerbForEvent(normalized),
@@ -645,7 +643,7 @@ export async function POST(request: Request) {
       })
       .where(eq(agreementsTable.id, existingAgreement.id));
 
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: null,
       actorRoleSnapshot: "system",
       action: auditVerbForEvent(normalized),
@@ -780,7 +778,7 @@ export async function POST(request: Request) {
   };
   await db.insert(agreementsTable).values(agreementRow);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: null,
     actorRoleSnapshot: "system",
     action: "document.signature_completed",

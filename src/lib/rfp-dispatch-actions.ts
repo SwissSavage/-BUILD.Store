@@ -25,10 +25,7 @@ import { db } from "@/db/client";
 import { inviteLinks, projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 /**
  * Dispatch quote-request pings to a set of talent user ids for a
@@ -111,7 +108,7 @@ export async function dispatchRfpQuoteRequests(
       readAt: null,
     });
 
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: admin.id,
       actorRoleSnapshot: snapshotActorRole(admin),
       action: "rfp.dispatched",
@@ -232,7 +229,7 @@ export async function inviteExternalTalentForRfp(
   };
   await db.insert(inviteLinks).values(invite);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "user.invited",

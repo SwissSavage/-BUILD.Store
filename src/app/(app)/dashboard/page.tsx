@@ -40,8 +40,11 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
 
-  const balance = getBalance(user.id);
-  const recentTx = getTransactions(user.id).slice(0, 3);
+  const [balance, allTx] = await Promise.all([
+    getBalance(user.id),
+    getTransactions(user.id),
+  ]);
+  const recentTx = allTx.slice(0, 3);
   const pillars = userPillars(user);
 
   // Walkthrough resume state — only render if the user has tier-relevant

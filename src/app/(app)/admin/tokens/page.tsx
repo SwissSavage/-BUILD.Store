@@ -23,7 +23,7 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 async function distribute(formData: FormData) {
   "use server";
   const admin = await requireAdmin();
-  distributeBuild({
+  await distributeBuild({
     toUserId: String(formData.get("toUserId")),
     amount: String(formData.get("amount")),
     type: String(formData.get("type")) as TokenTransaction["type"],

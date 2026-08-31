@@ -15,12 +15,12 @@
  * evolve the issuance semantics as the token contract situation
  * settles.
  */
-import { MOCK_BUILD_VOUCHERS } from "@/lib/mock-data/vouchers";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { randomUUID } from "crypto";
+import { ne, sql } from "drizzle-orm";
+import { db } from "@/db/client";
+import { buildVouchers } from "@/db/schema";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { getUserById } from "@/lib/readers/users";
 import {
   buildSplitForGross,
   voucherSourceTypeFor,
@@ -56,21 +56,161 @@ export interface IssueVoucherResult {
 }
 
 /**
- * Compute current issued supply (excludes forfeited — reclaimed
- * amounts return to headroom). Kept synchronous / non-async so
- * callers inside plain functions like `distributeBuild()` can use
- * it without inheriting the async color.
+ * Advisory-lock key for voucher issuance. Any transaction that reads
+ * the supply in order to decide whether it may issue takes this first,
+ * so the read-check-insert sequence is serialized.
+ *
+ * Without it the cap is advisory only: two concurrent issuances can
+ * both read a supply under the cap, both pass, and both insert. That
+ * is not a hypothetical for a settlement cascade, which issues several
+ * vouchers from one event.
  */
-function currentIssuedSupply(): number {
-  return MOCK_BUILD_VOUCHERS.filter(
-    (v) => v.swapStatus !== "forfeited",
-  ).reduce((sum, v) => sum + Number(v.amount), 0);
+const VOUCHER_SUPPLY_LOCK = 8_231_004;
+
+/**
+ * Current issued supply, excluding forfeited — reclaimed amounts
+ * return to headroom.
+ *
+ * Summed in SQL. Reading every voucher row to add up a number would
+ * get slower with every issuance, and this runs on the hot path of
+ * every settlement.
+ */
+async function currentIssuedSupply(
+  tx: Pick<typeof db, "select">,
+): Promise<number> {
+  const [row] = await tx
+    .select({
+      total: sql<string>`COALESCE(SUM(${buildVouchers.amount}), 0)`,
+    })
+    .from(buildVouchers)
+    .where(ne(buildVouchers.swapStatus, "forfeited"));
+  return Number(row?.total ?? 0);
 }
 
 function newVoucherId(): string {
-  return `voucher_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
+  return `voucher_${randomUUID()}`;
+}
+
+/** One voucher's worth of input, before ids and timestamps. */
+interface PendingVoucher {
+  userId: string;
+  amountNum: number;
+  sourceType: BuildVoucherSourceType;
+  sourceRefId: string | null;
+  notes: string | null;
+}
+
+/**
+ * Issue a batch of vouchers atomically.
+ *
+ * The cap is checked once against the total of the whole batch, inside
+ * the same transaction that inserts them. This matters for the
+ * settlement cascade: checking per-voucher in a loop means a batch that
+ * crosses the cap partway through leaves the earlier vouchers issued
+ * and the settlement permanently half-applied, with no signal that it
+ * happened. Either the whole split lands or none of it does.
+ *
+ * Audit events are emitted after the commit, so the log never claims
+ * an issuance that rolled back.
+ */
+async function issueVouchersAtomic(
+  pending: PendingVoucher[],
+  issuedByUserId: string | null,
+): Promise<{
+  vouchers: BuildVoucher[];
+  supplyBefore: number;
+  supplyAfter: number;
+}> {
+  for (const v of pending) {
+    if (!Number.isFinite(v.amountNum) || v.amountNum <= 0) {
+      throw new Error(
+        `Cannot issue voucher: amount "${v.amountNum}" is not a positive finite number.`,
+      );
+    }
+  }
+
+  const now = new Date().toISOString();
+  const vouchers: BuildVoucher[] = pending.map((v) => ({
+    id: newVoucherId(),
+    userId: v.userId,
+    amount: v.amountNum.toFixed(8),
+    sourceType: v.sourceType,
+    sourceRefId: v.sourceRefId,
+    // Vouchers stay vouchers. This is a claim on future $BUILD, not a
+    // token transfer — the swap to an on-chain balance is a separate,
+    // later step that sets swapStatus and swappedToTxHash.
+    swapStatus: "unswapped" as const,
+    swappedToTxHash: null,
+    swappedAt: null,
+    issuedAt: now,
+    notes: v.notes,
+    issuedByUserId,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  const batchTotal = pending.reduce((sum, v) => sum + v.amountNum, 0);
+
+  const { supplyBefore, supplyAfter } = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${VOUCHER_SUPPLY_LOCK})`);
+
+    const before = await currentIssuedSupply(tx);
+    const after = before + batchTotal;
+    if (after > BUILD_VOUCHER_SUPPLY_CAP) {
+      const headroom = BUILD_VOUCHER_SUPPLY_CAP - before;
+      throw new Error(
+        `Voucher issuance would exceed the ${BUILD_VOUCHER_SUPPLY_CAP.toLocaleString()} supply cap. ` +
+          `Current issuance: ${before.toLocaleString()}. Requested: ${batchTotal.toLocaleString()}. ` +
+          `Remaining headroom: ${headroom.toLocaleString()}.`,
+      );
+    }
+
+    await tx.insert(buildVouchers).values(
+      vouchers.map((v) => ({
+        id: v.id,
+        userId: v.userId,
+        amount: v.amount,
+        sourceType: v.sourceType,
+        sourceRefId: v.sourceRefId,
+        swapStatus: v.swapStatus,
+        swappedToTxHash: v.swappedToTxHash,
+        swappedAt: v.swappedAt,
+        issuedAt: v.issuedAt,
+        notes: v.notes,
+        issuedByUserId: v.issuedByUserId,
+        createdAt: v.createdAt,
+        updatedAt: v.updatedAt,
+      })),
+    );
+
+    return { supplyBefore: before, supplyAfter: after };
+  });
+
+  const actor = issuedByUserId ? await getUserById(issuedByUserId) : null;
+  let running = supplyBefore;
+  for (const v of vouchers) {
+    const next = running + Number(v.amount);
+    await logAuditEvent({
+      actorUserId: issuedByUserId,
+      actorRoleSnapshot: snapshotActorRole(actor),
+      action: "voucher.issued",
+      resourceKind: "build_voucher",
+      resourceId: v.id,
+      before: null,
+      after: {
+        userId: v.userId,
+        amount: v.amount,
+        sourceType: v.sourceType,
+        sourceRefId: v.sourceRefId,
+        supplyBefore: running,
+        supplyAfter: next,
+      },
+      reason: v.notes,
+    });
+    running = next;
+  }
+
+  return { vouchers, supplyBefore, supplyAfter };
 }
 
 /**
@@ -85,67 +225,22 @@ function newVoucherId(): string {
  * more granular error messages. Automated callers already know
  * their amounts are well-formed.
  */
-export function issueVoucherInternal(
+export async function issueVoucherInternal(
   input: IssueVoucherInput,
-): IssueVoucherResult {
-  const amountNum = Number(input.amount);
-  if (!Number.isFinite(amountNum) || amountNum <= 0) {
-    throw new Error(
-      `Cannot issue voucher: amount "${input.amount}" is not a positive finite number.`,
-    );
-  }
-
-  const supplyBefore = currentIssuedSupply();
-  const supplyAfter = supplyBefore + amountNum;
-  if (supplyAfter > BUILD_VOUCHER_SUPPLY_CAP) {
-    const headroom = BUILD_VOUCHER_SUPPLY_CAP - supplyBefore;
-    throw new Error(
-      `Voucher issuance would exceed the ${BUILD_VOUCHER_SUPPLY_CAP.toLocaleString()} supply cap. ` +
-        `Current issuance: ${supplyBefore.toLocaleString()}. Requested: ${amountNum.toLocaleString()}. ` +
-        `Remaining headroom: ${headroom.toLocaleString()}.`,
-    );
-  }
-
-  const now = new Date().toISOString();
-  const voucher: BuildVoucher = {
-    id: newVoucherId(),
-    userId: input.userId,
-    amount: amountNum.toFixed(8),
-    sourceType: input.sourceType,
-    sourceRefId: input.sourceRefId,
-    swapStatus: "unswapped",
-    swappedToTxHash: null,
-    swappedAt: null,
-    issuedAt: now,
-    notes: input.notes,
-    issuedByUserId: input.issuedByUserId,
-    createdAt: now,
-    updatedAt: now,
-  };
-  MOCK_BUILD_VOUCHERS.push(voucher);
-
-  const actor = input.issuedByUserId
-    ? MOCK_USERS.find((u) => u.id === input.issuedByUserId) ?? null
-    : null;
-  logAuditEvent({
-    actorUserId: input.issuedByUserId,
-    actorRoleSnapshot: snapshotActorRole(actor),
-    action: "voucher.issued",
-    resourceKind: "build_voucher",
-    resourceId: voucher.id,
-    before: null,
-    after: {
-      userId: input.userId,
-      amount: voucher.amount,
-      sourceType: input.sourceType,
-      sourceRefId: input.sourceRefId,
-      supplyBefore,
-      supplyAfter,
-    },
-    reason: input.notes,
-  });
-
-  return { voucher, supplyBefore, supplyAfter };
+): Promise<IssueVoucherResult> {
+  const { vouchers, supplyBefore, supplyAfter } = await issueVouchersAtomic(
+    [
+      {
+        userId: input.userId,
+        amountNum: Number(input.amount),
+        sourceType: input.sourceType,
+        sourceRefId: input.sourceRefId,
+        notes: input.notes,
+      },
+    ],
+    input.issuedByUserId,
+  );
+  return { voucher: vouchers[0], supplyBefore, supplyAfter };
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -196,17 +291,21 @@ export interface IssueBuildFromSettlementResult {
  * Skips zero-amount issuances (an empty admin roster, an empty
  * contributor list, or a gross so small the split rounds to zero).
  */
-export function issueBuildFromSettlement(
+export async function issueBuildFromSettlement(
   input: IssueBuildFromSettlementInput,
-): IssueBuildFromSettlementResult {
+): Promise<IssueBuildFromSettlementResult> {
   const split = buildSplitForGross(input.gross);
   const sourceType = voucherSourceTypeFor(input.cashSourceKind);
-  const talentVouchers: BuildVoucher[] = [];
-  const adminVouchers: BuildVoucher[] = [];
-  let treasuryVoucher: BuildVoucher | null = null;
-  let liquidityPoolVoucher: BuildVoucher | null = null;
 
-  // Talent — proportional if amounts provided, else even split.
+  // Assemble the entire split first, then issue it in one atomic
+  // batch. The previous shape issued each leg separately, so a cap
+  // breach partway through the cascade left talent paid and Treasury
+  // not, with the settlement recorded as complete.
+  const pending: PendingVoucher[] = [];
+  const note = (role: string) =>
+    input.noteContext ?? `$BUILD ${role} on ${input.cashSourceKind}`;
+
+  let talentCount = 0;
   if (input.contributors.userIds.length > 0 && split.talent > 0) {
     const perAmounts =
       input.contributors.amounts &&
@@ -216,65 +315,72 @@ export function issueBuildFromSettlement(
     input.contributors.userIds.forEach((userId, i) => {
       const amt = perAmounts[i];
       if (amt <= 0) return;
-      const { voucher } = issueVoucherInternal({
+      pending.push({
         userId,
-        amount: amt.toFixed(8),
+        amountNum: amt,
         sourceType,
         sourceRefId: input.sourceId,
-        notes:
-          input.noteContext ??
-          `$BUILD talent share on ${input.cashSourceKind}`,
-        issuedByUserId: input.actorUserId,
+        notes: note("talent share"),
       });
-      talentVouchers.push(voucher);
+      talentCount += 1;
     });
   }
 
-  // Admin — even split across the admin roster.
+  let adminCount = 0;
   if (input.admins.userIds.length > 0 && split.admin > 0) {
     const perAdmin = split.admin / input.admins.userIds.length;
     input.admins.userIds.forEach((userId) => {
-      const { voucher } = issueVoucherInternal({
+      pending.push({
         userId,
-        amount: perAdmin.toFixed(8),
+        amountNum: perAdmin,
         sourceType,
         sourceRefId: input.sourceId,
-        notes:
-          input.noteContext ??
-          `$BUILD admin-pool share on ${input.cashSourceKind}`,
-        issuedByUserId: input.actorUserId,
+        notes: note("admin-pool share"),
       });
-      adminVouchers.push(voucher);
+      adminCount += 1;
     });
   }
 
-  // Treasury sentinel.
-  if (split.treasury > 0) {
-    const { voucher } = issueVoucherInternal({
+  const hasTreasury = split.treasury > 0;
+  if (hasTreasury) {
+    pending.push({
       userId: HOUSE_TREASURY_ID,
-      amount: split.treasury.toFixed(8),
+      amountNum: split.treasury,
       sourceType,
       sourceRefId: input.sourceId,
-      notes:
-        input.noteContext ?? `$BUILD Treasury share on ${input.cashSourceKind}`,
-      issuedByUserId: input.actorUserId,
+      notes: note("Treasury share"),
     });
-    treasuryVoucher = voucher;
   }
 
-  // LP sentinel.
-  if (split.liquidityPool > 0) {
-    const { voucher } = issueVoucherInternal({
+  const hasLp = split.liquidityPool > 0;
+  if (hasLp) {
+    pending.push({
       userId: HOUSE_LP_ID,
-      amount: split.liquidityPool.toFixed(8),
+      amountNum: split.liquidityPool,
       sourceType,
       sourceRefId: input.sourceId,
-      notes:
-        input.noteContext ?? `$BUILD LP share on ${input.cashSourceKind}`,
-      issuedByUserId: input.actorUserId,
+      notes: note("LP share"),
     });
-    liquidityPoolVoucher = voucher;
   }
+
+  if (pending.length === 0) {
+    return {
+      talentVouchers: [],
+      adminVouchers: [],
+      treasuryVoucher: null,
+      liquidityPoolVoucher: null,
+      totalGenerated: split.totalGenerated,
+    };
+  }
+
+  const { vouchers } = await issueVouchersAtomic(pending, input.actorUserId);
+
+  // Slice the result back into legs, in the order they were pushed.
+  let cursor = 0;
+  const talentVouchers = vouchers.slice(cursor, (cursor += talentCount));
+  const adminVouchers = vouchers.slice(cursor, (cursor += adminCount));
+  const treasuryVoucher = hasTreasury ? vouchers[cursor++] : null;
+  const liquidityPoolVoucher = hasLp ? vouchers[cursor++] : null;
 
   return {
     talentVouchers,

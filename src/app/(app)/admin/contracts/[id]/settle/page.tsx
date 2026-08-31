@@ -66,7 +66,7 @@ import {
 } from "@/lib/types";
 import { dispatchTransfer } from "@/lib/payouts-stub";
 import { feedbackForContext } from "@/lib/mock-data/customer-feedback";
-import { poolForProject } from "@/lib/mock-data/engagement-recovery-pools";
+import { poolForProject } from "@/lib/readers/reserve-pool";
 import { evaluateBonusGate } from "@/lib/bonus-gate";
 import {
   executeBonusDecision,
@@ -174,7 +174,7 @@ async function settleContract(formData: FormData) {
   // 80/16/2/2 split. Fires alongside the cash split so voucher
   // accounting stays in lockstep.
   try {
-    issueBuildFromSettlement({
+    await issueBuildFromSettlement({
       gross: collected,
       cashSourceKind: "contract_settlement",
       sourceId: contractId,
@@ -751,7 +751,7 @@ function Pool({
 /*                                          read-only with pool credit */
 /* ------------------------------------------------------------------ */
 
-function BonusReleasePanel({
+async function BonusReleasePanel({
   project,
   allPeerReviews,
 }: {
@@ -771,7 +771,7 @@ function BonusReleasePanel({
     pmRating: project.pmEngagementRating,
     gate: project.bonusGate,
   });
-  const pool = poolForProject(project.id);
+  const pool = await poolForProject(project.id);
 
   const wouldRelease =
     decision.outcome === "release" ||

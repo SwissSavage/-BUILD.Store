@@ -379,6 +379,39 @@ export const portfolioItems = pgTable("portfolio_items", {
   rejectionNote: text("rejection_note"),
 });
 
+/**
+ * Portfolio fraud signals (task #56, Agreement Section 16).
+ *
+ * Cross-user duplicate detection on portfolio image and project URLs.
+ * A signal is an accusation against a member's work, so it carries a
+ * disposition and a reviewer — a flag that can't be adjudicated and
+ * recorded is just an unresolved suspicion sitting on someone's file.
+ */
+export const portfolioFraudSignals = pgTable("portfolio_fraud_signals", {
+  id: text("id").primaryKey(),
+  kind: text("kind", {
+    enum: ["duplicate_image_url", "duplicate_project_url", "external_match"],
+  }).notNull(),
+  portfolioItemId: text("portfolio_item_id")
+    .notNull()
+    .references(() => portfolioItems.id, { onDelete: "cascade" }),
+  offendingUserId: text("offending_user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // Nullable: an external_match has no colliding row on our side.
+  collidingPortfolioItemId: text("colliding_portfolio_item_id"),
+  collidingUserId: text("colliding_user_id"),
+  signature: text("signature").notNull(),
+  confidence: numeric("confidence", { precision: 4, scale: 3 }).notNull(),
+  detectedAt: timestamp("detected_at", { mode: "string", withTimezone: true }).notNull(),
+  reviewedAt: timestamp("reviewed_at", { mode: "string", withTimezone: true }),
+  reviewedByUserId: text("reviewed_by_user_id").references(() => users.id),
+  disposition: text("disposition", {
+    enum: ["pending", "confirmed_fraud", "false_positive"],
+  }),
+  reviewerNote: text("reviewer_note"),
+});
+
 export const mvpScores = pgTable("mvp_scores", {
   userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
   ovr: integer("ovr").notNull(),
@@ -1510,6 +1543,7 @@ export const schema = {
   cooperativeQuotes,
   cooperativeReceipts,
   portfolioItems,
+  portfolioFraudSignals,
   mvpScores,
   mvpCompliancePenalties,
   futureModernistRecognitions,

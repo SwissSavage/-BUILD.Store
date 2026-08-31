@@ -3,7 +3,7 @@
  *
  *   - submitProspectiveContribution
  *       Public, no auth. Validates fields, writes a row to
- *       MOCK_PROSPECTIVE_CONTRIBUTIONS, fans a notification to every
+ *       prospective_contributions, fans a notification to every
  *       admin so the queue badge lights up, redirects the submitter to
  *       a thank-you page that doesn't reveal queue state.
  *
@@ -25,10 +25,13 @@ import { notify } from "@/lib/writers/notifications";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_PROSPECTIVE_CONTRIBUTIONS } from "@/lib/mock-data/prospective-contributions";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getProjectById } from "@/lib/readers/projects";
+import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { prospectiveContributions } from "@/db/schema";
+import { prospectiveContributionReader } from "@/lib/readers";
+import { getAdminUsers } from "@/lib/readers/users";
 import type {
   Notification,
   ProspectiveContribution,
@@ -44,8 +47,9 @@ async function pushNotification(
   await notify(partial);
 }
 
-function adminUserIds(): string[] {
-  return MOCK_USERS.filter((u) => u.isAdmin).map((u) => u.id);
+async function adminUserIds(): Promise<string[]> {
+  const { users } = await getAdminUsers();
+  return users.map((u) => u.id);
 }
 
 /** Cheap email shape check; production swap should use a proper validator. */
@@ -62,7 +66,7 @@ export async function submitProspectiveContribution(formData: FormData) {
   const hoursRaw = String(formData.get("hoursPerWeek") ?? "0");
   const portfolioRaw = String(formData.get("portfolioLink") ?? "").trim();
 
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const project = await getProjectById(projectId);
   if (!project) throw new Error("Project not found");
   if (project.kind !== "internal") {
     throw new Error("Outside contributions only apply to internal projects");
@@ -82,7 +86,7 @@ export async function submitProspectiveContribution(formData: FormData) {
   const hoursPerWeek = Math.max(0, Math.min(60, Number(hoursRaw) || 0));
   const portfolioLink = portfolioRaw.length > 0 ? portfolioRaw : null;
 
-  const id = `pc_${Date.now().toString(36)}`;
+  const id = `pc_${randomUUID()}`;
   const row: ProspectiveContribution = {
     id,
     projectId,
@@ -98,10 +102,26 @@ export async function submitProspectiveContribution(formData: FormData) {
     adminNote: null,
     createdAt: new Date().toISOString(),
   };
-  MOCK_PROSPECTIVE_CONTRIBUTIONS.push(row);
+  // Persist before notifying. An admin following the queue-light
+  // link has to find the offer waiting for them.
+  await db.insert(prospectiveContributions).values({
+    id: row.id,
+    projectId: row.projectId,
+    contactName: row.contactName,
+    contactEmail: row.contactEmail,
+    proposedRole: row.proposedRole,
+    pitch: row.pitch,
+    hoursPerWeek: row.hoursPerWeek,
+    portfolioLink: row.portfolioLink,
+    status: row.status,
+    reviewedBy: row.reviewedBy,
+    reviewedAt: row.reviewedAt,
+    adminNote: row.adminNote,
+    createdAt: row.createdAt,
+  });
 
   // Fan a heads-up to every admin so the queue light flips immediately.
-  for (const adminId of adminUserIds()) {
+  for (const adminId of await adminUserIds()) {
     await pushNotification({
       userId: adminId,
       kind: "prospective_contribution",
@@ -128,7 +148,7 @@ export async function decideProspectiveContribution(formData: FormData) {
   ) as ProspectiveContributionStatus;
   const adminNote = String(formData.get("adminNote") ?? "").trim();
 
-  const row = MOCK_PROSPECTIVE_CONTRIBUTIONS.find((c) => c.id === id);
+  const row = await prospectiveContributionReader.byId(id);
   if (!row) throw new Error("Row not found");
 
   const ALLOWED: ProspectiveContributionStatus[] = [
@@ -139,10 +159,18 @@ export async function decideProspectiveContribution(formData: FormData) {
   ];
   if (!ALLOWED.includes(next)) throw new Error("Unknown status");
 
-  row.status = next;
-  row.reviewedBy = user.id;
-  row.reviewedAt = new Date().toISOString();
-  if (adminNote.length > 0) row.adminNote = adminNote;
+  await db
+    .update(prospectiveContributions)
+    .set({
+      status: next,
+      reviewedBy: user.id,
+      reviewedAt: new Date().toISOString(),
+      // Only overwrite the note when the admin actually typed one —
+      // an empty box on a status change must not erase the reasoning
+      // recorded at an earlier step.
+      ...(adminNote.length > 0 ? { adminNote } : {}),
+    })
+    .where(eq(prospectiveContributions.id, id));
 
   revalidatePath("/admin/projects/contributions");
   revalidatePath(`/projects/${row.projectId}`);

@@ -16,10 +16,10 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { portfolioReader, safely } from "@/lib/readers";
 import {
-  MOCK_FRAUD_SIGNALS,
+  allFraudSignals,
   reviewFraudSignal,
   runFraudScan,
 } from "@/lib/fraud-scan";
@@ -28,6 +28,8 @@ import {
   publicName,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 async function reviewAction(formData: FormData) {
   "use server";
@@ -60,24 +62,35 @@ async function runScanNow() {
   revalidatePath("/admin/portfolios/fraud-review");
 }
 
-function findItem(id: string) {
-  return MOCK_PORTFOLIO.find((p) => p.id === id) ?? null;
+type Roster = Awaited<ReturnType<typeof getAllUsers>>["users"];
+type Items = Awaited<ReturnType<typeof portfolioReader.all>>;
+
+function findItem(items: Items, id: string) {
+  return items.find((p) => p.id === id) ?? null;
 }
-function findUser(id: string) {
-  return MOCK_USERS.find((u) => u.id === id) ?? null;
+function findUser(roster: Roster, id: string) {
+  return roster.find((u) => u.id === id) ?? null;
 }
 
 export default async function FraudReviewPage() {
   await requireAdmin();
 
+  // The flagged items and their owners are loaded once for the whole
+  // queue — a signal names two items and two users, so resolving them
+  // per row would be four lookups per signal.
+  const [signals, items, { users: roster }] = await Promise.all([
+    safely(() => allFraudSignals(), []),
+    safely(() => portfolioReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+
   // Pending first, then most-recent reviewed at the bottom.
-  const pending = MOCK_FRAUD_SIGNALS.filter((s) => !s.reviewedAt).sort(
-    (a, b) => b.detectedAt.localeCompare(a.detectedAt),
-  );
-  const reviewed = MOCK_FRAUD_SIGNALS.filter((s) => s.reviewedAt).sort(
-    (a, b) =>
-      (b.reviewedAt ?? "").localeCompare(a.reviewedAt ?? ""),
-  );
+  const pending = signals
+    .filter((s) => !s.reviewedAt)
+    .sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
+  const reviewed = signals
+    .filter((s) => s.reviewedAt)
+    .sort((a, b) => (b.reviewedAt ?? "").localeCompare(a.reviewedAt ?? ""));
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
@@ -126,13 +139,13 @@ export default async function FraudReviewPage() {
         ) : (
           <ul className="mt-4 space-y-4">
             {pending.map((s) => {
-              const a = findItem(s.portfolioItemId);
+              const a = findItem(items, s.portfolioItemId);
               const b = s.collidingPortfolioItemId
-                ? findItem(s.collidingPortfolioItemId)
+                ? findItem(items, s.collidingPortfolioItemId)
                 : null;
-              const aUser = findUser(s.offendingUserId);
+              const aUser = findUser(roster, s.offendingUserId);
               const bUser = s.collidingUserId
-                ? findUser(s.collidingUserId)
+                ? findUser(roster, s.collidingUserId)
                 : null;
               return (
                 <li

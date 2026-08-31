@@ -15,9 +15,9 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_PROSPECTIVE_CONTRIBUTIONS } from "@/lib/mock-data/prospective-contributions";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllProjects } from "@/lib/readers/projects";
+import { getAllUsers } from "@/lib/readers/users";
+import { prospectiveContributionReader, safely } from "@/lib/readers";
 import { decideProspectiveContribution } from "@/lib/prospective-contribution-actions";
 import {
   PROSPECTIVE_CONTRIBUTION_STATUS_LABELS,
@@ -25,8 +25,11 @@ import {
   type Project,
   type ProspectiveContribution,
   type ProspectiveContributionStatus,
+  type User,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 const STATUS_ACCENT: Record<ProspectiveContributionStatus, string> = {
   new: "#5070F0",
@@ -43,14 +46,26 @@ function formatDate(iso: string): string {
   });
 }
 
-function projectFor(row: ProspectiveContribution): Project | undefined {
-  return MOCK_PROJECTS.find((p) => p.id === row.projectId);
+function projectFor(
+  projects: Project[],
+  row: ProspectiveContribution,
+): Project | undefined {
+  return projects.find((p) => p.id === row.projectId);
 }
 
 export default async function AdminProjectContributionsPage() {
   await requireAdmin();
 
-  const sorted = [...MOCK_PROSPECTIVE_CONTRIBUTIONS].sort((a, b) =>
+  const [rows, { projects }, { users: roster }] = await Promise.all([
+    safely(() => prospectiveContributionReader.all(), []),
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+
+  const sorted = [...rows].sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt),
   );
   const open = sorted.filter(
@@ -102,7 +117,7 @@ export default async function AdminProjectContributionsPage() {
         ) : (
           <div className="mt-3 space-y-3">
             {open.map((c) => (
-              <OpenRow key={c.id} row={c} />
+              <OpenRow key={c.id} row={c} projects={projects} />
             ))}
           </div>
         )}
@@ -115,7 +130,12 @@ export default async function AdminProjectContributionsPage() {
           </h2>
           <div className="mt-3 space-y-2">
             {closed.map((c) => (
-              <ClosedRow key={c.id} row={c} />
+              <ClosedRow
+                key={c.id}
+                row={c}
+                projects={projects}
+                roster={roster}
+              />
             ))}
           </div>
         </section>
@@ -124,8 +144,14 @@ export default async function AdminProjectContributionsPage() {
   );
 }
 
-function OpenRow({ row }: { row: ProspectiveContribution }) {
-  const project = projectFor(row);
+function OpenRow({
+  row,
+  projects,
+}: {
+  row: ProspectiveContribution;
+  projects: Project[];
+}) {
+  const project = projectFor(projects, row);
   const accent = STATUS_ACCENT[row.status];
 
   return (
@@ -249,11 +275,19 @@ function OpenRow({ row }: { row: ProspectiveContribution }) {
   );
 }
 
-function ClosedRow({ row }: { row: ProspectiveContribution }) {
-  const project = projectFor(row);
+function ClosedRow({
+  row,
+  projects,
+  roster,
+}: {
+  row: ProspectiveContribution;
+  projects: Project[];
+  roster: User[];
+}) {
+  const project = projectFor(projects, row);
   const accent = STATUS_ACCENT[row.status];
   const decidedBy = row.reviewedBy
-    ? MOCK_USERS.find((u) => u.id === row.reviewedBy)
+    ? roster.find((u) => u.id === row.reviewedBy)
     : undefined;
 
   return (

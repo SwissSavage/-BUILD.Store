@@ -12,18 +12,27 @@
  * Publishing makes the item visible on /u/[handle] and /showcase.
  * Rejecting records a note the member sees on their own editor.
  *
- * Sandbox: mutates MOCK_PORTFOLIO in memory.
- * REPLACE WITH: Drizzle updates + attribution-ledger inserts on publish.
+ * Publish / unpublish / reject all update `portfolio_items`. They
+ * mutated in-memory fixture objects until 2026-08-30, so a member
+ * whose work was approved saw it published, and it reverted to the
+ * review queue on the next deploy.
+ *
+ * Still to come: attribution-ledger inserts on publish.
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { portfolioItems } from "@/db/schema";
+import { getUserById } from "@/lib/readers/users";
+import { getPortfolioForUser, portfolioReader, safely } from "@/lib/readers";
 import { INDUSTRY_LABELS, adminName, userPillars } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
+
+export const dynamic = "force-dynamic";
 
 async function publishItem(formData: FormData) {
   "use server";
@@ -35,26 +44,36 @@ async function publishItem(formData: FormData) {
   const publishedDescription = String(formData.get("publishedDescription") ?? "").trim();
   const hideProjectUrl = formData.get("hideProjectUrl") === "on";
 
-  const item = MOCK_PORTFOLIO.find((p) => p.id === id);
+  const item = await portfolioReader.byId(id);
   if (!item) return;
 
-  item.publishedAt = new Date().toISOString();
-  item.rejectedAt = null;
-  item.rejectionNote = null;
-  // Only store overrides when the admin actually changed the text; null means
-  // "use member's raw value" so edits in the future stay visible.
-  item.publishedTitle =
-    publishedTitle && publishedTitle !== item.title ? publishedTitle : null;
-  item.publishedDescription =
-    publishedDescription && publishedDescription !== (item.description ?? "")
-      ? publishedDescription
-      : null;
-  item.hideProjectUrl = hideProjectUrl;
+  await db
+    .update(portfolioItems)
+    .set({
+      publishedAt: new Date().toISOString(),
+      rejectedAt: null,
+      rejectionNote: null,
+      // Only store overrides when the admin actually changed the
+      // text. Null means "use the member's raw value", so later edits
+      // by the member stay visible rather than being frozen behind a
+      // copy of what they wrote at review time.
+      publishedTitle:
+        publishedTitle && publishedTitle !== item.title
+          ? publishedTitle
+          : null,
+      publishedDescription:
+        publishedDescription &&
+        publishedDescription !== (item.description ?? "")
+          ? publishedDescription
+          : null,
+      hideProjectUrl,
+    })
+    .where(eq(portfolioItems.id, id));
 
   revalidatePath("/admin/portfolios");
   revalidatePath(`/admin/portfolios/${userId}`);
   revalidatePath("/showcase");
-  const u = MOCK_USERS.find((x) => x.id === userId);
+  const u = await getUserById(userId);
   if (u) revalidatePath(`/u/${u.handle}`);
   revalidatePath("/profile/portfolio");
 }
@@ -65,18 +84,20 @@ async function unpublishItem(formData: FormData) {
 
   const id = String(formData.get("id") ?? "");
   const userId = String(formData.get("userId") ?? "");
-  const item = MOCK_PORTFOLIO.find((p) => p.id === id);
-  if (item) {
-    item.publishedAt = null;
-    item.publishedTitle = null;
-    item.publishedDescription = null;
-    item.hideProjectUrl = false;
-  }
+  await db
+    .update(portfolioItems)
+    .set({
+      publishedAt: null,
+      publishedTitle: null,
+      publishedDescription: null,
+      hideProjectUrl: false,
+    })
+    .where(eq(portfolioItems.id, id));
 
   revalidatePath("/admin/portfolios");
   revalidatePath(`/admin/portfolios/${userId}`);
   revalidatePath("/showcase");
-  const u = MOCK_USERS.find((x) => x.id === userId);
+  const u = await getUserById(userId);
   if (u) revalidatePath(`/u/${u.handle}`);
   revalidatePath("/profile/portfolio");
 }
@@ -89,12 +110,14 @@ async function rejectItem(formData: FormData) {
   const userId = String(formData.get("userId") ?? "");
   const note = String(formData.get("rejectionNote") ?? "").trim() || "Needs revision.";
 
-  const item = MOCK_PORTFOLIO.find((p) => p.id === id);
-  if (item) {
-    item.publishedAt = null;
-    item.rejectedAt = new Date().toISOString();
-    item.rejectionNote = note;
-  }
+  await db
+    .update(portfolioItems)
+    .set({
+      publishedAt: null,
+      rejectedAt: new Date().toISOString(),
+      rejectionNote: note,
+    })
+    .where(eq(portfolioItems.id, id));
 
   revalidatePath(`/admin/portfolios/${userId}`);
   revalidatePath("/profile/portfolio");
@@ -108,12 +131,12 @@ export default async function AdminMemberPortfolioPage({
   await requireAdmin();
   const { userId } = await params;
 
-  const user = MOCK_USERS.find((u) => u.id === userId);
+  const user = await getUserById(userId);
   if (!user) notFound();
 
-  const items = MOCK_PORTFOLIO
-    .filter((p) => p.userId === userId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const items = (
+    await safely(() => getPortfolioForUser(userId), [])
+  ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   const pillars = userPillars(user);
 

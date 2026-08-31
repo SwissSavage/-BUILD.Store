@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getUserById } from "@/lib/readers/users";
 import { deriveTalentTagsFromUser, buildTalentTagSet } from "@/lib/talent-match";
 import {
   adminAddTalentTag,
@@ -18,6 +18,8 @@ import {
 import { INDUSTRY_LABELS, publicName } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminMemberTagsPage({
   params,
 }: {
@@ -25,7 +27,7 @@ export default async function AdminMemberTagsPage({
 }) {
   await requireAdmin();
   const { id } = await params;
-  const user = MOCK_USERS.find((u) => u.id === id);
+  const user = await getUserById(id);
   if (!user) notFound();
 
   const derived = deriveTalentTagsFromUser(user);

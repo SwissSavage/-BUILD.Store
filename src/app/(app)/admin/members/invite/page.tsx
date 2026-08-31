@@ -25,13 +25,14 @@ import {
   resendInviteLink,
   revokeInviteLink,
 } from "@/lib/invite-actions";
-import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   TIER_LABELS,
   adminName,
   type MembershipTier,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 type InviteRow = typeof inviteLinks.$inferSelect;
 
@@ -125,9 +126,10 @@ export default async function InviteMemberPage({
     if (!id) return "unknown";
     const u = userById.get(id);
     if (u) return u.name ?? u.handle ?? u.email;
-    // Legacy seed users may still be in MOCK_USERS.
-    const mock = MOCK_USERS.find((m) => m.id === id);
-    return mock ? adminName(mock) : "unknown";
+    // The fixture fallback that used to live here predated the users
+    // table read above, which now covers seed and real accounts
+    // alike. An id that misses is genuinely unknown.
+    return "unknown";
   }
 
   return (

@@ -33,8 +33,8 @@ import {
   projects as projectsTable,
 } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { publicName, type ProposedBuilder } from "@/lib/types";
+import { getAllUsers } from "@/lib/readers/users";
+import { publicName, type ProposedBuilder, type User } from "@/lib/types";
 import {
   createCooperativeQuote,
   removeCooperativeQuote,
@@ -47,18 +47,20 @@ import {
   deriveAggregatePricing,
 } from "@/lib/quote-pricing";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Candidate builders for proposal: Members + Partners. Sorted for
  * a predictable reference table. Admins can propose themselves —
  * sometimes the founder IS the lead on a founding-client engagement.
  *
- * Reads from seeded MOCK_USERS (which was mirrored into Postgres at
- * seed time). Full Drizzle swap of the users table read path is a
- * separate concern; this stays as mock read for now since seed keeps
- * both in sync.
+ * Reads the live roster. The seed-mirroring assumption this used to
+ * rely on stopped holding the moment real people started signing up —
+ * a founding-client engagement could not have been proposed to any of
+ * them.
  */
-function proposalCandidates() {
-  return [...MOCK_USERS]
+function proposalCandidates(roster: User[]) {
+  return [...roster]
     .filter(
       (u) =>
         u.membershipTier === "member" || u.membershipTier === "partner",
@@ -151,13 +153,13 @@ export default async function AdminCooperativeQuotesPage() {
     .select()
     .from(cooperativeQuotesTable)
     .orderBy(desc(cooperativeQuotesTable.createdAt));
-  const candidates = proposalCandidates();
+  const { users: roster } = await getAllUsers();
+  const candidates = proposalCandidates(roster);
   const projects = await eligibleProjects();
 
   // Batch-load the projects referenced by existing quotes so the list
   // renderer below can label each quote with its project title without
-  // an N+1 lookup. Post-Beta-cutover swap of the old MOCK_PROJECTS.find
-  // per-row pattern.
+  // an N+1 lookup, replacing the old per-row fixture find.
   const quoteProjectIds = quotes.map((q) => q.projectId);
   const quoteProjects =
     quoteProjectIds.length > 0

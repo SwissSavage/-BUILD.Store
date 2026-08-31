@@ -58,8 +58,8 @@ async function saveProfile(formData: FormData) {
   "use server";
   // Always resolve the writer from the actual session, not from a
   // hidden form field. Fixes the bug Rob hit: real Auth.js users
-  // (like Rob, invited via Track A) aren't in MOCK_USERS, so the
-  // old MOCK_USERS.find(...) returned undefined and threw
+  // (like Rob, invited via Track A) weren't in the fixture array, so
+  // the old lookup returned undefined and threw
   // "User not found" — everyone saw a broken save.
   const currentUser = await getCurrentUser();
   if (!currentUser) throw new Error("Sign in required");
@@ -141,7 +141,7 @@ export default async function ProfilePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
 
-  // Reader swap 2026-08-29: every block below read a MOCK_ array, so
+  // Reader swap 2026-08-29: every block below read a fixture array, so
   // a member's own profile showed seed work, seed quotes, seed
   // earnings, and seed orders.
   const [

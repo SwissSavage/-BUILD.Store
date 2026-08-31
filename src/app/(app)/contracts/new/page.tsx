@@ -2,7 +2,7 @@
  * Submit a contract RFP (external client work).
  *
  * SANDBOX→LIVE swap history:
- *   - Pre-Beta cutover: MOCK_PROJECTS.push mutation, no DB persistence.
+ *   - Pre-Beta cutover: in-memory push, no DB persistence.
  *   - Beta cutover (this file, 2026-08-13): db.insert(projects) against
  *     live Postgres. RFP lands in the intake queue with isRfp=true +
  *     rfpApprovedAt=null. Admin scrubs + approves via /admin/rfps.

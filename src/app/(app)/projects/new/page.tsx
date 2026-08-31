@@ -2,7 +2,7 @@
  * Propose an internal initiative (cooperative contribution).
  *
  * SANDBOX→LIVE swap history:
- *   - Pre-Beta cutover: MOCK_PROJECTS.push mutation, no persistence.
+ *   - Pre-Beta cutover: in-memory push, no persistence.
  *   - Beta cutover (this file, 2026-08-13): db.insert(projects) against
  *     live Postgres. Internal initiatives are admin-proposed so they're
  *     implicitly approved (rfpApprovedAt set at creation, no intake-queue
@@ -22,7 +22,7 @@ import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import { notify } from "@/lib/writers/notifications";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 // Single canonical owner for internal cooperative work. Future Modern
@@ -86,15 +86,15 @@ async function createInitiative(formData: FormData) {
     .from(users)
     .where(eq(users.isAdmin, true));
   for (const admin of admins) {
-    MOCK_NOTIFICATIONS.push({
-      id: `ntf_init_${projectId}_${admin.id}_${Math.random().toString(36).slice(2, 5)}`,
+    // Routed through the shared writer rather than pushed onto the
+    // in-memory array — that push was why proposing an initiative
+    // never lit the admin queue.
+    await notify({
       userId: admin.id,
       kind: "prospective_contribution",
       title: `Initiative proposed: ${title}`,
       body: `${proposer.firstName ?? proposer.handle ?? "A member"} proposed a new internal initiative. Review + assign contributors.`,
       href: `/admin/projects`,
-      createdAt: now,
-      readAt: null,
     });
   }
 

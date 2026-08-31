@@ -16,9 +16,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_ORDERS } from "@/lib/mock-data/orders";
-import { MOCK_PRODUCTS } from "@/lib/mock-data/products";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { orderReader, productReader, safely } from "@/lib/readers";
+import { getUserById } from "@/lib/readers/users";
 import {
   MARKETPLACE_CATEGORY_LABELS,
   ORDER_NEXT_STATUSES,
@@ -34,13 +33,15 @@ import { previewOrderSplit } from "@/lib/order-splits";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { BuyerFeedbackSection } from "@/components/BuyerFeedbackSection";
 
+export const dynamic = "force-dynamic";
+
 export default async function OrderDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const order = MOCK_ORDERS.find((o) => o.id === id);
+  const order = await orderReader.byId(id);
   if (!order) notFound();
 
   const current = await getCurrentUser();
@@ -70,7 +71,12 @@ export default async function OrderDetailPage({
     );
   }
 
-  const seller = MOCK_USERS.find((u) => u.id === order.sellerId);
+  const seller = await getUserById(order.sellerId);
+  // The line items carry a title snapshot taken at purchase, so the
+  // product lookup is only for the link and image — an item whose
+  // product was since delisted still renders with what the buyer
+  // actually bought.
+  const lineProducts = await safely(() => productReader.all(), []);
   const split = previewOrderSplit(Number(order.subtotal));
   const validNext = ORDER_NEXT_STATUSES[order.status];
 
@@ -114,7 +120,9 @@ export default async function OrderDetailPage({
           <CardEyebrow>Items</CardEyebrow>
           <ul className="mt-3 divide-y divide-[var(--surface-border)]">
             {order.items.map((item) => {
-              const product = MOCK_PRODUCTS.find((p) => p.id === item.productId);
+              const product = lineProducts.find(
+                (p) => p.id === item.productId,
+              );
               return (
                 <li
                   key={item.productId}

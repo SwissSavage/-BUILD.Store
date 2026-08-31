@@ -14,7 +14,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_ORDERS } from "@/lib/mock-data/orders";
+import { eq } from "drizzle-orm";
+import { orders as ordersTable } from "@/db/schema";
+import { orderReader, safely } from "@/lib/readers";
 import {
   MARKETPLACE_CATEGORY_LABELS,
   ORDER_NEXT_STATUSES,
@@ -27,6 +29,8 @@ import {
 } from "@/lib/order-actions";
 import { previewOrderSplit } from "@/lib/order-splits";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 const STATUS_ORDER: OrderStatus[] = [
   "placed",
@@ -42,7 +46,12 @@ export default async function SellerOrdersPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin?next=/profile/seller/orders");
 
-  const mine = MOCK_ORDERS.filter((o) => o.sellerId === user.id);
+  // Scoped in SQL. A seller opening their own order list must not
+  // cause a read of every other seller's orders.
+  const mine = await safely(
+    () => orderReader.where(eq(ordersTable.sellerId, user.id)),
+    [],
+  );
   const lifetimeRevenue = mine
     .filter((o) => o.status === "delivered" || o.status === "shipped")
     .reduce((sum, o) => sum + Number(o.subtotal), 0);

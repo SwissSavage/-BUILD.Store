@@ -9,8 +9,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_ORDERS } from "@/lib/mock-data/orders";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { eq } from "drizzle-orm";
+import { orders as ordersTable } from "@/db/schema";
+import { orderReader, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
 import {
   MARKETPLACE_CATEGORY_LABELS,
   ORDER_STATUS_LABELS,
@@ -19,11 +21,17 @@ import {
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { NotificationStrip } from "@/components/NotificationStrip";
 
+export const dynamic = "force-dynamic";
+
 export default async function OrdersPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin?next=/orders");
 
-  const mine = MOCK_ORDERS.filter((o) => o.buyerId === user.id).sort(
+  const [mineUnsorted, { users: roster }] = await Promise.all([
+    safely(() => orderReader.where(eq(ordersTable.buyerId, user.id)), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const mine = mineUnsorted.sort(
     (a, b) => b.placedAt.localeCompare(a.placedAt),
   );
 
@@ -55,7 +63,7 @@ export default async function OrdersPage() {
       ) : (
         <div className="mt-8 space-y-3">
           {mine.map((o) => {
-            const seller = MOCK_USERS.find((u) => u.id === o.sellerId);
+            const seller = roster.find((u) => u.id === o.sellerId);
             return (
               <Link key={o.id} href={`/orders/${o.id}`} className="block">
                 <Card className="transition-colors hover:border-brand-magenta">

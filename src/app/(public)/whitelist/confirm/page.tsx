@@ -15,15 +15,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  MOCK_WHITELIST_PURCHASES,
-  MOCK_WHITELIST_TIERS,
-} from "@/lib/mock-data/whitelist";
+  whitelistPurchaseReader,
+  whitelistTierReader,
+} from "@/lib/readers";
 import {
   WHITELIST_PURCHASE_STATUS_LABELS,
   WHITELIST_RAIL_LABELS,
 } from "@/lib/types";
 import { previewDonationSplit } from "@/lib/whitelist-splits";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 export default async function WhitelistConfirmPage({
   searchParams,
@@ -32,9 +34,9 @@ export default async function WhitelistConfirmPage({
 }) {
   const { id } = await searchParams;
   if (!id) notFound();
-  const purchase = MOCK_WHITELIST_PURCHASES.find((p) => p.id === id);
+  const purchase = await whitelistPurchaseReader.byId(id);
   if (!purchase) notFound();
-  const tier = MOCK_WHITELIST_TIERS.find((t) => t.id === purchase.tierId);
+  const tier = await whitelistTierReader.byId(purchase.tierId);
   if (!tier) notFound();
   const split = previewDonationSplit(Number(purchase.amountUsd));
 

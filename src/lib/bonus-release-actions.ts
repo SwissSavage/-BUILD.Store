@@ -19,8 +19,12 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { eq } from "drizzle-orm";
-import { peerReviews as peerReviewsTable } from "@/db/schema";
+import { and, eq, isNull, or } from "drizzle-orm";
+import { db } from "@/db/client";
+import {
+  peerReviews as peerReviewsTable,
+  projects as projectsTable,
+} from "@/db/schema";
 import { peerReviewReader } from "@/lib/readers";
 import { getProjectById } from "@/lib/readers/projects";
 import { customerFeedback as customerFeedbackTable } from "@/db/schema";
@@ -31,6 +35,41 @@ import { evaluateBonusGate } from "@/lib/bonus-gate";
 import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
 import { hasValidPayoutDocument } from "@/lib/payout-gate";
 import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
+
+/**
+ * Record the bonus decision on the contract.
+ *
+ * Guarded on the decision still being unset, so a double-submit can't
+ * overwrite a decision that already fired — and the caller's own
+ * re-decide check, which reads this same field, finally has something
+ * real to read. Until now the whole thing was assigned to a row object
+ * and thrown away: the money moved, the contract stayed pending, and
+ * the guard against double-releasing never had a value to catch on.
+ */
+async function recordBonusDecision(
+  projectId: string,
+  decision: "released" | "reclaimed",
+): Promise<void> {
+  const now = new Date().toISOString();
+  const res = await db
+    .update(projectsTable)
+    .set({ bonusDecision: decision, bonusDecidedAt: now, updatedAt: now })
+    .where(
+      and(
+        eq(projectsTable.id, projectId),
+        or(
+          isNull(projectsTable.bonusDecision),
+          eq(projectsTable.bonusDecision, "pending"),
+        ),
+      ),
+    )
+    .returning({ id: projectsTable.id });
+  if (res.length === 0) {
+    throw new Error(
+      "Bonus decision was already recorded for this contract by another request.",
+    );
+  }
+}
 
 async function findProject(id: string) {
   const p = await getProjectById(id);
@@ -49,9 +88,20 @@ export async function setPmEngagementRating(formData: FormData) {
   if (!Number.isFinite(raw) || raw < 1 || raw > 5) {
     throw new Error("Rating must be an integer from 1 to 5.");
   }
-  const project = await findProject(projectId);
-  project.pmEngagementRating = Math.round(raw);
-  project.updatedAt = new Date().toISOString();
+  await findProject(projectId);
+
+  // Persisted. This assigned to the row object returned by the reader,
+  // which does nothing — so the PM's engagement rating was never
+  // recorded, and the bonus gate that reads it always saw null and
+  // treated the rating as missing.
+  await db
+    .update(projectsTable)
+    .set({
+      pmEngagementRating: Math.round(raw),
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(projectsTable.id, projectId));
+
   revalidatePath(`/admin/contracts/${projectId}/settle`);
 }
 
@@ -110,6 +160,7 @@ export async function executeBonusDecision(formData: FormData) {
   if (decision.outcome === "reclaim") {
     await creditRecoveryPool(projectId, project.talentBonusAmount);
     project.bonusDecision = "reclaimed";
+    await recordBonusDecision(projectId, "reclaimed");
   } else {
     // Release or release-by-default both pay talent. In sandbox
     // we also cascade a $BUILD distribution across the project's
@@ -189,7 +240,6 @@ export async function executeBonusDecision(formData: FormData) {
     }
   }
   project.bonusDecidedAt = new Date().toISOString();
-  project.updatedAt = new Date().toISOString();
   // Initialize the pool row regardless so the surface has something to
   // render even on the release path (it'll just sit at $0).
   // Opening the pool is the same upsert as crediting it with zero —

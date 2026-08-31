@@ -6,18 +6,25 @@
 import Link from "next/link";
 import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
 import { SERVICE_PARTNERS } from "@/lib/mock-data/partners";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { latestCohortSpotlight } from "@/lib/mock-data/cohort-spotlights";
+import { getAllUsers } from "@/lib/readers/users";
+import { spotlightReader, safely } from "@/lib/readers";
 import { TradingCard, type TradingCardTier } from "@/components/TradingCard";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { Avatar } from "@/components/Avatar";
 
 /**
- * Static-rendered. Roster reads MOCK_USERS at build time; no request-time
- * dependencies. Home serves as cached HTML from the edge.
+ * Statically rendered, revalidated hourly.
+ *
+ * The roster and cohort rails read Postgres now rather than fixtures,
+ * but this page is the marketing front door and should still serve as
+ * cached HTML — so it stays static with ISR instead of going
+ * force-dynamic like the rest of the app. An hour of staleness on a
+ * curated showcase costs nothing; a per-request database round trip on
+ * the landing page does.
  */
+export const revalidate = 3600;
 
-export default function Home() {
+export default async function Home() {
   return (
     <>
       <Hero />
@@ -99,7 +106,7 @@ function ContributorAffiliations() {
  * people belong on it — not as generic avatars but as the branded
  * player cards that signal how the cooperative organizes.
  */
-function Roster() {
+async function Roster() {
   // Fixed 5-card lineup showing the RPG rarity ladder end-to-end for
   // homepage launch-design demonstration. Locked 2026-07-01 per Jamar:
   // Jamar gold · BBG magenta · Sunny blue · Bayu green · Sahtyre grey.
@@ -113,10 +120,17 @@ function Roster() {
     { userId: "u_sahtyre", tier: "probation" },
   ];
 
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
   const preview = ROSTER.map(({ userId, tier }) => {
-    const user = MOCK_USERS.find((u) => u.id === userId);
+    const user = roster.find((u) => u.id === userId);
     return user ? { user, tier } : null;
-  }).filter((row): row is { user: (typeof MOCK_USERS)[number]; tier: TradingCardTier } => row !== null);
+  }).filter(
+    (row): row is { user: (typeof roster)[number]; tier: TradingCardTier } =>
+      row !== null,
+  );
 
   if (preview.length === 0) return null;
 
@@ -455,13 +469,20 @@ function FaqSection() {
  * as the roster grows. Click through to /cohort/[period] for the
  * full narrative + cross-linked builder profiles.
  */
-function CohortRail() {
-  const spotlight = latestCohortSpotlight();
+async function CohortRail() {
+  const [spotlights, { users: roster }] = await Promise.all([
+    safely(() => spotlightReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const spotlight =
+    [...spotlights].sort((a, b) =>
+      b.periodKey.localeCompare(a.periodKey),
+    )[0] ?? null;
   if (!spotlight) return null;
 
   const users = spotlight.userIds
-    .map((id) => MOCK_USERS.find((u) => u.id === id))
-    .filter((u): u is (typeof MOCK_USERS)[number] => !!u);
+    .map((id) => roster.find((u) => u.id === id))
+    .filter((u): u is (typeof roster)[number] => !!u);
 
   return (
     <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">

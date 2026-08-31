@@ -18,9 +18,11 @@
  * Full brief + application form live at /jobs/[id] and require sign-in.
  */
 import Link from "next/link";
-import { MOCK_JOBS } from "@/lib/mock-data/jobs";
+import { getOpenJobs, safely } from "@/lib/readers";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Open roles — Future Modern",
@@ -38,8 +40,10 @@ export default async function JobsPage() {
   // MOCK data for now; a follow-up drizzle-swap will source from the
   // `jobs` table. Listing shape is identical either way — the swap is
   // isolated to this query.
-  const open = MOCK_JOBS.filter((j) => j.status === "open").sort(
-    (a, b) => b.createdAt.localeCompare(a.createdAt),
+  // Status filter in the query — a closed role should never be one
+  // client-side filter away from a public page.
+  const open = (await safely(() => getOpenJobs(), [])).sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
   );
 
   return (

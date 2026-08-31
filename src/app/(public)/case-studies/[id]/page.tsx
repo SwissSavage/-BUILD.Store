@@ -10,13 +10,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getProjectById } from "@/lib/readers/projects";
+import { getAllUsers } from "@/lib/readers/users";
 import {
   INDUSTRY_LABELS,
   publicNameDisambiguated,
 } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";
@@ -31,7 +33,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const p = MOCK_PROJECTS.find((x) => x.id === id);
+  const p = await getProjectById(id);
   if (!p || p.status !== "completed") {
     return { title: "Case study not found — Future Modern" };
   }
@@ -48,7 +50,7 @@ export default async function CaseStudyDetail({
   params: Promise<Params>;
 }) {
   const { id } = await params;
-  const project = MOCK_PROJECTS.find((p) => p.id === id);
+  const project = await getProjectById(id);
   if (
     !project ||
     project.kind !== "contract" ||
@@ -58,9 +60,10 @@ export default async function CaseStudyDetail({
     notFound();
   }
 
+  const { users: roster } = await getAllUsers();
   const contributors = (project.assignedMemberIds ?? [])
-    .map((uid) => MOCK_USERS.find((u) => u.id === uid))
-    .filter((u): u is (typeof MOCK_USERS)[number] => !!u);
+    .map((uid) => roster.find((u) => u.id === uid))
+    .filter((u): u is (typeof roster)[number] => !!u);
 
   const creativeWork = {
     "@context": "https://schema.org",
@@ -75,7 +78,7 @@ export default async function CaseStudyDetail({
       ? {
           contributor: contributors.map((c) => ({
             "@type": "Person",
-            name: publicNameDisambiguated(c, MOCK_USERS),
+            name: publicNameDisambiguated(c, roster),
             url: `${SITE_URL}/u/${c.handle}`,
           })),
         }
@@ -152,7 +155,7 @@ export default async function CaseStudyDetail({
                     href={`/u/${c.handle}`}
                     className="font-medium hover:text-brand-magenta"
                   >
-                    {publicNameDisambiguated(c, MOCK_USERS)}
+                    {publicNameDisambiguated(c, roster)}
                   </Link>
                   {c.discipline && (
                     <span className="ml-2 text-xs text-ink-muted">

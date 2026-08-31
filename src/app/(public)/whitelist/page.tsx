@@ -24,11 +24,20 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
+import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
 import {
-  MOCK_WHITELIST_TIERS,
-  MOCK_WHITELIST_PURCHASES,
-  MOCK_CONSULTATION_REQUESTS,
-} from "@/lib/mock-data/whitelist";
+  consultationRequests,
+  whitelistPurchases,
+  whitelistTiers,
+} from "@/db/schema";
+import {
+  consultationRequestReader,
+  whitelistPurchaseReader,
+  whitelistTierReader,
+  safely,
+} from "@/lib/readers";
 import {
   INDUSTRY_LABELS,
   WHITELIST_RAIL_LABELS,
@@ -41,6 +50,8 @@ import { previewDonationSplit } from "@/lib/whitelist-splits";
 import { createHubspotLead } from "@/lib/crm-stub";
 import { grossUpForCard } from "@/lib/payments-fees";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 const SCOPE_ORDER: Industry[] = ["stem", "creative-media", "professional-services"];
 
@@ -57,7 +68,7 @@ async function initiateDonation(formData: FormData) {
   const buyerName = String(formData.get("buyerName") ?? "").trim();
   const buyerEmail = String(formData.get("buyerEmail") ?? "").trim();
 
-  const tier = MOCK_WHITELIST_TIERS.find((t) => t.id === tierId);
+  const tier = await whitelistTierReader.byId(tierId);
   if (!tier || !tier.isDonation) throw new Error("Invalid donation tier");
   if (!buyerName || !buyerEmail) {
     throw new Error("Name and email required.");
@@ -75,7 +86,7 @@ async function initiateDonation(formData: FormData) {
     rail === "cash" ? grossUpForCard(subtotal).processingFee : 0;
 
   const purchase: WhitelistPurchase = {
-    id: `wlp_${Date.now()}`,
+    id: `wlp_${randomUUID()}`,
     tierId,
     buyerId: current?.id ?? null,
     buyerEmail,
@@ -84,7 +95,7 @@ async function initiateDonation(formData: FormData) {
     amountUsd: tier.priceUsd,
     processingFee: processingFee.toFixed(2),
     stripePaymentIntentId:
-      rail === "cash" ? `pi_mock_${Date.now()}` : null,
+      rail === "cash" ? `pi_pending_${randomUUID()}` : null,
     cryptoTxHash: null, // set by wallet confirmation in production
     referrerId: null, // donations route 100% to structural pools, no payout
     status: "initiated",
@@ -92,7 +103,26 @@ async function initiateDonation(formData: FormData) {
     paidAt: null,
     splitDistributedAt: null,
   };
-  MOCK_WHITELIST_PURCHASES.push(purchase);
+  // Persisted before the redirect. This pushed to an in-memory array,
+  // so a donor completed the form, landed on a confirmation page, and
+  // the cooperative had no record that anyone had given anything.
+  await db.insert(whitelistPurchases).values({
+    id: purchase.id,
+    tierId: purchase.tierId,
+    buyerId: purchase.buyerId,
+    buyerEmail: purchase.buyerEmail,
+    buyerName: purchase.buyerName,
+    rail: purchase.rail,
+    amountUsd: purchase.amountUsd,
+    processingFee: purchase.processingFee,
+    stripePaymentIntentId: purchase.stripePaymentIntentId,
+    cryptoTxHash: purchase.cryptoTxHash,
+    referrerId: purchase.referrerId,
+    status: purchase.status,
+    createdAt: purchase.createdAt,
+    paidAt: purchase.paidAt,
+    splitDistributedAt: purchase.splitDistributedAt,
+  });
   revalidatePath("/whitelist");
   revalidatePath("/admin/whitelist");
   revalidatePath("/admin");
@@ -101,7 +131,8 @@ async function initiateDonation(formData: FormData) {
 
 async function submitConsultation(formData: FormData) {
   "use server";
-  const tier = MOCK_WHITELIST_TIERS.find((t) => t.isConsultation);
+  const tiers = await whitelistTierReader.all();
+  const tier = tiers.find((t) => t.isConsultation);
   if (!tier) throw new Error("Consultation tier unavailable");
   const scopeBuckets = SCOPE_ORDER.filter(
     (s) => formData.get(`scope_${s}`) === "on",
@@ -112,7 +143,7 @@ async function submitConsultation(formData: FormData) {
   const briefing = String(formData.get("briefing") ?? "");
   const budgetHint = String(formData.get("budgetHint") ?? "").trim() || null;
   const request: ConsultationRequest = {
-    id: `cr_${Date.now()}`,
+    id: `cr_${randomUUID()}`,
     tierId: tier.id,
     contactName,
     contactEmail,
@@ -125,7 +156,22 @@ async function submitConsultation(formData: FormData) {
     adminNote: null,
     createdAt: new Date().toISOString(),
   };
-  MOCK_CONSULTATION_REQUESTS.push(request);
+  // Recorded locally first — the HubSpot sync below is allowed to
+  // fail, but only because this row already exists.
+  await db.insert(consultationRequests).values({
+    id: request.id,
+    tierId: request.tierId,
+    contactName: request.contactName,
+    contactEmail: request.contactEmail,
+    company: request.company,
+    scopeBuckets: request.scopeBuckets,
+    briefing: request.briefing,
+    budgetHint: request.budgetHint,
+    status: request.status,
+    assignedTo: request.assignedTo,
+    adminNote: request.adminNote,
+    createdAt: request.createdAt,
+  });
 
   // Land the scoping-call request in HubSpot too, same as the three
   // signup-intent forms. A CRM hiccup shouldn't block the actual intake,
@@ -156,11 +202,12 @@ async function submitConsultation(formData: FormData) {
   redirect(`/whitelist/thanks?kind=consultation`);
 }
 
-export default function WhitelistPage() {
-  const donationTiers = MOCK_WHITELIST_TIERS.filter(
+export default async function WhitelistPage() {
+  const allTiers = await safely(() => whitelistTierReader.all(), []);
+  const donationTiers = allTiers.filter(
     (t) => t.isDonation && t.active,
   );
-  const consultation = MOCK_WHITELIST_TIERS.find((t) => t.isConsultation);
+  const consultation = allTiers.find((t) => t.isConsultation);
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">

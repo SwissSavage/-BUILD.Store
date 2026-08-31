@@ -18,8 +18,13 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
-import { eq } from "drizzle-orm";
-import { customerFeedback, peerReviews } from "@/db/schema";
+import { and, eq, isNull, or } from "drizzle-orm";
+import { db } from "@/db/client";
+import {
+  customerFeedback,
+  peerReviews,
+  projects as projectsTable,
+} from "@/db/schema";
 import { getProjectById } from "@/lib/readers/projects";
 import { getUserById } from "@/lib/readers/users";
 import { customerFeedbackReader, peerReviewReader } from "@/lib/readers";
@@ -449,9 +454,38 @@ export async function executeGraduatedBonusRelease(
     }
   }
 
+  // Persisted, not assigned. `project` is a database row, not the
+  // shared fixture object it used to be, so mutating it here did
+  // nothing at all — the graduated release ran, money moved through
+  // the ledger, and the contract stayed marked bonus-pending.
+  //
+  // Guarded on still-pending so a second run can't re-release a bonus
+  // that has already been paid out.
+  const bonusDecidedAt = new Date().toISOString();
+  const released = await db
+    .update(projectsTable)
+    .set({
+      bonusDecision: "released",
+      bonusDecidedAt,
+      updatedAt: bonusDecidedAt,
+    })
+    .where(
+      and(
+        eq(projectsTable.id, projectId),
+        or(
+          isNull(projectsTable.bonusDecision),
+          eq(projectsTable.bonusDecision, "pending"),
+        ),
+      ),
+    )
+    .returning({ id: projectsTable.id });
+  if (released.length === 0) {
+    throw new Error(
+      "Bonus decision was already recorded for this contract by another request.",
+    );
+  }
   project.bonusDecision = "released";
-  project.bonusDecidedAt = new Date().toISOString();
-  project.updatedAt = project.bonusDecidedAt;
+  project.bonusDecidedAt = bonusDecidedAt;
 
   // Log a summary of what the release fired against — including
   // any missing sources — so the audit trail captures the state.

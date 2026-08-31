@@ -16,8 +16,8 @@
  */
 import Link from "next/link";
 import type { Metadata } from "next";
-import { cohortSpotlightsByRecency } from "@/lib/mock-data/cohort-spotlights";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { spotlightReader, safely } from "@/lib/readers";
 import { publicName } from "@/lib/types";
 import {
   Card,
@@ -27,6 +27,8 @@ import {
 import { Avatar } from "@/components/Avatar";
 import { OnChainBadge } from "@/components/OnChainBadge";
 
+export const dynamic = "force-dynamic";
+
 /** Static-rendered. Reads a build-time array. */
 
 export const metadata: Metadata = {
@@ -35,8 +37,14 @@ export const metadata: Metadata = {
     "Monthly onboarding spotlights on new builders joining Future Modern in real time. Who they are, what they're bringing, why the cooperative is glad to have them.",
 };
 
-export default function CohortIndexPage() {
-  const spotlights = cohortSpotlightsByRecency();
+export default async function CohortIndexPage() {
+  const [allSpotlights, { users: roster }] = await Promise.all([
+    safely(() => spotlightReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const spotlights = [...allSpotlights].sort((a, b) =>
+    b.periodKey.localeCompare(a.periodKey),
+  );
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -77,8 +85,8 @@ export default function CohortIndexPage() {
         <ol className="mt-12 space-y-6">
           {spotlights.map((spotlight) => {
             const spotlightUsers = spotlight.userIds
-              .map((id) => MOCK_USERS.find((u) => u.id === id))
-              .filter((u): u is (typeof MOCK_USERS)[number] => !!u);
+              .map((id) => roster.find((u) => u.id === id))
+              .filter((u): u is (typeof roster)[number] => !!u);
 
             return (
               <li key={spotlight.id}>

@@ -1,8 +1,8 @@
 /**
  * Marketplace browse surface (Phase 2.1 sandbox preview).
  *
- * Filtered view over MOCK_PRODUCTS keyed by `categorySlugs`. The user-
- * facing taxonomy comes from `MOCK_STORE_CATEGORIES` (CMS-editable —
+ * Filtered view over active products keyed by `categorySlugs`. The user-
+ * facing taxonomy comes from `store_categories` (CMS-editable —
  * see `src/lib/mock-data/store-categories.ts`).
  *
  * The legacy `MarketplaceCategory` enum (goods / saas / energy /
@@ -15,12 +15,10 @@
  * containment, pagination, search index.
  */
 import Link from "next/link";
-import { MOCK_PRODUCTS } from "@/lib/mock-data/products";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import {
-  activeCategories,
-  activeCategoryBySlug,
-} from "@/lib/mock-data/store-categories";
+import { eq } from "drizzle-orm";
+import { products as productsTable } from "@/db/schema";
+import { productReader, storeCategoryReader, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
 import {
   publicName,
   userPillars,
@@ -28,21 +26,36 @@ import {
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
+export const dynamic = "force-dynamic";
+
 export default async function StorePage({
   searchParams,
 }: {
   searchParams: Promise<{ category?: string }>;
 }) {
   const { category: categoryParam } = await searchParams;
-  const activeCategory = categoryParam
-    ? activeCategoryBySlug(categoryParam)
-    : null;
-  const categories = activeCategories();
+  // Active listings only, filtered in the query. The store is public,
+  // so a visitor must not be able to make the app read every draft and
+  // rejected listing in the marketplace.
+  const [allCategories, activeProducts, { users: roster }] =
+    await Promise.all([
+      safely(() => storeCategoryReader.all(), []),
+      safely(
+        () => productReader.where(eq(productsTable.status, "active")),
+        [],
+      ),
+      safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    ]);
 
-  const products = MOCK_PRODUCTS.filter(
-    (p) =>
-      p.status === "active" &&
-      (!activeCategory || p.categorySlugs.includes(activeCategory.slug)),
+  const categories = allCategories
+    .filter((c) => c.isActive)
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+  const activeCategory = categoryParam
+    ? categories.find((c) => c.slug === categoryParam) ?? null
+    : null;
+
+  const products = activeProducts.filter(
+    (p) => !activeCategory || p.categorySlugs.includes(activeCategory.slug),
   );
 
   return (
@@ -107,7 +120,7 @@ export default async function StorePage({
       ) : (
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {products.map((p) => {
-            const seller = MOCK_USERS.find((u) => u.id === p.sellerId);
+            const seller = roster.find((u) => u.id === p.sellerId);
             const pillars = seller ? userPillars(seller) : [];
             return (
               <Link key={p.id} href={`/store/${p.id}`} className="block">
@@ -116,7 +129,10 @@ export default async function StorePage({
                     <div>
                       <CardEyebrow>
                         {p.categorySlugs
-                          .map((s) => activeCategoryBySlug(s)?.name)
+                          .map(
+                            (slug) =>
+                              categories.find((c) => c.slug === slug)?.name,
+                          )
                           .filter(Boolean)
                           .join(" · ") || "Uncategorized"}
                       </CardEyebrow>

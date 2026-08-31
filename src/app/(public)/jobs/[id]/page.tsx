@@ -13,12 +13,14 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MOCK_JOBS } from "@/lib/mock-data/jobs";
+import { jobReader } from "@/lib/readers";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
 import { Card } from "@/components/Card";
 import { ApplyToJobForm } from "@/components/ApplyToJobForm";
+
+export const dynamic = "force-dynamic";
 
 const TYPE_LABEL: Record<string, string> = {
   "full-time": "Full-time",
@@ -46,7 +48,7 @@ interface Params {
 
 export async function generateMetadata({ params }: { params: Promise<Params> }) {
   const { id } = await params;
-  const job = MOCK_JOBS.find((j) => j.id === id);
+  const job = await jobReader.byId(id);
   if (!job) return { title: "Role not found — Future Modern" };
   return {
     title: `${job.title} — Future Modern`,
@@ -61,7 +63,7 @@ export default async function JobDetailPage({
   params: Promise<Params>;
 }) {
   const { id } = await params;
-  const job = MOCK_JOBS.find((j) => j.id === id);
+  const job = await jobReader.byId(id);
   if (!job) notFound();
 
   const isSignedIn = !!(await getCurrentUser());

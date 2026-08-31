@@ -2,13 +2,18 @@
 
 /**
  * Server actions for the Mux content locker. Sandbox: mutates the
- * in-memory MOCK_MEDIA_ASSETS array. Real impl will write to the
+ * media_assets table. Uploads and moderation both landed in an
+ * in-memory array until 2026-08-30, so a member's upload vanished
+ * and every moderation decision with it. Real impl will write to the
  * `media_assets` Postgres table and call into the Mux upload API.
  */
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_MEDIA_ASSETS } from "@/lib/mock-data/media-assets";
+import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { mediaAssets } from "@/db/schema";
 import type {
   Industry,
   MediaAssetKind,
@@ -59,8 +64,8 @@ export async function submitMediaAsset(formData: FormData) {
   if (!title || !description || !playbackUrl) return;
 
   const now = new Date().toISOString();
-  MOCK_MEDIA_ASSETS.push({
-    id: `ma_${Date.now()}`,
+  await db.insert(mediaAssets).values({
+    id: `ma_${randomUUID()}`,
     uploaderId: user.id,
     kind: kindRaw as MediaAssetKind,
     title,
@@ -97,14 +102,19 @@ export async function moderateMediaAsset(formData: FormData) {
   const adminNote = String(formData.get("adminNote") ?? "").trim() || null;
 
   if (!VALID_STATUSES.includes(statusRaw as MediaAssetStatus)) return;
-  const row = MOCK_MEDIA_ASSETS.find((a) => a.id === id);
-  if (!row) return;
-
-  row.status = statusRaw as MediaAssetStatus;
-  row.adminNote = adminNote;
-  row.reviewedBy = user.id;
-  row.reviewedAt = new Date().toISOString();
-  row.updatedAt = row.reviewedAt;
+  const reviewedAt = new Date().toISOString();
+  const moderated = await db
+    .update(mediaAssets)
+    .set({
+      status: statusRaw as MediaAssetStatus,
+      adminNote,
+      reviewedBy: user.id,
+      reviewedAt,
+      updatedAt: reviewedAt,
+    })
+    .where(eq(mediaAssets.id, id))
+    .returning({ id: mediaAssets.id });
+  if (moderated.length === 0) return;
 
   revalidatePath("/locker");
   revalidatePath("/admin/locker");

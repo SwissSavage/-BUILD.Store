@@ -25,13 +25,16 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { randomUUID } from "crypto";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db/client";
 import {
-  MOCK_AVAILABILITY,
-  MOCK_BLOCKS,
-  MOCK_MEETINGS,
-  meetingById,
-} from "@/lib/mock-data/calendar";
+  calendarAvailability,
+  calendarBlocks,
+  calendarMeetings,
+} from "@/db/schema";
+import { getUserById } from "@/lib/readers/users";
+import { meetingReader } from "@/lib/readers";
 import type {
   CalendarAvailability,
   CalendarBlock,
@@ -39,13 +42,14 @@ import type {
 } from "@/lib/types";
 
 function newId(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 5)}`;
+  return `${prefix}_${randomUUID()}`;
 }
 
-function ensureMember(userId: string): void {
-  const user = MOCK_USERS.find((u) => u.id === userId);
+async function ensureMember(userId: string): Promise<void> {
+  // Real lookup. The fixture scan threw "User not found" for every
+  // member who signed up through the live flow, so the shared calendar
+  // was unusable by anyone real.
+  const user = await getUserById(userId);
   if (!user) throw new Error("User not found");
   if (user.membershipTier !== "member") {
     throw new Error(
@@ -61,7 +65,7 @@ function ensureMember(userId: string): void {
 export async function addAvailability(formData: FormData) {
   const me = await getCurrentUser();
   if (!me) throw new Error("Sign in required");
-  ensureMember(me.id);
+  await ensureMember(me.id);
 
   const dayOfWeek = Number(formData.get("dayOfWeek") ?? -1);
   if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
@@ -88,7 +92,15 @@ export async function addAvailability(formData: FormData) {
     timezone,
     createdAt: new Date().toISOString(),
   };
-  MOCK_AVAILABILITY.push(row);
+  await db.insert(calendarAvailability).values({
+    id: row.id,
+    userId: row.userId,
+    dayOfWeek: row.dayOfWeek,
+    startMinute: row.startMinute,
+    endMinute: row.endMinute,
+    timezone: row.timezone,
+    createdAt: row.createdAt,
+  });
   revalidatePath("/profile/calendar");
   revalidatePath("/calendar");
 }
@@ -97,11 +109,18 @@ export async function removeAvailability(formData: FormData) {
   const me = await getCurrentUser();
   if (!me) throw new Error("Sign in required");
   const id = String(formData.get("id") ?? "").trim();
-  const idx = MOCK_AVAILABILITY.findIndex(
-    (a) => a.id === id && a.userId === me.id,
-  );
-  if (idx < 0) throw new Error("Availability row not found");
-  MOCK_AVAILABILITY.splice(idx, 1);
+  // Scoped to the caller's own row — the id alone must not be enough
+  // to delete somebody else's availability.
+  const removed = await db
+    .delete(calendarAvailability)
+    .where(
+      and(
+        eq(calendarAvailability.id, id),
+        eq(calendarAvailability.userId, me.id),
+      ),
+    )
+    .returning({ id: calendarAvailability.id });
+  if (removed.length === 0) throw new Error("Availability row not found");
   revalidatePath("/profile/calendar");
   revalidatePath("/calendar");
 }
@@ -109,7 +128,7 @@ export async function removeAvailability(formData: FormData) {
 export async function addBlock(formData: FormData) {
   const me = await getCurrentUser();
   if (!me) throw new Error("Sign in required");
-  ensureMember(me.id);
+  await ensureMember(me.id);
 
   const startsAt = String(formData.get("startsAt") ?? "").trim();
   const endsAt = String(formData.get("endsAt") ?? "").trim();
@@ -128,7 +147,14 @@ export async function addBlock(formData: FormData) {
     reason: reason.length === 0 ? null : reason,
     createdAt: new Date().toISOString(),
   };
-  MOCK_BLOCKS.push(row);
+  await db.insert(calendarBlocks).values({
+    id: row.id,
+    userId: row.userId,
+    startsAt: row.startsAt,
+    endsAt: row.endsAt,
+    reason: row.reason,
+    createdAt: row.createdAt,
+  });
   revalidatePath("/profile/calendar");
   revalidatePath("/calendar");
 }
@@ -137,9 +163,11 @@ export async function removeBlock(formData: FormData) {
   const me = await getCurrentUser();
   if (!me) throw new Error("Sign in required");
   const id = String(formData.get("id") ?? "").trim();
-  const idx = MOCK_BLOCKS.findIndex((b) => b.id === id && b.userId === me.id);
-  if (idx < 0) throw new Error("Block not found");
-  MOCK_BLOCKS.splice(idx, 1);
+  const removed = await db
+    .delete(calendarBlocks)
+    .where(and(eq(calendarBlocks.id, id), eq(calendarBlocks.userId, me.id)))
+    .returning({ id: calendarBlocks.id });
+  if (removed.length === 0) throw new Error("Block not found");
   revalidatePath("/profile/calendar");
   revalidatePath("/calendar");
 }
@@ -151,7 +179,7 @@ export async function removeBlock(formData: FormData) {
 export async function createPeerMeeting(formData: FormData) {
   const me = await getCurrentUser();
   if (!me) throw new Error("Sign in required");
-  ensureMember(me.id);
+  await ensureMember(me.id);
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
@@ -169,7 +197,7 @@ export async function createPeerMeeting(formData: FormData) {
   if (!otherAttendeeId || otherAttendeeId === me.id) {
     throw new Error("Pick a Member to book with (not yourself).");
   }
-  ensureMember(otherAttendeeId);
+  await ensureMember(otherAttendeeId);
 
   const row: CalendarMeeting = {
     id: newId("mt"),
@@ -191,7 +219,26 @@ export async function createPeerMeeting(formData: FormData) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  MOCK_MEETINGS.push(row);
+  await db.insert(calendarMeetings).values({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    startsAt: row.startsAt,
+    endsAt: row.endsAt,
+    kind: row.kind,
+    organizerId: row.organizerId,
+    attendeeIds: row.attendeeIds,
+    confirmedByAttendeeIds: row.confirmedByAttendeeIds,
+    status: row.status,
+    externalClientName: row.externalClientName,
+    externalClientEmail: row.externalClientEmail,
+    projectId: row.projectId,
+    pmUserId: row.pmUserId,
+    notesPreview: row.notesPreview,
+    recordingUrl: row.recordingUrl,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  });
   revalidatePath("/profile/calendar");
   revalidatePath("/calendar");
 }
@@ -245,7 +292,26 @@ export async function createExternalClientMeeting(formData: FormData) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  MOCK_MEETINGS.push(row);
+  await db.insert(calendarMeetings).values({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    startsAt: row.startsAt,
+    endsAt: row.endsAt,
+    kind: row.kind,
+    organizerId: row.organizerId,
+    attendeeIds: row.attendeeIds,
+    confirmedByAttendeeIds: row.confirmedByAttendeeIds,
+    status: row.status,
+    externalClientName: row.externalClientName,
+    externalClientEmail: row.externalClientEmail,
+    projectId: row.projectId,
+    pmUserId: row.pmUserId,
+    notesPreview: row.notesPreview,
+    recordingUrl: row.recordingUrl,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  });
   revalidatePath("/profile/calendar");
   revalidatePath("/calendar");
   revalidatePath("/admin");
@@ -255,20 +321,26 @@ export async function confirmMeeting(formData: FormData) {
   const me = await getCurrentUser();
   if (!me) throw new Error("Sign in required");
   const id = String(formData.get("id") ?? "").trim();
-  const meeting = meetingById(id);
+  const meeting = await meetingReader.byId(id);
   if (!meeting) throw new Error("Meeting not found");
   if (!meeting.attendeeIds.includes(me.id)) {
     throw new Error("You're not an attendee on this meeting.");
   }
-  if (!meeting.confirmedByAttendeeIds.includes(me.id)) {
-    meeting.confirmedByAttendeeIds = [...meeting.confirmedByAttendeeIds, me.id];
-  }
-  // Once all attendees have confirmed, status flips to confirmed.
+  const confirmedBy = meeting.confirmedByAttendeeIds.includes(me.id)
+    ? meeting.confirmedByAttendeeIds
+    : [...meeting.confirmedByAttendeeIds, me.id];
+  // Once every attendee has confirmed, the meeting flips to confirmed.
   const allConfirmed = meeting.attendeeIds.every((a) =>
-    meeting.confirmedByAttendeeIds.includes(a),
+    confirmedBy.includes(a),
   );
-  if (allConfirmed) meeting.status = "confirmed";
-  meeting.updatedAt = new Date().toISOString();
+  await db
+    .update(calendarMeetings)
+    .set({
+      confirmedByAttendeeIds: confirmedBy,
+      ...(allConfirmed ? { status: "confirmed" as const } : {}),
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(calendarMeetings.id, id));
   revalidatePath("/profile/calendar");
   revalidatePath("/calendar");
 }
@@ -277,13 +349,15 @@ export async function declineMeeting(formData: FormData) {
   const me = await getCurrentUser();
   if (!me) throw new Error("Sign in required");
   const id = String(formData.get("id") ?? "").trim();
-  const meeting = meetingById(id);
+  const meeting = await meetingReader.byId(id);
   if (!meeting) throw new Error("Meeting not found");
   if (!meeting.attendeeIds.includes(me.id)) {
     throw new Error("You're not an attendee on this meeting.");
   }
-  meeting.status = "declined";
-  meeting.updatedAt = new Date().toISOString();
+  await db
+    .update(calendarMeetings)
+    .set({ status: "declined", updatedAt: new Date().toISOString() })
+    .where(eq(calendarMeetings.id, id));
   revalidatePath("/profile/calendar");
   revalidatePath("/calendar");
 }
@@ -292,13 +366,15 @@ export async function cancelMeeting(formData: FormData) {
   const me = await getCurrentUser();
   if (!me) throw new Error("Sign in required");
   const id = String(formData.get("id") ?? "").trim();
-  const meeting = meetingById(id);
+  const meeting = await meetingReader.byId(id);
   if (!meeting) throw new Error("Meeting not found");
   if (meeting.organizerId !== me.id && !me.isAdmin) {
     throw new Error("Only the organizer (or admin) can cancel a meeting.");
   }
-  meeting.status = "cancelled";
-  meeting.updatedAt = new Date().toISOString();
+  await db
+    .update(calendarMeetings)
+    .set({ status: "cancelled", updatedAt: new Date().toISOString() })
+    .where(eq(calendarMeetings.id, id));
   revalidatePath("/profile/calendar");
   revalidatePath("/calendar");
 }
@@ -308,7 +384,7 @@ export async function addMeetingNotes(formData: FormData) {
   if (!me) throw new Error("Sign in required");
   const id = String(formData.get("id") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
-  const meeting = meetingById(id);
+  const meeting = await meetingReader.byId(id);
   if (!meeting) throw new Error("Meeting not found");
   if (!meeting.attendeeIds.includes(me.id) && !me.isAdmin) {
     throw new Error("Only attendees (or admin) can add notes.");

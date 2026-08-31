@@ -20,8 +20,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import { getAdminUsers } from "@/lib/readers/users";
+import { notifyMany } from "@/lib/writers/notifications";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { Notification } from "@/lib/types";
 
@@ -31,24 +31,19 @@ function newNotificationId(kind: string): string {
     .slice(2, 5)}`;
 }
 
-function pushAdminNotification(
+async function pushAdminNotification(
   title: string,
   body: string,
   href: string,
-): void {
-  for (const admin of MOCK_USERS.filter((u) => u.isAdmin)) {
-    const ntf: Notification = {
-      id: newNotificationId("data_rights"),
-      userId: admin.id,
-      kind: "direct_message",
-      title,
-      body,
-      href,
-      createdAt: new Date().toISOString(),
-      readAt: null,
-    };
-    MOCK_NOTIFICATIONS.push(ntf);
-  }
+): Promise<void> {
+  // Shared writer. This pushed to the in-memory array, so a member's
+  // export or erasure request reached the audit log — which is what
+  // the legal clock runs on — but never pinged an admin to act on it.
+  const { users } = await getAdminUsers();
+  await notifyMany(
+    users.map((u) => u.id),
+    { kind: "direct_message", title, body, href },
+  );
 }
 
 export async function requestDataExport(formData: FormData) {
@@ -67,7 +62,7 @@ export async function requestDataExport(formData: FormData) {
     reason: note.length > 0 ? note.slice(0, 400) : null,
   });
 
-  pushAdminNotification(
+  await pushAdminNotification(
     `Data export requested: ${user.firstName ?? user.handle}`,
     `A Member has requested a copy of their data. Production auto-fulfills within 24 hours; sandbox surfaces the request for manual follow-up.${note ? ` Note: ${note.slice(0, 200)}` : ""}`,
     "/admin/audit-log?action=data.subject_export_requested",
@@ -105,7 +100,7 @@ export async function requestDataErasure(formData: FormData) {
     reason: reason.length > 0 ? reason.slice(0, 400) : null,
   });
 
-  pushAdminNotification(
+  await pushAdminNotification(
     `Erasure requested: ${user.firstName ?? user.handle}`,
     `A Member has requested account erasure. Production begins the 30-day soft-delete window and hard-deletes on day 31 (financial subset retained per legal hold). Sandbox surfaces the request for manual follow-up.${reason ? ` Reason: ${reason.slice(0, 200)}` : ""}`,
     "/admin/audit-log?action=data.subject_erasure_requested",

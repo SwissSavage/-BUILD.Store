@@ -18,8 +18,11 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { meetingById } from "@/lib/mock-data/calendar";
-import { MOCK_MEETING_MINUTES } from "@/lib/mock-data/meeting-minutes";
+import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { meetingMinutes } from "@/db/schema";
+import { meetingReader, minutesReader } from "@/lib/readers";
 import type {
   MeetingMinute,
   MeetingMinuteFormat,
@@ -27,12 +30,12 @@ import type {
 } from "@/lib/types";
 
 function newId(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 5)}`;
+  return `${prefix}_${randomUUID()}`;
 }
 
-function routingFor(meeting: ReturnType<typeof meetingById>): MeetingMinuteRouting {
+function routingFor(
+  meeting: Awaited<ReturnType<typeof meetingReader.byId>>,
+): MeetingMinuteRouting {
   if (!meeting) return "peer_one_on_one";
   if (meeting.projectId) return "project_scoped";
   if (meeting.kind === "team_governance") return "team_governance";
@@ -48,7 +51,7 @@ export async function captureMeetingMinute(formData: FormData) {
   const recordingUrl = String(formData.get("recordingUrl") ?? "").trim();
   const uploaded = formData.get("transcriptFile");
 
-  const meeting = meetingById(meetingId);
+  const meeting = await meetingReader.byId(meetingId);
   if (!meeting) throw new Error("Meeting not found");
   if (!meeting.attendeeIds.includes(me.id) && !me.isAdmin) {
     throw new Error("Only attendees (or admin) can capture minutes.");
@@ -86,7 +89,9 @@ export async function captureMeetingMinute(formData: FormData) {
 
   // One minute row per meeting. Replacing re-captures (capturer can
   // change format or replace body); corrections come from peers.
-  const existing = MOCK_MEETING_MINUTES.find((m) => m.meetingId === meetingId);
+  const existing = await minutesReader.one(
+    eq(meetingMinutes.meetingId, meetingId),
+  );
   if (existing) {
     existing.format = format;
     existing.body = format === "notes" ? body : null;
@@ -112,7 +117,19 @@ export async function captureMeetingMinute(formData: FormData) {
     capturedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  MOCK_MEETING_MINUTES.push(row);
+  await db.insert(meetingMinutes).values({
+    id: row.id,
+    meetingId: row.meetingId,
+    format: row.format,
+    routing: row.routing,
+    body: row.body,
+    recordingUrl: row.recordingUrl,
+    uploadedFile: row.uploadedFile,
+    capturedByUserId: row.capturedByUserId,
+    corrections: row.corrections,
+    capturedAt: row.capturedAt,
+    updatedAt: row.updatedAt,
+  });
   revalidatePath("/profile/calendar");
   revalidatePath("/admin/team-meetings");
 }
@@ -125,19 +142,28 @@ export async function addMinuteCorrection(formData: FormData) {
   if (body.length < 5) {
     throw new Error("Correction must be at least 5 characters.");
   }
-  const minute = MOCK_MEETING_MINUTES.find((m) => m.id === minuteId);
+  const minute = await minutesReader.byId(minuteId);
   if (!minute) throw new Error("Minute not found");
-  const meeting = meetingById(minute.meetingId);
+  const meeting = await meetingReader.byId(minute.meetingId);
   if (!meeting || !meeting.attendeeIds.includes(me.id)) {
     throw new Error("Only attendees can append corrections.");
   }
-  minute.corrections.push({
-    id: newId("cor"),
-    byUserId: me.id,
-    body,
-    addedAt: new Date().toISOString(),
-  });
-  minute.updatedAt = new Date().toISOString();
+  // Corrections are append-only — a minute is a record of what was
+  // said, and an attendee disputing it adds to that record rather
+  // than editing it.
+  const corrections = [
+    ...minute.corrections,
+    {
+      id: newId("cor"),
+      byUserId: me.id,
+      body,
+      addedAt: new Date().toISOString(),
+    },
+  ];
+  await db
+    .update(meetingMinutes)
+    .set({ corrections, updatedAt: new Date().toISOString() })
+    .where(eq(meetingMinutes.id, minuteId));
   revalidatePath("/profile/calendar");
   revalidatePath("/admin/team-meetings");
 }

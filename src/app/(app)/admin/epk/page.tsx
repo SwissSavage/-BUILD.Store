@@ -16,7 +16,8 @@ import {
   MOCK_ARTIST_EPKS,
   pendingEpkSubmissions,
 } from "@/lib/mock-data/artist-epk";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { epkReader, getPendingEpks, safely } from "@/lib/readers";
 import {
   approveEpk,
   requestEpkRevision,
@@ -35,15 +36,29 @@ function formatDate(iso: string): string {
   });
 }
 
-function userFor(epk: ArtistEpk): User | null {
-  return MOCK_USERS.find((u) => u.id === epk.userId) ?? null;
+/**
+ * Resolve an EPK's owner from the already-loaded roster rather than
+ * querying per card.
+ */
+function makeUserFor(roster: User[]) {
+  const byId = new Map(roster.map((u) => [u.id, u]));
+  return (epk: ArtistEpk): User | null => byId.get(epk.userId) ?? null;
 }
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminEpkQueuePage() {
   await requireAdmin();
 
-  const pending = pendingEpkSubmissions();
-  const published = MOCK_ARTIST_EPKS.filter(
+  // Reader swap 2026-08-29: curation queue read seed EPKs.
+  const [{ users: roster }, pending, allEpks] = await Promise.all([
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => getPendingEpks(), []),
+    safely(() => epkReader.all(), []),
+  ]);
+  const userFor = makeUserFor(roster);
+
+  const published = allEpks.filter(
     (e) => e.status === "published",
   ).sort((a, b) =>
     (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
@@ -84,7 +99,7 @@ export default async function AdminEpkQueuePage() {
               </p>
             </Card>
           ) : (
-            pending.map((epk) => <PendingEpkRow key={epk.userId} epk={epk} />)
+            pending.map((epk) => <PendingEpkRow key={epk.userId} epk={epk} userFor={userFor} />)
           )}
         </div>
       </section>
@@ -102,7 +117,7 @@ export default async function AdminEpkQueuePage() {
             </Card>
           ) : (
             published.map((epk) => (
-              <PublishedEpkRow key={epk.userId} epk={epk} />
+              <PublishedEpkRow key={epk.userId} epk={epk} userFor={userFor} />
             ))
           )}
         </div>
@@ -111,7 +126,13 @@ export default async function AdminEpkQueuePage() {
   );
 }
 
-function PendingEpkRow({ epk }: { epk: ArtistEpk }) {
+function PendingEpkRow({
+  epk,
+  userFor,
+}: {
+  epk: ArtistEpk;
+  userFor: (e: ArtistEpk) => User | null;
+}) {
   const user = userFor(epk);
   if (!user) return null;
 
@@ -255,7 +276,13 @@ function PendingEpkRow({ epk }: { epk: ArtistEpk }) {
   );
 }
 
-function PublishedEpkRow({ epk }: { epk: ArtistEpk }) {
+function PublishedEpkRow({
+  epk,
+  userFor,
+}: {
+  epk: ArtistEpk;
+  userFor: (e: ArtistEpk) => User | null;
+}) {
   const user = userFor(epk);
   if (!user) return null;
   return (

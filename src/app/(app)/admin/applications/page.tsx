@@ -6,8 +6,11 @@
  */
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_APPLICATIONS } from "@/lib/mock-data/applications";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { membershipApplications, users as usersTable } from "@/db/schema";
+import { membershipApplicationReader, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
 import { TIER_LABELS } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -17,29 +20,51 @@ async function decide(formData: FormData) {
   const decision = String(formData.get("decision")) as "approved" | "rejected";
   const reviewerId = String(formData.get("reviewerId"));
 
-  const app = MOCK_APPLICATIONS.find((a) => a.id === id);
+  const app = await membershipApplicationReader.byId(id);
   if (!app) return;
-  app.status = decision;
-  app.reviewedBy = reviewerId;
-  app.reviewedAt = new Date().toISOString();
 
-  if (decision === "approved") {
-    const u = MOCK_USERS.find((x) => x.id === app.userId);
-    if (u) {
-      u.membershipTier = app.requestedTier;
-      u.updatedAt = new Date().toISOString();
+  const now = new Date().toISOString();
+
+  // Writer swap 2026-08-29: both of these were in-memory mutations.
+  // An admin approving a tier promotion watched the member's tier
+  // change and then silently revert on the next deploy — the decision
+  // was never recorded and the promotion never happened.
+  //
+  // Application status and the tier grant move together in one
+  // transaction. A half-applied promotion (application marked
+  // approved, tier never granted) is worse than neither.
+  await db.transaction(async (tx) => {
+    await tx
+      .update(membershipApplications)
+      .set({ status: decision, reviewedBy: reviewerId, reviewedAt: now })
+      .where(eq(membershipApplications.id, id));
+
+    if (decision === "approved") {
+      await tx
+        .update(usersTable)
+        .set({ membershipTier: app.requestedTier, updatedAt: now })
+        .where(eq(usersTable.id, app.userId));
     }
-  }
+  });
 
   revalidatePath("/admin/applications");
   revalidatePath("/admin");
   revalidatePath("/admin/members");
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminApplicationsPage() {
   const me = await requireAdmin();
-  const pending = MOCK_APPLICATIONS.filter((a) => a.status === "pending");
-  const reviewed = MOCK_APPLICATIONS.filter((a) => a.status !== "pending");
+  // Reader swap 2026-08-29: queue read a mock array.
+  const [applications, { users: roster }] = await Promise.all([
+    safely(() => membershipApplicationReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const userById = new Map(roster.map((u) => [u.id, u]));
+
+  const pending = applications.filter((a) => a.status === "pending");
+  const reviewed = applications.filter((a) => a.status !== "pending");
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -55,7 +80,7 @@ export default async function AdminApplicationsPage() {
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {pending.map((app) => {
-              const user = MOCK_USERS.find((u) => u.id === app.userId);
+              const user = userById.get(app.userId);
               return (
                 <Card key={app.id}>
                   <CardEyebrow>
@@ -117,7 +142,7 @@ export default async function AdminApplicationsPage() {
               </thead>
               <tbody>
                 {reviewed.map((app) => {
-                  const user = MOCK_USERS.find((u) => u.id === app.userId);
+                  const user = userById.get(app.userId);
                   return (
                     <tr key={app.id} className="border-t border-[var(--surface-border)]">
                       <td className="p-4">

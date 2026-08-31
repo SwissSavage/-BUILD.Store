@@ -22,12 +22,12 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
 import {
-  MOCK_CUSTOMER_FEEDBACK,
-  pendingFeedback,
-} from "@/lib/mock-data/customer-feedback";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_ORDERS } from "@/lib/mock-data/orders";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+  customerFeedbackReader,
+  orderReader,
+  safely,
+} from "@/lib/readers";
+import { getAllProjects } from "@/lib/readers/projects";
+import { getAllUsers } from "@/lib/readers/users";
 import {
   declineGoogleReviewFollowup,
   markGoogleReviewFollowupSent,
@@ -42,6 +42,8 @@ import {
   GOOGLE_REVIEW_FOLLOWUP_LABELS,
   type CustomerFeedback,
   type User,
+  type Project,
+  type Order,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -51,29 +53,40 @@ const CLIENT_LABELS: Record<string, string> = {
   client_arborai: "ArborAI",
 };
 
-function eligibleAttributees(row: CustomerFeedback): User[] {
+/**
+ * Who a testimonial can be attributed to. Built as a closure over the
+ * already-loaded roster, projects, and orders so a queue of N rows
+ * costs three queries rather than 3N.
+ */
+type Ctx = {
+  userById: Map<string, User>;
+  projectById: Map<string, Project>;
+  orderById: Map<string, Order>;
+};
+
+function eligibleAttributees(row: CustomerFeedback, ctx: Ctx): User[] {
   if (row.contextKind === "contract") {
-    const project = MOCK_PROJECTS.find((p) => p.id === row.contextId);
+    const project = ctx.projectById.get(row.contextId);
     if (!project) return [];
     return project.assignedMemberIds
-      .map((id) => MOCK_USERS.find((u) => u.id === id))
+      .map((id) => ctx.userById.get(id))
       .filter((u): u is User => Boolean(u));
   }
   // marketplace_order
-  const order = MOCK_ORDERS.find((o) => o.id === row.contextId);
+  const order = ctx.orderById.get(row.contextId);
   if (!order) return [];
-  const seller = MOCK_USERS.find((u) => u.id === order.sellerId);
+  const seller = ctx.userById.get(order.sellerId);
   return seller ? [seller] : [];
 }
 
-function contextLabel(row: CustomerFeedback): string {
+function contextLabel(row: CustomerFeedback, ctx: Ctx): string {
   if (row.contextKind === "contract") {
-    const project = MOCK_PROJECTS.find((p) => p.id === row.contextId);
+    const project = ctx.projectById.get(row.contextId);
     if (!project) return row.contextId;
     const client = CLIENT_LABELS[project.clientId] ?? project.clientId;
     return `${project.title} · ${client}`;
   }
-  const order = MOCK_ORDERS.find((o) => o.id === row.contextId);
+  const order = ctx.orderById.get(row.contextId);
   return order ? `Order ${order.number}` : row.contextId;
 }
 
@@ -84,11 +97,31 @@ function formatDate(iso: string): string {
   });
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminTestimonialsPage() {
   await requireAdmin();
 
-  const pending = pendingFeedback();
-  const published = MOCK_CUSTOMER_FEEDBACK.filter(
+  // Reader swap 2026-08-29: testimonial queue read seed feedback.
+  const [allFeedback, { users: roster }, { projects }, orders] =
+    await Promise.all([
+      safely(() => customerFeedbackReader.all(), []),
+      safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+      safely(() => getAllProjects(), {
+        projects: [],
+        source: "postgres" as const,
+      }),
+      safely(() => orderReader.all(), []),
+    ]);
+
+  const ctx: Ctx = {
+    userById: new Map(roster.map((u) => [u.id, u])),
+    projectById: new Map(projects.map((p) => [p.id, p])),
+    orderById: new Map(orders.map((o) => [o.id, o])),
+  };
+
+  const pending = allFeedback.filter((f) => f.publishedAt === null);
+  const published = allFeedback.filter(
     (f) => f.publishedAt !== null,
   ).sort((a, b) =>
     (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
@@ -130,7 +163,7 @@ export default async function AdminTestimonialsPage() {
             </Card>
           ) : (
             pending.map((row) => (
-              <PendingRow key={row.id} row={row} />
+              <PendingRow key={row.id} row={row} ctx={ctx} />
             ))
           )}
         </div>
@@ -149,7 +182,7 @@ export default async function AdminTestimonialsPage() {
             </Card>
           ) : (
             published.map((row) => (
-              <PublishedRow key={row.id} row={row} />
+              <PublishedRow key={row.id} row={row} ctx={ctx} />
             ))
           )}
         </div>
@@ -158,8 +191,8 @@ export default async function AdminTestimonialsPage() {
   );
 }
 
-function PendingRow({ row }: { row: CustomerFeedback }) {
-  const targets = eligibleAttributees(row);
+function PendingRow({ row, ctx }: { row: CustomerFeedback; ctx: Ctx }) {
+  const targets = eligibleAttributees(row, ctx);
   const consent = row.attributionConsent;
   const publishingBlocked =
     consent === null || consent === "internal_only";
@@ -169,7 +202,7 @@ function PendingRow({ row }: { row: CustomerFeedback }) {
     <Card>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <CardEyebrow>{contextLabel(row)}</CardEyebrow>
+          <CardEyebrow>{contextLabel(row, ctx)}</CardEyebrow>
           <CardTitle className="mt-1 text-xl">
             {row.customerName} · {row.overallStars}★
           </CardTitle>
@@ -333,13 +366,15 @@ function PendingRow({ row }: { row: CustomerFeedback }) {
   );
 }
 
-function PublishedRow({ row }: { row: CustomerFeedback }) {
-  const target = MOCK_USERS.find((u) => u.id === row.publishedForUserId);
+function PublishedRow({ row, ctx }: { row: CustomerFeedback; ctx: Ctx }) {
+  const target = row.publishedForUserId
+    ? ctx.userById.get(row.publishedForUserId)
+    : undefined;
   return (
     <Card className="border-[#007048]/40">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <CardEyebrow>{contextLabel(row)}</CardEyebrow>
+          <CardEyebrow>{contextLabel(row, ctx)}</CardEyebrow>
           <CardTitle className="mt-1 text-xl">
             On {target ? publicName(target) : "—"}&apos;s profile
           </CardTitle>

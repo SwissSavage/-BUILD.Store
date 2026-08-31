@@ -3,77 +3,124 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_APPLICATIONS } from "@/lib/mock-data/applications";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_TRANSACTIONS } from "@/lib/mock-data/tokens";
-import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
-import { MOCK_QUOTES } from "@/lib/mock-data/quotes";
-import { MOCK_INVOICES } from "@/lib/mock-data/invoices";
-import { MOCK_SPLITS } from "@/lib/mock-data/splits";
-import { MOCK_SELLER_APPLICATIONS } from "@/lib/mock-data/seller-applications";
-import { MOCK_PRODUCTS } from "@/lib/mock-data/products";
-import {
-  MOCK_WHITELIST_PURCHASES,
-  MOCK_CONSULTATION_REQUESTS,
-} from "@/lib/mock-data/whitelist";
-import { MOCK_FEEDBACK } from "@/lib/mock-data/feedback";
-import { MOCK_CUSTOMER_FEEDBACK } from "@/lib/mock-data/customer-feedback";
-import { listInboundSubmissions } from "@/lib/mock-data/inbound-submissions";
-import { MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
-import { MOCK_AUDIT_LOG } from "@/lib/mock-data/audit-log";
 import { championsCourtMembers } from "@/lib/mvp-score";
+import { getAllUsers } from "@/lib/readers/users";
+import { getAllProjects } from "@/lib/readers/projects";
+import {
+  auditLogReader,
+  consultationRequestReader,
+  customerFeedbackReader,
+  feedbackReader,
+  inboundReader,
+  invoiceReader,
+  membershipApplicationReader,
+  mvpScoreReader,
+  portfolioReader,
+  productReader,
+  quoteSheetReader,
+  safely,
+  sellerApplicationReader,
+  splitReader,
+  tokenReader,
+  whitelistPurchaseReader,
+} from "@/lib/readers";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminHome() {
   await requireAdmin();
 
-  const pending = MOCK_APPLICATIONS.filter((a) => a.status === "pending").length;
-  const openProjects = MOCK_PROJECTS.filter((p) => p.status === "open").length;
-  const rfpPending = MOCK_PROJECTS.filter(
+  // Reader swap 2026-08-29: every tile count came from a mock array,
+  // so the admin console reported the seed cooperative's numbers, not
+  // the real one. Loaded in parallel — sixteen sequential queries on
+  // the landing page would be noticeable.
+  const [
+    { users: roster },
+    { projects: allProjects },
+    applications,
+    portfolio,
+    quotes,
+    transactions,
+    invoiceRows,
+    sellerApps,
+    productRows,
+    whitelistRows,
+    consultRows,
+    feedbackRows,
+    customerFeedbackRows,
+    inboundRows,
+    auditRows,
+    scores,
+    splits,
+  ] = await Promise.all([
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+    safely(() => membershipApplicationReader.all(), []),
+    safely(() => portfolioReader.all(), []),
+    safely(() => quoteSheetReader.all(), []),
+    safely(() => tokenReader.all(), []),
+    safely(() => invoiceReader.all(), []),
+    safely(() => sellerApplicationReader.all(), []),
+    safely(() => productReader.all(), []),
+    safely(() => whitelistPurchaseReader.all(), []),
+    safely(() => consultationRequestReader.all(), []),
+    safely(() => feedbackReader.all(), []),
+    safely(() => customerFeedbackReader.all(), []),
+    safely(() => inboundReader.all(), []),
+    safely(() => auditLogReader.all(), []),
+    safely(() => mvpScoreReader.all(), []),
+    safely(() => splitReader.all(), []),
+  ]);
+
+  const pending = applications.filter((a) => a.status === "pending").length;
+  const openProjects = allProjects.filter((p) => p.status === "open").length;
+  const rfpPending = allProjects.filter(
     (p) =>
       p.kind === "contract" &&
       p.isRfp &&
       !p.rfpApprovedAt &&
       p.status !== "cancelled",
   ).length;
-  const portfolioPending = MOCK_PORTFOLIO.filter(
+  const portfolioPending = portfolio.filter(
     (p) => !p.publishedAt && !p.rejectedAt,
   ).length;
-  const quotesPending = MOCK_QUOTES.filter(
+  const quotesPending = quotes.filter(
     (q) => !q.approvedAt && !q.rejectedAt,
   ).length;
-  const totalDistributed = MOCK_TRANSACTIONS.reduce(
+  const totalDistributed = transactions.reduce(
     (sum, tx) => sum + Number(tx.amount),
     0,
   );
-  const outstandingAR = MOCK_INVOICES.reduce((sum, inv) => {
+  const outstandingAR = invoiceRows.reduce((sum, inv) => {
     if (inv.status === "draft" || inv.status === "void") return sum;
     return sum + (Number(inv.total) - Number(inv.paidAmount));
   }, 0);
-  const sellerAppsPending = MOCK_SELLER_APPLICATIONS.filter(
+  const sellerAppsPending = sellerApps.filter(
     (a) => a.status === "pending",
   ).length;
-  const productsPending = MOCK_PRODUCTS.filter(
+  const productsPending = productRows.filter(
     (p) => p.status === "pending_review",
   ).length;
   const marketplaceQueue = sellerAppsPending + productsPending;
-  const whitelistOpen = MOCK_WHITELIST_PURCHASES.filter(
+  const whitelistOpen = whitelistRows.filter(
     (p) => p.status === "initiated" || p.status === "paid",
   ).length;
-  const consultNew = MOCK_CONSULTATION_REQUESTS.filter(
+  const consultNew = consultRows.filter(
     (r) => r.status === "new",
   ).length;
   const whitelistQueue = whitelistOpen + consultNew;
-  const feedbackNew = MOCK_FEEDBACK.filter((f) => f.status === "new").length;
-  const testimonialsPending = MOCK_CUSTOMER_FEEDBACK.filter(
+  const feedbackNew = feedbackRows.filter((f) => f.status === "new").length;
+  const testimonialsPending = customerFeedbackRows.filter(
     (f) => f.publishedAt === null,
   ).length;
-  const inboundRows = listInboundSubmissions();
   const inboundOpen = inboundRows.filter(
     (r) => r.status === "new" || r.status === "in_triage" || r.status === "needs_info",
   ).length;
-  const championsCircleCount = championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS).length;
+  const championsCircleCount = championsCourtMembers(scores, roster).length;
 
   const tiles = [
     {
@@ -86,9 +133,9 @@ export default async function AdminHome() {
       href: "/admin/mvp",
       title: "MVP Score",
       count: championsCircleCount,
-      sub: `Champion's Court (top 10% AND ≥ 90) · ${MOCK_MVP_SCORES.length} snapshots`,
+      sub: `Champion's Court (top 10% AND ≥ 90) · ${scores.length} snapshots`,
     },
-    { href: "/admin/members", title: "Members", count: MOCK_USERS.length, sub: "Across all tiers" },
+    { href: "/admin/members", title: "Members", count: roster.length, sub: "Across all tiers" },
     { href: "/admin/applications", title: "Applications", count: pending, sub: "Pending review" },
     { href: "/admin/projects", title: "Projects", count: openProjects, sub: "Open RFPs" },
     {
@@ -136,14 +183,14 @@ export default async function AdminHome() {
     {
       href: "/admin/team",
       title: "Team",
-      count: MOCK_USERS.filter((u) => u.isAdmin).length,
+      count: roster.filter((u) => u.isAdmin).length,
       sub: "Active admins",
     },
     {
       href: "/admin/feedback",
       title: "Beta feedback",
       count: feedbackNew,
-      sub: `${MOCK_FEEDBACK.length} total · ${feedbackNew} untriaged`,
+      sub: `${feedbackRows.length} total · ${feedbackNew} untriaged`,
     },
     {
       href: "/admin/testimonials",
@@ -154,7 +201,7 @@ export default async function AdminHome() {
     {
       href: "/admin/payments",
       title: "Payments",
-      count: MOCK_SPLITS.filter(
+      count: splits.filter(
         (s) => s.payoutStatus === "queued" || s.payoutStatus === "pending",
       ).length,
       sub: "Payout rail status · manual-send queue",
@@ -162,19 +209,19 @@ export default async function AdminHome() {
     {
       href: "/admin/compliance",
       title: "Compliance",
-      count: MOCK_AUDIT_LOG.length,
+      count: auditRows.length,
       sub: "SOC 2 + ISO 27001 control status · audit log entries",
     },
     {
       href: "/admin/audit-log",
       title: "Audit log",
-      count: MOCK_AUDIT_LOG.length,
+      count: auditRows.length,
       sub: "Append-only. Every security-relevant action, reverse-chron.",
     },
     {
       href: "/admin/access-review",
       title: "Access review",
-      count: MOCK_USERS.filter((u) => u.isAdmin).length,
+      count: roster.filter((u) => u.isAdmin).length,
       sub: "Admins carrying the flag · quarterly walk-through cadence",
     },
     {

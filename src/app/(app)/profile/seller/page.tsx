@@ -12,14 +12,18 @@
  * submissions, only their own.
  *
  * REPLACE WITH: Drizzle insert on `seller_applications` + lookup by the
- * authenticated user id. Currently writes to MOCK_SELLER_APPLICATIONS in
+ * authenticated user id. Writes to seller_applications; it wrote to an in-memory array in
  * memory so the admin queue updates live across the sandbox.
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_SELLER_APPLICATIONS } from "@/lib/mock-data/seller-applications";
+import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { sellerApplications } from "@/db/schema";
+import { sellerApplicationReader, safely } from "@/lib/readers";
 import {
   MARKETPLACE_CATEGORY_LABELS,
   SELLER_APPLICATION_STATUS_LABELS,
@@ -27,6 +31,8 @@ import {
   type SellerApplication,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 const CATEGORY_ORDER: MarketplaceCategory[] = [
   "goods",
@@ -53,7 +59,7 @@ async function submitApplication(formData: FormData) {
 
   const now = new Date().toISOString();
   const application: SellerApplication = {
-    id: `sa_${Date.now()}`,
+    id: `sa_${randomUUID()}`,
     userId: user.id,
     requestedCategories,
     pitch,
@@ -63,7 +69,17 @@ async function submitApplication(formData: FormData) {
     adminNote: null,
     createdAt: now,
   };
-  MOCK_SELLER_APPLICATIONS.push(application);
+  await db.insert(sellerApplications).values({
+    id: application.id,
+    userId: application.userId,
+    requestedCategories: application.requestedCategories,
+    pitch: application.pitch,
+    status: application.status,
+    reviewedBy: application.reviewedBy,
+    reviewedAt: application.reviewedAt,
+    adminNote: application.adminNote,
+    createdAt: application.createdAt,
+  });
   revalidatePath("/profile/seller");
   revalidatePath("/admin/marketplace");
   revalidatePath("/admin");
@@ -74,9 +90,15 @@ export default async function SellerApplicationPage() {
   if (!user) redirect("/signin?next=/profile/seller");
 
   // Most recent application (if any)
-  const mine = [...MOCK_SELLER_APPLICATIONS]
-    .filter((a) => a.userId === user.id)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const mine = (
+    await safely(
+      () =>
+        sellerApplicationReader.where(
+          eq(sellerApplications.userId, user.id),
+        ),
+      [],
+    )
+  ).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const latest = mine[0];
   const isApproved = latest?.status === "approved";
   const isPending = latest?.status === "pending";

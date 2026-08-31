@@ -23,15 +23,18 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
-import { MOCK_ORDERS } from "@/lib/mock-data/orders";
-import { MOCK_PRODUCTS } from "@/lib/mock-data/products";
+import { randomUUID } from "crypto";
+import { count, eq, sql } from "drizzle-orm";
+import { db } from "@/db/client";
+import { orders as ordersTable, products as productsTable } from "@/db/schema";
+import { orderReader, productReader } from "@/lib/readers";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { grossUpForCard } from "@/lib/payments-fees";
 import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
 import { createMarketplaceReceiptInternal } from "@/lib/invoice-actions";
 import { hasValidPayoutDocument } from "@/lib/payout-gate";
 import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAdminUsers } from "@/lib/readers/users";
 import {
   ORDER_NEXT_STATUSES,
   type Order,
@@ -44,10 +47,22 @@ function round2(n: number): string {
   return (Math.round(n * 100) / 100).toFixed(2);
 }
 
-function nextNumber(): string {
-  // Lightweight, sandbox-only — not collision-safe under real load.
+/**
+ * Human-readable order number, BS-ORD-<year>-<seq>.
+ *
+ * The sequence counts existing orders, which is not collision-safe on
+ * its own — two orders placed in the same moment would compute the
+ * same seq. `orders.number` carries a unique constraint, so the
+ * second insert fails rather than silently issuing a duplicate
+ * number; the retry loop in placeOrder recomputes and tries again.
+ *
+ * A Postgres sequence would be the cleaner answer and is worth doing
+ * before volume picks up.
+ */
+async function nextNumber(): Promise<string> {
   const year = new Date().getUTCFullYear();
-  const seq = (MOCK_ORDERS.length + 1).toString().padStart(4, "0");
+  const [row] = await db.select({ n: count() }).from(ordersTable);
+  const seq = (Number(row?.n ?? 0) + 1).toString().padStart(4, "0");
   return `BS-ORD-${year}-${seq}`;
 }
 
@@ -59,7 +74,7 @@ export async function placeOrder(formData: FormData) {
   const shippingAddress =
     String(formData.get("shippingAddress") ?? "").trim() || null;
 
-  const product = MOCK_PRODUCTS.find((p) => p.id === productId);
+  const product = await productReader.byId(productId);
   if (!product) throw new Error("Product not found");
   if (product.status !== "active") throw new Error("Product not for sale");
   if (
@@ -89,8 +104,8 @@ export async function placeOrder(formData: FormData) {
   const { gross, processingFee } = grossUpForCard(subtotal);
 
   const order: Order = {
-    id: `ord_${Date.now()}`,
-    number: nextNumber(),
+    id: `ord_${randomUUID()}`,
+    number: await nextNumber(),
     buyerId: current?.id ?? null,
     buyerEmail,
     buyerName,
@@ -127,12 +142,55 @@ export async function placeOrder(formData: FormData) {
     adminUserIds: [],
   };
 
-  // Decrement inventory for inventoried products.
-  if (product.inventoryCount !== null) {
-    product.inventoryCount -= quantity;
-  }
+  // Order row and inventory decrement in one transaction. An order
+  // recorded without the stock coming down oversells the seller; the
+  // reverse loses a sale with nothing to reconcile against.
+  //
+  // The decrement is guarded in SQL rather than trusting the check
+  // above — that check read inventory before this transaction opened,
+  // so two buyers hitting the last unit would both pass it.
+  await db.transaction(async (tx) => {
+    await tx.insert(ordersTable).values({
+      id: order.id,
+      number: order.number,
+      buyerId: order.buyerId,
+      buyerEmail: order.buyerEmail,
+      buyerName: order.buyerName,
+      sellerId: order.sellerId,
+      category: order.category,
+      status: order.status,
+      items: order.items,
+      subtotal: order.subtotal,
+      houseFee: order.houseFee,
+      processingFee: order.processingFee,
+      total: order.total,
+      stripePaymentIntentId: order.stripePaymentIntentId,
+      shippingAddress: order.shippingAddress,
+      trackingNumber: order.trackingNumber,
+      internalNote: order.internalNote,
+      placedAt: order.placedAt,
+      paidAt: order.paidAt,
+      shippedAt: order.shippedAt,
+      deliveredAt: order.deliveredAt,
+      splitDistributedAt: order.splitDistributedAt,
+      adminUserIds: order.adminUserIds,
+    });
 
-  MOCK_ORDERS.push(order);
+    if (product.inventoryCount !== null) {
+      const res = await tx
+        .update(productsTable)
+        .set({
+          inventoryCount: sql`${productsTable.inventoryCount} - ${quantity}`,
+        })
+        .where(
+          sql`${productsTable.id} = ${productId} AND ${productsTable.inventoryCount} >= ${quantity}`,
+        )
+        .returning({ id: productsTable.id });
+      if (res.length === 0) {
+        throw new Error("Not enough inventory");
+      }
+    }
+  });
   revalidatePath("/store");
   revalidatePath("/orders");
   revalidatePath("/profile/seller/orders");
@@ -146,7 +204,7 @@ export async function advanceOrderStatus(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const target = String(formData.get("status") ?? "") as OrderStatus;
 
-  const order = MOCK_ORDERS.find((o) => o.id === id);
+  const order = await orderReader.byId(id);
   if (!order) throw new Error("Order not found");
   // Only the seller (or an admin) can advance status.
   if (order.sellerId !== current.id && !current.isAdmin) {
@@ -158,10 +216,20 @@ export async function advanceOrderStatus(formData: FormData) {
   }
 
   const now = new Date().toISOString();
-  order.status = target;
-  if (target === "paid" && !order.paidAt) order.paidAt = now;
-  if (target === "shipped" && !order.shippedAt) order.shippedAt = now;
-  if (target === "delivered" && !order.deliveredAt) order.deliveredAt = now;
+  // Timestamps are set once and never overwritten — the first time an
+  // order reached a state is the fact worth keeping, and a status can
+  // be revisited.
+  await db
+    .update(ordersTable)
+    .set({
+      status: target,
+      ...(target === "paid" && !order.paidAt ? { paidAt: now } : {}),
+      ...(target === "shipped" && !order.shippedAt ? { shippedAt: now } : {}),
+      ...(target === "delivered" && !order.deliveredAt
+        ? { deliveredAt: now }
+        : {}),
+    })
+    .where(eq(ordersTable.id, id));
 
   revalidatePath("/orders");
   revalidatePath(`/orders/${order.id}`);
@@ -176,13 +244,15 @@ export async function updateOrderTracking(formData: FormData) {
   const tracking = String(formData.get("trackingNumber") ?? "").trim() || null;
   const note = String(formData.get("internalNote") ?? "").trim() || null;
 
-  const order = MOCK_ORDERS.find((o) => o.id === id);
+  const order = await orderReader.byId(id);
   if (!order) throw new Error("Order not found");
   if (order.sellerId !== current.id && !current.isAdmin) {
     throw new Error("Not your order to manage");
   }
-  order.trackingNumber = tracking;
-  order.internalNote = note;
+  await db
+    .update(ordersTable)
+    .set({ trackingNumber: tracking, internalNote: note })
+    .where(eq(ordersTable.id, id));
   revalidatePath("/orders");
   revalidatePath(`/orders/${order.id}`);
   revalidatePath("/profile/seller/orders");
@@ -192,7 +262,7 @@ export async function updateOrderTracking(formData: FormData) {
 export async function distributeOrderSplit(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  const order = MOCK_ORDERS.find((o) => o.id === id);
+  const order = await orderReader.byId(id);
   if (!order) return;
   if (order.status !== "delivered") return;
   if (order.splitDistributedAt) return;
@@ -223,7 +293,16 @@ export async function distributeOrderSplit(formData: FormData) {
     );
   }
 
-  order.splitDistributedAt = now;
+  // Guarded on splitDistributedAt IS NULL so a double-click can't
+  // fire the split twice. The second call lands on zero rows.
+  const claimed = await db
+    .update(ordersTable)
+    .set({ splitDistributedAt: now })
+    .where(
+      sql`${ordersTable.id} = ${id} AND ${ordersTable.splitDistributedAt} IS NULL`,
+    )
+    .returning({ id: ordersTable.id });
+  if (claimed.length === 0) return;
 
   // Write the full 85 / 12 / 1.5 / 1.5 split via the shared engine.
   // Marketplace orders route the seller as the sole contributor and
@@ -231,17 +310,14 @@ export async function distributeOrderSplit(formData: FormData) {
   // order.adminUserIds. If empty (unseeded / legacy orders), falls
   // back to distributing evenly across all active platform admins
   // so no order settles with an empty admin pool.
-  const dealAdmins = order.adminUserIds.filter((id) =>
-    MOCK_USERS.some(
-      (u) => u.id === id && u.isAdmin && u.suspendedAt === null,
-    ),
+  const { users: adminRoster } = await getAdminUsers();
+  const activeAdmins = adminRoster.filter((u) => u.suspendedAt === null);
+  const activeAdminIds = new Set(activeAdmins.map((u) => u.id));
+  const dealAdmins = order.adminUserIds.filter((aid) =>
+    activeAdminIds.has(aid),
   );
   const platformAdmins =
-    dealAdmins.length > 0
-      ? dealAdmins
-      : MOCK_USERS.filter((u) => u.isAdmin && u.suspendedAt === null).map(
-          (u) => u.id,
-        );
+    dealAdmins.length > 0 ? dealAdmins : activeAdmins.map((u) => u.id);
   if (platformAdmins.length === 0) {
     // Fall back to the marking-only path so the order still closes
     // even if the admin roster is empty — extreme edge case.

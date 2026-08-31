@@ -12,19 +12,25 @@
  *     settlement page, but admins should be able to see "what's still
  *     queued to leave the cooperative" without flipping tabs.
  *
- * Mutations write to in-memory MOCK_INVOICES / MOCK_PROJECTS — same
- * pattern as settle/page.tsx. REPLACE WITH: Drizzle inserts +
- * Mercury reconciliation worker that flips status when the deposit
- * lands.
+ * Mutations write to Postgres (swapped 2026-08-29). Still manual:
+ * an admin marks an invoice received after seeing the deposit in
+ * Mercury. A reconciliation worker that flips status automatically
+ * when the deposit lands is the remaining piece.
  */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_INVOICES } from "@/lib/mock-data/invoices";
-import { MOCK_SPLITS } from "@/lib/mock-data/splits";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getProjectById } from "@/lib/readers/projects";
+import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import {
+  invoices as invoicesTable,
+  projects as projectsTable,
+} from "@/db/schema";
+import { invoiceReader, splitReader, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
 import { RESERVE_RECIPIENTS } from "@/lib/mock-data/splits";
 import { creditReserveOnInvoiceCollection } from "@/lib/reserve-actions";
 import {
@@ -57,15 +63,29 @@ const PAYOUT_COLOR: Record<PayoutStatus, string> = {
   failed: "#E53E3E",
 };
 
-function recalcInvoiceTotals(invoice: Invoice): void {
-  const sub = sumSubtotal(invoice.lineItems);
-  const fee = invoice.lineItems
+/**
+ * Derive the money columns from line items.
+ *
+ * Returns the values rather than mutating, so callers persist them in
+ * the same UPDATE that changes everything else. The old version
+ * mutated an in-memory object and nothing was ever written.
+ */
+function invoiceTotals(lineItems: Invoice["lineItems"]): {
+  subtotal: string;
+  processingFee: string;
+  total: string;
+  updatedAt: string;
+} {
+  const sub = sumSubtotal(lineItems);
+  const fee = lineItems
     .filter((li) => li.isProcessingFee)
     .reduce((acc, li) => acc + Number(li.amount), 0);
-  invoice.subtotal = sub.toFixed(2);
-  invoice.processingFee = fee.toFixed(2);
-  invoice.total = (sub + fee).toFixed(2);
-  invoice.updatedAt = new Date().toISOString();
+  return {
+    subtotal: sub.toFixed(2),
+    processingFee: fee.toFixed(2),
+    total: (sub + fee).toFixed(2),
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 async function issueInvoice(formData: FormData) {
@@ -75,16 +95,24 @@ async function issueInvoice(formData: FormData) {
 
   const id = String(formData.get("invoiceId") ?? "");
   const dueAt = String(formData.get("dueAt") ?? "");
-  const inv = MOCK_INVOICES.find((i) => i.id === id);
+  const inv = await invoiceReader.byId(id);
   if (!inv) throw new Error("Invoice not found");
   if (inv.status !== "draft") throw new Error("Only drafts can be issued");
 
+  // Writer swap 2026-08-29: issuing an invoice mutated an in-memory
+  // object, so the client was never actually billed.
   const now = new Date().toISOString();
-  inv.issuedAt = now;
-  inv.dueAt = dueAt ? new Date(dueAt).toISOString() : null;
-  inv.status = "issued";
-  inv.number = inv.number.replace(/^FM-2026-DRAFT-/, "FM-2026-");
-  recalcInvoiceTotals(inv);
+  const totals = invoiceTotals(inv.lineItems);
+  await db
+    .update(invoicesTable)
+    .set({
+      issuedAt: now,
+      dueAt: dueAt ? new Date(dueAt).toISOString() : null,
+      status: "issued",
+      number: inv.number.replace(/^FM-2026-DRAFT-/, "FM-2026-"),
+      ...totals,
+    })
+    .where(eq(invoicesTable.id, id));
 
   revalidatePath(`/admin/contracts/${inv.contractId}/ledger`);
 }
@@ -97,30 +125,53 @@ async function markReceived(formData: FormData) {
   const id = String(formData.get("invoiceId") ?? "");
   const amount = Number(formData.get("amount") ?? 0);
   const reference = String(formData.get("reference") ?? "");
-  const inv = MOCK_INVOICES.find((i) => i.id === id);
+  const inv = await invoiceReader.byId(id);
   if (!inv) throw new Error("Invoice not found");
   if (amount <= 0) throw new Error("Amount must be > 0");
 
+  // Writer swap 2026-08-29: recording that a client paid was an
+  // in-memory mutation. AR never moved, and the reserve-pool credit
+  // below fired against state that did not persist.
   const now = new Date().toISOString();
   const newPaid = Number(inv.paidAmount) + amount;
-  inv.paidAmount = newPaid.toFixed(2);
-  inv.paidAt = now;
-  inv.mercuryReference = reference || inv.mercuryReference || `merc_${Date.now()}`;
-  inv.status =
+  const nextStatus =
     newPaid + 0.005 >= Number(inv.total) ? "received" : "partially_received";
-  inv.updatedAt = now;
+
+  await db
+    .update(invoicesTable)
+    .set({
+      paidAmount: newPaid.toFixed(2),
+      paidAt: now,
+      mercuryReference:
+        reference || inv.mercuryReference || `merc_${randomUUID()}`,
+      status: nextStatus,
+      updatedAt: now,
+    })
+    .where(eq(invoicesTable.id, id));
+
+  inv.status = nextStatus;
 
   // Sync the contract's collectedRevenue so the settle page picks it up
   // when the AR is fully received.
-  const project = MOCK_PROJECTS.find((p) => p.id === inv.contractId);
-  if (project && inv.status === "received") {
-    // Sum every received invoice on this contract and put it on the project.
-    const totalReceived = MOCK_INVOICES.filter(
-      (i) => i.contractId === project.id && i.status === "received",
-    ).reduce((acc, i) => acc + Number(i.subtotal), 0);
-    project.collectedRevenue = totalReceived.toFixed(2);
-    project.collectedAt = now;
-    project.updatedAt = now;
+  const project = inv.contractId ? await getProjectById(inv.contractId) : null;
+  if (project && nextStatus === "received") {
+    // Sum every received invoice on this contract and put it on the
+    // project so the settle page has a real collected figure.
+    const contractInvoices = await invoiceReader.where(
+      eq(invoicesTable.contractId, project.id),
+    );
+    const totalReceived = contractInvoices
+      .filter((i) => i.status === "received")
+      .reduce((acc, i) => acc + Number(i.subtotal), 0);
+
+    await db
+      .update(projectsTable)
+      .set({
+        collectedRevenue: totalReceived.toFixed(2),
+        collectedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(projectsTable.id, project.id));
 
     // Fund the Contract Reserve Pool with the top − bottom delta
     // now that the invoice is fully paid. Idempotent — refuses to
@@ -143,28 +194,30 @@ async function toggleCardOptIn(formData: FormData) {
   if (!admin || !admin.isAdmin) throw new Error("Admin only");
 
   const id = String(formData.get("invoiceId") ?? "");
-  const inv = MOCK_INVOICES.find((i) => i.id === id);
+  const inv = await invoiceReader.byId(id);
   if (!inv) throw new Error("Invoice not found");
   if (inv.status === "received" || inv.status === "void") {
     throw new Error("Cannot change rail on a closed invoice");
   }
 
-  // Strip any existing processing-fee row, then either re-add (if turning on)
-  // or leave off (turning off). The calculator owns that row.
-  inv.lineItems = inv.lineItems.filter((li) => !li.isProcessingFee);
-  if (!inv.acceptsCard) {
-    // Turn on.
-    const sub = sumSubtotal(inv.lineItems);
-    inv.lineItems.push(buildProcessingFeeLineItem(sub));
-    inv.acceptsCard = true;
-    inv.paymentMethod = "cc_stripe";
-  } else {
-    // Turn off → revert to Mercury default.
-    inv.acceptsCard = false;
-    inv.paymentMethod = "ach_mercury";
-    inv.stripePaymentIntentId = null;
-  }
-  recalcInvoiceTotals(inv);
+  // Strip any existing processing-fee row, then either re-add (turning
+  // card on) or leave it off. The calculator owns that row.
+  const base = inv.lineItems.filter((li) => !li.isProcessingFee);
+  const turningOn = !inv.acceptsCard;
+  const lineItems = turningOn
+    ? [...base, buildProcessingFeeLineItem(sumSubtotal(base))]
+    : base;
+
+  await db
+    .update(invoicesTable)
+    .set({
+      lineItems,
+      acceptsCard: turningOn,
+      paymentMethod: turningOn ? "cc_stripe" : "ach_mercury",
+      stripePaymentIntentId: turningOn ? inv.stripePaymentIntentId : null,
+      ...invoiceTotals(lineItems),
+    })
+    .where(eq(invoicesTable.id, id));
 
   revalidatePath(`/admin/contracts/${inv.contractId}/ledger`);
 }
@@ -179,9 +232,11 @@ async function createDraft(formData: FormData) {
   const amount = Number(formData.get("amount") ?? 0);
   if (amount <= 0) throw new Error("Amount must be > 0");
 
-  const id = `inv_${contractId}_${Date.now()}`;
+  const id = `inv_${randomUUID()}`;
   const now = new Date().toISOString();
-  MOCK_INVOICES.push({
+  // Writer swap 2026-08-29: draft invoices were pushed in memory, so
+  // an admin could bill a client and have the invoice disappear.
+  await db.insert(invoicesTable).values({
     id,
     direction: "coop_to_client",
     documentKind: "invoice",
@@ -222,6 +277,8 @@ async function createDraft(formData: FormData) {
   revalidatePath(`/admin/contracts/${contractId}/ledger`);
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function ContractLedgerPage({
   params,
 }: {
@@ -231,11 +288,17 @@ export default async function ContractLedgerPage({
   if (!admin || !admin.isAdmin) redirect("/dashboard");
 
   const { id } = await params;
-  const project = MOCK_PROJECTS.find((p) => p.id === id);
+  const project = await getProjectById(id);
   if (!project || project.kind !== "contract") notFound();
 
-  const invoices = MOCK_INVOICES.filter((i) => i.contractId === id);
-  const splits = MOCK_SPLITS.filter((s) => s.contractId === id);
+  const [invoices, splits, { users: roster }] = await Promise.all([
+    safely(() => invoiceReader.where(eq(invoicesTable.contractId, id)), []),
+    safely(() => splitReader.all(), []).then((rows) =>
+      rows.filter((r) => r.contractId === id),
+    ),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const userById = new Map(roster.map((u) => [u.id, u]));
 
   // AR roll-ups.
   const totalIssued = invoices
@@ -416,7 +479,7 @@ export default async function ContractLedgerPage({
               <tbody>
                 {splits.map((s) => {
                   const recipient =
-                    MOCK_USERS.find((u) => u.id === s.recipientId);
+                    userById.get(s.recipientId);
                   const reserve = RESERVE_RECIPIENTS.find(
                     (r) => r.id === s.recipientId,
                   );

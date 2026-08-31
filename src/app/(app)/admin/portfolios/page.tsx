@@ -8,17 +8,26 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { portfolioReader, safely } from "@/lib/readers";
 import { INDUSTRY_LABELS, userPillars, adminName } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPortfoliosPage() {
   await requireAdmin();
 
-  const perMember = MOCK_USERS.map((u) => {
-    const items = MOCK_PORTFOLIO.filter((p) => p.userId === u.id);
+  // Reader swap 2026-08-29: the review queue listed seed members and
+  // seed work, so nothing a real member submitted showed up here.
+  const [{ users: roster }, allItems] = await Promise.all([
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => portfolioReader.all(), []),
+  ]);
+
+  const perMember = roster.map((u) => {
+    const items = allItems.filter((p) => p.userId === u.id);
     const pending = items.filter((p) => !p.publishedAt && !p.rejectedAt).length;
     const published = items.filter((p) => p.publishedAt).length;
     const redacted = items.filter(

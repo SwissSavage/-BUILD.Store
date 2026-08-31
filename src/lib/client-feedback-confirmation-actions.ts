@@ -21,7 +21,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { MOCK_CUSTOMER_FEEDBACK } from "@/lib/mock-data/customer-feedback";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { customerFeedback as customerFeedbackTable } from "@/db/schema";
+import { customerFeedbackReader } from "@/lib/readers";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 /**
@@ -32,8 +35,11 @@ export async function confirmClientFeedback(formData: FormData): Promise<void> {
   const token = String(formData.get("token") ?? "").trim();
   if (!token) throw new Error("Confirmation token is required.");
 
-  const row = MOCK_CUSTOMER_FEEDBACK.find(
-    (f) => f.clientConfirmationToken === token,
+  // Token comparison in the WHERE clause. A client opening their own
+  // confirmation link must not cause a read of every other client's
+  // feedback row.
+  const row = await customerFeedbackReader.one(
+    eq(customerFeedbackTable.clientConfirmationToken, token),
   );
   if (!row) throw new Error("Token not found or expired.");
   if (row.clientConfirmationStatus === "confirmed") {
@@ -45,8 +51,21 @@ export async function confirmClientFeedback(formData: FormData): Promise<void> {
     );
   }
 
-  row.clientConfirmationStatus = "confirmed";
-  row.clientConfirmedAt = new Date().toISOString();
+  // Guarded on still-pending so a double-submit, or a dispute racing
+  // a confirmation, cannot overwrite a decision the client already
+  // made. This row is the client's own attestation of the rating.
+  await db
+    .update(customerFeedbackTable)
+    .set({
+      clientConfirmationStatus: "confirmed",
+      clientConfirmedAt: new Date().toISOString(),
+    })
+    .where(
+      and(
+        eq(customerFeedbackTable.id, row.id),
+        eq(customerFeedbackTable.clientConfirmationStatus, "pending"),
+      ),
+    );
 
   await logAuditEvent({
     actorUserId: null,
@@ -85,8 +104,11 @@ export async function disputeClientFeedback(formData: FormData): Promise<void> {
   const disputeReason = String(formData.get("disputeReason") ?? "").trim();
   if (!token) throw new Error("Confirmation token is required.");
 
-  const row = MOCK_CUSTOMER_FEEDBACK.find(
-    (f) => f.clientConfirmationToken === token,
+  // Token comparison in the WHERE clause. A client opening their own
+  // confirmation link must not cause a read of every other client's
+  // feedback row.
+  const row = await customerFeedbackReader.one(
+    eq(customerFeedbackTable.clientConfirmationToken, token),
   );
   if (!row) throw new Error("Token not found or expired.");
   if (row.clientConfirmationStatus === "disputed") {
@@ -98,10 +120,25 @@ export async function disputeClientFeedback(formData: FormData): Promise<void> {
     );
   }
 
-  row.clientConfirmationStatus = "disputed";
-  row.clientConfirmedAt = new Date().toISOString();
+  await db
+    .update(customerFeedbackTable)
+    .set({
+      clientConfirmationStatus: "disputed",
+      clientConfirmedAt: new Date().toISOString(),
+    })
+    .where(
+      and(
+        eq(customerFeedbackTable.id, row.id),
+        eq(customerFeedbackTable.clientConfirmationStatus, "pending"),
+      ),
+    );
   if (disputeReason) {
-    row.prose = `${row.prose}\n\n[Client dispute reason]: ${disputeReason}`;
+    await db
+      .update(customerFeedbackTable)
+      .set({
+        prose: `${row.prose}\n\n[Client dispute reason]: ${disputeReason}`,
+      })
+      .where(eq(customerFeedbackTable.id, row.id));
   }
 
   await logAuditEvent({

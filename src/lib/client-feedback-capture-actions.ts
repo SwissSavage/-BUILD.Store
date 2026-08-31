@@ -26,9 +26,11 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_CUSTOMER_FEEDBACK } from "@/lib/mock-data/customer-feedback";
-import { MOCK_MEETING_MINUTES } from "@/lib/mock-data/meeting-minutes";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { and, eq, isNotNull } from "drizzle-orm";
+import { db } from "@/db/client";
+import { customerFeedback as customerFeedbackTable } from "@/db/schema";
+import { getProjectById } from "@/lib/readers/projects";
+import { customerFeedbackReader, minutesReader } from "@/lib/readers";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { CustomerFeedback } from "@/lib/types";
 
@@ -68,7 +70,7 @@ export async function captureClientFeedbackDuringCall(
   const clientEmail = String(formData.get("clientEmail") ?? "").trim();
 
   if (!projectId) throw new Error("Project id required.");
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const project = await getProjectById(projectId);
   if (!project) throw new Error("Project not found.");
 
   if (!meetingMinuteId) {
@@ -76,7 +78,7 @@ export async function captureClientFeedbackDuringCall(
       "Meeting-minute link required. Admin-capture cannot proceed without a linked call record — that's the structural evidence gate. Log the call on /calendar first, then reference the minute id here.",
     );
   }
-  const minute = MOCK_MEETING_MINUTES.find((m) => m.id === meetingMinuteId);
+  const minute = await minutesReader.byId(meetingMinuteId);
   if (!minute) {
     throw new Error(
       `Meeting minute ${meetingMinuteId} not found. Verify the id from /calendar.`,
@@ -103,11 +105,12 @@ export async function captureClientFeedbackDuringCall(
   // Refuse duplicate capture — one row per (project + admin-captured
   // context). Client can still self-submit later; that gets its own
   // row with capturedByAdminUserId = null.
-  const already = MOCK_CUSTOMER_FEEDBACK.find(
-    (f) =>
-      f.contextKind === "contract" &&
-      f.contextId === projectId &&
-      f.capturedByAdminUserId !== null,
+  const already = await customerFeedbackReader.one(
+    and(
+      eq(customerFeedbackTable.contextKind, "contract"),
+      eq(customerFeedbackTable.contextId, projectId),
+      isNotNull(customerFeedbackTable.capturedByAdminUserId),
+    )!,
   );
   if (already) {
     throw new Error(
@@ -151,7 +154,33 @@ export async function captureClientFeedbackDuringCall(
     clientConfirmedAt: null,
     createdAt: now,
   };
-  MOCK_CUSTOMER_FEEDBACK.push(row);
+  await db.insert(customerFeedbackTable).values({
+    id: row.id,
+    contextKind: row.contextKind,
+    contextId: row.contextId,
+    customerName: row.customerName,
+    customerEmail: row.customerEmail,
+    overallStars: row.overallStars,
+    metExpectations: row.metExpectations,
+    communication: row.communication,
+    wouldHireAgain: row.wouldHireAgain,
+    prose: row.prose,
+    contributorShoutout: row.contributorShoutout,
+    attributionConsent: row.attributionConsent,
+    googleReviewOptIn: row.googleReviewOptIn,
+    googleReviewFollowupStatus: row.googleReviewFollowupStatus,
+    googleReviewFollowupSentAt: row.googleReviewFollowupSentAt,
+    publishedAt: row.publishedAt,
+    publishedQuote: row.publishedQuote,
+    publishedForUserId: row.publishedForUserId,
+    capturedByAdminUserId: row.capturedByAdminUserId,
+    captureContext: row.captureContext,
+    meetingMinuteId: row.meetingMinuteId,
+    clientConfirmationStatus: row.clientConfirmationStatus,
+    clientConfirmationToken: row.clientConfirmationToken,
+    clientConfirmedAt: row.clientConfirmedAt,
+    createdAt: row.createdAt,
+  });
 
   // Audit — captures the provenance shape explicitly so the
   // pattern-surfacing task (#266) can flag admins with an unusual

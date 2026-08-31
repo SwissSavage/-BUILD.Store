@@ -23,7 +23,8 @@ import { eq } from "drizzle-orm";
 import { peerReviews as peerReviewsTable } from "@/db/schema";
 import { peerReviewReader } from "@/lib/readers";
 import { getProjectById } from "@/lib/readers/projects";
-import { feedbackForContext } from "@/lib/mock-data/customer-feedback";
+import { customerFeedback as customerFeedbackTable } from "@/db/schema";
+import { customerFeedbackReader } from "@/lib/readers";
 import { creditRecoveryPool } from "@/lib/writers/reserve-pool";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { evaluateBonusGate } from "@/lib/bonus-gate";
@@ -87,7 +88,12 @@ export async function executeBonusDecision(formData: FormData) {
     );
   }
 
-  const feedback = feedbackForContext(projectId)[0] ?? null;
+  const feedback =
+    (
+      await customerFeedbackReader.where(
+        eq(customerFeedbackTable.contextId, projectId),
+      )
+    )[0] ?? null;
   // Scoped to this project in the query. A bonus-gate evaluation must
   // not read every review in the cooperative to find the handful
   // attached to this contract.

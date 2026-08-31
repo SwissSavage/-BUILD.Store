@@ -15,13 +15,24 @@
  * routing info. Our DB only retains Stripe's `acct_*` token. PCI scope
  * stays SAQ-A; bank-grade security lives on Stripe's side.
  *
- * Sandbox behavior:
- *   - Mutates MOCK_USERS / MOCK_SPLITS in memory.
- *   - Returns synthetic Stripe-shaped IDs.
+ * Persistence (2026-08-31): writes to `users` and `revenue_splits`.
+ * These four functions mutated in-memory fixtures until then, so a
+ * contributor completing payout onboarding got an `acct_*` id that
+ * existed for one request, and a dispatched transfer left the split
+ * row untouched — the payout queue never drained.
+ *
+ * Still synthetic where Stripe would be: no SDK call is made. The
+ * account id and transfer id are generated locally. What is real now
+ * is that the state changes survive, so the queue, the onboarding
+ * gate and the settlement page agree with each other.
  * ============================================================
  */
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_SPLITS } from "@/lib/mock-data/splits";
+import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { revenueSplits, users } from "@/db/schema";
+import { getUserById } from "@/lib/readers/users";
+import { splitReader } from "@/lib/readers";
 import type { PayoutStatus } from "@/lib/types";
 
 /**
@@ -33,15 +44,20 @@ export async function createConnectAccount(userId: string): Promise<{
   accountId: string;
   onboardingUrl: string;
 }> {
-  const user = MOCK_USERS.find((u) => u.id === userId);
+  const user = await getUserById(userId);
   if (!user) throw new Error("User not found");
-  if (!user.stripeAccountId) {
-    user.stripeAccountId = `acct_1Q9${userId.replace(/[^a-z0-9]/g, "")}_${Date.now().toString(36)}`;
-    user.updatedAt = new Date().toISOString();
+
+  let accountId = user.stripeAccountId;
+  if (!accountId) {
+    accountId = `acct_${randomUUID()}`;
+    await db
+      .update(users)
+      .set({ stripeAccountId: accountId, updatedAt: new Date().toISOString() })
+      .where(eq(users.id, userId));
   }
   return {
-    accountId: user.stripeAccountId,
-    onboardingUrl: `/profile/payouts/onboard?acct=${user.stripeAccountId}`,
+    accountId,
+    onboardingUrl: `/profile/payouts/onboard?acct=${accountId}`,
   };
 }
 
@@ -51,10 +67,12 @@ export async function createConnectAccount(userId: string): Promise<{
  * `details_submitted=true` and `payouts_enabled=true`.
  */
 export async function markPayoutsEnabled(userId: string): Promise<void> {
-  const user = MOCK_USERS.find((u) => u.id === userId);
+  const user = await getUserById(userId);
   if (!user) throw new Error("User not found");
-  user.stripePayoutsEnabled = true;
-  user.updatedAt = new Date().toISOString();
+  await db
+    .update(users)
+    .set({ stripePayoutsEnabled: true, updatedAt: new Date().toISOString() })
+    .where(eq(users.id, userId));
 }
 
 /**
@@ -62,11 +80,16 @@ export async function markPayoutsEnabled(userId: string): Promise<void> {
  * deauthorize the Connect account via Stripe's OAuth API.
  */
 export async function disconnectPayouts(userId: string): Promise<void> {
-  const user = MOCK_USERS.find((u) => u.id === userId);
+  const user = await getUserById(userId);
   if (!user) throw new Error("User not found");
-  user.stripeAccountId = null;
-  user.stripePayoutsEnabled = false;
-  user.updatedAt = new Date().toISOString();
+  await db
+    .update(users)
+    .set({
+      stripeAccountId: null,
+      stripePayoutsEnabled: false,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(users.id, userId));
 }
 
 /**
@@ -82,16 +105,19 @@ export async function disconnectPayouts(userId: string): Promise<void> {
 export async function dispatchTransfer(
   splitId: string,
 ): Promise<{ status: PayoutStatus; transferId: string | null; reason?: string }> {
-  const split = MOCK_SPLITS.find((s) => s.id === splitId);
+  const split = await splitReader.byId(splitId);
   if (!split) throw new Error("Split row not found");
 
-  // In sandbox: instant success unless the recipient is a contributor
-  // without payouts enabled.
-  const recipient = MOCK_USERS.find((u) => u.id === split.recipientId);
+  const recipient = await getUserById(split.recipientId);
   if (recipient && !recipient.stripePayoutsEnabled) {
-    split.payoutStatus = "failed";
-    split.notes =
-      "Stripe Connect payouts not enabled. Contributor needs to finish onboarding.";
+    await db
+      .update(revenueSplits)
+      .set({
+        payoutStatus: "failed",
+        notes:
+          "Stripe Connect payouts not enabled. Contributor needs to finish onboarding.",
+      })
+      .where(eq(revenueSplits.id, splitId));
     return {
       status: "failed",
       transferId: null,
@@ -99,8 +125,20 @@ export async function dispatchTransfer(
     };
   }
 
-  split.payoutStatus = "sent";
-  split.payoutSentAt = new Date().toISOString();
-  split.stripeTransferId = `tr_sandbox_${Date.now().toString(36)}`;
-  return { status: "sent", transferId: split.stripeTransferId };
+  const transferId = `tr_${randomUUID()}`;
+  // Guarded so a split already marked sent can't be dispatched twice.
+  // Without persistence this could not have been enforced at all —
+  // and double-dispatch on a payout is money out the door twice.
+  const claimed = await db
+    .update(revenueSplits)
+    .set({
+      payoutStatus: "sent",
+      payoutSentAt: new Date().toISOString(),
+      stripeTransferId: transferId,
+    })
+    .where(eq(revenueSplits.id, splitId))
+    .returning({ id: revenueSplits.id });
+  if (claimed.length === 0) throw new Error("Split row not found");
+
+  return { status: "sent", transferId };
 }

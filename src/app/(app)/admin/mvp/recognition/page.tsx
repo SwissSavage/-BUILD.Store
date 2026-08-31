@@ -11,8 +11,8 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
+import { getAllUsers } from "@/lib/readers/users";
+import { mvpScoreReader, recognitionReader, safely } from "@/lib/readers";
 import {
   MOCK_FUTURE_MODERNIST_RECOGNITIONS,
   periodKeyFor,
@@ -23,10 +23,12 @@ import {
   selectFutureModernist,
   rescindFutureModernist,
 } from "@/lib/future-modernist-actions";
-import { publicName } from "@/lib/types";
+import { publicName, type User } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 const SHORTLIST_SIZE = 5;
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminFutureModernistPage() {
   await requireAdmin();
@@ -37,14 +39,22 @@ export default async function AdminFutureModernistPage() {
   // the MVP shortlist (Partners don't get OVR scores per the locked tier
   // matrix), but the selection form's universe is open to ALL active
   // users so admin can recognize Partners by editorial judgment.
-  const shortlist = MOCK_MVP_SCORES.filter((s) => !s.isProvisional)
+  // Reader swap 2026-08-29: shortlist and eligibility both read seed
+  // data, so recognition would have been awarded to seed profiles.
+  const [{ users: roster }, allScores] = await Promise.all([
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => mvpScoreReader.all(), []),
+  ]);
+  const userById = new Map(roster.map((u) => [u.id, u]));
+
+  const shortlist = allScores.filter((s) => !s.isProvisional)
     .sort((a, b) => b.ovr - a.ovr)
     .slice(0, SHORTLIST_SIZE);
 
   // Recognition-eligible universe: all active users (Members + Partners).
   // Excludes prospects/viewers and self-managed admins who are operations
   // accounts rather than recognized contributors.
-  const eligibleUsers = MOCK_USERS.filter(
+  const eligibleUsers = roster.filter(
     (u) =>
       u.membershipTier === "member" || u.membershipTier === "partner",
   );
@@ -89,7 +99,7 @@ export default async function AdminFutureModernistPage() {
         </p>
         <ul className="mt-4 space-y-2 text-sm">
           {shortlist.map((s, i) => {
-            const user = MOCK_USERS.find((u) => u.id === s.userId);
+            const user = userById.get(s.userId);
             if (!user) return null;
             return (
               <li
@@ -163,7 +173,7 @@ export default async function AdminFutureModernistPage() {
         ) : (
           <ul className="mt-4 space-y-3">
             {recent.map((r) => {
-              const user = MOCK_USERS.find((u) => u.id === r.userId);
+              const user = userById.get(r.userId);
               if (!user) return null;
               return (
                 <Card key={r.id}>
@@ -211,7 +221,7 @@ function SelectForm({
   eligibleUsers,
   periodKind,
 }: {
-  eligibleUsers: typeof MOCK_USERS;
+  eligibleUsers: User[];
   periodKind: "month" | "year";
 }) {
   const members = eligibleUsers

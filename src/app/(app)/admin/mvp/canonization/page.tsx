@@ -12,16 +12,13 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import {
-  MOCK_CANONIZATIONS,
-  canonizationsForYear,
-} from "@/lib/mock-data/canonizations";
+import { getAllUsers } from "@/lib/readers/users";
+import { canonizationReader, safely } from "@/lib/readers";
 import {
   canonizeYear,
   setCanonizationCaption,
 } from "@/lib/canonization-actions";
-import { publicName } from "@/lib/types";
+import { publicName, type User, type MemberCanonization } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 const TIER_LABELS: Record<string, string> = {
@@ -42,12 +39,21 @@ const TIER_ACCENT: Record<string, string> = {
   champion: "#D4AF37",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminCanonizationPage() {
   await requireAdmin();
 
+  // Reader swap 2026-08-29: canonization roll listed seed members.
+  const [{ users: roster }, allCanonizations] = await Promise.all([
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => canonizationReader.all(), []),
+  ]);
+  const userById = new Map(roster.map((u) => [u.id, u]));
+
   // Group canonizations by year for the listing.
   const years = Array.from(
-    new Set(MOCK_CANONIZATIONS.map((c) => c.year)),
+    new Set(allCanonizations.map((c) => c.year)),
   ).sort((a, b) => b - a);
 
   const currentYear = new Date().getUTCFullYear();
@@ -139,15 +145,25 @@ export default async function AdminCanonizationPage() {
         </Card>
       ) : (
         years.map((y) => (
-          <YearSection key={y} year={y} />
+          <YearSection key={y} year={y} allCanonizations={allCanonizations} userById={userById} />
         ))
       )}
     </div>
   );
 }
 
-function YearSection({ year }: { year: number }) {
-  const rows = canonizationsForYear(year).sort((a, b) => {
+function YearSection({
+  year,
+  allCanonizations,
+  userById,
+}: {
+  year: number;
+  allCanonizations: MemberCanonization[];
+  userById: Map<string, User>;
+}) {
+  const rows = allCanonizations
+    .filter((c) => c.year === year)
+    .sort((a, b) => {
     // Sort by tier rank (champion at top) then ovr desc.
     const tierRank: Record<string, number> = {
       champion: 5,
@@ -175,7 +191,7 @@ function YearSection({ year }: { year: number }) {
       </div>
       <ul className="mt-4 space-y-2">
         {rows.map((c) => {
-          const user = MOCK_USERS.find((u) => u.id === c.userId);
+          const user = userById.get(c.userId);
           if (!user) return null;
           return (
             <li

@@ -12,12 +12,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers, getUserById } from "@/lib/readers/users";
 import {
-  MOCK_MVP_PENALTIES,
-  MOCK_MVP_SCORES,
-  mvpScoreForUser,
-} from "@/lib/mock-data/mvp-scores";
+  getMvpScore,
+  getPenaltiesForUser,
+  mvpScoreReader,
+  safely,
+} from "@/lib/readers";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import {
   applyCompliancePenalty,
@@ -34,6 +35,8 @@ import {
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { MvpCard } from "@/components/MvpCard";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminMvpUserPage({
   params,
 }: {
@@ -41,13 +44,22 @@ export default async function AdminMvpUserPage({
 }) {
   await requireAdmin();
   const { userId } = await params;
-  const user = MOCK_USERS.find((u) => u.id === userId);
+  // Reader swap 2026-08-29: member, snapshot, and penalty history all
+  // read seed data, so this page showed a fictional record.
+  const user = await getUserById(userId);
   if (!user) notFound();
-  const snapshot = mvpScoreForUser(userId);
 
-  const penalties = MOCK_MVP_PENALTIES
-    .filter((p) => p.userId === userId)
-    .sort((a, b) => b.appliedAt.localeCompare(a.appliedAt));
+  const [snapshot, rawPenalties, allScores, { users: roster }] =
+    await Promise.all([
+      safely(() => getMvpScore(userId), null),
+      safely(() => getPenaltiesForUser(userId), []),
+      safely(() => mvpScoreReader.all(), []),
+      safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    ]);
+
+  const penalties = [...rawPenalties].sort((a, b) =>
+    b.appliedAt.localeCompare(a.appliedAt),
+  );
 
   const now = new Date().toISOString();
   const activeCount = penalties.filter((p) => p.expiresAt > now).length;
@@ -76,7 +88,7 @@ export default async function AdminMvpUserPage({
             user={user}
             mode="self"
             isInCourt={new Set(
-              championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS),
+              championsCourtMembers(allScores, roster),
             ).has(user.id)}
           />
         </div>

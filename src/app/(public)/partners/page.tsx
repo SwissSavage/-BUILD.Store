@@ -19,10 +19,13 @@
  */
 import Link from "next/link";
 import {
-  ECOSYSTEM_PARTNERS,
-  PRODUCT_AFFILIATES,
-} from "@/lib/mock-data/partners";
+  ecosystemPartnerReader,
+  productAffiliateReader,
+  safely,
+} from "@/lib/readers";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 /** Static-rendered. Partner rosters read from build-time mock stores. */
 
@@ -32,7 +35,12 @@ export const metadata = {
     "SaaS partners and product affiliates the Future Modern cooperative endorses. Product-side surface — talent members live on /team.",
 };
 
-export default function PartnersPage() {
+export default async function PartnersPage() {
+  const [ecosystem, affiliates] = await Promise.all([
+    safely(() => ecosystemPartnerReader.all(), []),
+    safely(() => productAffiliateReader.all(), []),
+  ]);
+
   return (
     <div className="mx-auto max-w-app px-6 py-12">
       <header>
@@ -57,6 +65,7 @@ export default function PartnersPage() {
         </p>
       </header>
 
+      {ecosystem.length > 0 && (
       <section className="mt-14">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -71,11 +80,11 @@ export default function PartnersPage() {
             </p>
           </div>
           <span className="text-xs text-ink-faint">
-            {ECOSYSTEM_PARTNERS.length} products
+            {ecosystem.length} products
           </span>
         </div>
         <div className="mt-6 grid gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {ECOSYSTEM_PARTNERS.map((p) => (
+          {ecosystem.map((p) => (
             <div
               key={p.id}
               className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4"
@@ -97,7 +106,9 @@ export default function PartnersPage() {
           ))}
         </div>
       </section>
+      )}
 
+      {affiliates.length > 0 && (
       <section className="mt-16">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -111,11 +122,11 @@ export default function PartnersPage() {
             </p>
           </div>
           <span className="text-xs text-ink-faint">
-            {PRODUCT_AFFILIATES.length} affiliates
+            {affiliates.length} affiliates
           </span>
         </div>
         <div className="mt-6 grid gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {PRODUCT_AFFILIATES.map((p) => (
+          {affiliates.map((p) => (
             <div
               key={p.id}
               className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4"
@@ -136,6 +147,7 @@ export default function PartnersPage() {
           ))}
         </div>
       </section>
+      )}
 
       <Card className="mt-16 border-[#D828A0]/40">
         <CardEyebrow>Have a product?</CardEyebrow>

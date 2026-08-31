@@ -5,9 +5,8 @@
  */
 import Link from "next/link";
 import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
-import { SERVICE_PARTNERS } from "@/lib/mock-data/partners";
 import { getAllUsers } from "@/lib/readers/users";
-import { spotlightReader, safely } from "@/lib/readers";
+import { servicePartnerReader, spotlightReader, safely } from "@/lib/readers";
 import { TradingCard, type TradingCardTier } from "@/components/TradingCard";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { Avatar } from "@/components/Avatar";
@@ -364,7 +363,13 @@ function Pillars() {
   );
 }
 
-function Partners() {
+async function Partners() {
+  const partners = await safely(() => servicePartnerReader.all(), []);
+  // Nothing to show until real signed relationships exist. The whole
+  // section disappears rather than rendering an empty grid under a
+  // heading that claims partners.
+  if (partners.length === 0) return null;
+
   return (
     <section className="fm-below-fold border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
       <div className="mx-auto max-w-app px-6 py-20">
@@ -387,7 +392,7 @@ function Partners() {
           </Link>
         </div>
         <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {SERVICE_PARTNERS.map((p) => (
+          {partners.map((p) => (
             <div
               key={p.id}
               className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 transition-colors hover:border-brand-blue"

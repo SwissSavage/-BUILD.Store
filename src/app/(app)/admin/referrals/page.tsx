@@ -14,9 +14,9 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { getAllUsers } from "@/lib/readers/users";
 import { partnerReferralReader, safely } from "@/lib/readers";
 import {
-  ECOSYSTEM_PARTNERS,
-  PRODUCT_AFFILIATES,
-} from "@/lib/mock-data/partners";
+  ecosystemPartnerReader,
+  productAffiliateReader,
+} from "@/lib/readers";
 import {
   logReferral,
   markReferralConverted,
@@ -48,6 +48,17 @@ export default async function AdminReferralsPage() {
     users: [],
     source: "postgres" as const,
   });
+
+  // Partner directories read live. Both start empty — a seeded
+  // partner is a public claim FM hasn't made.
+  const [ecosystem, affiliates] = await Promise.all([
+    safely(() => ecosystemPartnerReader.all(), []),
+    safely(() => productAffiliateReader.all(), []),
+  ]);
+  const partnerNameById = new Map<string, string>([
+    ...ecosystem.map((p) => [p.id, p.name] as const),
+    ...affiliates.map((p) => [p.id, p.name] as const),
+  ]);
   const userById = new Map(roster.map((u) => [u.id, u]));
   const allRows = await safely(() => partnerReferralReader.all(), []);
 
@@ -130,14 +141,14 @@ export default async function AdminReferralsPage() {
               >
                 <option value="">Pick a partner</option>
                 <optgroup label="SaaS Partners">
-                  {ECOSYSTEM_PARTNERS.map((p) => (
+                  {ecosystem.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
                   ))}
                 </optgroup>
                 <optgroup label="Product Affiliates">
-                  {PRODUCT_AFFILIATES.map((p) => (
+                  {affiliates.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
@@ -218,7 +229,11 @@ export default async function AdminReferralsPage() {
           <ul className="mt-4 space-y-3">
             {pending.map((r) => (
               <li key={r.id}>
-                <ReferralCard r={r} userById={userById} />
+                <ReferralCard
+                  r={r}
+                  userById={userById}
+                  partnerNameById={partnerNameById}
+                />
               </li>
             ))}
           </ul>
@@ -238,7 +253,11 @@ export default async function AdminReferralsPage() {
           <ul className="mt-4 space-y-3">
             {converted.map((r) => (
               <li key={r.id}>
-                <ReferralCard r={r} userById={userById} />
+                <ReferralCard
+                  r={r}
+                  userById={userById}
+                  partnerNameById={partnerNameById}
+                />
               </li>
             ))}
           </ul>
@@ -254,7 +273,11 @@ export default async function AdminReferralsPage() {
           <ul className="mt-4 space-y-3">
             {closedOut.map((r) => (
               <li key={r.id}>
-                <ReferralCard r={r} userById={userById} />
+                <ReferralCard
+                  r={r}
+                  userById={userById}
+                  partnerNameById={partnerNameById}
+                />
               </li>
             ))}
           </ul>
@@ -264,18 +287,21 @@ export default async function AdminReferralsPage() {
   );
 }
 
-function partnerNameFor(r: PartnerReferral): string {
-  const registry =
-    r.partnerKind === "saas_partner" ? ECOSYSTEM_PARTNERS : PRODUCT_AFFILIATES;
-  return registry.find((p) => p.id === r.partnerId)?.name ?? r.partnerId;
+function partnerNameFor(
+  names: Map<string, string>,
+  r: PartnerReferral,
+): string {
+  return names.get(r.partnerId) ?? r.partnerId;
 }
 
 function ReferralCard({
   r,
   userById,
+  partnerNameById,
 }: {
   r: PartnerReferral;
   userById: Map<string, User>;
+  partnerNameById: Map<string, string>;
 }) {
   const referrer = userById.get(r.referrerUserId);
   return (
@@ -292,7 +318,7 @@ function ReferralCard({
           </CardTitle>
           <p className="mt-1 text-[11px] text-ink-faint">
             To{" "}
-            <span className="text-ink">{partnerNameFor(r)}</span>{" "}
+            <span className="text-ink">{partnerNameFor(partnerNameById, r)}</span>{" "}
             ({PARTNER_REFERRAL_KIND_LABELS[r.partnerKind]}) · referred by{" "}
             {referrer ? (
               <span className="text-ink">{publicName(referrer)}</span>

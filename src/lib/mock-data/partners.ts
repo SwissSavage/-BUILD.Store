@@ -39,121 +39,42 @@ import type {
   ServicePartner,
 } from "@/lib/types";
 
-export const SERVICE_PARTNERS: ServicePartner[] = [
-  {
-    id: "sp_brainhub",
-    name: "BrainHub",
-    capabilities: [
-      "Software engineering",
-      "Web + frontend development",
-      "Blockchain",
-      "Technical project management",
-    ],
-    websiteUrl: null,
-    affiliateUrl: null,
-    pillarHint: "stem",
-    shippedTogether: false,
-  },
-  {
-    id: "sp_chaotic_neutral",
-    name: "Chaotic Neutral Studios",
-    capabilities: ["Film production"],
-    websiteUrl: null,
-    affiliateUrl: null,
-    pillarHint: "creative-media",
-    shippedTogether: false,
-  },
-  {
-    id: "sp_hype_us",
-    name: "Hype-US",
-    capabilities: [
-      "UI / UX design",
-      "Frontend development",
-      "Web development",
-    ],
-    websiteUrl: "https://hype-us.com",
-    affiliateUrl: null,
-    pillarHint: "stem",
-    shippedTogether: true,
-  },
-  {
-    id: "sp_lucid",
-    name: "Lucid Consulting",
-    capabilities: [
-      "Pitch decks + sales narrative",
-      "Growth + brand",
-      "Operations strategy",
-      "Fractional co-founder",
-    ],
-    websiteUrl: "https://lucidconsult.ing",
-    affiliateUrl: null,
-    pillarHint: "professional-services",
-    shippedTogether: false,
-  },
-  {
-    id: "sp_nyoka",
-    name: "Nyoka",
-    capabilities: [
-      "Software engineering",
-      "Web + frontend development",
-      "Blockchain",
-      "Technical project management",
-    ],
-    websiteUrl: null,
-    affiliateUrl: null,
-    pillarHint: "stem",
-    shippedTogether: false,
-  },
-  {
-    id: "sp_synthax",
-    name: "Syndika / Synthax.codes",
-    capabilities: [
-      "Software engineering",
-      "Web + frontend development",
-      "Blockchain",
-      "Technical project management",
-    ],
-    websiteUrl: "https://synthax.codes",
-    affiliateUrl: null,
-    pillarHint: "stem",
-    shippedTogether: true,
-  },
-  {
-    id: "sp_underscore_ave",
-    name: "Underscore Ave",
-    capabilities: ["Photography"],
-    websiteUrl: null,
-    affiliateUrl: null,
-    pillarHint: "creative-media",
-    shippedTogether: false,
-  },
-];
+/**
+ * Service partners — orgs FM has signed letters of intent with.
+ *
+ * Deliberately empty. Every row here renders on the homepage as a
+ * public claim that FM has a signed co-delivery relationship with
+ * that org. The seven example orgs that used to sit here were
+ * fixtures and were making that claim publicly.
+ */
+export const SERVICE_PARTNERS: ServicePartner[] = [];
 
-export const ECOSYSTEM_PARTNERS: EcosystemPartner[] = [
-  { id: "ep_panvala", name: "Panvala", role: "No-cost fundraising", websiteUrl: null, affiliateUrl: null },
-  { id: "ep_collab_land", name: "Collab.land", role: "Token-based access management", websiteUrl: null, affiliateUrl: null },
-  { id: "ep_roll", name: "Roll", role: "Social token issuer", websiteUrl: null, affiliateUrl: null },
-  { id: "ep_satoshis_closet", name: "Satoshi's Closet", role: "Wallet", websiteUrl: "https://satoshiscloset.com", affiliateUrl: null },
-  { id: "ep_diode", name: "Diode", role: "Connectivity", websiteUrl: "https://diode.io", affiliateUrl: null },
-  { id: "ep_knownorigin", name: "KnownOrigin", role: "Curated NFT marketplace", websiteUrl: null, affiliateUrl: null },
-  { id: "ep_zora", name: "Zora", role: "NFT minting + marketplace", websiteUrl: null, affiliateUrl: null },
-  { id: "ep_tiktok", name: "TikTok", role: "Livestreaming", websiteUrl: null, affiliateUrl: null },
-  { id: "ep_hello_group", name: "The Hello Group", role: "Touring, digital growth, distribution", websiteUrl: null, affiliateUrl: null },
-  { id: "ep_catalog", name: "Catalog", role: "Curated music NFT marketplace", websiteUrl: null, affiliateUrl: null },
-  { id: "ep_40acres", name: "40acres DAO", role: "Black crypto cultural space", websiteUrl: null, affiliateUrl: null },
-  { id: "ep_fwb", name: "Friends with Benefits", role: "Cultural DAO", websiteUrl: null, affiliateUrl: null },
-  { id: "ep_giver", name: "Giver Marketing", role: "Marketing", websiteUrl: null, affiliateUrl: null },
-];
+/**
+ * SaaS partners — software products the cooperative endorses and
+ * earns referral revenue from.
+ *
+ * Empty until a real referral relationship is documented. Giver
+ * Marketing previously sat here and has moved to affiliates, per
+ * Jamar 2026-08-31: it is not a SaaS product.
+ */
+export const ECOSYSTEM_PARTNERS: EcosystemPartner[] = [];
 
+/**
+ * Product affiliates — real referral relationships only.
+ *
+ * Trimmed to the three Jamar confirmed 2026-08-31. Do not add an
+ * entry here without a relationship that actually exists; this
+ * renders publicly on /partners.
+ */
+/**
+ * Product affiliates — products only.
+ *
+ * The bar is that the entry is a product someone can go use. Talent
+ * groups do not belong here even when the relationship is real:
+ * routing work to another talent group goes through the cooperative,
+ * not through a public link that lets someone bypass it. Giver
+ * Marketing and Reach were removed on that basis (Jamar 2026-08-31).
+ */
 export const PRODUCT_AFFILIATES: ProductAffiliate[] = [
-  { id: "pa_notion", name: "Notion", websiteUrl: "https://notion.so", affiliateUrl: null },
-  { id: "pa_gatsby", name: "Gatsby Events", websiteUrl: "https://gatsby.events", affiliateUrl: null },
-  { id: "pa_versabot", name: "VersaBot", websiteUrl: "https://versabot.co", affiliateUrl: null },
-  { id: "pa_satoshis", name: "Satoshi's Closet", websiteUrl: "https://satoshiscloset.com", affiliateUrl: null },
-  { id: "pa_zenith", name: "Zenith", websiteUrl: "https://zenithai.io", affiliateUrl: null },
   { id: "pa_viim", name: "ViiM", websiteUrl: null, affiliateUrl: null },
-  { id: "pa_nanogenesis", name: "NanoGenesis Labs", websiteUrl: null, affiliateUrl: null },
-  { id: "pa_livepeer", name: "Livepeer", websiteUrl: "https://livepeer.org", affiliateUrl: null },
-  { id: "pa_reach", name: "Reach", websiteUrl: null, affiliateUrl: null },
-  { id: "pa_fwb_fest", name: "FWB Fest", websiteUrl: null, affiliateUrl: null },
 ];

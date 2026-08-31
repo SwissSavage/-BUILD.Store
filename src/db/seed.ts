@@ -138,6 +138,11 @@ async function main() {
   await seedTable("store_categories", schema.storeCategories, MOCK_STORE_CATEGORIES);
   await seedTable("whitelist_tiers", schema.whitelistTiers, MOCK_WHITELIST_TIERS);
   await seedTable("jobs", schema.jobs, MOCK_JOBS);
+  // Partner directories. Every row renders on a public page as a
+  // claim that FM has a real relationship with that org, so these
+  // hold confirmed relationships only — service partners and SaaS
+  // partners are both empty, affiliates carries the three Jamar
+  // confirmed 2026-08-31.
   await seedTable("service_partners", schema.servicePartners, SERVICE_PARTNERS);
   await seedTable("ecosystem_partners", schema.ecosystemPartners, ECOSYSTEM_PARTNERS);
   await seedTable("product_affiliates", schema.productAffiliates, PRODUCT_AFFILIATES);

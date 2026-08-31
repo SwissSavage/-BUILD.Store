@@ -14,7 +14,8 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
 import { distributeBuild } from "@/lib/wallet-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { safely } from "@/lib/readers";
 import { MOCK_TRANSACTIONS } from "@/lib/mock-data/tokens";
 import type { TokenTransaction } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
@@ -45,8 +46,16 @@ const TYPES: TokenTransaction["type"][] = [
   "admin_grant",
 ];
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminTokensPage() {
   await requireAdmin();
+  // Reader swap 2026-08-29: was MOCK_USERS.
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+  const userById = new Map(roster.map((u) => [u.id, u]));
 
   const recent = [...MOCK_TRANSACTIONS]
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
@@ -73,7 +82,7 @@ export default async function AdminTokensPage() {
                 className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
                 required
               >
-                {MOCK_USERS.map((u) => (
+                {roster.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.firstName} {u.lastName}
                   </option>
@@ -155,7 +164,7 @@ export default async function AdminTokensPage() {
               </thead>
               <tbody>
                 {recent.map((tx) => {
-                  const u = MOCK_USERS.find((x) => x.id === tx.userId);
+                  const u = userById.get(tx.userId);
                   return (
                     <tr key={tx.id} className="border-t border-[var(--surface-border)]">
                       <td className="p-4 text-ink-muted">

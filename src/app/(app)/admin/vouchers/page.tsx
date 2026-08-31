@@ -20,9 +20,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_BUILD_VOUCHERS } from "@/lib/mock-data/vouchers";
-import { publicName } from "@/lib/types";
+import { getAllUsers } from "@/lib/readers/users";
+import { voucherReader, safely } from "@/lib/readers";
+import { publicName, type User } from "@/lib/types";
 import type { BuildVoucher } from "@/lib/types";
 import {
   BUILD_VOUCHER_SOURCE_TYPE_LABELS,
@@ -63,8 +63,8 @@ function sumByStatus(
  * Partners + Prospects — no Viewers (no earning relationship). No
  * suspended accounts.
  */
-function issuanceCandidates() {
-  return [...MOCK_USERS]
+function issuanceCandidates(roster: User[]) {
+  return [...roster]
     .filter(
       (u) =>
         (u.membershipTier === "member" ||
@@ -90,11 +90,22 @@ function groupByUser(rows: BuildVoucher[]): Map<string, BuildVoucher[]> {
   return byUser;
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminVouchersPage() {
   const viewer = await getCurrentUser();
   if (!viewer || !viewer.isAdmin) redirect("/signin?next=/admin/vouchers");
 
-  const rows = [...MOCK_BUILD_VOUCHERS];
+  // Reader swap 2026-08-29: was MOCK_USERS.
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+  const userById = new Map(roster.map((u) => [u.id, u]));
+  const allRows = await safely(() => voucherReader.all(), []);
+
+
+  const rows = allRows;
   const unswappedTotal = sumByStatus(rows, "unswapped");
   const pendingTotal = sumByStatus(rows, "pending_swap");
   const swappedTotal = sumByStatus(rows, "swapped");
@@ -108,7 +119,7 @@ export default async function AdminVouchersPage() {
     .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
 
   const grouped = groupByUser(rows);
-  const candidates = issuanceCandidates();
+  const candidates = issuanceCandidates(roster);
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -335,7 +346,7 @@ export default async function AdminVouchersPage() {
         ) : (
           <ul className="mt-4 space-y-3">
             {pendingQueue.map((row) => {
-              const user = MOCK_USERS.find((u) => u.id === row.userId);
+              const user = userById.get(row.userId);
               return (
                 <li key={row.id}>
                   <Card>
@@ -420,7 +431,7 @@ export default async function AdminVouchersPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {Array.from(grouped.entries()).map(([userId, userRows]) => {
-              const user = MOCK_USERS.find((u) => u.id === userId);
+              const user = userById.get(userId);
               if (!user) return null;
               const active = userRows
                 .filter((v) => v.swapStatus !== "forfeited")

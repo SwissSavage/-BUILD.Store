@@ -18,7 +18,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { safely } from "@/lib/readers";
 import {
   adminEarningsByUser,
   adminPoolLifetimeTotal,
@@ -45,9 +46,19 @@ const USD_FMT = new Intl.NumberFormat("en-US", {
   currency: "USD",
 });
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPoolsPage() {
   const viewer = await getCurrentUser();
   if (!viewer || !viewer.isAdmin) redirect("/signin?next=/admin/pools");
+
+  // Reader swap 2026-08-29: was MOCK_USERS.
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+  const userById = new Map(roster.map((u) => [u.id, u]));
+
 
   const treasury = treasuryBalance();
   const lp = liquidityPoolBalance();
@@ -169,7 +180,7 @@ export default async function AdminPoolsPage() {
               {Array.from(adminByUser.entries())
                 .sort((a, b) => b[1] - a[1])
                 .map(([userId, total]) => {
-                  const user = MOCK_USERS.find((u) => u.id === userId);
+                  const user = userById.get(userId);
                   return (
                     <li
                       key={userId}

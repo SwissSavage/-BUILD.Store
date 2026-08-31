@@ -16,10 +16,19 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_SELLER_APPLICATIONS } from "@/lib/mock-data/seller-applications";
-import { MOCK_PRODUCTS } from "@/lib/mock-data/products";
-import { MOCK_ORDERS } from "@/lib/mock-data/orders";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import {
+  sellerApplications as sellerApplicationsTable,
+  products as productsTable,
+} from "@/db/schema";
+import { getAllUsers } from "@/lib/readers/users";
+import {
+  orderReader,
+  productReader,
+  safely,
+  sellerApplicationReader,
+} from "@/lib/readers";
 import {
   MARKETPLACE_CATEGORY_LABELS,
   ORDER_STATUS_LABELS,
@@ -39,12 +48,17 @@ async function decideApplication(formData: FormData) {
   const decision = String(formData.get("decision")) as "approved" | "rejected";
   const note = String(formData.get("note") ?? "").trim() || null;
 
-  const app = MOCK_SELLER_APPLICATIONS.find((a) => a.id === id);
-  if (!app) return;
-  app.status = decision;
-  app.reviewedBy = admin.id;
-  app.reviewedAt = new Date().toISOString();
-  app.adminNote = note;
+  // Writer swap 2026-08-29: seller approval mutated an in-memory
+  // object, so a member approved to sell watched it revert.
+  await db
+    .update(sellerApplicationsTable)
+    .set({
+      status: decision,
+      reviewedBy: admin.id,
+      reviewedAt: new Date().toISOString(),
+      adminNote: note,
+    })
+    .where(eq(sellerApplicationsTable.id, id));
   revalidatePath("/admin/marketplace");
   revalidatePath("/admin");
   revalidatePath("/profile/seller");
@@ -57,31 +71,42 @@ async function decideProduct(formData: FormData) {
   const decision = String(formData.get("decision")) as "active" | "rejected";
   const note = String(formData.get("note") ?? "").trim() || null;
 
-  const prod = MOCK_PRODUCTS.find((p) => p.id === id);
-  if (!prod) return;
-  prod.status = decision;
-  prod.adminNote = note;
-  prod.updatedAt = new Date().toISOString();
-  // reviewedBy isn't on Product today; audit table will carry it in prod.
+  // Writer swap 2026-08-29: listing approval was in-memory too, so an
+  // approved product never reached the public store.
+  await db
+    .update(productsTable)
+    .set({
+      status: decision,
+      adminNote: note,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(productsTable.id, id));
+  // reviewedBy isn't a column on products; the audit log carries it.
   void admin;
   revalidatePath("/admin/marketplace");
   revalidatePath("/admin");
   revalidatePath("/store");
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminMarketplacePage() {
   await requireAdmin();
 
-  const pendingApps = MOCK_SELLER_APPLICATIONS.filter(
-    (a) => a.status === "pending",
-  );
-  const reviewedApps = MOCK_SELLER_APPLICATIONS.filter(
-    (a) => a.status !== "pending",
-  );
-  const pendingProducts = MOCK_PRODUCTS.filter(
+  // Reader swap 2026-08-29: both queues read seed data.
+  const [allApps, allProducts, { users: roster }] = await Promise.all([
+    safely(() => sellerApplicationReader.all(), []),
+    safely(() => productReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const userById = new Map(roster.map((u) => [u.id, u]));
+
+  const pendingApps = allApps.filter((a) => a.status === "pending");
+  const reviewedApps = allApps.filter((a) => a.status !== "pending");
+  const pendingProducts = allProducts.filter(
     (p) => p.status === "pending_review",
   );
-  const activeProducts = MOCK_PRODUCTS.filter((p) => p.status === "active");
+  const activeProducts = allProducts.filter((p) => p.status === "active");
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -109,7 +134,7 @@ export default async function AdminMarketplacePage() {
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {pendingApps.map((app) => {
-              const user = MOCK_USERS.find((u) => u.id === app.userId);
+              const user = userById.get(app.userId);
               return (
                 <Card key={app.id}>
                   <CardEyebrow>
@@ -173,7 +198,7 @@ export default async function AdminMarketplacePage() {
               </thead>
               <tbody>
                 {reviewedApps.map((app) => {
-                  const user = MOCK_USERS.find((u) => u.id === app.userId);
+                  const user = userById.get(app.userId);
                   return (
                     <tr
                       key={app.id}
@@ -221,7 +246,7 @@ export default async function AdminMarketplacePage() {
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {pendingProducts.map((p) => {
-              const seller = MOCK_USERS.find((u) => u.id === p.sellerId);
+              const seller = userById.get(p.sellerId);
               return (
                 <Card key={p.id}>
                   <CardEyebrow>
@@ -297,8 +322,16 @@ const ORDER_LANES: OrderStatus[] = [
  * status here — that's the seller's job — but they can intervene from
  * the order detail page if they need to.
  */
-function AdminOrdersSection() {
-  const orders = [...MOCK_ORDERS].sort(
+async function AdminOrdersSection() {
+  // Loads its own data: rendered deep in the page body, so it does not
+  // share the top-level fetch.
+  const [allOrders, { users: sellers }] = await Promise.all([
+    safely(() => orderReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const sellerById = new Map(sellers.map((u) => [u.id, u]));
+
+  const orders = [...allOrders].sort(
     (a, b) => b.placedAt.localeCompare(a.placedAt),
   );
   const grossDelivered = orders
@@ -373,9 +406,7 @@ function AdminOrdersSection() {
                   </thead>
                   <tbody>
                     {rows.map((o) => {
-                      const seller = MOCK_USERS.find(
-                        (u) => u.id === o.sellerId,
-                      );
+                      const seller = sellerById.get(o.sellerId);
                       const split = previewOrderSplit(Number(o.subtotal));
                       return (
                         <tr

@@ -15,12 +15,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import {
-  milestonesForProject,
-  projectProgress,
-} from "@/lib/mock-data/project-milestones";
+import { getProjectById } from "@/lib/readers/projects";
+import { getMilestonesForProject, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
+import { projectProgress } from "@/lib/mock-data/project-milestones";
 import {
   createMilestone,
   deleteMilestone,
@@ -35,6 +33,7 @@ import {
   publicName,
   type MilestoneStatus,
   type ProjectMilestone,
+  type User,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
@@ -50,10 +49,20 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-function ownerLabel(ownerUserId: string): string {
-  const u = MOCK_USERS.find((x) => x.id === ownerUserId);
-  return u ? publicName(u) : ownerUserId;
+/**
+ * Resolve a milestone owner's display name from the already-loaded
+ * roster. Falls back to the raw id when the owner is no longer a
+ * member, which is better than rendering blank.
+ */
+function makeOwnerLabel(roster: User[]) {
+  const byId = new Map(roster.map((u) => [u.id, u]));
+  return (ownerUserId: string): string => {
+    const u = byId.get(ownerUserId);
+    return u ? publicName(u) : ownerUserId;
+  };
 }
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminTrackerPage({
   params,
@@ -62,15 +71,23 @@ export default async function AdminTrackerPage({
 }) {
   await requireAdmin();
   const { id } = await params;
-  const project = MOCK_PROJECTS.find((p) => p.id === id);
+  // Reader swap 2026-08-29: admin tracker read seed projects, seed
+  // milestones, and a seed roster.
+  const project = await getProjectById(id);
   if (!project) notFound();
 
-  const milestones = milestonesForProject(id);
+  const [milestones, { users: roster }] = await Promise.all([
+    safely(() => getMilestonesForProject(id), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const ownerLabel = makeOwnerLabel(roster);
+  const userById = new Map(roster.map((u) => [u.id, u]));
+
   const progress = projectProgress(id);
   const teamCandidates = project.assignedMemberIds
     .concat(project.adminUserIds)
     .filter((v, i, arr) => arr.indexOf(v) === i)
-    .map((uid) => MOCK_USERS.find((u) => u.id === uid))
+    .map((uid) => userById.get(uid))
     .filter((u): u is NonNullable<typeof u> => Boolean(u));
 
   return (
@@ -170,6 +187,7 @@ export default async function AdminTrackerPage({
           ) : (
             milestones.map((m) => (
               <MilestoneRow
+                ownerLabel={ownerLabel}
                 key={m.id}
                 milestone={m}
                 teamCandidates={teamCandidates}
@@ -254,9 +272,11 @@ export default async function AdminTrackerPage({
 function MilestoneRow({
   milestone,
   teamCandidates,
+  ownerLabel,
 }: {
   milestone: ProjectMilestone;
   teamCandidates: Array<{ id: string }>;
+  ownerLabel: (ownerUserId: string) => string;
 }) {
   void teamCandidates;
   return (

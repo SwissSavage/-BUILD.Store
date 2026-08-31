@@ -19,12 +19,13 @@
  */
 
 import { revalidatePath } from "next/cache";
+import { notify } from "@/lib/writers/notifications";
+import { getNotificationsForUser } from "@/lib/readers/notifications";
 import { eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { db } from "@/db/client";
 import { inviteLinks, projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 /**
@@ -83,9 +84,13 @@ export async function dispatchRfpQuoteRequests(
     // Debounce — check for a recent dispatch to this user for this
     // RFP. Uses the notifications table itself; href suffix carries
     // the pair identifier.
-    const already = MOCK_NOTIFICATIONS.some(
+    // Debounce against the notifications table. This read the
+    // in-memory array, which reset on every deploy — so the same
+    // member could be re-pinged about the same contract after each
+    // one, and the debounce window silently meant nothing.
+    const recent = await getNotificationsForUser(uid, 100);
+    const already = recent.some(
       (n) =>
-        n.userId === uid &&
         n.kind === "rfp_quote_request" &&
         n.href.endsWith(`/contracts/${rfpId}?dispatch=1`) &&
         now - new Date(n.createdAt).getTime() < debounceMs,
@@ -95,17 +100,14 @@ export async function dispatchRfpQuoteRequests(
       continue;
     }
 
-    MOCK_NOTIFICATIONS.push({
-      id: `ntf_rfp_${Date.now().toString(36)}_${Math.random()
-        .toString(36)
-        .slice(2, 6)}`,
+    // Shared writer — the in-memory push meant a routed contract
+    // never reached the member it was routed to.
+    await notify({
       userId: uid,
       kind: "rfp_quote_request",
       title: `Quote request: ${rfp.title}`,
       body: `Admin routed this open contract to you. Review the brief and submit a bid if it's a fit.`,
       href: `/contracts/${rfpId}?dispatch=1`,
-      createdAt: new Date().toISOString(),
-      readAt: null,
     });
 
     await logAuditEvent({

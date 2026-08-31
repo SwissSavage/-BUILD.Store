@@ -23,11 +23,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { notify } from "@/lib/writers/notifications";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { Notification } from "@/lib/types";
 
@@ -74,17 +74,13 @@ export async function inviteMemberToDocumenso(formData: FormData) {
 
   const signupUrl = `${DOCUMENSO_BASE.replace(/\/$/, "")}/signup?email=${encodeURIComponent(target.email)}`;
 
-  const ntf: Notification = {
-    id: `ntf_dmns_${userId}_${Math.random().toString(36).slice(2, 6)}`,
+  await notify({
     userId,
     kind: "documenso_account_ready",
     title: "Your Documenso account is ready to claim",
     body: `As a ${target.membershipTier === "member" ? "Member" : "Partner"}, you get a free Documenso account on ${DOCUMENSO_BASE}. Claim it and use it to send + track your own signed documents.`,
     href: signupUrl,
-    createdAt: now,
-    readAt: null,
-  };
-  MOCK_NOTIFICATIONS.push(ntf);
+  });
 
   await logAuditEvent({
     actorUserId: admin.id,

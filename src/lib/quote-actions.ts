@@ -29,6 +29,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { notify } from "@/lib/writers/notifications";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
@@ -37,8 +38,7 @@ import {
   users as usersTable,
 } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import { getUserById } from "@/lib/readers/users";
 import { updateHubspotDealStage } from "@/lib/crm-stub";
 import {
   DOCUMENSO_TEMPLATES,
@@ -93,21 +93,11 @@ async function notifyAdminsOnQuoteDecision(
     adminUserIds.push(quote.createdByUserId);
   }
   const href = `/admin/cooperative-quotes`;
-  const now = new Date().toISOString();
+  // Routed through the shared writer. These were pushed onto the
+  // in-memory array, so a submitted quote never lit the admin queue
+  // it was telling the admin to go look at.
   for (const adminId of adminUserIds) {
-    const ntf: Notification = {
-      id: `ntf_quote_${quote.id}_${adminId}_${Math.random()
-        .toString(36)
-        .slice(2, 5)}`,
-      userId: adminId,
-      kind,
-      title,
-      body,
-      href,
-      createdAt: now,
-      readAt: null,
-    };
-    MOCK_NOTIFICATIONS.push(ntf);
+    await notify({ userId: adminId, kind, title, body, href });
   }
 }
 
@@ -213,7 +203,9 @@ function validateBuilderPricing(
  * Parse the proposedBuildersJson payload. Validates every entry has
  * a userId, pricing, timeline, and relevance. Returns typed builders.
  */
-function parseProposedBuilders(raw: string): ProposedBuilder[] {
+async function parseProposedBuilders(
+  raw: string,
+): Promise<ProposedBuilder[]> {
   if (!raw.trim()) {
     throw new Error("Propose at least one builder.");
   }
@@ -252,7 +244,7 @@ function parseProposedBuilders(raw: string): ProposedBuilder[] {
         `Duplicate builder ${userId}. Each Builder can appear at most once per quote.`,
       );
     }
-    const user = MOCK_USERS.find((u) => u.id === userId);
+    const user = await getUserById(userId);
     if (!user) {
       throw new Error(`Unknown builder: ${userId}`);
     }
@@ -318,7 +310,7 @@ export async function createCooperativeQuote(formData: FormData) {
     throw new Error("Client display name is required.");
   }
 
-  const proposedBuilders = parseProposedBuilders(proposedBuildersJson);
+  const proposedBuilders = await parseProposedBuilders(proposedBuildersJson);
 
   if (scopeSummary.length < 20) {
     throw new Error(
@@ -509,7 +501,7 @@ export async function approveCooperativeQuote(formData: FormData) {
   quote.clientContactEmail = clientContactEmail;
   quote.clientContactName = clientContactName;
 
-  const leadUser = MOCK_USERS.find((u) => u.id === selectedLeadUserId);
+  const leadUser = await getUserById(selectedLeadUserId);
   const leadName = leadUser
     ? `${leadUser.firstName} ${leadUser.lastName}`.trim()
     : selectedLeadUserId;
@@ -961,7 +953,7 @@ export async function retrySowDispatch(formData: FormData) {
     );
   }
 
-  const leadUser = MOCK_USERS.find((u) => u.id === quote.selectedLeadUserId);
+  const leadUser = await getUserById(quote.selectedLeadUserId);
   const leadName = leadUser
     ? `${leadUser.firstName} ${leadUser.lastName}`.trim()
     : quote.selectedLeadUserId;

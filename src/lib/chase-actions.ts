@@ -9,7 +9,7 @@
  * lightweight — an in-app notification for peers/PM, a fresh
  * magic-link email (or the intent thereof, MVP) for the client.
  *
- * Sandbox: writes to MOCK_NOTIFICATIONS + audit log. Production
+ * Writes notifications + audit log. Production
  * dispatches real email through Postmark and the notification
  * inserter goes to the notifications table.
  *
@@ -20,9 +20,9 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import { getProjectById } from "@/lib/readers/projects";
+import { getUserById } from "@/lib/readers/users";
+import { notify } from "@/lib/writers/notifications";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { Notification } from "@/lib/types";
 
@@ -32,25 +32,23 @@ function nextNotifId(prefix: string): string {
     .slice(2, 5)}`;
 }
 
-function pushNotification(input: {
+async function pushNotification(input: {
   userId: string;
   kind: Notification["kind"];
   title: string;
   body: string;
   href: string;
-}): Notification {
-  const notif: Notification = {
-    id: nextNotifId("chase"),
+}): Promise<void> {
+  // Shared writer. These were pushed onto the in-memory array, so
+  // every chase nudge this file sends — PM rating, client feedback,
+  // peer review — was invisible to the person being nudged.
+  await notify({
     userId: input.userId,
     kind: input.kind,
     title: input.title,
     body: input.body,
     href: input.href,
-    createdAt: new Date().toISOString(),
-    readAt: null,
-  };
-  MOCK_NOTIFICATIONS.push(notif);
-  return notif;
+  });
 }
 
 /**
@@ -63,7 +61,7 @@ export async function remindPmForRating(formData: FormData): Promise<void> {
   const admin = await requireAdmin();
   const projectId = String(formData.get("projectId") ?? "").trim();
   if (!projectId) throw new Error("Project id required.");
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const project = await getProjectById(projectId);
   if (!project) throw new Error("Project not found.");
 
   const targets = project.adminUserIds.length > 0 ? project.adminUserIds : [];
@@ -74,7 +72,7 @@ export async function remindPmForRating(formData: FormData): Promise<void> {
   }
 
   for (const targetId of targets) {
-    pushNotification({
+    await pushNotification({
       userId: targetId,
       kind: "contract_stage",
       title: `PM engagement rating needed — ${project.title}`,
@@ -116,9 +114,9 @@ export async function remindPeersForRating(formData: FormData): Promise<void> {
   if (!projectId) throw new Error("Project id required.");
   if (!targetContributorId) throw new Error("Contributor id required.");
 
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const project = await getProjectById(projectId);
   if (!project) throw new Error("Project not found.");
-  const targetUser = MOCK_USERS.find((u) => u.id === targetContributorId);
+  const targetUser = await getUserById(targetContributorId);
   const targetName = targetUser
     ? `${targetUser.firstName} ${targetUser.lastName ?? ""}`.trim()
     : targetContributorId;
@@ -133,7 +131,7 @@ export async function remindPeersForRating(formData: FormData): Promise<void> {
   }
 
   for (const peerId of peers) {
-    pushNotification({
+    await pushNotification({
       userId: peerId,
       kind: "peer_review_requested",
       title: `Peer review needed for ${targetName}`,
@@ -179,7 +177,7 @@ export async function remindClientForFeedback(
       "Client email required — the magic-link needs a destination.",
     );
   }
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const project = await getProjectById(projectId);
   if (!project) throw new Error("Project not found.");
 
   // Sandbox: just log the intent. Production wires the actual

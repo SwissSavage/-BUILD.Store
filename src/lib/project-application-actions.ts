@@ -21,15 +21,20 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_PROJECT_APPLICATIONS } from "@/lib/mock-data/project-applications";
 
 import { notify } from "@/lib/writers/notifications";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { projectApplications } from "@/db/schema";
+import {
+  projectApplications,
+  projects as projectsTable,
+} from "@/db/schema";
 import { getProjectById } from "@/lib/readers/projects";
-import { findPendingApplication } from "@/lib/readers/project-applications";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import {
+  findPendingApplication,
+  getApplicationById,
+} from "@/lib/readers/project-applications";
+import { getAdminUsers } from "@/lib/readers/users";
 import { publicName } from "@/lib/types";
 import type { Notification, ProjectApplication } from "@/lib/types";
 
@@ -48,8 +53,9 @@ async function pushNotification(
 }
 
 /** Every platform admin's userId. Drives the apply-fan-out recipient list. */
-function adminUserIds(): string[] {
-  return MOCK_USERS.filter((u) => u.isAdmin).map((u) => u.id);
+async function adminUserIds(): Promise<string[]> {
+  const { users } = await getAdminUsers();
+  return users.map((u) => u.id);
 }
 
 export async function applyToProject(formData: FormData) {
@@ -108,32 +114,31 @@ export async function applyToProject(formData: FormData) {
   };
   // Writer swap 2026-08-28: was an in-memory push, so submitted bids
   // disappeared on the next deploy and never reached the admin queue.
-  try {
-    await db.insert(projectApplications).values({
-      id: application.id,
-      projectId: application.projectId,
-      userId: application.userId,
-      proposedRole: application.proposedRole,
-      pitch: application.pitch,
-      hoursPerWeek: application.hoursPerWeek,
-      hourlyRate: null,
-      portfolioLink: application.portfolioLink,
-      status: application.status,
-      reviewedBy: null,
-      reviewedAt: null,
-      adminNote: null,
-      withdrawnAt: null,
-      createdAt: application.createdAt,
-    });
-  } catch {
-    // Postgres unreachable, or a seed-only project id with no real
-    // row to reference. Keep the in-memory copy so local dev works.
-    MOCK_PROJECT_APPLICATIONS.push(application);
-  }
+  //
+  // The catch that used to wrap this fell back to the array on any
+  // database error, which turned a failed bid into a successful-
+  // looking one. A member who can't bid needs to know that.
+  await db.insert(projectApplications).values({
+    id: application.id,
+    projectId: application.projectId,
+    userId: application.userId,
+    proposedRole: application.proposedRole,
+    pitch: application.pitch,
+    hoursPerWeek: application.hoursPerWeek,
+    hourlyRate: null,
+    portfolioLink: application.portfolioLink,
+    status: application.status,
+    reviewedBy: null,
+    reviewedAt: null,
+    adminNote: null,
+    withdrawnAt: null,
+    createdAt: application.createdAt,
+  });
+
 
   // Fan out to every admin so the queue light flips immediately.
   const applicantLabel = publicName(user);
-  for (const adminId of adminUserIds()) {
+  for (const adminId of await adminUserIds()) {
     await pushNotification({
       userId: adminId,
       kind: "project_application",
@@ -158,7 +163,7 @@ export async function decideProjectApplication(formData: FormData) {
   const decision = String(formData.get("decision") ?? "");
   const adminNote = String(formData.get("adminNote") ?? "").trim();
 
-  const app = MOCK_PROJECT_APPLICATIONS.find((a) => a.id === id);
+  const app = await getApplicationById(id);
   if (!app) throw new Error("Application not found");
   if (app.status !== "pending") {
     throw new Error("Already decided");
@@ -167,20 +172,49 @@ export async function decideProjectApplication(formData: FormData) {
     throw new Error("Unknown decision");
   }
 
-  const project = MOCK_PROJECTS.find((p) => p.id === app.projectId);
+  const project = await getProjectById(app.projectId);
   if (!project) throw new Error("Project not found");
 
   const now = new Date().toISOString();
-  app.reviewedBy = user.id;
-  app.reviewedAt = now;
-  app.adminNote = adminNote.length > 0 ? adminNote : null;
 
   if (decision === "approve") {
-    app.status = "approved";
-    if (!project.assignedMemberIds.includes(app.userId)) {
-      project.assignedMemberIds = [...project.assignedMemberIds, app.userId];
-    }
-    project.updatedAt = now;
+    // Approval and crew assignment move together. An approved bid
+    // without the member on assignedMemberIds means they're told
+    // they're on the contract and every surface that lists the crew
+    // disagrees — including the settlement engine, which pays from
+    // that list.
+    //
+    // The status guard makes the whole thing idempotent: a second
+    // click lands on zero rows and leaves the roster alone.
+    await db.transaction(async (tx) => {
+      const claimed = await tx
+        .update(projectApplications)
+        .set({
+          status: "approved",
+          reviewedBy: user.id,
+          reviewedAt: now,
+          adminNote: adminNote.length > 0 ? adminNote : null,
+        })
+        .where(
+          and(
+            eq(projectApplications.id, id),
+            eq(projectApplications.status, "pending"),
+          ),
+        )
+        .returning({ id: projectApplications.id });
+      if (claimed.length === 0) return;
+
+      if (!project.assignedMemberIds.includes(app.userId)) {
+        await tx
+          .update(projectsTable)
+          .set({
+            assignedMemberIds: [...project.assignedMemberIds, app.userId],
+            updatedAt: now,
+          })
+          .where(eq(projectsTable.id, project.id));
+      }
+    });
+
     await pushNotification({
       userId: app.userId,
       kind: "project_application_decision",
@@ -192,7 +226,20 @@ export async function decideProjectApplication(formData: FormData) {
       href: `/projects/${project.id}`,
     });
   } else {
-    app.status = "rejected";
+    await db
+      .update(projectApplications)
+      .set({
+        status: "rejected",
+        reviewedBy: user.id,
+        reviewedAt: now,
+        adminNote: adminNote.length > 0 ? adminNote : null,
+      })
+      .where(
+        and(
+          eq(projectApplications.id, id),
+          eq(projectApplications.status, "pending"),
+        ),
+      );
     await pushNotification({
       userId: app.userId,
       kind: "project_application_decision",
@@ -216,7 +263,7 @@ export async function withdrawProjectApplication(formData: FormData) {
   if (!user) throw new Error("Sign in required");
 
   const id = String(formData.get("id") ?? "");
-  const app = MOCK_PROJECT_APPLICATIONS.find((a) => a.id === id);
+  const app = await getApplicationById(id);
   if (!app) throw new Error("Application not found");
   if (app.userId !== user.id) {
     throw new Error("You can only withdraw your own applications");
@@ -225,8 +272,18 @@ export async function withdrawProjectApplication(formData: FormData) {
     throw new Error("Only pending applications can be withdrawn");
   }
 
-  app.status = "withdrawn";
-  app.withdrawnAt = new Date().toISOString();
+  // Scoped to this member's own pending row, so a withdraw racing an
+  // admin decision can't undo a decision that already landed.
+  await db
+    .update(projectApplications)
+    .set({ status: "withdrawn", withdrawnAt: new Date().toISOString() })
+    .where(
+      and(
+        eq(projectApplications.id, id),
+        eq(projectApplications.userId, user.id),
+        eq(projectApplications.status, "pending"),
+      ),
+    );
 
   revalidatePath("/projects");
   revalidatePath(`/projects/${app.projectId}`);

@@ -30,8 +30,7 @@ import { db } from "@/db/client";
 import { projectMilestones } from "@/db/schema";
 import { getAllProjects, getProjectById } from "@/lib/readers/projects";
 import { getMilestonesForProject, milestoneReader } from "@/lib/readers";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import { getUserById } from "@/lib/readers/users";
 import {
   MILESTONE_DUE_SOON_DAYS,
   type MilestoneStatus,
@@ -105,7 +104,10 @@ export async function createMilestone(formData: FormData) {
   if (title.length === 0) throw new Error("Title is required");
   const description = String(formData.get("description") ?? "").trim() || null;
   const ownerUserId = String(formData.get("ownerUserId") ?? "");
-  if (!MOCK_USERS.find((u) => u.id === ownerUserId)) {
+  // Real lookup. The fixture scan here threw "Owner not found" for
+  // every member who signed up through the live flow, so a milestone
+  // could only be assigned to a seed profile.
+  if (!(await getUserById(ownerUserId))) {
     throw new Error("Owner not found");
   }
   const dueAt = parseDueAt(formData.get("dueAt"));
@@ -399,7 +401,7 @@ export async function runMilestoneSweep(): Promise<{
       await fanOut(await projectAdminUserIds(row.projectId), {
         kind: "milestone_overdue",
         title: `Overdue: ${row.title}`,
-        body: `${project.title}. ${daysOver} day${daysOver === 1 ? "" : "s"} past due. Owner: ${ownerName(row.ownerUserId)}.`,
+        body: `${project.title}. ${daysOver} day${daysOver === 1 ? "" : "s"} past due. Owner: ${await ownerName(row.ownerUserId)}.`,
         href: `/admin/contracts/${row.projectId}/tracker`,
       });
       row.lastOverdueNoticeAt = new Date(now).toISOString();
@@ -524,8 +526,8 @@ export async function runWeeklyProjectRollup(): Promise<{
   return { digestsSent };
 }
 
-function ownerName(userId: string): string {
-  const u = MOCK_USERS.find((x) => x.id === userId);
+async function ownerName(userId: string): Promise<string> {
+  const u = await getUserById(userId);
   if (!u) return userId;
   return u.firstName ?? u.handle;
 }
@@ -602,7 +604,7 @@ export async function updateMilestoneStatus(formData: FormData) {
     body:
       next === "blocked"
         ? `${project.title} — ${row.blockerNote}`
-        : `${project.title}. ${ownerName(user.id)} moved this from ${prev.replace("_", " ")} to ${next.replace("_", " ")}.`,
+        : `${project.title}. ${await ownerName(user.id)} moved this from ${prev.replace("_", " ")} to ${next.replace("_", " ")}.`,
     href: `/projects/${row.projectId}`,
   });
 

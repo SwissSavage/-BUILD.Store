@@ -25,15 +25,14 @@ import { notify, notifyMany } from "@/lib/writers/notifications";
 import { getAllUsers } from "@/lib/readers/users";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_ORDERS } from "@/lib/mock-data/orders";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { randomUUID } from "crypto";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { customerFeedback as customerFeedbackTable } from "@/db/schema";
+import { getProjectById } from "@/lib/readers/projects";
+import { getUserById } from "@/lib/readers/users";
+import { customerFeedbackReader, orderReader } from "@/lib/readers";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
-import {
-  MOCK_CUSTOMER_FEEDBACK,
-  hasFeedbackForContext,
-} from "@/lib/mock-data/customer-feedback";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import type {
   AttributionConsent,
   CustomerFeedback,
@@ -49,6 +48,52 @@ async function pushNotification(
   // Was an in-memory push, so these notifications never survived a
   // deploy and the bell icon was effectively decorative.
   await notify(partial);
+}
+
+/**
+ * Has this contract or order already been reviewed?
+ *
+ * Scoped in the query. This backs the "already submitted" guard on a
+ * public magic-link route, so it must not read every piece of customer
+ * feedback the cooperative holds to answer a question about one
+ * engagement.
+ */
+async function hasFeedbackForContext(contextId: string): Promise<boolean> {
+  const rows = await customerFeedbackReader.where(
+    eq(customerFeedbackTable.contextId, contextId),
+  );
+  return rows.length > 0;
+}
+
+/** Persist one feedback row. */
+async function insertFeedback(row: CustomerFeedback): Promise<void> {
+  await db.insert(customerFeedbackTable).values({
+    id: row.id,
+    contextKind: row.contextKind,
+    contextId: row.contextId,
+    customerName: row.customerName,
+    customerEmail: row.customerEmail,
+    overallStars: row.overallStars,
+    metExpectations: row.metExpectations,
+    communication: row.communication,
+    wouldHireAgain: row.wouldHireAgain,
+    prose: row.prose,
+    contributorShoutout: row.contributorShoutout,
+    attributionConsent: row.attributionConsent,
+    googleReviewOptIn: row.googleReviewOptIn,
+    googleReviewFollowupStatus: row.googleReviewFollowupStatus,
+    googleReviewFollowupSentAt: row.googleReviewFollowupSentAt,
+    publishedAt: row.publishedAt,
+    publishedQuote: row.publishedQuote,
+    publishedForUserId: row.publishedForUserId,
+    capturedByAdminUserId: row.capturedByAdminUserId,
+    captureContext: row.captureContext,
+    meetingMinuteId: row.meetingMinuteId,
+    clientConfirmationStatus: row.clientConfirmationStatus,
+    clientConfirmationToken: row.clientConfirmationToken,
+    clientConfirmedAt: row.clientConfirmedAt,
+    createdAt: row.createdAt,
+  });
 }
 
 async function fanOutToAdmins(
@@ -172,7 +217,7 @@ function parseSubmissionFields(formData: FormData) {
  */
 export async function submitCustomerFeedbackByLink(formData: FormData) {
   const contextId = String(formData.get("contextId") ?? "");
-  const project = MOCK_PROJECTS.find((p) => p.id === contextId);
+  const project = await getProjectById(contextId);
   if (!project) throw new Error("Engagement not found");
   if (project.kind !== "contract") {
     throw new Error("This rail is for external client contracts only");
@@ -180,16 +225,14 @@ export async function submitCustomerFeedbackByLink(formData: FormData) {
   if (project.status !== "completed") {
     throw new Error("Feedback opens once the contract is marked completed");
   }
-  if (hasFeedbackForContext(contextId)) {
+  if (await hasFeedbackForContext(contextId)) {
     throw new Error("Feedback for this engagement was already submitted");
   }
 
   const parsed = parseSubmissionFields(formData);
   const optedInToReview = parsed.googleReviewOptIn === "yes_send_link";
   const row: CustomerFeedback = {
-    id: `cf_${Date.now().toString(36)}_${Math.random()
-      .toString(36)
-      .slice(2, 6)}`,
+    id: `cf_${randomUUID()}`,
     contextKind: "contract" as CustomerFeedbackContextKind,
     contextId,
     googleReviewFollowupStatus: optedInToReview ? "pending_review" : null,
@@ -206,7 +249,7 @@ export async function submitCustomerFeedbackByLink(formData: FormData) {
     createdAt: new Date().toISOString(),
     ...parsed,
   };
-  MOCK_CUSTOMER_FEEDBACK.push(row);
+  await insertFeedback(row);
 
   await fanOutToAdmins(
     `Customer feedback on ${project.title}`,
@@ -236,7 +279,7 @@ export async function submitBuyerFeedback(formData: FormData) {
   if (!buyer) throw new Error("Sign in required");
 
   const orderId = String(formData.get("orderId") ?? "");
-  const order = MOCK_ORDERS.find((o) => o.id === orderId);
+  const order = await orderReader.byId(orderId);
   if (!order) throw new Error("Order not found");
   if (order.buyerId !== buyer.id) {
     throw new Error("You can only review orders you placed");
@@ -244,7 +287,7 @@ export async function submitBuyerFeedback(formData: FormData) {
   if (order.status !== "delivered") {
     throw new Error("Feedback opens after delivery");
   }
-  if (hasFeedbackForContext(orderId)) {
+  if (await hasFeedbackForContext(orderId)) {
     throw new Error("You already left feedback for this order");
   }
 
@@ -279,9 +322,7 @@ export async function submitBuyerFeedback(formData: FormData) {
   const optedInToReview = googleReviewOptIn === "yes_send_link";
 
   const row: CustomerFeedback = {
-    id: `cf_${Date.now().toString(36)}_${Math.random()
-      .toString(36)
-      .slice(2, 6)}`,
+    id: `cf_${randomUUID()}`,
     contextKind: "marketplace_order" as CustomerFeedbackContextKind,
     contextId: orderId,
     customerName: buyer.firstName ?? buyer.email,
@@ -307,7 +348,7 @@ export async function submitBuyerFeedback(formData: FormData) {
     clientConfirmedAt: null,
     createdAt: new Date().toISOString(),
   };
-  MOCK_CUSTOMER_FEEDBACK.push(row);
+  await insertFeedback(row);
 
   await fanOutToAdmins(
     `Buyer feedback on ${order.number}`,
@@ -340,7 +381,7 @@ export async function publishTestimonial(formData: FormData) {
     formData.get("publishedForUserId") ?? "",
   );
 
-  const row = MOCK_CUSTOMER_FEEDBACK.find((f) => f.id === feedbackId);
+  const row = await customerFeedbackReader.byId(feedbackId);
   if (!row) throw new Error("Feedback row not found");
   if (publishedQuote.length < 20) {
     throw new Error("Quote must be at least 20 characters");
@@ -356,14 +397,21 @@ export async function publishTestimonial(formData: FormData) {
       "Customer did not consent to external attribution — testimonial cannot be published.",
     );
   }
-  const target = MOCK_USERS.find((u) => u.id === publishedForUserId);
+  const target = await getUserById(publishedForUserId);
   if (!target) throw new Error("Target contributor not found");
 
   const now = new Date().toISOString();
   const beforePublishedAt = row.publishedAt;
-  row.publishedAt = now;
-  row.publishedQuote = publishedQuote;
-  row.publishedForUserId = publishedForUserId;
+  // Guarded on still-unpublished so two admins promoting the same
+  // quote can't overwrite each other's chosen excerpt.
+  await db
+    .update(customerFeedbackTable)
+    .set({
+      publishedAt: now,
+      publishedQuote,
+      publishedForUserId,
+    })
+    .where(eq(customerFeedbackTable.id, feedbackId));
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -398,16 +446,24 @@ export async function publishTestimonial(formData: FormData) {
 export async function unpublishTestimonial(formData: FormData) {
   const admin = await requireAdmin();
   const feedbackId = String(formData.get("feedbackId") ?? "");
-  const row = MOCK_CUSTOMER_FEEDBACK.find((f) => f.id === feedbackId);
+  const row = await customerFeedbackReader.byId(feedbackId);
   if (!row) throw new Error("Feedback row not found");
   const formerUserId = row.publishedForUserId;
   const formerHandle = formerUserId
-    ? MOCK_USERS.find((u) => u.id === formerUserId)?.handle
+    ? (await getUserById(formerUserId))?.handle
     : null;
   const beforePublishedAt = row.publishedAt;
-  row.publishedAt = null;
-  row.publishedQuote = null;
-  row.publishedForUserId = null;
+  // Retract clears the published fields; the underlying feedback row
+  // stays, so the customer's original words are never destroyed by an
+  // admin changing their mind about showing them.
+  await db
+    .update(customerFeedbackTable)
+    .set({
+      publishedAt: null,
+      publishedQuote: null,
+      publishedForUserId: null,
+    })
+    .where(eq(customerFeedbackTable.id, feedbackId));
 
   if (formerUserId) {
     await logAuditEvent({
@@ -435,7 +491,7 @@ export async function unpublishTestimonial(formData: FormData) {
 export async function markGoogleReviewFollowupSent(formData: FormData) {
   await requireAdmin();
   const feedbackId = String(formData.get("feedbackId") ?? "");
-  const row = MOCK_CUSTOMER_FEEDBACK.find((f) => f.id === feedbackId);
+  const row = await customerFeedbackReader.byId(feedbackId);
   if (!row) throw new Error("Feedback row not found");
   if (row.googleReviewOptIn !== "yes_send_link") {
     throw new Error(
@@ -445,8 +501,20 @@ export async function markGoogleReviewFollowupSent(formData: FormData) {
   if (row.googleReviewFollowupStatus === "sent") {
     throw new Error("Follow-up was already sent for this feedback row.");
   }
-  row.googleReviewFollowupStatus = "sent";
-  row.googleReviewFollowupSentAt = new Date().toISOString();
+  // Guarded on not-already-sent, so a double-click can't record a
+  // second send against the same customer.
+  await db
+    .update(customerFeedbackTable)
+    .set({
+      googleReviewFollowupStatus: "sent",
+      googleReviewFollowupSentAt: new Date().toISOString(),
+    })
+    .where(
+      and(
+        eq(customerFeedbackTable.id, feedbackId),
+        eq(customerFeedbackTable.googleReviewFollowupStatus, "pending_review"),
+      ),
+    );
   revalidatePath(`/admin/testimonials`);
 }
 
@@ -459,13 +527,16 @@ export async function markGoogleReviewFollowupSent(formData: FormData) {
 export async function declineGoogleReviewFollowup(formData: FormData) {
   await requireAdmin();
   const feedbackId = String(formData.get("feedbackId") ?? "");
-  const row = MOCK_CUSTOMER_FEEDBACK.find((f) => f.id === feedbackId);
+  const row = await customerFeedbackReader.byId(feedbackId);
   if (!row) throw new Error("Feedback row not found");
   if (row.googleReviewOptIn !== "yes_send_link") {
     throw new Error(
       "Customer did not opt in to a Google Review follow-up.",
     );
   }
-  row.googleReviewFollowupStatus = "declined";
+  await db
+    .update(customerFeedbackTable)
+    .set({ googleReviewFollowupStatus: "declined" })
+    .where(eq(customerFeedbackTable.id, feedbackId));
   revalidatePath(`/admin/testimonials`);
 }

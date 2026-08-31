@@ -65,7 +65,8 @@ import {
   type PeerReview,
 } from "@/lib/types";
 import { dispatchTransfer } from "@/lib/payouts-stub";
-import { feedbackForContext } from "@/lib/mock-data/customer-feedback";
+import { customerFeedback as customerFeedbackTable } from "@/db/schema";
+import { customerFeedbackReader } from "@/lib/readers";
 import { poolForProject } from "@/lib/readers/reserve-pool";
 import { evaluateBonusGate } from "@/lib/bonus-gate";
 import {
@@ -761,7 +762,12 @@ async function BonusReleasePanel({
   if (!project.talentBonusAmount) return null;
   const baseAmount = Number(project.talentBaseAmount ?? 0);
   const bonusAmount = Number(project.talentBonusAmount);
-  const feedback = feedbackForContext(project.id)[0] ?? null;
+  const feedback =
+    (
+      await customerFeedbackReader.where(
+        eq(customerFeedbackTable.contextId, project.id),
+      )
+    )[0] ?? null;
   const peerReviews = allPeerReviews.filter(
     (r) => r.contextId === project.id,
   );

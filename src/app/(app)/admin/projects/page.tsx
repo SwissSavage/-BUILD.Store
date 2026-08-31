@@ -9,7 +9,6 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { db } from "@/db/client";
 import { projects as projectsTable } from "@/db/schema";
 import { getAllProjects } from "@/lib/readers/projects";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { newContributionCount } from "@/lib/mock-data/prospective-contributions";
 import { INDUSTRY_LABELS, type Project } from "@/lib/types";
 
@@ -18,13 +17,16 @@ export const dynamic = "force-dynamic";
 /**
  * Advance a project's lifecycle status.
  *
- * Writer swap 2026-08-28: this mutated MOCK_PROJECTS in memory, so an
+ * Writer swap 2026-08-28: this mutated an in-memory fixture, so an
  * admin moving a project to "completed" saw it change, then saw it
  * revert on the next deploy or whenever the request hit a different
  * container process. Now writes to Postgres.
  *
- * Mock fallback retained only for seed-only project ids that have no
- * Postgres row, so the demo data stays clickable.
+ * No fallback. This used to catch database errors and mutate an
+ * in-memory fixture instead, which meant a failed status change
+ * rendered as a successful one — the same shape of bug as the profile
+ * save. If the update finds no row, that is a real problem and the
+ * admin needs to see it.
  */
 async function advance(formData: FormData) {
   "use server";
@@ -32,24 +34,14 @@ async function advance(formData: FormData) {
   const next = String(formData.get("status")) as Project["status"];
   const now = new Date().toISOString();
 
-  let wrote = false;
-  try {
-    const res = await db
-      .update(projectsTable)
-      .set({ status: next, updatedAt: now })
-      .where(eq(projectsTable.id, id))
-      .returning({ id: projectsTable.id });
-    wrote = res.length > 0;
-  } catch {
-    // Fall through to the mock path below.
-  }
+  const res = await db
+    .update(projectsTable)
+    .set({ status: next, updatedAt: now })
+    .where(eq(projectsTable.id, id))
+    .returning({ id: projectsTable.id });
 
-  if (!wrote) {
-    const p = MOCK_PROJECTS.find((x) => x.id === id);
-    if (p) {
-      p.status = next;
-      p.updatedAt = now;
-    }
+  if (res.length === 0) {
+    throw new Error(`Project ${id} not found — status was not changed.`);
   }
 
   revalidatePath("/admin/projects");
@@ -61,7 +53,6 @@ const STATUSES: Project["status"][] = ["open", "in_progress", "completed", "canc
 export default async function AdminProjectsPage() {
   await requireAdmin();
   const newOutsideOffers = newContributionCount();
-  // Reader swap 2026-08-28: was MOCK_PROJECTS.
   const { projects: allProjects } = await getAllProjects();
 
   return (

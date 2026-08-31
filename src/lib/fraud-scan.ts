@@ -23,9 +23,12 @@
  * fires every day.
  */
 import type { NotificationKind, Notification } from "@/lib/types";
-import { MOCK_PORTFOLIO } from "@/lib/mock-data/portfolio";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import { randomUUID } from "crypto";
+import { and, eq, isNull } from "drizzle-orm";
+import { db } from "@/db/client";
+import { portfolioFraudSignals } from "@/db/schema";
+import { getPublishedPortfolio } from "@/lib/readers";
+import { getAdminUsers } from "@/lib/readers/users";
 import { notify } from "@/lib/writers/notifications";
 
 export interface FraudSignal {
@@ -45,11 +48,26 @@ export interface FraudSignal {
 }
 
 /**
- * In-memory sink for signals until a real portfolio_fraud_signals
- * Drizzle table lands. Exported so the admin review UI reads it
- * directly. Real DB swap: db.select().from(portfolioFraudSignals).
+ * Read every signal, newest first. The admin review queue splits
+ * pending from reviewed on its own.
  */
-export const MOCK_FRAUD_SIGNALS: FraudSignal[] = [];
+export async function allFraudSignals(): Promise<FraudSignal[]> {
+  const rows = await db.select().from(portfolioFraudSignals);
+  return (rows as unknown as FraudSignal[]).sort((a, b) =>
+    b.detectedAt.localeCompare(a.detectedAt),
+  );
+}
+
+/** Unreviewed signals only. */
+export async function pendingFraudSignals(): Promise<FraudSignal[]> {
+  const rows = await db
+    .select()
+    .from(portfolioFraudSignals)
+    .where(isNull(portfolioFraudSignals.reviewedAt));
+  return (rows as unknown as FraudSignal[]).sort((a, b) =>
+    a.detectedAt.localeCompare(b.detectedAt),
+  );
+}
 
 function computeSignature(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -70,26 +88,37 @@ function computeSignature(url: string | null | undefined): string | null {
 }
 
 function newSignalId(): string {
-  return `frs_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
+  return `frs_${randomUUID()}`;
 }
 
-function alreadyRecorded(
-  portfolioItemId: string,
-  collidingPortfolioItemId: string | null,
-  kind: FraudSignal["kind"],
-): boolean {
-  return MOCK_FRAUD_SIGNALS.some(
-    (s) =>
-      s.portfolioItemId === portfolioItemId &&
-      s.collidingPortfolioItemId === collidingPortfolioItemId &&
-      s.kind === kind,
+/**
+ * Signals already on file, as a lookup key set.
+ *
+ * The sweep runs over every published item weekly, so it must not
+ * re-raise what it has already raised — otherwise the queue grows by
+ * a duplicate row per pair per week and a dismissed false positive
+ * comes back every Sunday. Loaded once per sweep rather than queried
+ * per candidate pair.
+ */
+async function existingSignalKeys(): Promise<Set<string>> {
+  const rows = await db
+    .select({
+      portfolioItemId: portfolioFraudSignals.portfolioItemId,
+      collidingPortfolioItemId:
+        portfolioFraudSignals.collidingPortfolioItemId,
+      kind: portfolioFraudSignals.kind,
+    })
+    .from(portfolioFraudSignals);
+  return new Set(
+    rows.map(
+      (r) => `${r.portfolioItemId}|${r.collidingPortfolioItemId ?? ""}|${r.kind}`,
+    ),
   );
 }
 
-function findAdminIds(): string[] {
-  return MOCK_USERS.filter((u) => u.isAdmin).map((u) => u.id);
+async function findAdminIds(): Promise<string[]> {
+  const { users } = await getAdminUsers();
+  return users.map((u) => u.id);
 }
 
 async function pushNotification(
@@ -132,9 +161,10 @@ export async function runFraudScan(options: {
 
   // Only published, non-rejected items are eligible. Rejected items
   // aren't user-facing, so duplicates among them don't matter.
-  const published = MOCK_PORTFOLIO.filter(
-    (p) => p.publishedAt && !p.rejectedAt,
-  );
+  // Only published items are eligible. Rejected items aren't
+  // user-facing, so duplicates among them don't matter.
+  const publishedAll = await getPublishedPortfolio();
+  const published = publishedAll.filter((p) => !p.rejectedAt);
 
   // Build two lookup maps: imageUrl signature → items, projectUrl
   // signature → items. Any signature with items from >1 distinct
@@ -158,7 +188,9 @@ export async function runFraudScan(options: {
   }
 
   let newSignals = 0;
-  const adminIds = findAdminIds();
+  const adminIds = await findAdminIds();
+  const seen = await existingSignalKeys();
+  const toInsert: FraudSignal[] = [];
 
   function recordCollisions(
     map: Map<string, typeof published>,
@@ -175,12 +207,10 @@ export async function runFraudScan(options: {
       for (let a = 0; a < items.length; a += 1) {
         for (let b = a + 1; b < items.length; b += 1) {
           if (items[a].userId === items[b].userId) continue;
-          if (
-            alreadyRecorded(items[a].id, items[b].id, kind) ||
-            alreadyRecorded(items[b].id, items[a].id, kind)
-          ) {
-            continue;
-          }
+          const forward = `${items[a].id}|${items[b].id}|${kind}`;
+          const reverse = `${items[b].id}|${items[a].id}|${kind}`;
+          if (seen.has(forward) || seen.has(reverse)) continue;
+          seen.add(forward);
           const signal: FraudSignal = {
             id: newSignalId(),
             kind,
@@ -198,7 +228,7 @@ export async function runFraudScan(options: {
             disposition: "pending",
             reviewerNote: null,
           };
-          MOCK_FRAUD_SIGNALS.push(signal);
+          toInsert.push(signal);
           newSignals += 1;
           // Fan a single admin ping per collision. Keeps volume
           // low on Monday morning after the Sunday sweep.
@@ -219,8 +249,36 @@ export async function runFraudScan(options: {
   recordCollisions(byImage, "duplicate_image_url", "image");
   recordCollisions(byProject, "duplicate_project_url", "project link");
 
-  // Flush admin pings. One insert regardless of how many collisions
-  // the sweep found.
+  // Persist the signals before notifying. An admin who clicks the
+  // link in the ping must find the signal waiting for them, not an
+  // empty queue.
+  //
+  // onConflictDoNothing against the dedupe index: two sweeps running
+  // at once (a manual run alongside the cron, say) would both read an
+  // empty `seen` set and both try to insert the same pair.
+  if (toInsert.length > 0) {
+    await db
+      .insert(portfolioFraudSignals)
+      .values(
+        toInsert.map((sig) => ({
+          id: sig.id,
+          kind: sig.kind,
+          portfolioItemId: sig.portfolioItemId,
+          offendingUserId: sig.offendingUserId,
+          collidingPortfolioItemId: sig.collidingPortfolioItemId,
+          collidingUserId: sig.collidingUserId,
+          signature: sig.signature,
+          confidence: String(sig.confidence),
+          detectedAt: sig.detectedAt,
+          reviewedAt: sig.reviewedAt,
+          reviewedByUserId: sig.reviewedByUserId,
+          disposition: sig.disposition,
+          reviewerNote: sig.reviewerNote,
+        })),
+      )
+      .onConflictDoNothing();
+  }
+
   for (const n of pendingNotifications) {
     await notify(n);
   }
@@ -244,13 +302,41 @@ export async function reviewFraudSignal(input: {
   reviewerId: string;
   note?: string;
 }): Promise<FraudSignal | null> {
-  const signal = MOCK_FRAUD_SIGNALS.find((s) => s.id === input.signalId);
-  if (!signal) return null;
-  if (signal.reviewedAt) return signal; // already reviewed, idempotent
-  signal.disposition = input.disposition;
-  signal.reviewedAt = new Date().toISOString();
-  signal.reviewedByUserId = input.reviewerId;
-  signal.reviewerNote = input.note ?? null;
+  const [existing] = (await db
+    .select()
+    .from(portfolioFraudSignals)
+    .where(eq(portfolioFraudSignals.id, input.signalId))
+    .limit(1)) as unknown as FraudSignal[];
+  if (!existing) return null;
+  if (existing.reviewedAt) return existing; // already reviewed, idempotent
+
+  const reviewedAt = new Date().toISOString();
+
+  // Guarded on reviewedAt IS NULL so two admins adjudicating the same
+  // signal at once can't overwrite each other's disposition — the
+  // second one lands on zero rows and the first decision stands.
+  await db
+    .update(portfolioFraudSignals)
+    .set({
+      disposition: input.disposition,
+      reviewedAt,
+      reviewedByUserId: input.reviewerId,
+      reviewerNote: input.note ?? null,
+    })
+    .where(
+      and(
+        eq(portfolioFraudSignals.id, input.signalId),
+        isNull(portfolioFraudSignals.reviewedAt),
+      ),
+    );
+
+  const signal: FraudSignal = {
+    ...existing,
+    disposition: input.disposition,
+    reviewedAt,
+    reviewedByUserId: input.reviewerId,
+    reviewerNote: input.note ?? null,
+  };
   // Compliance-penalty wire-up (Agreement Section 17) lands as a
   // follow-up — the fraud-review admin surface should call the
   // mvp-compliance-penalty action explicitly when disposition is

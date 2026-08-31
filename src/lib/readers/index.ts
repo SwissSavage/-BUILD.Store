@@ -323,6 +323,13 @@ export const canonizationReader = makeReader<MemberCanonization>(
   { orderBy: memberCanonizations.frozenAt, idColumn: memberCanonizations.id },
 );
 
+/** One member's canonizations. */
+export function getCanonizationsForUser(
+  userId: string,
+): Promise<MemberCanonization[]> {
+  return canonizationReader.where(eq(memberCanonizations.userId, userId));
+}
+
 export const spotlightReader = makeReader<CohortSpotlight>(cohortSpotlights, {
   orderBy: cohortSpotlights.publishedAt,
   idColumn: cohortSpotlights.id,
@@ -539,6 +546,15 @@ export const recognitionReader = makeReader<FutureModernistRecognition>(
     idColumn: futureModernistRecognitions.id,
   },
 );
+
+/** One member's Future Modernist recognitions. */
+export function getRecognitionsForUser(
+  userId: string,
+): Promise<FutureModernistRecognition[]> {
+  return recognitionReader.where(
+    eq(futureModernistRecognitions.userId, userId),
+  );
+}
 
 export const penaltyReader = makeReader<MvpCompliancePenalty>(
   mvpCompliancePenalties,

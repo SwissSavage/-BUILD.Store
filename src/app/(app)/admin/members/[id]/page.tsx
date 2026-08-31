@@ -30,8 +30,10 @@ import { db } from "@/db/client";
 import { mvpCompliancePenalties } from "@/db/schema";
 import type { MvpCompliancePenalty } from "@/lib/types";
 import { readAuditLog } from "@/lib/readers/audit-log";
-import { MOCK_FUTURE_MODERNIST_RECOGNITIONS } from "@/lib/mock-data/future-modernist-recognitions";
-import { MOCK_CANONIZATIONS } from "@/lib/mock-data/canonizations";
+import {
+  getCanonizationsForUser,
+  getRecognitionsForUser,
+} from "@/lib/readers";
 import {
   reactivateUser,
   setMembershipTier,
@@ -71,7 +73,7 @@ export default async function MemberDrillDown({
 }) {
   const admin = await requireAdmin();
   const { id } = await params;
-  // Reader swap 2026-08-29: was MOCK_USERS, so clicking Manage on any
+  // Reader swap 2026-08-29: was a fixture array, so clicking Manage on any
   // real member 404'd. The list page had already been swapped; this
   // drill-down had not, which made the list look fixed while every row
   // in it led nowhere.
@@ -121,12 +123,10 @@ export default async function MemberDrillDown({
     (sum, tx) => sum + Number(tx.amount),
     0,
   );
-  const recognitions = MOCK_FUTURE_MODERNIST_RECOGNITIONS.filter(
-    (r) => r.userId === user.id,
-  );
-  const canonizations = MOCK_CANONIZATIONS.filter(
-    (c) => c.userId === user.id,
-  );
+  const [recognitions, canonizations] = await Promise.all([
+    safely(() => getRecognitionsForUser(user.id), []),
+    safely(() => getCanonizationsForUser(user.id), []),
+  ]);
   const auditEntries = await readAuditLog({
     resourceKind: "user",
     resourceId: user.id,

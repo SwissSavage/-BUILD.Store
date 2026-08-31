@@ -62,6 +62,9 @@ import {
   revenueSplits,
   sellerApplications,
   storeCategories,
+  servicePartners,
+  ecosystemPartners,
+  productAffiliates,
   products,
   mediaAssets,
   attributionEntries,
@@ -521,6 +524,32 @@ export async function isApprovedSeller(userId: string): Promise<boolean> {
   );
   return rows.length > 0;
 }
+
+/**
+ * Partner directories.
+ *
+ * These render on public marketing surfaces, so an entry appearing
+ * here is a public claim that FM has a signed relationship with that
+ * org. They read the live tables and nothing else — a seeded example
+ * partner is a false statement about who the cooperative works with.
+ */
+type ServicePartnerRow = typeof servicePartners.$inferSelect;
+export const servicePartnerReader = makeReader<ServicePartnerRow>(
+  servicePartners,
+  { idColumn: servicePartners.id },
+);
+
+type EcosystemPartnerRow = typeof ecosystemPartners.$inferSelect;
+export const ecosystemPartnerReader = makeReader<EcosystemPartnerRow>(
+  ecosystemPartners,
+  { idColumn: ecosystemPartners.id },
+);
+
+type ProductAffiliateRow = typeof productAffiliates.$inferSelect;
+export const productAffiliateReader = makeReader<ProductAffiliateRow>(
+  productAffiliates,
+  { idColumn: productAffiliates.id },
+);
 
 export const storeCategoryReader = makeReader<StoreCategory>(storeCategories, {
   idColumn: storeCategories.id,

@@ -12,10 +12,10 @@
  *     settlement page, but admins should be able to see "what's still
  *     queued to leave the cooperative" without flipping tabs.
  *
- * Mutations write to in-memory MOCK_INVOICES / MOCK_PROJECTS — same
- * pattern as settle/page.tsx. REPLACE WITH: Drizzle inserts +
- * Mercury reconciliation worker that flips status when the deposit
- * lands.
+ * Mutations write to Postgres (swapped 2026-08-29). Still manual:
+ * an admin marks an invoice received after seeing the deposit in
+ * Mercury. A reconciliation worker that flips status automatically
+ * when the deposit lands is the remaining piece.
  */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";

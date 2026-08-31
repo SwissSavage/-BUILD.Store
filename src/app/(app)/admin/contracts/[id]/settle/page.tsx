@@ -25,7 +25,8 @@
  * On submit: write rows for all three pools, dispatch Stripe Connect
  * transfers per row (failure-isolated), mark contract `completed`.
  *
- * Sandbox: persists splits to MOCK_SPLITS in memory.
+ * Splits persist to Postgres via settlement-splits.ts, which wraps
+ * the whole distribution in one transaction.
  * REPLACE WITH: Drizzle insert into `revenue_splits` + Stripe Connect
  * transfers + audit log entries on every decision.
  */
@@ -36,7 +37,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projects, revenueSplits } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_ATTRIBUTION } from "@/lib/mock-data/attribution";
+import {
+  attributionReader,
+  peerReviewReader,
+  safely,
+} from "@/lib/readers";
 import { RESERVE_RECIPIENTS } from "@/lib/mock-data/splits";
 import {
   ADMIN_PCT,
@@ -46,7 +51,7 @@ import {
 } from "@/lib/settlement-splits";
 import { hasValidPayoutDocument } from "@/lib/payout-gate";
 import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
 import {
   ATTRIBUTION_ROLE_LABELS,
   PAYOUT_STATUS_LABELS,
@@ -56,10 +61,11 @@ import {
   type Project,
   type RevenueSplit,
   type SplitPool,
+  type User,
+  type PeerReview,
 } from "@/lib/types";
 import { dispatchTransfer } from "@/lib/payouts-stub";
 import { feedbackForContext } from "@/lib/mock-data/customer-feedback";
-import { MOCK_PEER_REVIEWS } from "@/lib/mock-data/peer-reviews";
 import { poolForProject } from "@/lib/mock-data/engagement-recovery-pools";
 import { evaluateBonusGate } from "@/lib/bonus-gate";
 import {
@@ -212,6 +218,8 @@ async function settleContract(formData: FormData) {
   revalidatePath("/profile/attribution");
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function SettlePage({
   params,
 }: {
@@ -266,7 +274,19 @@ export default async function SettlePage({
 
   // Aggregate attribution → contributor pool (delivery_lead + contributor
   // only). Weights summed across roles per user, normalized to 100%.
-  const attributions = MOCK_ATTRIBUTION.filter((a) => a.contractId === id);
+  // Reader swap 2026-08-29: attribution, roster, and peer reviews all
+  // read seed data. This page computes who gets paid what, so it was
+  // computing splits from a fictional contributor sheet.
+  const [allAttribution, { users: roster }, allPeerReviews] =
+    await Promise.all([
+      safely(() => attributionReader.all(), []),
+      safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+      safely(() => peerReviewReader.all(), []),
+    ]);
+  const userById = new Map(roster.map((u) => [u.id, u]));
+  const labelForRecipient = makeLabelForRecipient(userById);
+
+  const attributions = allAttribution.filter((a) => a.contractId === id);
   const contribAttrs = attributions.filter(
     (a) => rolePool(a.role) === "contributor",
   );
@@ -300,7 +320,7 @@ export default async function SettlePage({
 
   // Candidates list for the AdminAllocator dropdown — anyone who could
   // plausibly be added (members + partners + admins).
-  const adminCandidates = MOCK_USERS.filter(
+  const adminCandidates = roster.filter(
     (u) => u.membershipTier !== "viewer",
   ).map((u) => ({
     id: u.id,
@@ -352,7 +372,10 @@ export default async function SettlePage({
         />
       </div>
 
-      <BonusReleasePanel project={project as unknown as Project} />
+      <BonusReleasePanel
+        project={project as unknown as Project}
+        allPeerReviews={allPeerReviews}
+      />
 
       {contributorRows.length === 0 && (
         <Card className="mt-6">
@@ -395,7 +418,7 @@ export default async function SettlePage({
               </thead>
               <tbody>
                 {contributorRows.map((row) => {
-                  const u = MOCK_USERS.find((u) => u.id === row.userId);
+                  const u = userById.get(row.userId);
                   const roles = contribAttrs
                     .filter((a) => a.userId === row.userId)
                     .map((a) => ATTRIBUTION_ROLE_LABELS[a.role])
@@ -468,7 +491,7 @@ export default async function SettlePage({
                 {missingAdmins
                   .map(
                     (uid) =>
-                      adminName(MOCK_USERS.find((u) => u.id === uid)) ?? uid,
+                      adminName(userById.get(uid)) ?? uid,
                   )
                   .join(", ")}{" "}
                 {missingAdmins.length === 1 ? "is" : "are"} on the attribution
@@ -571,13 +594,23 @@ function PoolStat({
   );
 }
 
-function SettledView({
+async function SettledView({
   project,
   splits,
 }: {
   project: typeof projects.$inferSelect;
   splits: RevenueSplit[];
 }) {
+  // Loads its own roster: this view returns early, before the main
+  // page body does its loading, so it cannot share that fetch.
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+  const labelForRecipient = makeLabelForRecipient(
+    new Map(roster.map((u) => [u.id, u])),
+  );
+
   const collected = Number(project.collectedRevenue ?? "0");
   const byPool = (pool: SplitPool) => splits.filter((s) => s.pool === pool);
   const sumPool = (pool: SplitPool) =>
@@ -625,14 +658,22 @@ function SettledView({
         />
       </div>
 
-      <Pool title="Contributor pool — 85%" rows={byPool("contributor")} />
-      <Pool title="Admin commission — 12% of revenue" rows={byPool("admin")} />
-      <Pool title="Reserve — 3% of revenue" rows={byPool("reserve")} />
+      <Pool title="Contributor pool — 85%" rows={byPool("contributor")} labelForRecipient={labelForRecipient} />
+      <Pool title="Admin commission — 12% of revenue" rows={byPool("admin")} labelForRecipient={labelForRecipient} />
+      <Pool title="Reserve — 3% of revenue" rows={byPool("reserve")} labelForRecipient={labelForRecipient} />
     </div>
   );
 }
 
-function Pool({ title, rows }: { title: string; rows: RevenueSplit[] }) {
+function Pool({
+  title,
+  rows,
+  labelForRecipient,
+}: {
+  title: string;
+  rows: RevenueSplit[];
+  labelForRecipient: (id: string) => string;
+}) {
   if (rows.length === 0) return null;
   return (
     <Card className="mt-6">
@@ -710,12 +751,18 @@ function Pool({ title, rows }: { title: string; rows: RevenueSplit[] }) {
 /*                                          read-only with pool credit */
 /* ------------------------------------------------------------------ */
 
-function BonusReleasePanel({ project }: { project: Project }) {
+function BonusReleasePanel({
+  project,
+  allPeerReviews,
+}: {
+  project: Project;
+  allPeerReviews: PeerReview[];
+}) {
   if (!project.talentBonusAmount) return null;
   const baseAmount = Number(project.talentBaseAmount ?? 0);
   const bonusAmount = Number(project.talentBonusAmount);
   const feedback = feedbackForContext(project.id)[0] ?? null;
-  const peerReviews = MOCK_PEER_REVIEWS.filter(
+  const peerReviews = allPeerReviews.filter(
     (r) => r.contextId === project.id,
   );
   const decision = evaluateBonusGate({
@@ -895,10 +942,13 @@ function GateInputStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function labelForRecipient(id: string): string {
-  const user = MOCK_USERS.find((u) => u.id === id);
-  if (user) return adminName(user);
-  const reserve = RESERVE_RECIPIENTS.find((r) => r.id === id);
-  if (reserve) return reserve.label;
-  return id;
+function makeLabelForRecipient(userById: Map<string, User>) {
+  return (id: string): string => {
+    const user = userById.get(id);
+    if (user) return adminName(user);
+    const reserve = RESERVE_RECIPIENTS.find((r) => r.id === id);
+    if (reserve) return reserve.label;
+    return id;
+  };
 }
+

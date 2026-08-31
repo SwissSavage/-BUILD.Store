@@ -18,8 +18,9 @@ import { eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth-stub";
 import { db } from "@/db/client";
 import { projects } from "@/db/schema";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllProjects } from "@/lib/readers/projects";
+import { safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
 import { fairMixTalentForRfp } from "@/lib/talent-match";
 import {
   dispatchRfpQuoteRequests,
@@ -48,6 +49,8 @@ interface Params {
   id: string;
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function RfpDispatchPage({
   params,
 }: {
@@ -72,11 +75,22 @@ export default async function RfpDispatchPage({
     notFound();
   }
 
-  // Compute a rough engagement count per user so the rotation bucket
-  // biases toward newer talent. Cheap heuristic from MOCK_PROJECTS
-  // assigned rosters; production swap reads from a real query.
+  // Reader swap 2026-08-29: the fair-mix rotation biased against
+  // newer talent using seed engagement counts, so dispatch picked
+  // from the wrong pool entirely.
+  const [{ projects: allProjects }, { users: roster }] = await Promise.all([
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const userById = new Map(roster.map((u) => [u.id, u]));
+
+  // Rough engagement count per member so the rotation bucket favors
+  // talent who have not been placed recently.
   const engagementCounts = new Map<string, number>();
-  for (const p of MOCK_PROJECTS) {
+  for (const p of allProjects) {
     for (const uid of p.assignedMemberIds ?? []) {
       engagementCounts.set(uid, (engagementCounts.get(uid) ?? 0) + 1);
     }
@@ -145,7 +159,7 @@ export default async function RfpDispatchPage({
 
             <ul className="space-y-2">
               {mix.map((m) => {
-                const u = MOCK_USERS.find((x) => x.id === m.user.id);
+                const u = userById.get(m.user.id);
                 if (!u) return null;
                 return (
                   <li

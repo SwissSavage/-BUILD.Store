@@ -14,9 +14,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_ATTRIBUTION } from "@/lib/mock-data/attribution";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { randomUUID } from "crypto";
+import { db } from "@/db/client";
+import { attributionEntries as attributionTable } from "@/db/schema";
+import { getProjectById } from "@/lib/readers/projects";
+import { getAttributionForUser, attributionReader, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
 import {
   ATTRIBUTION_ROLE_LABELS,
   adminName,
@@ -43,12 +46,16 @@ async function logEntry(formData: FormData) {
     throw new Error("Weight must be between 0 and 1");
   }
 
-  MOCK_ATTRIBUTION.push({
-    id: `att_${Date.now()}`,
+  // Writer swap 2026-08-29: was an in-memory push. Attribution
+  // entries are the input to the revenue split engine — an admin
+  // logging who contributed what watched it save and then vanish, so
+  // splits would have been computed against nothing.
+  await db.insert(attributionTable).values({
+    id: `att_${randomUUID()}`,
     contractId,
     userId,
     role,
-    weight,
+    weight: String(weight),
     notes,
     loggedBy: admin.id,
     loggedAt: new Date().toISOString(),
@@ -59,6 +66,8 @@ async function logEntry(formData: FormData) {
   revalidatePath("/admin/contracts");
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function AttributionLedgerPage({
   params,
 }: {
@@ -68,10 +77,18 @@ export default async function AttributionLedgerPage({
   if (!admin || !admin.isAdmin) redirect("/dashboard");
 
   const { id } = await params;
-  const project = MOCK_PROJECTS.find((p) => p.id === id);
+  // Reader swap 2026-08-29: attribution ledger read seed data, so the
+  // contributor sheet an admin uses to compute splits was fiction.
+  const project = await getProjectById(id);
   if (!project) notFound();
 
-  const entries = MOCK_ATTRIBUTION.filter((a) => a.contractId === id).sort(
+  const [allAttribution, { users: roster }] = await Promise.all([
+    safely(() => attributionReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const userById = new Map(roster.map((u) => [u.id, u]));
+
+  const entries = allAttribution.filter((a) => a.contractId === id).sort(
     (a, b) => a.loggedAt.localeCompare(b.loggedAt),
   );
 
@@ -125,7 +142,7 @@ export default async function AttributionLedgerPage({
         ) : (
           <ul className="mt-4 divide-y divide-[var(--surface-border)]">
             {entries.map((e) => {
-              const u = MOCK_USERS.find((u) => u.id === e.userId);
+              const u = userById.get(e.userId);
               return (
                 <li key={e.id} className="py-3">
                   <div className="flex items-start gap-3">
@@ -147,7 +164,7 @@ export default async function AttributionLedgerPage({
                         <p className="mt-1 text-sm text-ink-muted">{e.notes}</p>
                       )}
                       <p className="mt-1 text-xs text-ink-faint">
-                        Logged by {adminName(MOCK_USERS.find((u) => u.id === e.loggedBy))}{" "}
+                        Logged by {adminName(e.loggedBy ? userById.get(e.loggedBy) : undefined)}{" "}
                         on {new Date(e.loggedAt).toLocaleDateString()}
                       </p>
                     </div>
@@ -179,7 +196,7 @@ export default async function AttributionLedgerPage({
               className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
             >
               <option value="">Select…</option>
-              {MOCK_USERS.filter((u) => u.membershipTier !== "viewer").map((u) => (
+              {roster.filter((u) => u.membershipTier !== "viewer").map((u) => (
                 <option key={u.id} value={u.id}>
                   {adminName(u)}
                   {suggested.has(u.id) ? " (assigned)" : ""}

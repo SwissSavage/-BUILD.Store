@@ -8,28 +8,53 @@
  * surface is ready for when the cooperative-owned production swap lands
  * (auth, domains, backend per the launch-prep checklist).
  *
- * Mutations write to MOCK_USERS in memory — same pattern as the rest of
- * the admin surfaces. REPLACE WITH: Drizzle update on `users.is_admin`,
- * audit log entry per grant/revoke, and an email notification to the
- * promoted user.
+ * Grant and revoke update `users.is_admin` and write an audit entry.
+ * Both were in-memory until 2026-08-30, which meant promoting someone
+ * to admin appeared to work and reverted on the next deploy — and the
+ * second revoke path, on /admin/access-review, had the same problem
+ * while logging the revocation as though it had taken effect.
+ *
+ * Still to come: an email to the promoted user.
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { users } from "@/db/schema";
+import { getAllUsers, getUserById } from "@/lib/readers/users";
+import { safely } from "@/lib/readers";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { INDUSTRY_LABELS, adminName } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 async function grantAdmin(formData: FormData) {
   "use server";
   const admin = await getCurrentUser();
   if (!admin || !admin.isAdmin) throw new Error("Admin only");
   const userId = String(formData.get("userId") ?? "");
-  const user = MOCK_USERS.find((u) => u.id === userId);
+  const user = await getUserById(userId);
   if (!user) throw new Error("User not found");
-  user.isAdmin = true;
-  user.updatedAt = new Date().toISOString();
+
+  await db
+    .update(users)
+    .set({ isAdmin: true, updatedAt: new Date().toISOString() })
+    .where(eq(users.id, userId));
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "user.admin_flag_changed",
+    resourceKind: "user",
+    resourceId: userId,
+    before: { isAdmin: false },
+    after: { isAdmin: true },
+    reason: "Granted from /admin/team.",
+  });
+
   revalidatePath("/admin/team");
   revalidatePath("/admin");
 }
@@ -44,10 +69,25 @@ async function revokeAdmin(formData: FormData) {
       "Self-revoke disabled — another admin must remove you to prevent locking the platform out.",
     );
   }
-  const user = MOCK_USERS.find((u) => u.id === userId);
+  const user = await getUserById(userId);
   if (!user) throw new Error("User not found");
-  user.isAdmin = false;
-  user.updatedAt = new Date().toISOString();
+
+  await db
+    .update(users)
+    .set({ isAdmin: false, updatedAt: new Date().toISOString() })
+    .where(eq(users.id, userId));
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "user.admin_flag_changed",
+    resourceKind: "user",
+    resourceId: userId,
+    before: { isAdmin: true },
+    after: { isAdmin: false },
+    reason: "Revoked from /admin/team.",
+  });
+
   revalidatePath("/admin/team");
   revalidatePath("/admin");
 }
@@ -56,8 +96,13 @@ export default async function AdminTeamPage() {
   const current = await getCurrentUser();
   if (!current || !current.isAdmin) redirect("/dashboard");
 
-  const admins = MOCK_USERS.filter((u) => u.isAdmin);
-  const promotable = MOCK_USERS.filter(
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+
+  const admins = roster.filter((u) => u.isAdmin);
+  const promotable = roster.filter(
     (u) =>
       !u.isAdmin &&
       (u.membershipTier === "member" || u.membershipTier === "partner"),

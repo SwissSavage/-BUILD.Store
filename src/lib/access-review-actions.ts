@@ -8,15 +8,24 @@
  * `config.access_reviewed`) — that record is what the auditor asks for
  * during a Type II observation window.
  *
- * Sandbox: revocation flips User.isAdmin to false. Production adds
- * scoped-role revocation (drop finance_admin / membership_admin /
- * moderation_admin individually).
+ * Revocation clears `users.is_admin`. Until 2026-08-30 it flipped the
+ * field on an in-memory fixture object, so the audit log recorded a
+ * revocation that had not happened — the target kept admin access and
+ * the record said otherwise. That is the worst possible failure for a
+ * control whose entire output is the record.
+ *
+ * Still to come: scoped-role revocation (drop finance_admin /
+ * membership_admin / moderation_admin individually) rather than one
+ * boolean.
  */
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { users } from "@/db/schema";
+import { getAdminUsers, getUserById } from "@/lib/readers/users";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 /**
@@ -40,14 +49,21 @@ export async function revokeAdminFlag(formData: FormData) {
     );
   }
 
-  const target = MOCK_USERS.find((u) => u.id === targetId);
+  const target = await getUserById(targetId);
   if (!target) throw new Error("Target user not found");
   if (!target.isAdmin) {
     throw new Error("Target is not currently an admin.");
   }
 
   const before = { isAdmin: target.isAdmin };
-  target.isAdmin = false;
+
+  // Persist before logging. An audit entry written ahead of a failed
+  // update would assert a revocation that never happened, which is
+  // exactly the state this control exists to rule out.
+  await db
+    .update(users)
+    .set({ isAdmin: false, updatedAt: new Date().toISOString() })
+    .where(eq(users.id, targetId));
 
   await logAuditEvent({
     actorUserId: reviewer.id,
@@ -75,7 +91,11 @@ export async function revokeAdminFlag(formData: FormData) {
 export async function recordAccessReview(formData: FormData) {
   const reviewer = await requireAdmin();
   const summary = String(formData.get("summary") ?? "").trim();
-  const admins = MOCK_USERS.filter((u) => u.isAdmin).map((u) => ({
+  // The roster snapshot is the substance of the review record — it is
+  // what the auditor reads to see who held access on the date it was
+  // signed. It has to come from the live table.
+  const { users: adminRows } = await getAdminUsers();
+  const admins = adminRows.map((u) => ({
     id: u.id,
     handle: u.handle,
     firstName: u.firstName,

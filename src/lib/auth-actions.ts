@@ -12,10 +12,7 @@ import { revalidatePath } from "next/cache";
 import { REAL_SESSION_COOKIE, SESSION_COOKIE } from "@/lib/auth-stub";
 import { signOut as authJsSignOut } from "@/lib/auth";
 import { MOCK_USERS } from "@/lib/mock-data/users";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 
@@ -34,7 +31,7 @@ export async function signIn(formData: FormData) {
   const user = MOCK_USERS.find((u) => u.id === uid);
   if (!user) {
     // Log the failed attempt without leaking the (nonexistent) uid.
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: null,
       actorRoleSnapshot: "system",
       action: "user.failed_signin",
@@ -51,7 +48,7 @@ export async function signIn(formData: FormData) {
   // Signing in as a real user clears any stale view-as breadcrumb.
   jar.delete(REAL_SESSION_COOKIE);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: "user.signed_in",
@@ -98,7 +95,7 @@ export async function signOut() {
   }
 
   if (user) {
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: user.id,
       actorRoleSnapshot: snapshotActorRole(user),
       action: "user.signed_out",

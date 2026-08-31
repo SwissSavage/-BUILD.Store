@@ -22,7 +22,7 @@
  *
  * Same operational pattern as /admin/cohort (Tier 6) and
  * /admin/receipts (Tier 7). Every action writes to the immutable
- * audit trail via logAuditEvent().
+ * audit trail via await logAuditEvent().
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";

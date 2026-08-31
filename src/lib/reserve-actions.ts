@@ -17,10 +17,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_PEER_REVIEWS } from "@/lib/mock-data/peer-reviews";
@@ -138,7 +135,7 @@ export async function creditReserveOnInvoiceCollection(input: {
   const actor = input.actorUserId
     ? MOCK_USERS.find((u) => u.id === input.actorUserId) ?? null
     : null;
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: input.actorUserId,
     actorRoleSnapshot: snapshotActorRole(actor),
     action: "reserve.credited",
@@ -187,7 +184,16 @@ function snapshotComposite(input: {
   const actor = input.actorUserId
     ? MOCK_USERS.find((u) => u.id === input.actorUserId) ?? null
     : null;
-  logAuditEvent({
+  // Floating on purpose. `snapshotComposite` / `issueVoucherInternal`
+  // are synchronous and sit under a sync call chain that reaches into
+  // the settlement engine; converting them is its own change, not a
+  // rider on the audit-log swap. `logAuditEvent` never throws — it
+  // catches and reports its own failures — so an unawaited call here
+  // cannot reject, and this process is a long-lived Node container
+  // rather than a serverless function, so the insert does complete.
+  // TODO: drop the `void` when these two go async with the voucher
+  // persistence work.
+  void logAuditEvent({
     actorUserId: input.actorUserId,
     actorRoleSnapshot: snapshotActorRole(actor),
     action: "composite.computed",
@@ -395,7 +401,7 @@ export async function executeGraduatedBonusRelease(
       actorUserId: admin.id,
       rationale: `Composite ${c.composite.weightedComposite}/5 → released ${(c.composite.bonusReleaseFraction * 100).toFixed(1)}% of ${contribShare.toFixed(2)} bonus share (weighted by ${c.internalInvoiceAmount} internal invoice).`,
     });
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: admin.id,
       actorRoleSnapshot: snapshotActorRole(admin),
       action: "reserve.bonus_released",
@@ -442,7 +448,7 @@ export async function executeGraduatedBonusRelease(
         actorUserId: admin.id,
         rationale: `Peer-coverage bonus: ${d.sharePct.toFixed(2)}% of ${unreleasedPool.toFixed(2)} unreleased pool.`,
       });
-      logAuditEvent({
+      await logAuditEvent({
         actorUserId: admin.id,
         actorRoleSnapshot: snapshotActorRole(admin),
         action: "reserve.peer_coverage_distributed",
@@ -472,7 +478,7 @@ export async function executeGraduatedBonusRelease(
         rationale: `Residual after peer-coverage distribution — routed to Engagement Recovery Pool.`,
       });
       creditRecoveryPool(projectId, residual.toFixed(2));
-      logAuditEvent({
+      await logAuditEvent({
         actorUserId: admin.id,
         actorRoleSnapshot: snapshotActorRole(admin),
         action: "reserve.recovery_routed",
@@ -491,7 +497,7 @@ export async function executeGraduatedBonusRelease(
 
   // Log a summary of what the release fired against — including
   // any missing sources — so the audit trail captures the state.
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "reserve.bonus_released",
@@ -578,7 +584,7 @@ export async function issueClientRebate(formData: FormData): Promise<void> {
     rationale: rationale + multiplierNote,
   });
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "reserve.rebate_issued",

@@ -24,10 +24,7 @@ import { db } from "@/db/client";
 import { communityMessages } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { scrubForClient } from "@/lib/pii-scrub";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 const MAX_BODY_CHARS = 1000;
 const POST_COOLDOWN_MS = 30 * 1000;
@@ -132,7 +129,7 @@ export async function deleteCommunityMessage(formData: FormData) {
     })
     .where(eq(communityMessages.id, id));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: isAdminActor ? "config.setting_changed" : "user.applied",
@@ -167,7 +164,7 @@ export async function restoreCommunityMessage(formData: FormData) {
     })
     .where(eq(communityMessages.id, id));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "config.setting_changed",

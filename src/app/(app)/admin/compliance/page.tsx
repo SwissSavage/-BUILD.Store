@@ -13,8 +13,12 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_AUDIT_LOG } from "@/lib/mock-data/audit-log";
+
+import { countAuditEntries } from "@/lib/readers/audit-log";
+import { safely } from "@/lib/readers";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 type ControlStatus = "satisfied" | "partial" | "gap" | "planned";
 
@@ -29,7 +33,13 @@ interface ComplianceControl {
   href?: string;
 }
 
-const CONTROLS: ComplianceControl[] = [
+/**
+ * The control table takes the live audit-entry count so the CC7.2
+ * evidence line states what is actually in the table rather than a
+ * hardcoded claim. Everything else here is static text.
+ */
+function buildControls(auditEntryCount: number): ComplianceControl[] {
+  return [
   // ── SOC 2 Trust Services Criteria ──────────────────────────────
   {
     framework: "SOC 2",
@@ -122,7 +132,7 @@ const CONTROLS: ComplianceControl[] = [
     requirement:
       "The entity monitors systems and analyzes anomalies via an append-only audit log.",
     status: "satisfied",
-    sandboxEvidence: `MOCK_AUDIT_LOG append-only in-memory store. logAuditEvent() called from every security/financial/compliance-adjacent server action. ${MOCK_AUDIT_LOG.length} entries recorded so far.`,
+    sandboxEvidence: `Postgres audit_log_entries table, append-only by convention. logAuditEvent() called from every security/financial/compliance-adjacent server action. ${auditEntryCount} entries recorded.`,
     productionRemediation:
       "Drizzle audit_log table with UPDATE/DELETE grants revoked at DB role. Replication to S3 Object Lock (WORM) within one business day. 12-month hot retention, 7-year cold for financial subset.",
     href: "/admin/audit-log",
@@ -341,7 +351,8 @@ const CONTROLS: ComplianceControl[] = [
     productionRemediation:
       "Add jurisdictional matrix: FL corp filings, CA CCPA (for California residents), NY SHIELD Act, GDPR (if EU users). Annual legal review.",
   },
-];
+  ];
+}
 
 const STATUS_LABEL: Record<ControlStatus, string> = {
   satisfied: "Satisfied (sandbox)",
@@ -356,12 +367,18 @@ const STATUS_COLOR: Record<ControlStatus, string> = {
   planned: "#5070F0",
 };
 
-function countByStatus(status: ControlStatus): number {
-  return CONTROLS.filter((c) => c.status === status).length;
+function countByStatus(
+  controls: ComplianceControl[],
+  status: ControlStatus,
+): number {
+  return controls.filter((c) => c.status === status).length;
 }
 
 export default async function CompliancePage() {
   await requireAdmin();
+
+  const auditEntryCount = await safely(() => countAuditEntries(), 0);
+  const CONTROLS = buildControls(auditEntryCount);
 
   const summary: ControlStatus[] = ["satisfied", "partial", "gap", "planned"];
 
@@ -386,7 +403,7 @@ export default async function CompliancePage() {
             <CardEyebrow>{STATUS_LABEL[s]}</CardEyebrow>
             <CardTitle className="mt-2 text-3xl">
               <span style={{ color: STATUS_COLOR[s] }}>
-                {countByStatus(s)}
+                {countByStatus(CONTROLS, s)}
               </span>
             </CardTitle>
             <p className="mt-1 text-xs text-ink-muted">

@@ -23,10 +23,7 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 // Single canonical owner for internal cooperative work. Future Modern
 // IS the entity; $BUILD.Store is the platform product. Keeping one
@@ -101,7 +98,7 @@ async function createInitiative(formData: FormData) {
     });
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: proposer.id,
     actorRoleSnapshot: snapshotActorRole(proposer),
     action: "user.applied",

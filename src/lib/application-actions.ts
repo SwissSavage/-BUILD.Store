@@ -22,10 +22,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { jobApplications, projectApplications, projects } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import {
   computeRateBounds,
@@ -91,7 +88,7 @@ export async function submitJobApplication(formData: FormData): Promise<void> {
     throw err;
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: "user.applied",
@@ -201,7 +198,7 @@ export async function submitContractBid(formData: FormData): Promise<void> {
     createdAt: now,
   });
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: "user.applied",
@@ -270,7 +267,7 @@ export async function reviewJobApplication(formData: FormData): Promise<void> {
     })
     .where(eq(jobApplications.id, id));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: decision === "approved" ? "user.applied" : "user.applied",

@@ -16,10 +16,7 @@
  * settles.
  */
 import { MOCK_BUILD_VOUCHERS } from "@/lib/mock-data/vouchers";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import {
   buildSplitForGross,
@@ -127,7 +124,16 @@ export function issueVoucherInternal(
   const actor = input.issuedByUserId
     ? MOCK_USERS.find((u) => u.id === input.issuedByUserId) ?? null
     : null;
-  logAuditEvent({
+  // Floating on purpose. `snapshotComposite` / `issueVoucherInternal`
+  // are synchronous and sit under a sync call chain that reaches into
+  // the settlement engine; converting them is its own change, not a
+  // rider on the audit-log swap. `logAuditEvent` never throws — it
+  // catches and reports its own failures — so an unawaited call here
+  // cannot reject, and this process is a long-lived Node container
+  // rather than a serverless function, so the insert does complete.
+  // TODO: drop the `void` when these two go async with the voucher
+  // persistence work.
+  void logAuditEvent({
     actorUserId: input.issuedByUserId,
     actorRoleSnapshot: snapshotActorRole(actor),
     action: "voucher.issued",

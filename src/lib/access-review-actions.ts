@@ -17,10 +17,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_USERS } from "@/lib/mock-data/users";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 /**
  * Admin flips another admin's flag to false during access review.
@@ -52,7 +49,7 @@ export async function revokeAdminFlag(formData: FormData) {
   const before = { isAdmin: target.isAdmin };
   target.isAdmin = false;
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: reviewer.id,
     actorRoleSnapshot: snapshotActorRole(reviewer),
     action: "user.admin_flag_changed",
@@ -84,7 +81,7 @@ export async function recordAccessReview(formData: FormData) {
     firstName: u.firstName,
   }));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: reviewer.id,
     actorRoleSnapshot: snapshotActorRole(reviewer),
     action: "config.access_reviewed",

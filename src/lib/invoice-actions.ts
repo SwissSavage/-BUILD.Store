@@ -38,10 +38,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { invoices, projects, users } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import {
   COOP_RECIPIENT_ID,
   publicName,
@@ -168,7 +165,7 @@ export async function createInternalInvoice(formData: FormData): Promise<void> {
   };
   await db.insert(invoices).values(row);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: "quote.created", // reuse existing verb — see note below
@@ -229,7 +226,7 @@ export async function approveInternalInvoice(formData: FormData): Promise<void> 
     })
     .where(eq(invoices.id, id));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "quote.approved",
@@ -356,7 +353,7 @@ export async function generateExternalInvoice(
   };
   await db.insert(invoices).values(row);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "quote.created",
@@ -474,7 +471,7 @@ export async function markExternalInvoicePaid(
     })
     .where(eq(invoices.id, id));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "quote.approved",
@@ -643,7 +640,7 @@ export async function createRetroactiveReceipt(
   };
   await db.insert(invoices).values(row);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "quote.created",
@@ -795,7 +792,7 @@ export async function sendInvoiceForSignature(
     })
     .where(eq(invoices.id, row.id));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "document.signature_requested",

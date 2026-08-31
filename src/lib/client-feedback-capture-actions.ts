@@ -29,10 +29,7 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_CUSTOMER_FEEDBACK } from "@/lib/mock-data/customer-feedback";
 import { MOCK_MEETING_MINUTES } from "@/lib/mock-data/meeting-minutes";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { CustomerFeedback } from "@/lib/types";
 
 function nextFeedbackId(): string {
@@ -159,7 +156,7 @@ export async function captureClientFeedbackDuringCall(
   // Audit — captures the provenance shape explicitly so the
   // pattern-surfacing task (#266) can flag admins with an unusual
   // capture-to-self-submit ratio.
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "quote.created", // reuse until customer_feedback.captured verb added

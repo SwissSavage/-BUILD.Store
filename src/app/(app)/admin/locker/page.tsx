@@ -8,8 +8,8 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_MEDIA_ASSETS } from "@/lib/mock-data/media-assets";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { mediaAssetReader, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
 import { moderateMediaAsset } from "@/lib/locker-actions";
 import {
   INDUSTRY_LABELS,
@@ -19,6 +19,8 @@ import {
   adminName,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminLockerPage() {
   await requireAdmin();
@@ -31,14 +33,19 @@ export default async function AdminLockerPage() {
     "archived",
   ];
 
-  const sorted = [...MOCK_MEDIA_ASSETS].sort((a, b) => {
+  const [assets, { users: roster }] = await Promise.all([
+    safely(() => mediaAssetReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+
+  const sorted = [...assets].sort((a, b) => {
     const ai = STATUS_ORDER.indexOf(a.status);
     const bi = STATUS_ORDER.indexOf(b.status);
     if (ai !== bi) return ai - bi;
     return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
   });
 
-  const pendingCount = MOCK_MEDIA_ASSETS.filter(
+  const pendingCount = assets.filter(
     (a) => a.status === "pending_review",
   ).length;
 
@@ -51,7 +58,7 @@ export default async function AdminLockerPage() {
             Locker moderation
           </h1>
           <p className="mt-2 text-sm text-ink-muted">
-            {MOCK_MEDIA_ASSETS.length} total assets · {pendingCount} pending
+            {assets.length} total assets · {pendingCount} pending
             review · admin notes route back to the uploader.
           </p>
         </div>
@@ -66,7 +73,7 @@ export default async function AdminLockerPage() {
       <div className="mt-8 space-y-4">
         {sorted.map((asset) => {
           const uploader =
-            MOCK_USERS.find((u) => u.id === asset.uploaderId) ?? null;
+            roster.find((u) => u.id === asset.uploaderId) ?? null;
           return (
             <Card key={asset.id}>
               <div className="flex flex-wrap items-start justify-between gap-3">

@@ -34,10 +34,7 @@ import {
   projects,
 } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type {
   CooperativeQuote,
   ProposedBuilder,
@@ -226,7 +223,7 @@ export async function compileBidsIntoQuote(formData: FormData) {
   };
   await db.insert(cooperativeQuotes).values(row);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "quote.created",

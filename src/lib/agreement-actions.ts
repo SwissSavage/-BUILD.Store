@@ -34,10 +34,7 @@ import { db } from "@/db/client";
 import { agreements as agreementsTable } from "@/db/schema";
 import { agreementReader } from "@/lib/readers";
 import { MOCK_USERS } from "@/lib/mock-data/users";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import {
   publicName,
   type Agreement,
@@ -173,7 +170,7 @@ export async function createAgreement(formData: FormData): Promise<void> {
   // by an admin disappeared before the renewal checker ever saw it.
   await db.insert(agreementsTable).values(row);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "agreement.created",
@@ -250,7 +247,7 @@ export async function updateAgreement(formData: FormData): Promise<void> {
     })
     .where(eq(agreementsTable.id, id));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "agreement.updated",
@@ -288,7 +285,7 @@ export async function removeAgreement(formData: FormData): Promise<void> {
   if (!removed) throw new Error("Agreement not found.");
   await db.delete(agreementsTable).where(eq(agreementsTable.id, id));
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "agreement.removed",
@@ -392,7 +389,7 @@ export async function sendLoiForSignature(
     throw err;
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "document.signature_requested",
@@ -539,7 +536,7 @@ export async function sendNcndaForSignature(
     throw err;
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "document.signature_requested",

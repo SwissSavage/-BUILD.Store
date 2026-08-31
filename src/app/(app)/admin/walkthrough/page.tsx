@@ -14,10 +14,13 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { safely } from "@/lib/readers";
 import { viewAsUser } from "@/lib/auth-actions";
 import { publicName } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 interface Step {
   action: string;
@@ -47,12 +50,17 @@ const SECTIONS_TOC = [
 export default async function WalkthroughPage() {
   await requireAdmin();
 
-  // Pick sandbox users for each tier at render time so the buttons
-  // route to something that exists. Falls back to first-of-tier if
-  // named picks aren't in the store.
-  const findFirst = (
-    predicate: (u: (typeof MOCK_USERS)[number]) => boolean,
-  ) => MOCK_USERS.find(predicate);
+  // Pick a real user for each tier at render time so the view-as
+  // buttons route to somebody who exists. Falls back to first-of-tier
+  // when the named picks aren't on the roster — and to null when the
+  // tier has no members at all, which the buttons below handle by
+  // disabling rather than linking somewhere broken.
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+  const findFirst = (predicate: (u: (typeof roster)[number]) => boolean) =>
+    roster.find(predicate);
 
   const partnerUser =
     findFirst(

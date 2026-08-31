@@ -14,14 +14,17 @@
  * reviews older than 90 days flip the row to "overdue."
  */
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { readAuditLog } from "@/lib/mock-data/audit-log";
+import { getAdminUsers, getAllUsers } from "@/lib/readers/users";
+import { safely } from "@/lib/readers";
+import { readAuditLog } from "@/lib/readers/audit-log";
 import {
   recordAccessReview,
   revokeAdminFlag,
 } from "@/lib/access-review-actions";
 import { adminName } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
@@ -48,10 +51,21 @@ function daysSince(iso: string | null | undefined): string {
 export default async function AccessReviewPage() {
   const reviewer = await requireAdmin();
 
-  const admins = MOCK_USERS.filter((u) => u.isAdmin);
+  // The quarterly access review is only meaningful against the real
+  // admin roster. Reviewing a fixture list would produce a signed
+  // attestation about people who don't hold the flag.
+  const empty = { users: [], source: "postgres" as const };
+  const [{ users: admins }, { users: roster }] = await Promise.all([
+    safely(() => getAdminUsers(), empty),
+    // Full roster, not just current admins: the actor on a past review
+    // or revocation may have since lost the flag, and their name should
+    // still resolve. Looking them up in the admin list only would print
+    // a raw id for exactly the people the review is about.
+    safely(() => getAllUsers(), empty),
+  ]);
 
   // Prior review completions from the audit log.
-  const priorReviews = readAuditLog({
+  const priorReviews = await readAuditLog({
     action: "config.access_reviewed",
     limit: 20,
   });
@@ -66,13 +80,21 @@ export default async function AccessReviewPage() {
 
   // Prior revocations from the audit log — surface for this session's
   // walk-through so the reviewer can see who's already been touched.
-  const priorRevocations = readAuditLog({
+  // Revocations are a subset of admin-flag changes, and the flag
+  // predicate lives in the JSONB `after` blob rather than a column.
+  // So the limit has to be generous enough that filtering afterwards
+  // doesn't starve the list — a tight LIMIT here would silently show
+  // zero revocations on a busy log.
+  const flagChanges = await readAuditLog({
     action: "user.admin_flag_changed",
-    limit: 30,
-  }).filter((e) => {
-    const after = e.after as { isAdmin?: boolean } | null;
-    return after?.isAdmin === false;
+    limit: 200,
   });
+  const priorRevocations = flagChanges
+    .filter((e) => {
+      const after = e.after as { isAdmin?: boolean } | null;
+      return after?.isAdmin === false;
+    })
+    .slice(0, 30);
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -109,7 +131,7 @@ export default async function AccessReviewPage() {
             Last review completed {daysSince(lastReview.createdAt)} by{" "}
             <span className="text-ink">
               {adminName(
-                MOCK_USERS.find((u) => u.id === lastReview.actorUserId) ??
+                roster.find((u) => u.id === lastReview.actorUserId) ??
                   null,
               )}
             </span>
@@ -252,7 +274,7 @@ export default async function AccessReviewPage() {
                     </span>{" "}
                     ·{" "}
                     {adminName(
-                      MOCK_USERS.find((u) => u.id === e.actorUserId) ??
+                      roster.find((u) => u.id === e.actorUserId) ??
                         null,
                     )}
                     {e.reason && (
@@ -282,7 +304,7 @@ export default async function AccessReviewPage() {
                     </span>{" "}
                     ·{" "}
                     {adminName(
-                      MOCK_USERS.find((u) => u.id === e.actorUserId) ??
+                      roster.find((u) => u.id === e.actorUserId) ??
                         null,
                     )}{" "}
                     revoked{" "}

@@ -28,10 +28,7 @@ import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_ORDERS } from "@/lib/mock-data/orders";
 import { MOCK_USERS } from "@/lib/mock-data/users";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import {
   MOCK_CUSTOMER_FEEDBACK,
   hasFeedbackForContext,
@@ -368,7 +365,7 @@ export async function publishTestimonial(formData: FormData) {
   row.publishedQuote = publishedQuote;
   row.publishedForUserId = publishedForUserId;
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "testimonial.published",
@@ -413,7 +410,7 @@ export async function unpublishTestimonial(formData: FormData) {
   row.publishedForUserId = null;
 
   if (formerUserId) {
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: admin.id,
       actorRoleSnapshot: snapshotActorRole(admin),
       action: "testimonial.unpublished",

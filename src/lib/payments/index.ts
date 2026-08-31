@@ -31,7 +31,7 @@ import { stripeDispatch, stripeHealth, stripeVerify } from "./stripe-rail";
 import { manualDispatch, manualHealth, manualVerify } from "./manual-rail";
 import { plaidDispatch, plaidHealth, plaidVerify } from "./plaid-rail";
 import { cryptoDispatch, cryptoHealth, cryptoVerify } from "./crypto-rail";
-import { logAuditEvent } from "@/lib/mock-data/audit-log";
+import { logAuditEvent } from "@/lib/writers/audit-log";
 
 export type {
   DispatchPayoutInput,
@@ -100,7 +100,7 @@ export async function dispatchPayout(
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: null,
       actorRoleSnapshot: "system",
       action: "payout.dispatch_failed",
@@ -113,7 +113,7 @@ export async function dispatchPayout(
     throw err;
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: null,
     actorRoleSnapshot: "system",
     action: "payout.dispatched",

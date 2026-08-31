@@ -18,10 +18,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_COHORT_SPOTLIGHTS } from "@/lib/mock-data/cohort-spotlights";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { CohortSpotlight } from "@/lib/types";
 
 function newSpotlightId(): string {
@@ -130,7 +127,7 @@ export async function createCohortSpotlight(formData: FormData) {
   };
   MOCK_COHORT_SPOTLIGHTS.push(row);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "cohort.spotlight_created",
@@ -166,7 +163,7 @@ export async function removeCohortSpotlight(formData: FormData) {
 
   const [removed] = MOCK_COHORT_SPOTLIGHTS.splice(idx, 1);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "cohort.spotlight_removed",

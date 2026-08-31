@@ -33,10 +33,7 @@ import {
 } from "@/lib/mock-data/artist-epk";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type {
   ArtistEpk,
   ArtistMetricSnapshot,
@@ -461,7 +458,7 @@ export async function approveEpk(formData: FormData) {
     target.profileMode = "epk";
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "epk.approved",
@@ -514,7 +511,7 @@ export async function requestEpkRevision(formData: FormData) {
   epk.adminRevisionNote = note;
   await bumpUpdated(epk);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "epk.revision_requested",

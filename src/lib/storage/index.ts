@@ -41,9 +41,7 @@ import {
   hetznerRead,
   hetznerStore,
 } from "./hetzner-driver";
-import {
-  logAuditEvent,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent } from "@/lib/writers/audit-log";
 
 export type { FileKind, StorageBackend, StoredFile, StorageDriverHealth };
 export { StorageError };
@@ -70,7 +68,7 @@ export async function storeFile(
   } catch (err) {
     if (primary === "hetzner") throw err; // no fallback beyond fallback
     // Fallback path: log + reroute to Hetzner.
-    logAuditEvent({
+    await logAuditEvent({
       actorUserId: null,
       actorRoleSnapshot: "system",
       action: "config.setting_changed",

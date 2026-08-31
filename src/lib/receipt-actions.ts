@@ -27,10 +27,7 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_PROJECT_MILESTONES } from "@/lib/mock-data/project-milestones";
 import { MOCK_COOPERATIVE_RECEIPTS } from "@/lib/mock-data/cooperative-receipts";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { CooperativeReceipt } from "@/lib/types";
 
 function newReceiptId(): string {
@@ -167,7 +164,7 @@ export async function generateCooperativeReceipt(formData: FormData) {
   };
   MOCK_COOPERATIVE_RECEIPTS.push(row);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "receipt.generated",
@@ -203,7 +200,7 @@ export async function removeCooperativeReceipt(formData: FormData) {
 
   const [removed] = MOCK_COOPERATIVE_RECEIPTS.splice(idx, 1);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "receipt.removed",

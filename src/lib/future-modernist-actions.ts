@@ -20,10 +20,7 @@ import {
   periodKeyFor,
   recognitionForPeriod,
 } from "@/lib/mock-data/future-modernist-recognitions";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { FutureModernistRecognition } from "@/lib/types";
 
 function newRecognitionId(): string {
@@ -81,7 +78,7 @@ export async function selectFutureModernist(formData: FormData) {
   };
   MOCK_FUTURE_MODERNIST_RECOGNITIONS.push(row);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "recognition.selected",
@@ -119,7 +116,7 @@ export async function rescindFutureModernist(formData: FormData) {
   const userId = original.userId;
   MOCK_FUTURE_MODERNIST_RECOGNITIONS.splice(idx, 1);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "recognition.revoked",

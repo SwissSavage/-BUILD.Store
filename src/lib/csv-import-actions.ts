@@ -26,10 +26,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
 import { pushInboundSubmission } from "@/lib/mock-data/inbound-submissions";
 import { extractKeywords } from "@/lib/talent-match";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { Industry } from "@/lib/types";
 
 // ─── header alias tables ────────────────────────────────────────
@@ -285,7 +282,7 @@ export async function importInboundCsv(formData: FormData) {
     imported += 1;
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "inbound.promoted_to_invite",

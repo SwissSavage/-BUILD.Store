@@ -25,10 +25,7 @@ import {
   processImage,
   type ImageVariantName,
 } from "@/lib/image-processing";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
 export type UploadedImage = Record<ImageVariantName, StoredFile>;
 
@@ -78,7 +75,7 @@ export async function uploadImage(
     stored[v.name] = record;
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: user.id,
     actorRoleSnapshot: snapshotActorRole(user),
     action: "config.setting_changed",

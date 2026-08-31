@@ -23,10 +23,7 @@ import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { feedbackForContext } from "@/lib/mock-data/customer-feedback";
 import { MOCK_PEER_REVIEWS } from "@/lib/mock-data/peer-reviews";
 import { creditPool, ensurePoolForProject } from "@/lib/mock-data/engagement-recovery-pools";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { evaluateBonusGate } from "@/lib/bonus-gate";
 import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
 import { hasValidPayoutDocument } from "@/lib/payout-gate";
@@ -186,7 +183,7 @@ export async function executeBonusDecision(formData: FormData) {
   // render even on the release path (it'll just sit at $0).
   ensurePoolForProject(projectId);
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action:

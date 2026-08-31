@@ -23,10 +23,7 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { Notification } from "@/lib/types";
 
 function nextNotifId(prefix: string): string {
@@ -86,7 +83,7 @@ export async function remindPmForRating(formData: FormData): Promise<void> {
     });
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "reserve.credited", // reuse until chase.reminder verb added
@@ -145,7 +142,7 @@ export async function remindPeersForRating(formData: FormData): Promise<void> {
     });
   }
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "reserve.credited",
@@ -193,7 +190,7 @@ export async function remindClientForFeedback(
     `[chase] client-feedback magic-link intent: /contracts/${projectId}/feedback → ${clientEmail}`,
   );
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "reserve.credited",

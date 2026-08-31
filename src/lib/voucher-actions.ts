@@ -38,10 +38,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_BUILD_VOUCHERS } from "@/lib/mock-data/vouchers";
 import { MOCK_USERS } from "@/lib/mock-data/users";
-import {
-  logAuditEvent,
-  snapshotActorRole,
-} from "@/lib/mock-data/audit-log";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { issueVoucherInternal } from "@/lib/voucher-issuance";
 import {
   BUILD_VOUCHER_SUPPLY_CAP,
@@ -195,7 +192,7 @@ export async function markVoucherPendingSwap(formData: FormData): Promise<void> 
   row.swapStatus = "pending_swap";
   row.updatedAt = new Date().toISOString();
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "voucher.marked_pending_swap",
@@ -234,7 +231,7 @@ export async function cancelPendingSwap(formData: FormData): Promise<void> {
   row.swapStatus = "unswapped";
   row.updatedAt = new Date().toISOString();
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     // Uses marked_pending_swap verb for both directions — the
@@ -291,7 +288,7 @@ export async function completeVoucherSwap(formData: FormData): Promise<void> {
   row.swappedAt = now;
   row.updatedAt = now;
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "voucher.swapped",
@@ -345,7 +342,7 @@ export async function forfeitVoucher(formData: FormData): Promise<void> {
   row.swapStatus = "forfeited";
   row.updatedAt = new Date().toISOString();
 
-  logAuditEvent({
+  await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
     action: "voucher.forfeited",

@@ -14,10 +14,17 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
 import { revalidatePath } from "next/cache";
-import { MOCK_QUOTES } from "@/lib/mock-data/quotes";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { INDUSTRY_LABELS, adminName } from "@/lib/types";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { quoteSheets } from "@/db/schema";
+import { quoteSheetReader, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
+import { getAllProjects } from "@/lib/readers/projects";
+import {
+  INDUSTRY_LABELS,
+  adminName,
+  type QuoteSheet,
+} from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
 
@@ -26,7 +33,7 @@ async function approveQuote(formData: FormData) {
   await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
-  const sheet = MOCK_QUOTES.find((q) => q.id === id);
+  const sheet = await quoteSheetReader.byId(id);
   if (!sheet) return;
 
   const approvedPrice = String(formData.get("approvedPrice") ?? "").trim();
@@ -37,18 +44,26 @@ async function approveQuote(formData: FormData) {
   // Only record a scrub override when the admin actually changed the raw
   // text. Equal to raw → null (meaning "send raw"). Keeps member edits to
   // price/timeline visible even after the first approval.
-  sheet.approvedPrice =
-    approvedPrice && approvedPrice !== sheet.price ? approvedPrice : null;
-  sheet.approvedTimeline =
-    approvedTimeline && approvedTimeline !== sheet.timeline
-      ? approvedTimeline
-      : null;
-  // Strengths / weaknesses are admin-authored narrative — blank = not written.
-  sheet.strengths = strengths || null;
-  sheet.weaknesses = weaknesses || null;
-  sheet.approvedAt = new Date().toISOString();
-  sheet.rejectedAt = null;
-  sheet.rejectionNote = null;
+  // Writer swap 2026-08-29: these were property assignments on an
+  // in-memory object, so an admin approving a quote watched it flip
+  // and then revert on the next deploy.
+  await db
+    .update(quoteSheets)
+    .set({
+      approvedPrice:
+        approvedPrice && approvedPrice !== sheet.price ? approvedPrice : null,
+      approvedTimeline:
+        approvedTimeline && approvedTimeline !== sheet.timeline
+          ? approvedTimeline
+          : null,
+      // Strengths / weaknesses are admin-authored narrative.
+      strengths: strengths || null,
+      weaknesses: weaknesses || null,
+      approvedAt: new Date().toISOString(),
+      rejectedAt: null,
+      rejectionNote: null,
+    })
+    .where(eq(quoteSheets.id, id));
 
   revalidatePath("/admin/quotes");
   revalidatePath("/profile/quotes");
@@ -61,18 +76,25 @@ async function rejectQuote(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const note = String(formData.get("rejectionNote") ?? "").trim() || "Needs revision.";
 
-  const sheet = MOCK_QUOTES.find((q) => q.id === id);
+  const sheet = await quoteSheetReader.byId(id);
   if (!sheet) return;
 
-  sheet.approvedAt = null;
-  sheet.rejectedAt = new Date().toISOString();
-  sheet.rejectionNote = note;
+  await db
+    .update(quoteSheets)
+    .set({
+      approvedAt: null,
+      rejectedAt: new Date().toISOString(),
+      rejectionNote: note,
+    })
+    .where(eq(quoteSheets.id, id));
 
   revalidatePath("/admin/quotes");
   revalidatePath("/profile/quotes");
 }
 
 type Filter = "pending" | "approved" | "rejected";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminQuotesPage({
   searchParams,
@@ -82,7 +104,18 @@ export default async function AdminQuotesPage({
   await requireAdmin();
   const { filter = "pending" } = await searchParams;
 
-  const sheets = MOCK_QUOTES.filter((q) => {
+  const [allQuotes, { users: roster }, { projects }] = await Promise.all([
+    safely(() => quoteSheetReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+  ]);
+  const userById = new Map(roster.map((u) => [u.id, u]));
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+
+  const sheets = allQuotes.filter((q) => {
     if (filter === "pending") return !q.approvedAt && !q.rejectedAt;
     if (filter === "approved") return Boolean(q.approvedAt);
     if (filter === "rejected") return Boolean(q.rejectedAt);
@@ -90,9 +123,9 @@ export default async function AdminQuotesPage({
   }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   const counts = {
-    pending: MOCK_QUOTES.filter((q) => !q.approvedAt && !q.rejectedAt).length,
-    approved: MOCK_QUOTES.filter((q) => q.approvedAt).length,
-    rejected: MOCK_QUOTES.filter((q) => q.rejectedAt).length,
+    pending: allQuotes.filter((q) => !q.approvedAt && !q.rejectedAt).length,
+    approved: allQuotes.filter((q) => q.approvedAt).length,
+    rejected: allQuotes.filter((q) => q.rejectedAt).length,
   };
 
   return (
@@ -126,8 +159,8 @@ export default async function AdminQuotesPage({
           </div>
         ) : (
           sheets.map((sheet) => {
-            const project = MOCK_PROJECTS.find((p) => p.id === sheet.projectId);
-            const author = MOCK_USERS.find((u) => u.id === sheet.userId);
+            const project = projectById.get(sheet.projectId);
+            const author = userById.get(sheet.userId);
             return (
               <Card key={sheet.id}>
                 <div className="flex flex-col gap-6 md:flex-row">
@@ -351,7 +384,7 @@ function FilterPill({
 function StatusPill({
   sheet,
 }: {
-  sheet: (typeof MOCK_QUOTES)[number];
+  sheet: QuoteSheet;
 }) {
   if (sheet.approvedAt) {
     return (

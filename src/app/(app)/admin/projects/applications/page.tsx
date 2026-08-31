@@ -12,9 +12,10 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_PROJECT_APPLICATIONS } from "@/lib/mock-data/project-applications";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllApplications } from "@/lib/readers/project-applications";
+import { getAllUsers } from "@/lib/readers/users";
+import { getAllProjects } from "@/lib/readers/projects";
+import { safely } from "@/lib/readers";
 import { decideProjectApplication } from "@/lib/project-application-actions";
 import {
   PROJECT_APPLICATION_STATUS_LABELS,
@@ -41,10 +42,24 @@ function formatDate(iso: string): string {
   });
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminProjectApplicationsPage() {
   await requireAdmin();
 
-  const sorted = [...MOCK_PROJECT_APPLICATIONS].sort((a, b) =>
+  // Reader swap 2026-08-29: bid triage queue read a mock array, so a
+  // real member's application never appeared for review.
+  const [applications, { users: roster }, { projects }] = await Promise.all([
+    safely(() => getAllApplications(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+  ]);
+  const lookup = makeLookup(roster, projects);
+
+  const sorted = [...applications].sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt),
   );
   const pending = sorted.filter((a) => a.status === "pending");
@@ -80,7 +95,7 @@ export default async function AdminProjectApplicationsPage() {
         ) : (
           <div className="mt-3 space-y-3">
             {pending.map((a) => (
-              <PendingRow key={a.id} application={a} />
+              <PendingRow key={a.id} application={a} lookup={lookup} />
             ))}
           </div>
         )}
@@ -93,7 +108,12 @@ export default async function AdminProjectApplicationsPage() {
           </h2>
           <div className="mt-3 space-y-2">
             {decided.map((a) => (
-              <DecidedRow key={a.id} application={a} />
+              <DecidedRow
+                key={a.id}
+                application={a}
+                lookup={lookup}
+                roster={roster}
+              />
             ))}
           </div>
         </section>
@@ -102,17 +122,31 @@ export default async function AdminProjectApplicationsPage() {
   );
 }
 
-function lookup(application: ProjectApplication): {
+/**
+ * Build a row-lookup closure over the already-loaded roster and
+ * project list. Each row would otherwise cost two queries.
+ */
+type RowLookup = (application: ProjectApplication) => {
   applicant: User | undefined;
   project: Project | undefined;
-} {
-  return {
-    applicant: MOCK_USERS.find((u) => u.id === application.userId),
-    project: MOCK_PROJECTS.find((p) => p.id === application.projectId),
-  };
+};
+
+function makeLookup(roster: User[], projects: Project[]): RowLookup {
+  const userById = new Map(roster.map((u) => [u.id, u]));
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+  return (application) => ({
+    applicant: userById.get(application.userId),
+    project: projectById.get(application.projectId),
+  });
 }
 
-function PendingRow({ application }: { application: ProjectApplication }) {
+function PendingRow({
+  application,
+  lookup,
+}: {
+  application: ProjectApplication;
+  lookup: RowLookup;
+}) {
   const { applicant, project } = lookup(application);
 
   return (
@@ -218,13 +252,21 @@ function PendingRow({ application }: { application: ProjectApplication }) {
   );
 }
 
-function DecidedRow({ application }: { application: ProjectApplication }) {
+function DecidedRow({
+  application,
+  lookup,
+  roster,
+}: {
+  application: ProjectApplication;
+  lookup: RowLookup;
+  roster: User[];
+}) {
   const { applicant, project } = lookup(application);
   const accent = STATUS_ACCENT[application.status];
   const decidedDate =
     application.reviewedAt ?? application.withdrawnAt ?? application.createdAt;
   const decidedBy = application.reviewedBy
-    ? MOCK_USERS.find((u) => u.id === application.reviewedBy)
+    ? roster.find((u) => u.id === application.reviewedBy)
     : undefined;
 
   return (

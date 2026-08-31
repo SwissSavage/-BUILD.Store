@@ -41,6 +41,13 @@ import {
   jobApplications,
   meetingMinutes,
   memberCanonizations,
+  membershipApplications,
+  whitelistPurchases,
+  consultationRequests,
+  auditLogEntries,
+  inviteLinks,
+  walkthroughSteps,
+  triangulatedComposites,
   mvpScores,
   orders,
   partnerReferrals,
@@ -78,6 +85,13 @@ import type {
   Invoice,
   MeetingMinute,
   MemberCanonization,
+  MembershipApplication,
+  WhitelistPurchase,
+  ConsultationRequest,
+  AuditLogEntry,
+  InviteLink,
+  WalkthroughStep,
+  TriangulatedComposite,
   MvpScore,
   Order,
   PartnerReferral,
@@ -604,3 +618,52 @@ export function findProposalByToken(
   if (!token) return Promise.resolve(null);
   return clientProposalReader.one(eq(clientProposals.token, token));
 }
+
+// ──────────────────────────────────────────────────────────────
+//  Remaining admin-console tables
+// ──────────────────────────────────────────────────────────────
+
+export const membershipApplicationReader = makeReader<MembershipApplication>(
+  membershipApplications,
+  {
+    orderBy: membershipApplications.createdAt,
+    idColumn: membershipApplications.id,
+  },
+);
+
+export const whitelistPurchaseReader = makeReader<WhitelistPurchase>(
+  whitelistPurchases,
+  { orderBy: whitelistPurchases.createdAt, idColumn: whitelistPurchases.id },
+);
+
+export const consultationRequestReader = makeReader<ConsultationRequest>(
+  consultationRequests,
+  {
+    orderBy: consultationRequests.createdAt,
+    idColumn: consultationRequests.id,
+  },
+);
+
+export const auditLogReader = makeReader<AuditLogEntry>(auditLogEntries, {
+  orderBy: auditLogEntries.createdAt,
+  idColumn: auditLogEntries.id,
+});
+
+export const inviteLinkReader = makeReader<InviteLink>(inviteLinks, {
+  orderBy: inviteLinks.createdAt,
+  idColumn: inviteLinks.id,
+});
+
+export const walkthroughStepReader = makeReader<WalkthroughStep>(
+  walkthroughSteps,
+  {
+    orderBy: walkthroughSteps.order,
+    direction: "asc",
+    idColumn: walkthroughSteps.id,
+  },
+);
+
+export const triangulatedCompositeReader =
+  makeReader<TriangulatedComposite>(triangulatedComposites, {
+    idColumn: triangulatedComposites.id,
+  });

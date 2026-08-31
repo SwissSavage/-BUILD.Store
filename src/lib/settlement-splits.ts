@@ -40,7 +40,7 @@ import {
   logAuditEvent,
   snapshotActorRole,
 } from "@/lib/mock-data/audit-log";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getUserById } from "@/lib/readers/users";
 import type {
   RevenueSplit,
   RevenueSplitSourceKind,
@@ -165,7 +165,10 @@ export async function writeStandardSettlementSplits(
   const liquidityPool = round2(input.gross * LP_PCT);
 
   const now = new Date().toISOString();
-  const actor = MOCK_USERS.find((u) => u.id === input.actorUserId) ?? null;
+  // Reader swap 2026-08-29: the actor stamped on every split row was
+  // looked up in the seed array, so a real admin settling a contract
+  // was recorded as null in the audit trail.
+  const actor = await getUserById(input.actorUserId);
   const rows: RevenueSplit[] = [];
 
   // ── Contributor rows ─────────────────────────────────────────
@@ -335,7 +338,7 @@ export async function writeDonationSplit(
   const liquidityPool = round2(input.gross - treasury);
   const now = new Date().toISOString();
   const actor = input.actorUserId
-    ? MOCK_USERS.find((u) => u.id === input.actorUserId) ?? null
+    ? await getUserById(input.actorUserId)
     : null;
 
   const rows: RevenueSplit[] = [

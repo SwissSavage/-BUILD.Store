@@ -12,14 +12,20 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_PROJECT_MILESTONES } from "@/lib/mock-data/project-milestones";
-import { MOCK_COOPERATIVE_RECEIPTS } from "@/lib/mock-data/cooperative-receipts";
+import type { Project, ProjectMilestone } from "@/lib/types";
+import { getAllProjects } from "@/lib/readers/projects";
+import {
+  cooperativeReceiptReader,
+  milestoneReader,
+  safely,
+} from "@/lib/readers";
 import {
   generateCooperativeReceipt,
   removeCooperativeReceipt,
 } from "@/lib/receipt-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+export const dynamic = "force-dynamic";
 
 /**
  * Eligible projects for receipt generation: contracts that have
@@ -28,19 +34,21 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
  * so the admin can jump to the existing receipt instead of trying to
  * regenerate.
  */
-function eligibleProjects() {
-  return MOCK_PROJECTS.filter(
+function eligibleProjects(projects: Project[]) {
+  return projects.filter(
     (p) => p.kind === "contract" && p.collectedAt !== null,
   );
 }
 
-/** Auto-compute milestone hit rate from the milestone store — used
- *  as a form-side default so the admin doesn't have to look it up. */
-function computeMilestones(projectId: string): {
-  hit: number;
-  total: number;
-} {
-  const rows = MOCK_PROJECT_MILESTONES.filter((m) => m.projectId === projectId);
+/** Auto-compute milestone hit rate — used as a form-side default so
+ *  the admin doesn't have to look it up. Takes the full milestone set
+ *  because the caller renders one row per eligible project, and a
+ *  query per row would scale with the contract count. */
+function computeMilestones(
+  milestones: ProjectMilestone[],
+  projectId: string,
+): { hit: number; total: number } {
+  const rows = milestones.filter((m) => m.projectId === projectId);
   return {
     hit: rows.filter((m) => m.status === "completed").length,
     total: rows.length,
@@ -51,12 +59,23 @@ export default async function AdminReceiptsPage() {
   const viewer = await getCurrentUser();
   if (!viewer || !viewer.isAdmin) redirect("/signin?next=/admin/receipts");
 
-  const receipts = [...MOCK_COOPERATIVE_RECEIPTS].sort((a, b) =>
+  const [receiptRows, { projects: allProjects }, milestones] =
+    await Promise.all([
+      safely(() => cooperativeReceiptReader.all(), []),
+      safely(() => getAllProjects(), {
+        projects: [],
+        source: "postgres" as const,
+      }),
+      safely(() => milestoneReader.all(), []),
+    ]);
+
+  const receipts = [...receiptRows].sort((a, b) =>
     b.generatedAt.localeCompare(a.generatedAt),
   );
-  const projects = eligibleProjects();
+  const projects = eligibleProjects(allProjects);
+  const withReceipt = new Set(receiptRows.map((r) => r.projectId));
   const projectsWithoutReceipt = projects.filter(
-    (p) => !MOCK_COOPERATIVE_RECEIPTS.some((r) => r.projectId === p.id),
+    (p) => !withReceipt.has(p.id),
   );
 
   return (
@@ -111,7 +130,7 @@ export default async function AdminReceiptsPage() {
                   Pick a settled project…
                 </option>
                 {projectsWithoutReceipt.map((p) => {
-                  const ms = computeMilestones(p.id);
+                  const ms = computeMilestones(milestones, p.id);
                   return (
                     <option key={p.id} value={p.id}>
                       {p.title} · {ms.hit}/{ms.total} milestones
@@ -276,7 +295,7 @@ export default async function AdminReceiptsPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {receipts.map((receipt) => {
-              const project = MOCK_PROJECTS.find(
+              const project = allProjects.find(
                 (p) => p.id === receipt.projectId,
               );
               const hitRatePct =

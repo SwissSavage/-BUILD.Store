@@ -43,6 +43,7 @@ import {
   memberCanonizations,
   membershipApplications,
   whitelistPurchases,
+  whitelistTiers,
   consultationRequests,
   auditLogEntries,
   inviteLinks,
@@ -87,6 +88,7 @@ import type {
   MemberCanonization,
   MembershipApplication,
   WhitelistPurchase,
+  WhitelistTier,
   ConsultationRequest,
   AuditLogEntry,
   InviteLink,
@@ -667,3 +669,7 @@ export const triangulatedCompositeReader =
   makeReader<TriangulatedComposite>(triangulatedComposites, {
     idColumn: triangulatedComposites.id,
   });
+
+export const whitelistTierReader = makeReader<WhitelistTier>(whitelistTiers, {
+  idColumn: whitelistTiers.id,
+});

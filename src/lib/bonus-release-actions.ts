@@ -19,9 +19,11 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
+import { eq } from "drizzle-orm";
+import { peerReviews as peerReviewsTable } from "@/db/schema";
+import { peerReviewReader } from "@/lib/readers";
+import { getProjectById } from "@/lib/readers/projects";
 import { feedbackForContext } from "@/lib/mock-data/customer-feedback";
-import { MOCK_PEER_REVIEWS } from "@/lib/mock-data/peer-reviews";
 import { creditRecoveryPool } from "@/lib/writers/reserve-pool";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { evaluateBonusGate } from "@/lib/bonus-gate";
@@ -29,8 +31,8 @@ import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
 import { hasValidPayoutDocument } from "@/lib/payout-gate";
 import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
 
-function findProject(id: string) {
-  const p = MOCK_PROJECTS.find((x) => x.id === id);
+async function findProject(id: string) {
+  const p = await getProjectById(id);
   if (!p) throw new Error("Project not found");
   return p;
 }
@@ -46,7 +48,7 @@ export async function setPmEngagementRating(formData: FormData) {
   if (!Number.isFinite(raw) || raw < 1 || raw > 5) {
     throw new Error("Rating must be an integer from 1 to 5.");
   }
-  const project = findProject(projectId);
+  const project = await findProject(projectId);
   project.pmEngagementRating = Math.round(raw);
   project.updatedAt = new Date().toISOString();
   revalidatePath(`/admin/contracts/${projectId}/settle`);
@@ -66,7 +68,7 @@ export async function setPmEngagementRating(formData: FormData) {
 export async function executeBonusDecision(formData: FormData) {
   const admin = await requireAdmin();
   const projectId = String(formData.get("projectId") ?? "").trim();
-  const project = findProject(projectId);
+  const project = await findProject(projectId);
 
   if (!project.talentBonusAmount) {
     throw new Error("No bonus amount on this contract — nothing to decide.");
@@ -86,8 +88,11 @@ export async function executeBonusDecision(formData: FormData) {
   }
 
   const feedback = feedbackForContext(projectId)[0] ?? null;
-  const peerReviews = MOCK_PEER_REVIEWS.filter(
-    (r) => r.contextId === projectId,
+  // Scoped to this project in the query. A bonus-gate evaluation must
+  // not read every review in the cooperative to find the handful
+  // attached to this contract.
+  const peerReviews = await peerReviewReader.where(
+    eq(peerReviewsTable.contextId, projectId),
   );
   const decision = evaluateBonusGate({
     feedback,

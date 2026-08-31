@@ -33,7 +33,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { agreements as agreementsTable } from "@/db/schema";
 import { agreementReader } from "@/lib/readers";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getUserById } from "@/lib/readers/users";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import {
   publicName,
@@ -118,7 +118,7 @@ export async function createAgreement(formData: FormData): Promise<void> {
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
   if (!userId) throw new Error("Pick a user for this agreement.");
-  const user = MOCK_USERS.find((u) => u.id === userId);
+  const user = await getUserById(userId);
   if (!user) throw new Error(`Unknown user: ${userId}`);
 
   if (!isAgreementType(agreementTypeRaw)) {
@@ -339,7 +339,7 @@ export async function sendLoiForSignature(
     String(formData.get("recipientEmail") ?? "").trim() || null;
   if (!userId) throw new Error("Pick a user to send the LOI to.");
 
-  const user = MOCK_USERS.find((u) => u.id === userId);
+  const user = await getUserById(userId);
   if (!user) throw new Error(`Unknown user: ${userId}`);
 
   const recipientEmail = overrideEmail ?? user.email;

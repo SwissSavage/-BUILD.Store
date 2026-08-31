@@ -11,8 +11,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_PARTNER_REFERRALS } from "@/lib/mock-data/partner-referrals";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { partnerReferralReader, safely } from "@/lib/readers";
 import {
   ECOSYSTEM_PARTNERS,
   PRODUCT_AFFILIATES,
@@ -27,6 +27,7 @@ import {
   PARTNER_REFERRAL_STATUS_LABELS,
   publicName,
   type PartnerReferral,
+  type User,
 } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
@@ -36,11 +37,22 @@ const USD_FMT = new Intl.NumberFormat("en-US", {
   currency: "USD",
 });
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminReferralsPage() {
   const viewer = await getCurrentUser();
   if (!viewer || !viewer.isAdmin) redirect("/signin?next=/admin/referrals");
 
-  const rows = [...MOCK_PARTNER_REFERRALS].sort((a, b) =>
+  // Reader swap 2026-08-29: was MOCK_USERS.
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+  const userById = new Map(roster.map((u) => [u.id, u]));
+  const allRows = await safely(() => partnerReferralReader.all(), []);
+
+
+  const rows = allRows.sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt),
   );
   const pending = rows.filter((r) => r.status === "pending");
@@ -54,7 +66,7 @@ export default async function AdminReferralsPage() {
     0,
   );
 
-  const members = [...MOCK_USERS].sort((a, b) =>
+  const members = [...roster].sort((a, b) =>
     publicName(a).localeCompare(publicName(b), "en", { sensitivity: "base" }),
   );
 
@@ -206,7 +218,7 @@ export default async function AdminReferralsPage() {
           <ul className="mt-4 space-y-3">
             {pending.map((r) => (
               <li key={r.id}>
-                <ReferralCard r={r} />
+                <ReferralCard r={r} userById={userById} />
               </li>
             ))}
           </ul>
@@ -226,7 +238,7 @@ export default async function AdminReferralsPage() {
           <ul className="mt-4 space-y-3">
             {converted.map((r) => (
               <li key={r.id}>
-                <ReferralCard r={r} />
+                <ReferralCard r={r} userById={userById} />
               </li>
             ))}
           </ul>
@@ -242,7 +254,7 @@ export default async function AdminReferralsPage() {
           <ul className="mt-4 space-y-3">
             {closedOut.map((r) => (
               <li key={r.id}>
-                <ReferralCard r={r} />
+                <ReferralCard r={r} userById={userById} />
               </li>
             ))}
           </ul>
@@ -258,8 +270,14 @@ function partnerNameFor(r: PartnerReferral): string {
   return registry.find((p) => p.id === r.partnerId)?.name ?? r.partnerId;
 }
 
-function ReferralCard({ r }: { r: PartnerReferral }) {
-  const referrer = MOCK_USERS.find((u) => u.id === r.referrerUserId);
+function ReferralCard({
+  r,
+  userById,
+}: {
+  r: PartnerReferral;
+  userById: Map<string, User>;
+}) {
+  const referrer = userById.get(r.referrerUserId);
   return (
     <Card>
       <div className="flex flex-wrap items-baseline justify-between gap-2">

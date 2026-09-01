@@ -7,7 +7,9 @@
  * (backward-looking, honoring shipped work) and annual Canonization
  * (year-end standing minted on-chain).
  *
- * Sandbox: mutate the in-memory MOCK_COHORT_SPOTLIGHTS store.
+ * Writes cohort_spotlights. Was an in-memory array until
+ * 2026-09-01, so no spotlight ever reached the table and the
+ * homepage rail that reads it rendered nothing.
  * Production: persist to `cohort_spotlights` with an append-only
  * event log; a bot could pre-fill a draft when a new Member's
  * `createdAt` bucket lands, admin publishes.
@@ -16,15 +18,17 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_COHORT_SPOTLIGHTS } from "@/lib/mock-data/cohort-spotlights";
+import { getUserById } from "@/lib/readers/users";
+import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { cohortSpotlights } from "@/db/schema";
+import { spotlightReader } from "@/lib/readers";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { CohortSpotlight } from "@/lib/types";
 
 function newSpotlightId(): string {
-  return `cohort_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 5)}`;
+  return `cs_${randomUUID()}`;
 }
 
 /**
@@ -100,7 +104,7 @@ export async function createCohortSpotlight(formData: FormData) {
 
   // Validate every userId resolves to a real Member/Partner.
   for (const uid of userIds) {
-    const target = MOCK_USERS.find((u) => u.id === uid);
+    const target = await getUserById(uid);
     if (!target) {
       throw new Error(`Unknown builder: ${uid}`);
     }
@@ -108,7 +112,10 @@ export async function createCohortSpotlight(formData: FormData) {
 
   // Block duplicates on the same period. Change requires explicit
   // removal + re-create so the intent shows up in the audit trail.
-  if (MOCK_COHORT_SPOTLIGHTS.some((s) => s.periodKey === periodKey)) {
+  const clash = await spotlightReader.one(
+    eq(cohortSpotlights.periodKey, periodKey),
+  );
+  if (clash) {
     throw new Error(
       `A spotlight already exists for ${labelFromPeriodKey(periodKey)}. Remove it before authoring a new one.`,
     );
@@ -125,7 +132,17 @@ export async function createCohortSpotlight(formData: FormData) {
     publishedAt: new Date().toISOString(),
     selectedByUserId: admin.id,
   };
-  MOCK_COHORT_SPOTLIGHTS.push(row);
+  await db.insert(cohortSpotlights).values({
+    id: row.id,
+    periodKey: row.periodKey,
+    periodLabel: row.periodLabel,
+    userIds: row.userIds,
+    headline: row.headline,
+    narrative: row.narrative,
+    paragraphSlug: row.paragraphSlug,
+    publishedAt: row.publishedAt,
+    selectedByUserId: row.selectedByUserId,
+  });
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -158,10 +175,10 @@ export async function removeCohortSpotlight(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("Spotlight id is required.");
 
-  const idx = MOCK_COHORT_SPOTLIGHTS.findIndex((s) => s.id === id);
-  if (idx === -1) throw new Error("Spotlight not found.");
+  const removed = await spotlightReader.byId(id);
+  if (!removed) throw new Error("Spotlight not found.");
 
-  const [removed] = MOCK_COHORT_SPOTLIGHTS.splice(idx, 1);
+  await db.delete(cohortSpotlights).where(eq(cohortSpotlights.id, id));
 
   await logAuditEvent({
     actorUserId: admin.id,

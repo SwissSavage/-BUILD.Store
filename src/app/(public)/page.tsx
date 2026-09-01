@@ -7,6 +7,11 @@ import Link from "next/link";
 import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
 import { getAllUsers } from "@/lib/readers/users";
 import { servicePartnerReader, spotlightReader, safely } from "@/lib/readers";
+import {
+  activeRecognitionUserIds,
+  publicProfileEligible,
+} from "@/lib/profile-visibility";
+import { periodKeyFor } from "@/lib/recognition-period";
 import { TradingCard, type TradingCardTier } from "@/components/TradingCard";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { Avatar } from "@/components/Avatar";
@@ -483,27 +488,64 @@ function FaqSection() {
 }
 
 /**
- * Cohort rail — landing preview of the most recent cohort spotlight.
+ * Cohort rail — who most recently joined the cooperative.
  *
- * Rolling monthly content engine: whoever most recently joined the
- * cooperative gets a small hero card here on the homepage, cycling
- * as the roster grows. Click through to /cohort/[period] for the
- * full narrative + cross-linked builder profiles.
+ * ─────────────────────────────────────────────────────────────
+ * AUTOMATIC BY DEFAULT (2026-09-01)
+ *
+ * This was described as a rolling engine that cycles as the roster
+ * grows, but it only ever rendered a hand-authored cohort_spotlights
+ * row — and nothing could write that table, so it rendered nothing.
+ * Multiple people signed on and the homepage never said so.
+ *
+ * Now it derives from the roster: the most recent joins, no curation
+ * required. A curated spotlight, when one exists for the current
+ * period, overrides it — that's the editorial layer, not the
+ * mechanism.
+ *
+ * Discovery gate applies either way (profile-visibility.ts, the
+ * matrix in future-modern.md): Members always, Partners only inside
+ * an active recognition window, opted-out never. Viewers never — they
+ * haven't joined anything. Without that this becomes a directory
+ * someone can work through to reach talent directly.
+ * ─────────────────────────────────────────────────────────────
  */
 async function CohortRail() {
-  const [spotlights, { users: roster }] = await Promise.all([
+  const [spotlights, { users: roster }, recognizedIds] = await Promise.all([
     safely(() => spotlightReader.all(), []),
     safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => activeRecognitionUserIds(), new Set<string>()),
   ]);
-  const spotlight =
+
+  const curated =
     [...spotlights].sort((a, b) =>
       b.periodKey.localeCompare(a.periodKey),
     )[0] ?? null;
-  if (!spotlight) return null;
 
-  const users = spotlight.userIds
-    .map((id) => roster.find((u) => u.id === id))
-    .filter((u): u is (typeof roster)[number] => !!u);
+  // Everyone eligible to appear, newest first.
+  const eligible = roster
+    .filter((u) => u.membershipTier !== "viewer")
+    .filter((u) => publicProfileEligible(u, recognizedIds))
+    .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+
+  const users = curated
+    ? curated.userIds
+        .map((id) => roster.find((u) => u.id === id))
+        .filter((u): u is (typeof roster)[number] => !!u)
+    : eligible.slice(0, 3);
+
+  if (users.length === 0) return null;
+
+  const now = new Date();
+  const spotlight = curated ?? {
+    periodKey: periodKeyFor(now, "month").key,
+    periodLabel: periodKeyFor(now, "month").label,
+    headline:
+      users.length === 1
+        ? `${publicName(users[0])} joined the cooperative`
+        : `${users.length} builders joined the cooperative`,
+    narrative: "",
+  };
 
   return (
     <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
@@ -527,13 +569,26 @@ async function CohortRail() {
 
         <div className="mt-8 grid gap-6 md:grid-cols-[2fr_1fr]">
           <div>
-            <p className="text-ink-muted">{spotlight.narrative}</p>
-            <Link
-              href={`/cohort/${spotlight.periodKey}`}
-              className="mt-4 inline-block text-sm text-brand-magenta hover:underline"
-            >
-              Read the full spotlight →
-            </Link>
+            {/* The narrative and the deep link only exist for a
+                curated spotlight. On the automatic path there is no
+                written piece to read, so promising one would be a
+                dead click. */}
+            {curated ? (
+              <>
+                <p className="text-ink-muted">{curated.narrative}</p>
+                <Link
+                  href={`/cohort/${curated.periodKey}`}
+                  className="mt-4 inline-block text-sm text-brand-magenta hover:underline"
+                >
+                  Read the full spotlight →
+                </Link>
+              </>
+            ) : (
+              <p className="text-ink-muted">
+                Newest builders in the cooperative. Every engagement
+                routes through Future Modern.
+              </p>
+            )}
           </div>
           {users.length > 0 && (
             <ul className="space-y-3">

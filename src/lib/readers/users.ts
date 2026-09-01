@@ -43,6 +43,28 @@ export interface UserRead {
  * Every user, newest first. This is the reader admin surfaces and
  * public people-listing pages should use.
  */
+/**
+ * `discipline` is a legacy duplicate of `tagline`.
+ *
+ * Both answered "what do you do in one line", but only tagline had an
+ * editor — so discipline held whatever the seed said about a member,
+ * permanently. Jamar's read "Cooperative Builder, Strategist", which
+ * is true and is not what he sells.
+ *
+ * Rather than edit 51 render sites, discipline is derived here:
+ * tagline when the member has written one, the old value when they
+ * haven't. One editable field, one meaning, and existing data isn't
+ * thrown away.
+ *
+ * The column stays for now. Dropping it is a migration and a separate
+ * decision; what mattered was that it stopped being authoritative.
+ */
+function deriveDiscipline<T extends { tagline?: string | null; discipline?: string | null }>(
+  row: T,
+): T {
+  return { ...row, discipline: row.tagline?.trim() || row.discipline || null };
+}
+
 export async function getAllUsers(): Promise<UserRead> {
   try {
     const rows = await db
@@ -53,7 +75,10 @@ export async function getAllUsers(): Promise<UserRead> {
     // A reachable-but-empty table is still a legitimate answer (fresh
     // environment, seed never run). Don't silently swap in seed data —
     // that would hide a real misconfiguration behind fake members.
-    return { users: rows as unknown as User[], source: "postgres" };
+    return {
+      users: (rows as unknown as User[]).map(deriveDiscipline),
+      source: "postgres",
+    };
   } catch (err) {
     // No seed fallback. Substituting fixtures for real member data is
     // the exact failure this refactor exists to kill — a page that
@@ -70,7 +95,7 @@ export async function getUserById(id: string): Promise<User | null> {
       .from(usersTable)
       .where(eq(usersTable.id, id))
       .limit(1);
-    return (row as unknown as User) ?? null;
+    return row ? deriveDiscipline(row as unknown as User) : null;
   } catch {
     return null;
   }
@@ -85,7 +110,7 @@ export async function getUserByHandle(handle: string): Promise<User | null> {
       .from(usersTable)
       .where(eq(usersTable.handle, normalized))
       .limit(1);
-    return (row as unknown as User) ?? null;
+    return row ? deriveDiscipline(row as unknown as User) : null;
   } catch {
     return null;
   }

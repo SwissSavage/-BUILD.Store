@@ -384,9 +384,9 @@ export default async function ProfilePage() {
               className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
             />
             <p className="mt-1.5 text-xs text-ink-faint">
-              One-liner shown on your player card and on client-facing
-              bid cards. Up to 120 characters. First-name / alias only
-              on public surfaces.
+              One line, in the words you&apos;d use with a client. Shows
+              on your card, the roster, client-facing bid cards, and
+              anywhere you&apos;re listed. Up to 120 characters.
             </p>
           </label>
 

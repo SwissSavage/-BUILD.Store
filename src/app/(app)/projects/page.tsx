@@ -12,6 +12,7 @@
  * For external one-off client work, see /contracts.
  */
 import Link from "next/link";
+import { PostListingButton } from "@/components/PostListingButton";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getAllProjects } from "@/lib/readers/projects";
 import { safely } from "@/lib/readers";
@@ -192,10 +193,16 @@ function Grid({ items }: { items: Project[] }) {
   );
 }
 
-function Empty() {
+async function Empty() {
   return (
     <div className="rounded-2xl border border-dashed border-[var(--surface-border)] p-8 text-center text-sm text-ink-muted">
       Nothing open right now. Check back, or propose one.
+      <PostListingButton
+        href="/admin/contracts/new"
+        label="Post an initiative"
+        hint="Admins post directly — members propose via /projects/new."
+        standalone
+      />
     </div>
   );
 }

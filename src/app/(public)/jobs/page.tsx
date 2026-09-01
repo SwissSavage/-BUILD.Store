@@ -18,6 +18,7 @@
  * Full brief + application form live at /jobs/[id] and require sign-in.
  */
 import Link from "next/link";
+import { PostListingButton } from "@/components/PostListingButton";
 import { getOpenJobs, safely } from "@/lib/readers";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
@@ -56,12 +57,19 @@ export default async function JobsPage() {
           working with Future Modern until the engagement ships. Sign in
           to see full briefs and apply.
         </p>
+        <PostListingButton href="/admin/jobs" label="Post a job" />
       </div>
 
       {open.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-dashed border-[var(--surface-border)] p-8 text-center text-sm text-ink-muted">
           No roles open right now. Postings refresh as partners route
           work to Future Modern.
+          <PostListingButton
+            href="/admin/jobs"
+            label="Post a job"
+            hint="Appears on this board as soon as you save it."
+            standalone
+          />
         </div>
       ) : (
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">

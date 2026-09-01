@@ -17,6 +17,7 @@
  * at /contracts/[id] and require sign-in.
  */
 import Link from "next/link";
+import { PostListingButton } from "@/components/PostListingButton";
 import { getAllProjects } from "@/lib/readers/projects";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
@@ -67,12 +68,22 @@ export default async function ContractsPage() {
           ships, then we attribute the client publicly if they consent.
           Sign in to see full briefs and bid.
         </p>
+        <PostListingButton
+          href="/admin/contracts/new"
+          label="Post a contract"
+        />
       </div>
 
       {open.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-dashed border-[var(--surface-border)] p-8 text-center text-sm text-ink-muted">
           No open contracts right now. New RFPs clear the intake queue
           regularly.
+          <PostListingButton
+            href="/admin/contracts/new"
+            label="Post a contract"
+            hint="Goes live immediately — admins skip the vetting queue."
+            standalone
+          />
         </div>
       ) : (
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">

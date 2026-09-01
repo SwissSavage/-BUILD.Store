@@ -1,37 +1,26 @@
 /**
  * Store nav dropdown. Lists active StoreCategories.
  *
- * Native <details>/<summary> so it works without client JS, matching
- * the Admin dropdown pattern. The categories themselves come from
- * `mock-data/store-categories.activeCategories()`, which will become
- * a Drizzle query or Payload fetch once CMS lands.
+ * Opens on hover via the shared HoverDropdown. Categories read live
+ * from `store_categories`.
  *
  * The "All" entry at the top routes to /store with no filter; each
  * category routes to /store?category=<slug>.
  */
 import Link from "next/link";
-import { activeCategories } from "@/lib/mock-data/store-categories";
-import { cn } from "@/lib/cn";
+import { storeCategoryReader, safely } from "@/lib/readers";
+import { HoverDropdown } from "@/components/HoverDropdown";
 
 const navLink = "text-ink-muted hover:text-ink transition-colors";
 
-export function StoreDropdown() {
-  const categories = activeCategories();
+export async function StoreDropdown() {
+  const all = await safely(() => storeCategoryReader.all(), []);
+  const categories = all
+    .filter((c) => c.isActive)
+    .sort((a, b) => a.displayOrder - b.displayOrder);
 
   return (
-    <details className="relative">
-      <summary
-        className={cn(
-          navLink,
-          "flex cursor-pointer list-none items-center gap-1 select-none hover:opacity-80",
-        )}
-      >
-        Store
-        <span aria-hidden="true" className="text-[10px]">
-          ▾
-        </span>
-      </summary>
-      <div className="absolute right-0 z-50 mt-2 w-64 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2 text-sm shadow-lg">
+    <HoverDropdown label="Store" href="/store" triggerClassName={navLink}>
         <Link
           href="/store"
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
@@ -62,7 +51,6 @@ export function StoreDropdown() {
             </Link>
           ))
         )}
-      </div>
-    </details>
+    </HoverDropdown>
   );
 }

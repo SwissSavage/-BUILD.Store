@@ -16,6 +16,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { viewAsUser } from "@/lib/auth-actions";
 import { cn } from "@/lib/cn";
+import { HoverDropdown } from "@/components/HoverDropdown";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { unreadNotificationCount } from "@/lib/readers/notifications";
 import {
@@ -163,7 +164,7 @@ export async function Nav() {
 const navLink = "text-ink-muted hover:text-ink transition-colors";
 
 /**
- * Admin nav button + view-as dropdown. Uses native <details>/<summary>
+ * Admin nav button + view-as dropdown. Opens on hover
  * so it works without client JS. Submitting a "View as" button posts
  * to `viewAsUser`, which sets the session cookie to the chosen target
  * and redirects to /. The persistent ViewingAsBanner (above this nav)
@@ -173,22 +174,13 @@ function AdminDropdown({ self }: { self: User }) {
   const { byTier, otherAdmins } = pickViewAsTargets(self);
 
   return (
-    <details className="relative">
-      <summary
-        className={cn(
-          navLink,
-          "flex cursor-pointer list-none items-center gap-1 select-none hover:opacity-80",
-        )}
-        style={{ color: "#D828A0" }}
-      >
-        Admin
-        <span aria-hidden="true" className="text-[10px]">
-          ▾
-        </span>
-      </summary>
-      <div
-        className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2 text-sm shadow-lg"
-      >
+    <HoverDropdown
+      label="Admin"
+      href="/admin"
+      width="w-72"
+      triggerClassName={cn(navLink, "hover:opacity-80")}
+      triggerStyle={{ color: "#D828A0" }}
+    >
         {/* Personal — admins land here for their own profile.
             Pulled out of the main nav row so the row stays scannable. */}
         <Link
@@ -286,8 +278,7 @@ function AdminDropdown({ self }: { self: User }) {
           Sandbox preview only. A pink banner stays at the top until
           you flip back.
         </p>
-      </div>
-    </details>
+    </HoverDropdown>
   );
 }
 

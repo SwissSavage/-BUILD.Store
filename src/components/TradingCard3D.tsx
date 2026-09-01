@@ -48,6 +48,20 @@ const TIER_BG_CLASS: Record<TradingCardTier, string> = {
   champion: "fm-card-bg-champion",
 };
 
+/**
+ * Tier accent for the initials wash. Matches TradingCard — the two
+ * components render the same person at different sizes and must not
+ * disagree about what colour their tier is.
+ */
+const TIER_ACCENT: Record<TradingCardTier, string> = {
+  standard: "#8a8780",
+  probation: "#A3A3A3",
+  good_standing: "#017249",
+  promotion_eligible: "#3A4FAA",
+  future_modernist: "#c7228a",
+  champion: "#D4AF37",
+};
+
 const TIER_BORDER: Record<TradingCardTier, string> = {
   standard: "var(--surface-border)",
   probation: "rgba(102, 102, 102, 0.5)",
@@ -82,6 +96,11 @@ export function TradingCard3D({
 }: TradingCard3DProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const faceRef = useRef<HTMLDivElement>(null);
+
+  // Jersey-style initials for the no-portrait state.
+  const initials =
+    `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase() ||
+    (user.handle?.[0]?.toUpperCase() ?? "FM");
 
   const aspectClass =
     aspectRatio === "square"
@@ -147,6 +166,8 @@ export function TradingCard3D({
         ref={faceRef}
         className={cn(
           "fm-card-3d-face relative isolate overflow-hidden rounded-2xl border bg-[var(--surface-elevated)]",
+          // Container query so the initials scale with the card.
+          "[container-type:inline-size]",
           "h-full w-full",
         )}
         style={{ borderColor: TIER_BORDER[tier] }}
@@ -165,22 +186,60 @@ export function TradingCard3D({
           Future Modern
         </div>
 
-        {/* Layer 3 — Portrait. Frontmost. Breaks the plane. */}
-        <div className="fm-card-3d-layer-front absolute inset-x-0 bottom-0 flex justify-center">
-          {user.avatarPortraitUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
+        {/* Layer 3 — Portrait. Frontmost. Breaks the plane.
+        
+            Same three states as TradingCard, kept in step deliberately:
+            studio portrait, then profile photo filled and faded, then
+            oversized initials. This component had only the first two
+            of those, so on the profile page — where nobody has a
+            studio shot — it fell back to a small circle floating at
+            the bottom while the flat card right below it rendered
+            correctly. */}
+        {user.avatarPortraitUrl ? (
+          <div className="fm-card-3d-layer-front absolute inset-x-0 bottom-0 flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={user.avatarPortraitUrl}
               alt=""
               aria-hidden="true"
               className="h-full max-h-[92%] w-auto object-contain object-bottom drop-shadow-[0_20px_25px_rgba(0,0,0,0.35)]"
             />
-          ) : (
-            <div className="mb-6 flex h-32 w-32 items-center justify-center">
-              <Avatar user={user} size="xl" />
-            </div>
-          )}
-        </div>
+          </div>
+        ) : user.profileImageUrl ? (
+          <div className="fm-card-3d-layer-front absolute inset-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={user.profileImageUrl}
+              alt=""
+              aria-hidden="true"
+              className="h-full w-full object-cover object-top"
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(to top, rgba(13,13,13,0.96) 12%, rgba(13,13,13,0.55) 42%, rgba(13,13,13,0) 72%)",
+              }}
+              aria-hidden
+            />
+          </div>
+        ) : (
+          <div
+            className="fm-card-3d-layer-front pointer-events-none absolute inset-0 flex items-center justify-center"
+            aria-hidden
+          >
+            <span
+              className="font-display font-semibold leading-none opacity-[0.18]"
+              style={{
+                fontSize: "clamp(72px, 38cqw, 190px)",
+                color: TIER_ACCENT[tier],
+                letterSpacing: "-0.04em",
+              }}
+            >
+              {initials}
+            </span>
+          </div>
+        )}
 
         {/* Layer 4 — Mouse-following holo sheen. Surface plane. */}
         <div className="fm-card-3d-sheen pointer-events-none absolute inset-0" aria-hidden />

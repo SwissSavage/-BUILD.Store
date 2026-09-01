@@ -16,6 +16,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
+import { memberLabel } from "@/lib/member-label";
 import { getPublicUsers } from "@/lib/readers/users";
 import { mvpScoreReader, safely } from "@/lib/readers";
 import { championsCourtMembers } from "@/lib/mvp-score";
@@ -206,9 +207,9 @@ export default async function TeamPage({
                   </CardTitle>
                   <OnChainBadge userId={user.id} size="sm" />
                 </div>
-                {user.discipline && (
+                {memberLabel(user) && (
                   <p className="mt-0.5 text-[11px] text-ink-muted">
-                    {user.discipline}
+                    {memberLabel(user)}
                   </p>
                 )}
                 {pillars.length > 0 && (

@@ -887,7 +887,7 @@ function TeamHand({
         ovr: mvpSnapshot ? mvpSnapshot.ovr : null,
         isProvisional: mvpSnapshot?.isProvisional ?? false,
         isInChampionsCourt: courtIds.has(user.id),
-    membershipTier: user.membershipTier,
+        membershipTier: user.membershipTier,
       });
       const entry: TalentHandEntry = {
         user: {
@@ -914,5 +914,16 @@ function TeamHand({
 
   if (entries.length === 0) return null;
 
-  return <TalentHand entries={entries} deal aspectRatio="3/4" />;
+  return (
+    <TalentHand
+      entries={entries}
+      deal
+      aspectRatio="3/4"
+      // Crew labels lead with the skills this contract asked for.
+      engagement={{
+        skillsRequired: project.skillsRequired,
+        industry: project.industry,
+      }}
+    />
+  );
 }

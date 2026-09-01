@@ -10,6 +10,7 @@
  */
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
+import { memberLabel } from "@/lib/member-label";
 import { getAllUsers, getUserByHandle } from "@/lib/readers/users";
 import {
   aggregateRating,
@@ -259,9 +260,9 @@ export default async function PublicProfilePage({
               )}
             </div>
             <div>
-              {user.discipline && (
+              {memberLabel(user) && (
                 <p className="text-[10px] uppercase tracking-wider text-white/60">
-                  {user.discipline}
+                  {memberLabel(user)}
                 </p>
               )}
               <p className="mt-1 font-display text-lg font-semibold leading-tight text-white">
@@ -283,7 +284,7 @@ export default async function PublicProfilePage({
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <TierBadge tier={user.membershipTier} />
             <OnChainBadge userId={user.id} size="sm" />
-            {user.discipline && (
+            {memberLabel(user) && (
               <span
                 className="rounded-full px-2.5 py-0.5 text-xs"
                 style={{
@@ -291,7 +292,7 @@ export default async function PublicProfilePage({
                   color: "#D828A0",
                 }}
               >
-                {user.discipline}
+                {memberLabel(user)}
               </span>
             )}
             {pillars.map((p, idx) => (

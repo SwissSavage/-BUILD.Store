@@ -17,6 +17,7 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
+import { memberLabel } from "@/lib/member-label";
 import { listInboundSubmissions } from "@/lib/mock-data/inbound-submissions";
 import { getAdminUsers } from "@/lib/readers/users";
 import { safely } from "@/lib/readers";
@@ -560,9 +561,9 @@ function SubmissionRow({
                     >
                       {publicName(m.user)}
                     </Link>
-                    {m.user.discipline && (
+                    {memberLabel(m.user) && (
                       <span className="ml-2 text-[11px] text-ink-muted">
-                        {m.user.discipline}
+                        {memberLabel(m.user)}
                       </span>
                     )}
                     {m.matchedTags.length > 0 && (

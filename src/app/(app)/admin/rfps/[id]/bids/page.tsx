@@ -20,6 +20,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth-stub";
+import { memberLabel } from "@/lib/member-label";
 import { db } from "@/db/client";
 import {
   cooperativeQuotes,
@@ -84,8 +85,13 @@ export default async function RfpBidCompilePage({
       firstName: users.firstName,
       lastName: users.lastName,
       handle: users.handle,
-      discipline: users.discipline,
       tagline: users.tagline,
+      // memberLabel derives the dense-slot label from these rather
+      // than the retired `discipline` column.
+      primaryIndustry: users.primaryIndustry,
+      secondaryIndustries: users.secondaryIndustries,
+      skills: users.skills,
+      membershipTier: users.membershipTier,
     })
     .from(projectApplications)
     .leftJoin(users, eq(users.id, projectApplications.userId))
@@ -216,9 +222,15 @@ export default async function RfpBidCompilePage({
                           <span className="font-medium">
                             {b.firstName ?? b.handle ?? "Talent"}
                           </span>
-                          {b.discipline && (
+                          {memberLabel(b, {
+                              skillsRequired: rfp.skillsRequired,
+                              industry: rfp.industry,
+                            }) && (
                             <span className="text-[11px] text-ink-muted">
-                              · {b.discipline}
+                              · {memberLabel(b, {
+                              skillsRequired: rfp.skillsRequired,
+                              industry: rfp.industry,
+                            })}
                             </span>
                           )}
                           {rate !== null && (

@@ -36,6 +36,10 @@ import { TradingCard3D } from "@/components/TradingCard3D";
 import { TierBadge } from "@/components/TierBadge";
 import { OnChainBadge } from "@/components/OnChainBadge";
 import { publicName, type User } from "@/lib/types";
+import {
+  memberLabel,
+  type MemberLabelContext,
+} from "@/lib/member-label";
 import type { TradingCardTier } from "@/components/TradingCard";
 
 /**
@@ -106,6 +110,13 @@ interface TalentHandProps {
    */
   contextLabel?: string;
   /**
+   * The engagement this hand is being dealt for. When given, each
+   * card's label leads with the skills that match it — and shows all
+   * of them, since one contractor often covers several pieces of the
+   * same brief.
+   */
+  engagement?: MemberLabelContext;
+  /**
    * When true (default), cards animate in with the deal effect on
    * mount. Set false for admin-side previews where the effect
    * distracts.
@@ -135,6 +146,7 @@ interface TalentHandProps {
 export function TalentHand({
   entries,
   contextLabel,
+  engagement,
   deal = true,
   aspectRatio = "3/4",
   selectable = false,
@@ -225,9 +237,9 @@ export function TalentHand({
                   </p>
                   <OnChainBadge userId={entry.user.id} size="sm" />
                 </div>
-                {entry.user.discipline && (
+                {memberLabel(entry.user, engagement) && (
                   <p className="mt-0.5 text-xs text-ink-muted">
-                    {entry.user.discipline}
+                    {memberLabel(entry.user, engagement)}
                   </p>
                 )}
                 <div className="mt-2">

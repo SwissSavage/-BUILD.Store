@@ -22,6 +22,7 @@
  * permissions on its own. Callers must pass the correct mode.
  */
 import { cn } from "@/lib/cn";
+import { memberLabel } from "@/lib/member-label";
 import {
   MVP_SUB_RATING_LABELS,
   type MvpScore,
@@ -41,8 +42,11 @@ interface MvpCardProps {
     | "lastName"
     | "handle"
     | "profileImageUrl"
-    | "discipline"
     | "membershipTier"
+    | "primaryIndustry"
+    | "secondaryIndustries"
+    | "skills"
+    | "tagline"
   >;
   mode: "self" | "peer";
   /**
@@ -114,9 +118,9 @@ export function MvpCard({
             <div className="font-display text-lg font-semibold leading-tight">
               {user.firstName ?? user.handle}
             </div>
-            {user.discipline && (
+            {memberLabel(user) && (
               <div className="mt-0.5 text-xs text-ink-muted">
-                {user.discipline}
+                {memberLabel(user)}
               </div>
             )}
             <BandBadge band={band} />
@@ -346,9 +350,9 @@ function ProvisionalCard({
             <div className="font-display text-lg font-semibold leading-tight">
               {user.firstName ?? user.handle}
             </div>
-            {user.discipline && (
+            {memberLabel(user) && (
               <div className="mt-0.5 text-xs text-ink-muted">
-                {user.discipline}
+                {memberLabel(user)}
               </div>
             )}
             <span

@@ -15,6 +15,7 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
+import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
 import { mvpScoreReader, safely } from "@/lib/readers";
 import {
@@ -143,9 +144,9 @@ export default async function AdminMvpPage() {
                     <td className="py-2 pr-3 text-ink-faint">{i + 1}</td>
                     <td className="py-2 pr-3">
                       <div className="font-medium">{publicName(user)}</div>
-                      {user.discipline && (
+                      {memberLabel(user) && (
                         <div className="text-[11px] text-ink-muted">
-                          {user.discipline}
+                          {memberLabel(user)}
                         </div>
                       )}
                     </td>

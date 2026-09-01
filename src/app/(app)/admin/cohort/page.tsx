@@ -17,6 +17,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
+import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
 import { safely } from "@/lib/readers";
 import {
@@ -210,9 +211,9 @@ export default async function AdminCohortPage() {
                     <p className="truncate font-medium">
                       {publicName(user)}
                     </p>
-                    {user.discipline && (
+                    {memberLabel(user) && (
                       <p className="truncate text-[11px] text-ink-faint">
-                        {user.discipline}
+                        {memberLabel(user)}
                       </p>
                     )}
                   </div>

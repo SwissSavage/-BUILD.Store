@@ -64,7 +64,7 @@ export default async function CohortIndexPage() {
           This is the forward-looking rail. For recognition of shipped
           work, see the{" "}
           <Link
-            href="/showcase"
+            href="/portfolio"
             className="text-brand-magenta hover:underline"
           >
             Future Modernist rail

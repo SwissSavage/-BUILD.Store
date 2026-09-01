@@ -77,7 +77,7 @@ export default async function TeamPage({
         <p className="mt-3 text-sm text-ink-muted">
           The cooperative roster is a Member-tier surface. Public
           browsing of the cooperative&apos;s work lives at{" "}
-          <Link href="/showcase" className="text-brand-magenta hover:underline">
+          <Link href="/portfolio" className="text-brand-magenta hover:underline">
             /showcase
           </Link>
           .

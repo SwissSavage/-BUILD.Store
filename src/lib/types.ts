@@ -176,7 +176,7 @@ export interface User {
   avatarPortraitUrl: string | null;
   /**
    * Discovery gate independent of membership tier. When true (default),
-   * Member-tier profiles surface in `/showcase`, member directories,
+   * Member-tier profiles surface in `/portfolio`, member directories,
    * homepage rails, and search indexes per the locked visibility matrix.
    * When false, the profile is excluded from discovery surfaces and
    * search engine indexing — direct-link URL still resolves but no
@@ -844,7 +844,7 @@ export interface Job {
  *
  *   2. The PUBLISHED overlay that admins control (`publishedAt`,
  *      `publishedTitle`, `publishedDescription`, `hideProjectUrl`) — this is
- *      what renders on public surfaces like `/u/[handle]` and `/showcase`.
+ *      what renders on public surfaces like `/u/[handle]` and `/portfolio`.
  *      Overlay fields default to null, meaning "use the raw value verbatim";
  *      admins override them to scrub personal branding, client names, or
  *      direct-contact vectors without destroying the member's original text.

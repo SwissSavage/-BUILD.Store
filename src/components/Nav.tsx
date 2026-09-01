@@ -98,7 +98,7 @@ export async function Nav() {
               <JobsDropdown />
               <StoreDropdown />
               <Link href="/orders" className={navLink}>Orders</Link>
-              <Link href="/showcase" className={navLink}>Showcase</Link>
+              <Link href="/portfolio" className={navLink}>Portfolio</Link>
               <Link href="/community" className={navLink}>Community</Link>
               {/* Artists (profileMode "epk") get a dedicated EPK editor
                   link — separate from the profile dropdown because EPK
@@ -120,7 +120,7 @@ export async function Nav() {
               <Link href="/about" className={navLink}>About</Link>
               <StoreDropdown />
               <JobsDropdown />
-              <Link href="/showcase" className={navLink}>Showcase</Link>
+              <Link href="/portfolio" className={navLink}>Portfolio</Link>
               <Link href="/community" className={navLink}>Community</Link>
               <Link href="/partners" className={navLink}>Partners</Link>
               <Link href="/whitelist" className={navLink}>Whitelist</Link>

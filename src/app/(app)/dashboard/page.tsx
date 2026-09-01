@@ -29,6 +29,14 @@ import {
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { TierBadge } from "@/components/TierBadge";
 import { Avatar } from "@/components/Avatar";
+import {
+  CARD_TIER_LABEL,
+  TradingCard,
+  deriveTradingCardTier,
+} from "@/components/TradingCard";
+import { championsCourtMembers } from "@/lib/mvp-score";
+import { mvpScoreReader } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
 import { HubspotStageBadge } from "@/components/HubspotStageBadge";
 import { FeedbackPrompt } from "@/components/FeedbackPrompt";
 import {
@@ -45,6 +53,20 @@ export default async function DashboardPage() {
     getTransactions(user.id),
   ]);
   const recentTx = allTx.slice(0, 3);
+
+  // Standing, for the member's own card.
+  const [mvpSnapshot, allScores, { users: allUsers }] = await Promise.all([
+    safely(() => mvpScoreReader.byId(user.id), null),
+    safely(() => mvpScoreReader.all(), []),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+  ]);
+  const cardTier = deriveTradingCardTier({
+    ovr: mvpSnapshot ? mvpSnapshot.ovr : null,
+    isProvisional: mvpSnapshot?.isProvisional ?? false,
+    isInChampionsCourt: new Set(
+      championsCourtMembers(allScores, allUsers),
+    ).has(user.id),
+  });
   const pillars = userPillars(user);
 
   // Walkthrough resume state — only render if the user has tier-relevant
@@ -118,8 +140,32 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-app px-6 py-12">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="flex items-start gap-4">
-          <Avatar user={user} size="xl" />
+        <div className="flex items-start gap-5">
+          {/* Your own card. The dashboard showed a plain avatar while
+              the public profile showed a trading card — so a member
+              saw everyone's standing except their own, on the page
+              they land on most. */}
+          <TradingCard
+            user={user}
+            tier={cardTier}
+            href={`/u/${user.handle}`}
+            className="hidden w-[150px] shrink-0 sm:block"
+            aspectRatio="3/4"
+          >
+            <div className="flex h-full flex-col justify-between">
+              <div className="flex items-start justify-end">
+                {mvpSnapshot && !mvpSnapshot.isProvisional && (
+                  <span className="rounded-full bg-black/40 px-2 py-0.5 font-mono text-[9px] text-white">
+                    OVR {mvpSnapshot.ovr}
+                  </span>
+                )}
+              </div>
+              <p className="text-[9px] uppercase tracking-wider text-white/70">
+                {CARD_TIER_LABEL[cardTier]}
+              </p>
+            </div>
+          </TradingCard>
+          <Avatar user={user} size="xl" className="sm:hidden" />
           <div>
             <p className="text-sm text-ink-muted">Welcome back,</p>
             <h1 className="font-display text-4xl font-semibold md:text-5xl">

@@ -32,6 +32,7 @@
  */
 
 import { useRef, type MouseEvent } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/Avatar";
 import type { User } from "@/lib/types";
@@ -82,6 +83,12 @@ interface TradingCard3DProps {
     | "avatarPortraitUrl"
   >;
   tier?: TradingCardTier;
+  /**
+   * Where the card goes when clicked. The card is the member's
+   * profile, not a decoration beside it, so wherever one appears it
+   * should be the way in. Omit when the card IS the destination.
+   */
+  href?: string;
   children?: React.ReactNode;
   className?: string;
   aspectRatio?: "3/4" | "4/5" | "square";
@@ -91,6 +98,7 @@ export function TradingCard3D({
   user,
   tier = "standard",
   children,
+  href,
   className,
   aspectRatio = "3/4",
 }: TradingCard3DProps) {
@@ -150,7 +158,7 @@ export function TradingCard3D({
     wrapper.style.setProperty("--sheen-y", "50%");
   }
 
-  return (
+  const card = (
     <div
       ref={wrapperRef}
       className={cn("fm-card-3d-wrapper", aspectClass, className)}
@@ -262,5 +270,17 @@ export function TradingCard3D({
         )}
       </div>
     </div>
+  );
+
+  // The card is the profile. When a destination is given it becomes
+  // the link to it rather than something you click past.
+  if (!href) return card;
+  return (
+    <Link
+      href={href}
+      className="block rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-magenta"
+    >
+      {card}
+    </Link>
   );
 }

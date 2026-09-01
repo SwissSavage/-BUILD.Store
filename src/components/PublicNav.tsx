@@ -54,8 +54,8 @@ export function PublicNav() {
             About
           </Link>
           <StoreDropdown />
-          <Link href="/showcase" className={navLink}>
-            Showcase
+          <Link href="/portfolio" className={navLink}>
+            Portfolio
           </Link>
           <Link href="/cohort" className={navLink}>
             Cohort

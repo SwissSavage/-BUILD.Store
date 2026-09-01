@@ -101,7 +101,7 @@ export default async function WalkthroughPage() {
           action: "Open /showcase.",
           observe:
             "Only discovery-eligible Members + recognized Partners should render. Verify Chibu (profilePublic=false) is NOT here. Verify the pillar filter reorders the grid.",
-          href: "/showcase",
+          href: "/portfolio",
         },
         {
           action: "Click any Member's card.",

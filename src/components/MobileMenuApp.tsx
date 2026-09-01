@@ -37,7 +37,7 @@ const memberLinks = [
   { href: "/wallet", label: "Wallet" },
   { href: "/store", label: "Store" },
   { href: "/orders", label: "Orders" },
-  { href: "/showcase", label: "Showcase" },
+  { href: "/portfolio", label: "Portfolio" },
   { href: "/locker", label: "Locker" },
 ];
 
@@ -46,7 +46,7 @@ const publicLinks = [
   { href: "/store", label: "Store" },
   { href: "/jobs", label: "Jobs" },
   { href: "/contracts", label: "Contracts" },
-  { href: "/showcase", label: "Showcase" },
+  { href: "/portfolio", label: "Portfolio" },
   { href: "/cohort", label: "Cohort" },
   { href: "/articles", label: "Articles" },
   { href: "/partners", label: "Partners" },

@@ -33,9 +33,8 @@ import {
 import { requireAdmin } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { RETENTION_DAYS } from "@/lib/trash-retention";
 
-/** How long a trashed project stays restorable. */
-export const RETENTION_DAYS = 30;
 
 function revalidateProjectSurfaces(): void {
   revalidatePath("/projects");

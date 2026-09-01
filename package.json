@@ -2,7 +2,7 @@
   "name": "build-store-unified",
   "version": "0.1.0-sandbox",
   "private": true,
-  "description": "$BUILD.Store unified sandbox — clickable prototype. Not production. See README.md.",
+  "description": "$BUILD.Store unified sandbox \u2014 clickable prototype. Not production. See README.md.",
   "license": "Apache-2.0",
   "author": "Future Modern Builderberg LLC",
   "homepage": "https://buildstore.example",
@@ -15,12 +15,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node scripts/check-use-server.mjs && tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "check:use-server": "node scripts/check-use-server.mjs"
   },
   "dependencies": {
     "next": "^15.1.6",

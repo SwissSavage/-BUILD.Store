@@ -13,11 +13,8 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { getAllUsers } from "@/lib/readers/users";
 import { getDeletedProjects } from "@/lib/readers/projects";
 import { safely } from "@/lib/readers";
-import {
-  purgeProject,
-  restoreProject,
-  RETENTION_DAYS,
-} from "@/lib/project-trash-actions";
+import { purgeProject, restoreProject } from "@/lib/project-trash-actions";
+import { RETENTION_DAYS } from "@/lib/trash-retention";
 import { adminName, INDUSTRY_LABELS } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 

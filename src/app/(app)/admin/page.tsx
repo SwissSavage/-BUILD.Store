@@ -24,6 +24,7 @@ import {
   servicePartnerReader,
   ecosystemPartnerReader,
   productAffiliateReader,
+  jobReader,
   tokenReader,
   whitelistPurchaseReader,
 } from "@/lib/readers";
@@ -59,6 +60,7 @@ export default async function AdminHome() {
     servicePartnerRows,
     ecosystemPartnerRows,
     affiliateRows,
+    jobRows,
   ] = await Promise.all([
     safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
     safely(() => getAllProjects(), {
@@ -83,7 +85,10 @@ export default async function AdminHome() {
     safely(() => servicePartnerReader.all(), []),
     safely(() => ecosystemPartnerReader.all(), []),
     safely(() => productAffiliateReader.all(), []),
+    safely(() => jobReader.all(), []),
   ]);
+
+  const openJobCount = jobRows.filter((j) => j.status === "open").length;
 
   const partnerCount =
     servicePartnerRows.length +
@@ -153,6 +158,12 @@ export default async function AdminHome() {
     { href: "/admin/applications", title: "Applications", count: pending, sub: "Pending review" },
     { href: "/admin/projects", title: "Projects", count: openProjects, sub: "Open RFPs" },
     {
+      href: "/contracts/new",
+      title: "New contract",
+      count: openProjects,
+      sub: "Post a contract for bids · open contracts shown",
+    },
+    {
       href: "/admin/rfps",
       title: "RFP intake",
       count: rfpPending,
@@ -193,6 +204,12 @@ export default async function AdminHome() {
       title: "Whitelist",
       count: whitelistQueue,
       sub: `${whitelistOpen} donations open · ${consultNew} consults new · access not for sale`,
+    },
+    {
+      href: "/admin/jobs",
+      title: "Jobs",
+      count: openJobCount,
+      sub: `${openJobCount} open on the public board · ${jobRows.length} total`,
     },
     {
       href: "/admin/partners",

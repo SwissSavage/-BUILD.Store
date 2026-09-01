@@ -24,7 +24,16 @@ import {
   recognitionReader,
   safely,
 } from "@/lib/readers";
-import { publicName } from "@/lib/types";
+import { TIER_LABELS, publicName, type User } from "@/lib/types";
+import {
+  activeRecognitionUserIds,
+  publicProfileEligible,
+} from "@/lib/profile-visibility";
+import {
+  TradingCard,
+  type TradingCardTier,
+  deriveTradingCardTier,
+} from "@/components/TradingCard";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 type ActivityKind =
@@ -39,6 +48,9 @@ type ActivityKind =
 interface ActivityEvent {
   id: string;
   kind: ActivityKind;
+  /** Present on join events — the feed renders the person's card. */
+  member?: User;
+  memberTier?: TradingCardTier;
   timestamp: string;
   userId: string | null;
   title: string;
@@ -77,6 +89,7 @@ async function collectEvents(): Promise<ActivityEvent[]> {
     epks,
     milestones,
     penalties,
+    recognizedIds,
   ] = await Promise.all([
     safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
     safely(() => getAllProjects(), {
@@ -88,6 +101,7 @@ async function collectEvents(): Promise<ActivityEvent[]> {
     safely(() => epkReader.all(), []),
     safely(() => milestoneReader.all(), []),
     safely(() => penaltyReader.all(), []),
+    safely(() => activeRecognitionUserIds(), new Set<string>()),
   ]);
 
   // Recognitions.
@@ -203,20 +217,41 @@ async function collectEvents(): Promise<ActivityEvent[]> {
     });
   }
 
-  // New Members (createdAt within reasonable memory).
+  // Joins.
+  //
+  // This filtered on membershipTier === "member" and nothing else, so
+  // it showed no joins at all in practice: a cold magic-link signup
+  // lands as `viewer` (auth.ts createUser), and only completing an
+  // invite grants member or partner. Partners were excluded outright
+  // even after being admitted.
+  //
+  // Now both admitted tiers appear, run through the discovery gate in
+  // profile-visibility.ts — the matrix locked in future-modern.md.
+  // Members always; Partners only inside an active recognition
+  // window; anyone opted out of `profilePublic`, never. That gate is
+  // what keeps this feed from becoming a directory someone can work
+  // through to reach talent directly.
   for (const u of roster) {
-    if (u.membershipTier !== "member") continue;
+    if (u.membershipTier === "viewer") continue;
+    if (!publicProfileEligible(u, recognizedIds)) continue;
     events.push({
       id: `evt_new_${u.id}`,
       kind: "new_member",
       timestamp: u.createdAt,
       userId: u.id,
-      title: `${publicName(u)} joined as Member`,
+      title: `${publicName(u)} joined as ${TIER_LABELS[u.membershipTier]}`,
       body: u.discipline
         ? `${u.discipline}. See profile for portfolio + standing.`
         : "Member joined the cooperative.",
       href: `/u/${u.handle}`,
       accent: "#5070F0",
+      member: u,
+      memberTier: deriveTradingCardTier({
+        ovr: null,
+        isProvisional: true,
+        isInChampionsCourt: false,
+        membershipTier: u.membershipTier,
+      }),
     });
   }
 
@@ -315,6 +350,29 @@ export default async function ActivityPage() {
               {dayEvents.map((e) => (
                 <li key={e.id}>
                   <Card>
+                    <div className="flex gap-4">
+                      {/* Join events lead with the person's card — the
+                          card is the profile, so this is the way in.
+                          Only rendered for people the discovery gate
+                          already cleared. */}
+                      {e.member && e.memberTier && (
+                        <TradingCard
+                          user={e.member}
+                          tier={e.memberTier}
+                          href={e.href ?? undefined}
+                          className="hidden w-[110px] shrink-0 sm:block"
+                          aspectRatio="3/4"
+                        >
+                          <div className="flex h-full flex-col justify-end">
+                            {e.member.discipline && (
+                              <p className="text-[8px] uppercase tracking-wider text-white/60">
+                                {e.member.discipline}
+                              </p>
+                            )}
+                          </div>
+                        </TradingCard>
+                      )}
+                      <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <CardEyebrow>{KIND_LABEL[e.kind]}</CardEyebrow>
                       <span className="text-[11px] text-ink-faint">
@@ -341,6 +399,8 @@ export default async function ActivityPage() {
                         Open →
                       </Link>
                     )}
+                      </div>
+                    </div>
                   </Card>
                 </li>
               ))}

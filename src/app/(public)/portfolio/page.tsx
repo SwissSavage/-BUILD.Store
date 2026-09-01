@@ -15,7 +15,10 @@
 import Link from "next/link";
 import { portfolioReader, safely } from "@/lib/readers";
 import { getAllUsers } from "@/lib/readers/users";
-import { publicProfileEligible } from "@/lib/profile-visibility";
+import {
+  activeRecognitionUserIds,
+  publicProfileEligible,
+} from "@/lib/profile-visibility";
 import {
   INDUSTRY_LABELS,
   type Industry,
@@ -49,12 +52,13 @@ export default async function PortfolioPage({
   // only via their direct `/u/[handle]` URL. See `profile-visibility.ts`.
   // Reader swap 2026-08-28: was MOCK_USERS + MOCK_PORTFOLIO, so the
   // showcase rendered seed work and never a real member's portfolio.
-  const [{ users }, allItems] = await Promise.all([
+  const [{ users }, allItems, recognizedIds] = await Promise.all([
     getAllUsers(),
     safely(() => portfolioReader.all(), []),
+    safely(() => activeRecognitionUserIds(), new Set<string>()),
   ]);
   const eligibleUserIds = new Set(
-    users.filter((u) => publicProfileEligible(u)).map((u) => u.id),
+    users.filter((u) => publicProfileEligible(u, recognizedIds)).map((u) => u.id),
   );
   const authorsById = new Map(users.map((u) => [u.id, u]));
   const published = allItems

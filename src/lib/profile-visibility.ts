@@ -19,8 +19,38 @@
  * whose period is current (current calendar month for monthly winners,
  * current calendar year for Constellation).
  */
-import { activeRecognitionsForUser } from "@/lib/mock-data/future-modernist-recognitions";
+import { eq, inArray } from "drizzle-orm";
+import { db } from "@/db/client";
+import { futureModernistRecognitions } from "@/db/schema";
+import { periodKeyFor } from "@/lib/recognition-period";
 import type { User } from "@/lib/types";
+
+/**
+ * User ids holding a recognition whose window is currently open.
+ *
+ * Loaded once by the caller and passed into `publicProfileEligible`.
+ * This used to read a fixture array inside the predicate, which meant
+ * the Partner half of the discovery gate was answered from seed data:
+ * a Partner who actually won a recognition stayed invisible, and
+ * seeded winners were visible whether or not they existed. A privacy
+ * control answering from fixtures is worse than one that is simply
+ * strict.
+ */
+export async function activeRecognitionUserIds(): Promise<Set<string>> {
+  const now = new Date();
+  const monthKey = periodKeyFor(now, "month").key;
+  const yearKey = periodKeyFor(now, "year").key;
+  const rows = await db
+    .select({
+      userId: futureModernistRecognitions.userId,
+      periodKey: futureModernistRecognitions.periodKey,
+    })
+    .from(futureModernistRecognitions)
+    .where(
+      inArray(futureModernistRecognitions.periodKey, [monthKey, yearKey]),
+    );
+  return new Set(rows.map((r) => r.userId));
+}
 
 /**
  * Whether the user's profile should appear in public discovery surfaces
@@ -38,12 +68,18 @@ import type { User } from "@/lib/types";
  */
 export function publicProfileEligible(
   user: Pick<User, "id" | "membershipTier" | "profilePublic">,
+  /**
+   * Ids with an open recognition window, from
+   * `activeRecognitionUserIds()`. Omitted means "none" — the strict
+   * reading, so a caller that forgets to load them under-exposes
+   * Partners rather than over-exposing them.
+   */
+  recognized?: Set<string>,
 ): boolean {
   // Discovery gate first — opt-out applies regardless of tier.
   if (user.profilePublic === false) return false;
   if (user.membershipTier === "member") return true;
-  const { month, year } = activeRecognitionsForUser(user.id);
-  return month !== null || year !== null;
+  return recognized?.has(user.id) ?? false;
 }
 
 /**
@@ -54,8 +90,9 @@ export function publicProfileEligible(
  */
 export function profileShouldIndex(
   user: Pick<User, "id" | "membershipTier" | "profilePublic">,
+  recognized?: Set<string>,
 ): boolean {
-  return publicProfileEligible(user);
+  return publicProfileEligible(user, recognized);
 }
 
 /**

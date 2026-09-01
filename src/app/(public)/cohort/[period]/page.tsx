@@ -17,7 +17,10 @@ import { cohortSpotlights } from "@/db/schema";
 import { getAllUsers } from "@/lib/readers/users";
 import { spotlightReader } from "@/lib/readers";
 import { publicName, type User } from "@/lib/types";
-import { publicProfileEligible } from "@/lib/profile-visibility";
+import {
+  activeRecognitionUserIds,
+  publicProfileEligible,
+} from "@/lib/profile-visibility";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
 import { OnChainBadge } from "@/components/OnChainBadge";
@@ -63,6 +66,7 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
   if (!spotlight) notFound();
 
   const { users: roster } = await getAllUsers();
+  const recognizedIds = await activeRecognitionUserIds();
   const spotlightUsers = spotlight.userIds
     .map((id) => roster.find((u) => u.id === id))
     .filter((u): u is User => !!u);
@@ -130,7 +134,7 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
                           {user.bio}
                         </p>
                       )}
-                      {publicProfileEligible(user) && (
+                      {publicProfileEligible(user, recognizedIds) && (
                         <Link
                           href={`/u/${user.handle}`}
                           className="mt-2 inline-block text-xs text-brand-magenta hover:underline"

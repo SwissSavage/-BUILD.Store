@@ -19,7 +19,10 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { getPublicUsers } from "@/lib/readers/users";
 import { mvpScoreReader, safely } from "@/lib/readers";
 import { championsCourtMembers } from "@/lib/mvp-score";
-import { publicProfileEligible } from "@/lib/profile-visibility";
+import {
+  activeRecognitionUserIds,
+  publicProfileEligible,
+} from "@/lib/profile-visibility";
 import {
   INDUSTRY_LABELS,
   publicName,
@@ -92,9 +95,10 @@ export default async function TeamPage({
 
   // Reader swap 2026-08-28: was MOCK_USERS + MOCK_MVP_SCORES, so the
   // public roster showed 13 seed profiles and never a real member.
-  const [{ users }, scores] = await Promise.all([
+  const [{ users }, scores, recognizedIds] = await Promise.all([
     safely(() => getPublicUsers(), { users: [], source: "postgres" as const }),
     safely(() => mvpScoreReader.all(), []),
+    safely(() => activeRecognitionUserIds(), new Set<string>()),
   ]);
   const scoreById = new Map(scores.map((sc) => [sc.userId, sc]));
 
@@ -103,7 +107,7 @@ export default async function TeamPage({
   // Roster = discovery-eligible users. Members always qualify; recognized
   // Partners do too during their window.
   const roster = users
-    .filter((u) => publicProfileEligible(u))
+    .filter((u) => publicProfileEligible(u, recognizedIds))
     .map((u) => {
       const pillars = userPillars(u);
       const snapshot = scoreById.get(u.id) ?? null;

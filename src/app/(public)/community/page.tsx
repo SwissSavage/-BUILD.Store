@@ -157,7 +157,7 @@ export default async function CommunityChatPage() {
           <ul className="mt-4 space-y-3">
             {rows.map((r) => {
               const displayName =
-                publicName({ firstName: r.firstName }) ||
+                publicName({ firstName: r.firstName, lastName: null }) ||
                 r.handle ||
                 "Cooperative member";
               const canDelete = isAdmin || user?.id === r.userId;

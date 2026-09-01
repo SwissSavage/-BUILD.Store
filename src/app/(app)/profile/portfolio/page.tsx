@@ -80,7 +80,7 @@ async function deleteItem(formData: FormData) {
 
   revalidatePath("/profile/portfolio");
   revalidatePath("/admin/portfolios");
-  revalidatePath("/showcase");
+  revalidatePath("/portfolio");
   if (user.handle) revalidatePath(`/u/${user.handle}`);
 }
 

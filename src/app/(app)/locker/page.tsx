@@ -212,8 +212,8 @@ function FilterBar({ params }: { params: SearchParams }) {
   // "see work samples" jump lands on the matching slice. With no pillar
   // selected, links to the unfiltered showcase.
   const showcaseHref = params.pillar
-    ? `/showcase?pillar=${params.pillar}`
-    : "/showcase";
+    ? `/portfolio?pillar=${params.pillar}`
+    : "/portfolio";
   return (
     <div className="mt-6 flex flex-wrap items-center gap-2">
       <span className="mr-2 text-[11px] uppercase tracking-wider text-ink-faint">

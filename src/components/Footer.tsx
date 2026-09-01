@@ -18,7 +18,7 @@ export function Footer() {
           <ul className="mt-3 space-y-1.5 text-sm">
             <li><Link href="/" className="hover:text-brand-magenta">Home</Link></li>
             <li><Link href="/about" className="hover:text-brand-magenta">About</Link></li>
-            <li><Link href="/showcase" className="hover:text-brand-magenta">Showcase</Link></li>
+            <li><Link href="/portfolio" className="hover:text-brand-magenta">Portfolio</Link></li>
             <li><Link href="/cohort" className="hover:text-brand-magenta">Cohort</Link></li>
             <li><Link href="/articles" className="hover:text-brand-magenta">Articles</Link></li>
             <li><Link href="/partners" className="hover:text-brand-magenta">Partners</Link></li>
@@ -35,7 +35,7 @@ export function Footer() {
           <ul className="mt-3 space-y-1.5 text-sm">
             <li>
               <Link
-                href="/showcase?pillar=stem"
+                href="/portfolio?pillar=stem"
                 className="hover:text-brand-magenta"
               >
                 STEM
@@ -43,7 +43,7 @@ export function Footer() {
             </li>
             <li>
               <Link
-                href="/showcase?pillar=creative-media"
+                href="/portfolio?pillar=creative-media"
                 className="hover:text-brand-magenta"
               >
                 Creative Media
@@ -51,7 +51,7 @@ export function Footer() {
             </li>
             <li>
               <Link
-                href="/showcase?pillar=professional-services"
+                href="/portfolio?pillar=professional-services"
                 className="hover:text-brand-magenta"
               >
                 Professional Services

@@ -249,7 +249,7 @@ export default async function ActivityPage() {
         </h1>
         <p className="mt-3 text-sm text-ink-muted">
           The cooperative activity feed is Member-tier. See{" "}
-          <Link href="/showcase" className="text-brand-magenta hover:underline">
+          <Link href="/portfolio" className="text-brand-magenta hover:underline">
             /showcase
           </Link>{" "}
           for public work.

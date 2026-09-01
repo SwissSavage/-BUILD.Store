@@ -1,5 +1,9 @@
 /**
- * Showcase — featured portfolio items across the cooperative.
+ * Portfolio — published work samples across the cooperative.
+ *
+ * Renamed from /showcase 2026-09-01. "Portfolio" said nothing about
+ * whether you were looking at members' own work or delivered client
+ * outcomes; /case-studies is the latter, this is the former.
  * Public-facing — only items that have been admin-published appear.
  * Redacted fields (overridden title/description, hidden projectUrl) are
  * resolved by `publicPortfolioView()` before render.
@@ -31,7 +35,7 @@ function parsePillar(raw: string | undefined): Industry | null {
 
 export const dynamic = "force-dynamic";
 
-export default async function ShowcasePage({
+export default async function PortfolioPage({
   searchParams,
 }: {
   searchParams: Promise<{ pillar?: string }>;
@@ -65,7 +69,7 @@ export default async function ShowcasePage({
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
-      <h1 className="font-display text-4xl font-semibold">Showcase</h1>
+      <h1 className="font-display text-4xl font-semibold">Portfolio</h1>
       <p className="mt-2 text-ink-muted">
         {activePillar
           ? `Work from the cooperative · ${INDUSTRY_LABELS[activePillar]}.`
@@ -90,7 +94,7 @@ export default async function ShowcasePage({
 function PillarFilter({ active }: { active: Industry | null }) {
   const pill = (label: string, target: Industry | null) => {
     const isActive = active === target;
-    const href = target ? `/showcase?pillar=${target}` : "/showcase";
+    const href = target ? `/portfolio?pillar=${target}` : "/portfolio";
     return (
       <Link
         key={target ?? "all"}

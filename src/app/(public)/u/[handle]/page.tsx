@@ -45,7 +45,11 @@ import { Avatar } from "@/components/Avatar";
 import { TierBadge } from "@/components/TierBadge";
 import { OnChainBadge } from "@/components/OnChainBadge";
 import { MvpCard } from "@/components/MvpCard";
-import { TradingCard, deriveTradingCardTier } from "@/components/TradingCard";
+import {
+  CARD_TIER_LABEL,
+  TradingCard,
+  deriveTradingCardTier,
+} from "@/components/TradingCard";
 import { TradingCard3D } from "@/components/TradingCard3D";
 import { ProfileShareButton } from "@/components/ProfileShareButton";
 
@@ -228,11 +232,34 @@ export default async function PublicProfilePage({
         />
       ))}
       <header className="flex flex-col items-start gap-6 md:flex-row md:items-start">
+        {/* The hero card was rendered with no children, so it was a
+            blank rectangle while the canon cards below it carried year
+            and OVR badges. Same component, same person, one of them
+            finished. It shows standing now: tier band always, OVR only
+            once a snapshot is published and out of provisional. */}
         <TradingCard3D
           user={user}
           tier={cardTier}
           className="w-full max-w-[280px] shrink-0"
-        />
+        >
+          <div className="flex h-full flex-col justify-between">
+            <div className="flex items-start justify-end">
+              {mvpSnapshot && !mvpSnapshot.isProvisional && (
+                <span className="rounded-full bg-black/40 px-2 py-0.5 font-mono text-[10px] text-white">
+                  OVR {mvpSnapshot.ovr}
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="font-display text-lg font-semibold text-white">
+                {displayName}
+              </p>
+              <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/70">
+                {CARD_TIER_LABEL[cardTier]}
+              </p>
+            </div>
+          </div>
+        </TradingCard3D>
         <div className="flex-1">
           <h1 className="font-display text-4xl font-semibold md:text-5xl">
             {displayName}

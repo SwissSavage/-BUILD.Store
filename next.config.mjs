@@ -1,6 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /**
+   * /showcase was public and indexed before the rename to /portfolio.
+   * Permanent redirect so external links and search results survive
+   * rather than landing on a 404.
+   */
+  async redirects() {
+    return [
+      { source: "/showcase", destination: "/portfolio", permanent: true },
+    ];
+  },
+
+  /**
    * Emit a self-contained deployable at .next/standalone. Copies only
    * the production dependencies + files Next.js actually uses at
    * runtime into a minimal directory tree, so the Docker image we ship

@@ -27,10 +27,10 @@ export default function NotFound() {
             Home
           </Link>
           <Link
-            href="/showcase"
+            href="/portfolio"
             className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
           >
-            Showcase
+            Portfolio
           </Link>
         </div>
       </div>

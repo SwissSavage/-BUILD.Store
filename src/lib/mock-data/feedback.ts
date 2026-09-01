@@ -80,7 +80,7 @@ export const MOCK_FEEDBACK: FeedbackEntry[] = [
   {
     id: "fbk_005",
     userId: "u_trevor",
-    surface: "/showcase",
+    surface: "/portfolio",
     surfaceLabel: "Showcase",
     walkthroughStepId: "wts_partner_intro",
     sentiment: "positive",

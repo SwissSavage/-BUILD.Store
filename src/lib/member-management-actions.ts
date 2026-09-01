@@ -36,7 +36,7 @@ function revalidateMemberPaths(handle?: string) {
   revalidatePath("/admin/audit-log");
   revalidatePath("/team");
   if (handle) revalidatePath(`/u/${handle}`);
-  revalidatePath("/showcase");
+  revalidatePath("/portfolio");
 }
 
 /**

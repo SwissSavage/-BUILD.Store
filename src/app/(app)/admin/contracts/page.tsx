@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getContracts } from "@/lib/readers/projects";
 import { attributionReader, splitReader, safely } from "@/lib/readers";
+import { trashProject } from "@/lib/project-trash-actions";
 import {
   HUBSPOT_STAGE_LABELS,
   INDUSTRY_LABELS,
@@ -241,6 +242,31 @@ function ContractRow({
           </Link>
         </div>
       )}
+
+      {/* Delete. Soft — goes to /admin/trash and is restorable for 30
+          days. Refuses outright once a payout has been dispatched,
+          since at that point the contract is a financial record.
+          Sits on this page as well as /admin/projects because this is
+          where you come looking for a contract. */}
+      <details className="mt-3">
+        <summary className="cursor-pointer text-[11px] text-ink-faint hover:text-brand-magenta">
+          Delete contract
+        </summary>
+        <form action={trashProject} className="mt-2 max-w-sm space-y-2">
+          <input type="hidden" name="id" value={project.id} />
+          <input
+            name="reason"
+            placeholder="Reason (optional)"
+            className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-1.5 text-xs text-ink"
+          />
+          <button
+            type="submit"
+            className="rounded-full border border-brand-magenta/50 px-3 py-1.5 text-[11px] text-brand-magenta hover:border-brand-magenta"
+          >
+            Move to trash
+          </button>
+        </form>
+      </details>
     </Card>
   );
 }

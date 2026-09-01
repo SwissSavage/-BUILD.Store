@@ -25,6 +25,7 @@
  * renders name + tier badges). The card itself is the visual frame +
  * portrait + brand backdrop.
  */
+import Link from "next/link";
 import { cn } from "@/lib/cn";
 import type { User } from "@/lib/types";
 
@@ -63,6 +64,14 @@ interface TradingCardProps {
     | "avatarPortraitUrl"
   >;
   tier?: TradingCardTier;
+  /**
+   * Where the card goes when clicked.
+   *
+   * The card is the member's profile, not a decoration beside it — so
+   * wherever one appears it should be the way in. Omit only when the
+   * card IS the destination (the profile page's own hero).
+   */
+  href?: string;
   /** Optional content composed on top of the card (name, badges, etc.). */
   children?: React.ReactNode;
   /** Width override. Default fluid. */
@@ -84,6 +93,16 @@ const TIER_BG_CLASS: Record<TradingCardTier, string> = {
  * Tier accent, used for the initials wash and the rule under them.
  * Same hues as the borders, at full strength.
  */
+/** Human label for the rarity band, shown on the card face. */
+export const CARD_TIER_LABEL: Record<TradingCardTier, string> = {
+  standard: "Partner",
+  probation: "Probation",
+  good_standing: "Good standing",
+  promotion_eligible: "Promotion eligible",
+  future_modernist: "Future Modernist",
+  champion: "Champion's Court",
+};
+
 const TIER_ACCENT: Record<TradingCardTier, string> = {
   standard: "#8a8780",
   probation: "#A3A3A3",
@@ -106,6 +125,7 @@ export function TradingCard({
   user,
   tier = "standard",
   children,
+  href,
   className,
   aspectRatio = "3/4",
 }: TradingCardProps) {
@@ -121,7 +141,7 @@ export function TradingCard({
         ? "aspect-[4/5]"
         : "aspect-[3/4]";
 
-  return (
+  const card = (
     <div
       className={cn(
         "relative isolate overflow-hidden rounded-2xl border bg-[var(--surface-elevated)]",
@@ -226,6 +246,18 @@ export function TradingCard({
         </div>
       )}
     </div>
+  );
+
+  // The card is the profile. When a destination is given it becomes
+  // the link to it rather than something you click past.
+  if (!href) return card;
+  return (
+    <Link
+      href={href}
+      className="block rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-magenta"
+    >
+      {card}
+    </Link>
   );
 }
 

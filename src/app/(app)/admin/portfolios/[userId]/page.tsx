@@ -72,7 +72,7 @@ async function publishItem(formData: FormData) {
 
   revalidatePath("/admin/portfolios");
   revalidatePath(`/admin/portfolios/${userId}`);
-  revalidatePath("/showcase");
+  revalidatePath("/portfolio");
   const u = await getUserById(userId);
   if (u) revalidatePath(`/u/${u.handle}`);
   revalidatePath("/profile/portfolio");
@@ -96,7 +96,7 @@ async function unpublishItem(formData: FormData) {
 
   revalidatePath("/admin/portfolios");
   revalidatePath(`/admin/portfolios/${userId}`);
-  revalidatePath("/showcase");
+  revalidatePath("/portfolio");
   const u = await getUserById(userId);
   if (u) revalidatePath(`/u/${u.handle}`);
   revalidatePath("/profile/portfolio");

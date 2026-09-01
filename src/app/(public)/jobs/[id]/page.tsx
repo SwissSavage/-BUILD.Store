@@ -17,6 +17,7 @@ import { jobReader } from "@/lib/readers";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
+import { Brief } from "@/components/Brief";
 import { Card } from "@/components/Card";
 import { ApplyToJobForm } from "@/components/ApplyToJobForm";
 
@@ -108,7 +109,7 @@ export default async function JobDetailPage({
         <h1 className="mt-2 font-display text-4xl font-semibold">
           {job.title}
         </h1>
-        <p className="mt-4 text-lg text-ink-muted">{job.description}</p>
+        <Brief text={job.description} title={job.title} className="mt-6" />
 
         <div className="mt-8 grid grid-cols-2 gap-6 md:grid-cols-4">
           <Field label="Comp" value={job.compensation} />

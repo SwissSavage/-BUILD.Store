@@ -4,6 +4,7 @@
  * whole app lives on one visual system.
  */
 import Link from "next/link";
+import { getCurrentUser } from "@/lib/auth-stub";
 import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
 import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
@@ -511,6 +512,15 @@ function FaqSection() {
  * someone can work through to reach talent directly.
  * ─────────────────────────────────────────────────────────────
  */
+/**
+ * How many joiners the rail carries before it overflows.
+ *
+ * Eight fits the column without the rail eating the page. The count of
+ * everyone beyond that still shows, so a growing cooperative reads as
+ * growing rather than as a list that stopped.
+ */
+const MAX_COHORT = 8;
+
 async function CohortRail() {
   const [spotlights, { users: roster }, recognizedIds] = await Promise.all([
     safely(() => spotlightReader.all(), []),
@@ -523,19 +533,67 @@ async function CohortRail() {
       b.periodKey.localeCompare(a.periodKey),
     )[0] ?? null;
 
-  // Everyone eligible to appear, newest first.
+  // Everyone eligible to appear, IN THE ORDER THEY JOINED.
+  //
+  // Ascending, not newest-first: this is a cohort, and a cohort reads
+  // as the sequence people arrived in. Newest-first also meant the
+  // rail reshuffled every signup, so nobody held a position.
   const eligible = roster
     .filter((u) => u.membershipTier !== "viewer")
     .filter((u) => publicProfileEligible(u, recognizedIds))
-    .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+    .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
+
+  // Accounts that exist but are still sitting at the signup default.
+  //
+  // `createUser` in auth.ts stamps every magic-link signup as
+  // "viewer"; only completing an invite promotes anyone. So people who
+  // were handed the URL and signed in directly land as viewers and are
+  // invisible here — correctly, since a viewer hasn't joined anything,
+  // but indistinguishably from "nobody has signed up", which is the
+  // failure mode this note exists to break.
+  const pendingTier = roster.filter(
+    (u) => u.membershipTier === "viewer",
+  ).length;
 
   const users = curated
     ? curated.userIds
         .map((id) => roster.find((u) => u.id === id))
         .filter((u): u is (typeof roster)[number] => !!u)
-    : eligible.slice(0, 3);
+    : eligible.slice(0, MAX_COHORT);
+  const overflow = curated ? 0 : Math.max(0, eligible.length - users.length);
 
-  if (users.length === 0) return null;
+  if (users.length === 0) {
+    // Nothing eligible. If accounts exist but are all sitting at
+    // "viewer", say so — to an admin only. The silent null here is
+    // what made seven real signups look like zero.
+    const viewer = await safely(() => getCurrentUser(), null);
+    if (!viewer?.isAdmin || pendingTier === 0) return null;
+    return (
+      <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+        <div className="mx-auto max-w-app px-6 py-10">
+          <div className="text-xs uppercase tracking-wider text-brand-blue">
+            This month&apos;s cohort · admin only
+          </div>
+          <p className="mt-2 max-w-2xl text-ink-muted">
+            {pendingTier} {pendingTier === 1 ? "account has" : "accounts have"}{" "}
+            signed up but{" "}
+            {pendingTier === 1 ? "is" : "are"} still set to{" "}
+            <strong className="text-ink">Viewer</strong>, so{" "}
+            {pendingTier === 1 ? "it doesn't" : "they don't"} appear here.
+            Signing in with a magic link doesn&apos;t grant membership —
+            only completing an invite does. Set their tier and they show
+            up in join order.
+          </p>
+          <Link
+            href="/admin/members"
+            className="mt-4 inline-block rounded-full bg-brand-magenta px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+          >
+            Set member tiers →
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   const now = new Date();
   const spotlight = curated ?? {
@@ -592,7 +650,7 @@ async function CohortRail() {
             )}
           </div>
           {users.length > 0 && (
-            <ul className="space-y-3">
+            <ul className="space-y-3" data-overflow={overflow}>
               {users.map((user) => (
                 <li
                   key={user.id}
@@ -611,11 +669,41 @@ async function CohortRail() {
                   </div>
                 </li>
               ))}
+              {overflow > 0 && (
+                <li className="px-4 text-xs text-ink-faint">
+                  + {overflow} more{" "}
+                  <Link href="/cohort" className="text-brand-magenta hover:underline">
+                    in the cohort →
+                  </Link>
+                </li>
+              )}
             </ul>
           )}
         </div>
+        {pendingTier > 0 && <PendingTierNote count={pendingTier} />}
       </div>
     </section>
+  );
+}
+
+/**
+ * Admin-only: accounts stuck at the signup default.
+ *
+ * Renders nothing for everyone else, so it can sit inside a public
+ * section without leaking that anyone is waiting.
+ */
+async function PendingTierNote({ count }: { count: number }) {
+  const viewer = await safely(() => getCurrentUser(), null);
+  if (!viewer?.isAdmin) return null;
+  return (
+    <p className="mt-6 border-t border-[var(--surface-border)] pt-4 text-xs text-ink-faint">
+      Admin only — {count} more{" "}
+      {count === 1 ? "account is" : "accounts are"} signed up at{" "}
+      <strong className="text-ink-muted">Viewer</strong> and not shown.{" "}
+      <Link href="/admin/members" className="text-brand-magenta hover:underline">
+        Set their tier →
+      </Link>
+    </p>
   );
 }
 

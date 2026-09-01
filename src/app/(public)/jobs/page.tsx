@@ -21,6 +21,7 @@ import Link from "next/link";
 import { PostListingButton } from "@/components/PostListingButton";
 import { getOpenJobs, safely } from "@/lib/readers";
 import { INDUSTRY_LABELS } from "@/lib/types";
+import { briefSummary } from "@/components/Brief";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 export const dynamic = "force-dynamic";
@@ -93,8 +94,8 @@ export default async function JobsPage() {
                   </span>
                 </div>
                 <CardTitle className="mt-2">{j.title}</CardTitle>
-                <p className="mt-3 line-clamp-3 text-sm text-ink-muted">
-                  {j.description}
+                <p className="mt-3 text-sm text-ink-muted">
+                  {briefSummary(j.description, { skipTitle: j.title })}
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-1.5">

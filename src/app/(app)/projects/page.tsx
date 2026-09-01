@@ -17,6 +17,7 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { getAllProjects } from "@/lib/readers/projects";
 import { safely } from "@/lib/readers";
 import { INDUSTRY_LABELS, type Project } from "@/lib/types";
+import { briefSummary } from "@/components/Brief";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { NotificationStrip } from "@/components/NotificationStrip";
 
@@ -157,10 +158,12 @@ function Grid({ items }: { items: Project[] }) {
           <Card className="h-full transition-colors hover:border-brand-magenta/40">
             <CardEyebrow>{INDUSTRY_LABELS[p.industry]}</CardEyebrow>
             <CardTitle className="mt-2">{p.title}</CardTitle>
-            <p className="mt-3 text-sm text-ink-muted">{p.description}</p>
+            <p className="mt-3 text-sm text-ink-muted">
+              {briefSummary(p.description, { skipTitle: p.title })}
+            </p>
 
             <div className="mt-4 flex flex-wrap gap-1.5">
-              {p.skillsRequired.map((s) => (
+              {p.skillsRequired.slice(0, 5).map((s) => (
                 <span
                   key={s}
                   className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted"

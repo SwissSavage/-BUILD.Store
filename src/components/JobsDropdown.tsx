@@ -4,12 +4,12 @@
  * (/projects) — under one nav entry so the header row stays
  * scannable (Rob beta note #1, task #59).
  *
- * Same native <details>/<summary> pattern as StoreDropdown so it
- * works without client JS and matches the platform's other
- * dropdowns.
+ * Opens on hover via the shared HoverDropdown — see that file for why
+ * the native <details> pattern was dropped (panels stayed open when
+ * you moved to another nav item).
  */
 import Link from "next/link";
-import { cn } from "@/lib/cn";
+import { HoverDropdown } from "@/components/HoverDropdown";
 
 const navLink = "text-ink-muted hover:text-ink transition-colors";
 
@@ -44,32 +44,19 @@ const ITEMS: JobsDropdownItem[] = [
 
 export function JobsDropdown() {
   return (
-    <details className="relative">
-      <summary
-        className={cn(
-          navLink,
-          "flex cursor-pointer list-none items-center gap-1 select-none hover:opacity-80",
-        )}
-      >
-        Jobs
-        <span aria-hidden="true" className="text-[10px]">
-          ▾
-        </span>
-      </summary>
-      <div className="absolute right-0 z-50 mt-2 w-64 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2 text-sm shadow-lg">
-        {ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
-          >
-            <span className="font-medium">{item.label}</span>
-            <span className="mt-0.5 block text-[11px] text-ink-faint">
-              {item.blurb}
-            </span>
-          </Link>
-        ))}
-      </div>
-    </details>
+    <HoverDropdown label="Jobs" href="/jobs" triggerClassName={navLink}>
+      {ITEMS.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
+        >
+          <span className="font-medium">{item.label}</span>
+          <span className="mt-0.5 block text-[11px] text-ink-faint">
+            {item.blurb}
+          </span>
+        </Link>
+      ))}
+    </HoverDropdown>
   );
 }

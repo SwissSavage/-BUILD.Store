@@ -31,20 +31,23 @@ export const TIER_LABELS: Record<MembershipTier, string> = {
  * bypasses the platform). Full names are retained on the User record for
  * admin/legal/internal purposes only.
  */
-export function publicName(u: Pick<User, "firstName"> | null | undefined): string {
-  return u?.firstName?.trim() || "Member";
+export function publicName(
+  u: Pick<User, "firstName" | "lastName"> | null | undefined,
+): string {
+  const first = u?.firstName?.trim();
+  if (!first) return "Member";
+  const last = u?.lastName?.trim();
+  return last ? `${first} ${last[0]}.` : first;
 }
 
 /**
- * Public display name with duplicate disambiguation (task #31). When
- * two members share the same first name, append the last initial so
- * clients + peers can tell them apart on public surfaces without
- * exposing full identity. "Sarah" alone if unique; "Sarah B." when
- * another Sarah exists in the population.
+ * Public display name with duplicate disambiguation (task #31).
  *
- * Population comparison is done client-side via a plain string match —
- * caller passes the pool (typically MOCK_USERS or a paginated cohort
- * slice) so the helper doesn't hit the DB directly.
+ * Superseded in practice as of 2026-08-31: `publicName` now always
+ * carries the last initial, so this returns the same string in every
+ * case. Kept because call sites pass a population pool and removing
+ * it is a wider edit than it's worth right now — but there is no
+ * longer a behavioural difference between the two.
  */
 export function publicNameDisambiguated(
   u: Pick<User, "firstName" | "lastName"> | null | undefined,
@@ -55,8 +58,9 @@ export function publicNameDisambiguated(
   const collisions = population.filter(
     (p) => p.firstName?.trim().toLowerCase() === first.toLowerCase(),
   ).length;
-  if (collisions <= 1 || !u.lastName?.trim()) return first;
-  return `${first} ${u.lastName.trim()[0]}.`;
+  void collisions;
+  const last = u.lastName?.trim();
+  return last ? `${first} ${last[0]}.` : first;
 }
 
 /**

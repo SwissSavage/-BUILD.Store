@@ -30,7 +30,8 @@ import {
 } from "@/components/TradingCard";
 
 const TIER_LABELS: Record<TradingCardTier, string> = {
-  standard: "Standard",
+  standard: "Unrated",
+  member: "Member",
   probation: "Probation",
   good_standing: "Good standing",
   promotion_eligible: "Promotion eligible",
@@ -40,6 +41,7 @@ const TIER_LABELS: Record<TradingCardTier, string> = {
 
 const TIER_ACCENT: Record<TradingCardTier, string> = {
   standard: "#666666",
+  member: "#c7228a",
   probation: "#666666",
   good_standing: "#007048",
   promotion_eligible: "#5070F0",
@@ -83,6 +85,7 @@ export default async function MemberCanonPage() {
     ovr: snapshot?.ovr ?? null,
     isProvisional: snapshot?.isProvisional ?? false,
     isInChampionsCourt: courtIds.has(user.id),
+    membershipTier: user.membershipTier,
   });
   const hasCurrentYearCard = past.some((c) => c.year === currentYear);
 

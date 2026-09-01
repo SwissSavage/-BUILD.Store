@@ -457,7 +457,7 @@ export const memberCanonizations = pgTable("member_canonizations", {
   userId: text("user_id").notNull().references(() => users.id),
   year: integer("year").notNull(),
   tier: text("tier", {
-    enum: ["standard", "probation", "good_standing", "promotion_eligible", "future_modernist", "champion"],
+    enum: ["standard", "member", "probation", "good_standing", "promotion_eligible", "future_modernist", "champion"],
   }).notNull(),
   ovr: integer("ovr"),
   recognitionIds: jsonb("recognition_ids").$type<string[]>().notNull().default([]),

@@ -35,6 +35,7 @@ import { TaglineRare } from "@/components/TaglineRare";
  */
 const TIER_FRACTAL_COLOR: Record<TradingCardTier, string> = {
   standard: "rgba(255, 255, 255, 0.32)",
+  member: "rgba(199, 34, 138, 0.45)",
   probation: "rgba(180, 180, 180, 0.38)",
   good_standing: "rgba(60, 190, 130, 0.42)",
   promotion_eligible: "rgba(120, 150, 250, 0.46)",
@@ -44,6 +45,7 @@ const TIER_FRACTAL_COLOR: Record<TradingCardTier, string> = {
 
 const TIER_BG_CLASS: Record<TradingCardTier, string> = {
   standard: "fm-card-bg-standard",
+  member: "fm-card-bg-member",
   probation: "fm-card-bg-probation",
   good_standing: "fm-card-bg-good-standing",
   promotion_eligible: "fm-card-bg-promotion",
@@ -53,6 +55,7 @@ const TIER_BG_CLASS: Record<TradingCardTier, string> = {
 
 const TIER_BORDER: Record<TradingCardTier, string> = {
   standard: "var(--surface-border)",
+  member: "rgba(199, 34, 138, 0.45)",
   probation: "rgba(102, 102, 102, 0.5)",
   good_standing: "rgba(0, 112, 72, 0.6)",
   promotion_eligible: "rgba(80, 112, 240, 0.6)",

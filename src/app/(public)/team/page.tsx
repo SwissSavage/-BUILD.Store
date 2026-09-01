@@ -51,6 +51,7 @@ const TIER_RANK: Record<TradingCardTier, number> = {
   promotion_eligible: 3,
   good_standing: 2,
   probation: 1,
+  member: 0,
   standard: 0,
 };
 
@@ -110,6 +111,7 @@ export default async function TeamPage({
         ovr: snapshot?.ovr ?? null,
         isProvisional: snapshot?.isProvisional ?? false,
         isInChampionsCourt: courtIds.has(u.id),
+    membershipTier: u.membershipTier,
       });
       return { user: u, pillars, tier };
     })

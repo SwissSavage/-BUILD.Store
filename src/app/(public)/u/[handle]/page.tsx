@@ -30,6 +30,7 @@ import { profileShouldIndex } from "@/lib/profile-visibility";
 import {
   INDUSTRY_LABELS,
   canSendDirectMessage,
+  TIER_LABELS,
   publicName,
   publicNameDisambiguated,
   publicPortfolioView,
@@ -149,6 +150,7 @@ export default async function PublicProfilePage({
     ovr: mvpSnapshot ? mvpSnapshot.ovr : null,
     isProvisional: mvpSnapshot?.isProvisional ?? false,
     isInChampionsCourt: courtIds.has(user.id),
+    membershipTier: user.membershipTier,
   });
 
   /**
@@ -243,7 +245,13 @@ export default async function PublicProfilePage({
           className="w-full max-w-[280px] shrink-0"
         >
           <div className="flex h-full flex-col justify-between">
-            <div className="flex items-start justify-end">
+            <div className="flex items-start justify-between gap-2">
+              {/* Membership tier — what they ARE. Distinct from the
+                  standing band below, which is how they're currently
+                  performing. */}
+              <span className="rounded-full bg-black/40 px-2 py-0.5 text-[10px] uppercase tracking-wider text-white">
+                {TIER_LABELS[user.membershipTier]}
+              </span>
               {mvpSnapshot && !mvpSnapshot.isProvisional && (
                 <span className="rounded-full bg-black/40 px-2 py-0.5 font-mono text-[10px] text-white">
                   OVR {mvpSnapshot.ovr}
@@ -251,7 +259,12 @@ export default async function PublicProfilePage({
               )}
             </div>
             <div>
-              <p className="font-display text-lg font-semibold text-white">
+              {user.discipline && (
+                <p className="text-[10px] uppercase tracking-wider text-white/60">
+                  {user.discipline}
+                </p>
+              )}
+              <p className="mt-1 font-display text-lg font-semibold leading-tight text-white">
                 {displayName}
               </p>
               <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/70">

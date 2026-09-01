@@ -887,6 +887,7 @@ function TeamHand({
         ovr: mvpSnapshot ? mvpSnapshot.ovr : null,
         isProvisional: mvpSnapshot?.isProvisional ?? false,
         isInChampionsCourt: courtIds.has(user.id),
+    membershipTier: user.membershipTier,
       });
       const entry: TalentHandEntry = {
         user: {

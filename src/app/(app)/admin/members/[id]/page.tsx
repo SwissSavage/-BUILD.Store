@@ -16,6 +16,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-stub";
+import { memberLabel } from "@/lib/member-label";
 import { getAllUsers, getUserById } from "@/lib/readers/users";
 import { getProjectsForMember } from "@/lib/readers/projects";
 import {
@@ -178,8 +179,8 @@ export default async function MemberDrillDown({
                 </span>
               )}
             </div>
-            {user.discipline && (
-              <p className="mt-2 text-sm text-ink-muted">{user.discipline}</p>
+            {memberLabel(user) && (
+              <p className="mt-2 text-sm text-ink-muted">{memberLabel(user)}</p>
             )}
             <p className="mt-2 text-xs text-ink-faint">
               Account created {formatDate(user.createdAt)} · last updated{" "}

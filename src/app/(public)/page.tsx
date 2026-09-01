@@ -5,6 +5,7 @@
  */
 import Link from "next/link";
 import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
+import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
 import { servicePartnerReader, spotlightReader, safely } from "@/lib/readers";
 import {
@@ -196,9 +197,9 @@ async function Roster() {
                 <div className="font-display text-lg font-semibold">
                   {publicName(user)}
                 </div>
-                {user.discipline && (
+                {memberLabel(user) && (
                   <div className="mt-0.5 text-xs text-ink-muted">
-                    {user.discipline}
+                    {memberLabel(user)}
                   </div>
                 )}
               </div>
@@ -602,9 +603,9 @@ async function CohortRail() {
                     <p className="truncate font-display text-base font-semibold">
                       {publicName(user)}
                     </p>
-                    {user.discipline && (
+                    {memberLabel(user) && (
                       <p className="truncate text-xs text-ink-muted">
-                        {user.discipline}
+                        {memberLabel(user)}
                       </p>
                     )}
                   </div>

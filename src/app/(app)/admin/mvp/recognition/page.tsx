@@ -11,6 +11,7 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
+import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
 import { mvpScoreReader, recognitionReader, safely } from "@/lib/readers";
 import {
@@ -114,9 +115,9 @@ export default async function AdminFutureModernistPage() {
                   >
                     {publicName(user)}
                   </Link>
-                  {user.discipline && (
+                  {memberLabel(user) && (
                     <span className="ml-2 text-[11px] text-ink-muted">
-                      {user.discipline}
+                      {memberLabel(user)}
                     </span>
                   )}
                 </div>
@@ -255,7 +256,7 @@ function SelectForm({
             {members.map((u) => (
               <option key={u.id} value={u.id}>
                 {publicName(u)}
-                {u.discipline ? ` — ${u.discipline}` : ""}
+                {u.discipline ? ` — ${memberLabel(u)}` : ""}
               </option>
             ))}
           </optgroup>
@@ -263,7 +264,7 @@ function SelectForm({
             {partners.map((u) => (
               <option key={u.id} value={u.id}>
                 {publicName(u)}
-                {u.discipline ? ` — ${u.discipline}` : ""}
+                {u.discipline ? ` — ${memberLabel(u)}` : ""}
               </option>
             ))}
           </optgroup>

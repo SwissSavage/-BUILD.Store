@@ -17,6 +17,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
+import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
 import { safely } from "@/lib/readers";
 import {
@@ -144,9 +145,9 @@ export default async function CooperativeCalendarPage() {
                       {publicName(m)}
                     </Link>
                   </CardTitle>
-                  {m.discipline && (
+                  {memberLabel(m) && (
                     <span className="text-[11px] text-ink-muted">
-                      {m.discipline}
+                      {memberLabel(m)}
                     </span>
                   )}
                 </div>

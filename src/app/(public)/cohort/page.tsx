@@ -17,6 +17,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getAllUsers } from "@/lib/readers/users";
+import { memberLabel } from "@/lib/member-label";
 import { spotlightReader, safely } from "@/lib/readers";
 import { publicName } from "@/lib/types";
 import {
@@ -122,9 +123,9 @@ export default async function CohortIndexPage() {
                             <span className="font-medium text-ink">
                               {publicName(user)}
                             </span>
-                            {user.discipline && (
+                            {memberLabel(user) && (
                               <span className="text-ink-muted">
-                                · {user.discipline}
+                                · {memberLabel(user)}
                               </span>
                             )}
                             <OnChainBadge userId={user.id} size="sm" />

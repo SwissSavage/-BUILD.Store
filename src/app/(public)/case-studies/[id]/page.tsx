@@ -11,6 +11,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getProjectById } from "@/lib/readers/projects";
+import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
 import {
   INDUSTRY_LABELS,
@@ -157,9 +158,9 @@ export default async function CaseStudyDetail({
                   >
                     {publicNameDisambiguated(c, roster)}
                   </Link>
-                  {c.discipline && (
+                  {memberLabel(c) && (
                     <span className="ml-2 text-xs text-ink-muted">
-                      · {c.discipline}
+                      · {memberLabel(c)}
                     </span>
                   )}
                 </li>

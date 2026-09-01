@@ -14,6 +14,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
+import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
 import { getAllProjects } from "@/lib/readers/projects";
 import {
@@ -240,8 +241,8 @@ async function collectEvents(): Promise<ActivityEvent[]> {
       timestamp: u.createdAt,
       userId: u.id,
       title: `${publicName(u)} joined as ${TIER_LABELS[u.membershipTier]}`,
-      body: u.discipline
-        ? `${u.discipline}. See profile for portfolio + standing.`
+      body: memberLabel(u)
+        ? `${memberLabel(u)}. See profile for portfolio + standing.`
         : "Member joined the cooperative.",
       href: `/u/${u.handle}`,
       accent: "#5070F0",
@@ -364,9 +365,9 @@ export default async function ActivityPage() {
                           aspectRatio="3/4"
                         >
                           <div className="flex h-full flex-col justify-end">
-                            {e.member.discipline && (
+                            {memberLabel(e.member) && (
                               <p className="text-[8px] uppercase tracking-wider text-white/60">
-                                {e.member.discipline}
+                                {memberLabel(e.member)}
                               </p>
                             )}
                           </div>

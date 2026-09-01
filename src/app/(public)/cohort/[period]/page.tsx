@@ -15,6 +15,7 @@ import {
 import { eq } from "drizzle-orm";
 import { cohortSpotlights } from "@/db/schema";
 import { getAllUsers } from "@/lib/readers/users";
+import { memberLabel } from "@/lib/member-label";
 import { spotlightReader } from "@/lib/readers";
 import { publicName, type User } from "@/lib/types";
 import {
@@ -124,9 +125,9 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
                         </CardTitle>
                         <OnChainBadge userId={user.id} size="sm" />
                       </div>
-                      {user.discipline && (
+                      {memberLabel(user) && (
                         <p className="mt-0.5 text-sm text-ink-muted">
-                          {user.discipline}
+                          {memberLabel(user)}
                         </p>
                       )}
                       {user.bio && (

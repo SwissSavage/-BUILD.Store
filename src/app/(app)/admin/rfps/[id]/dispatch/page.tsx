@@ -16,6 +16,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth-stub";
+import { memberLabel } from "@/lib/member-label";
 import { db } from "@/db/client";
 import { projects } from "@/db/schema";
 import { getAllProjects } from "@/lib/readers/projects";
@@ -188,9 +189,15 @@ export default async function RfpDispatchPage({
                           {BUCKET_LABELS[m.bucket]}
                         </span>
                       </div>
-                      {u.discipline && (
+                      {memberLabel(u, {
+                              skillsRequired: rfp.skillsRequired,
+                              industry: rfp.industry,
+                            }) && (
                         <div className="text-[11px] text-ink-muted">
-                          {u.discipline}
+                          {memberLabel(u, {
+                              skillsRequired: rfp.skillsRequired,
+                              industry: rfp.industry,
+                            })}
                         </div>
                       )}
                       <div className="mt-0.5 text-[10px] text-ink-faint">

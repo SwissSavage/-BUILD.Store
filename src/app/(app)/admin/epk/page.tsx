@@ -12,6 +12,7 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
+import { memberLabel } from "@/lib/member-label";
 import {
   MOCK_ARTIST_EPKS,
   pendingEpkSubmissions,
@@ -140,7 +141,7 @@ function PendingEpkRow({
     <Card className="border-[#5070F0]/40">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <CardEyebrow>{user.discipline ?? "Artist"}</CardEyebrow>
+          <CardEyebrow>{memberLabel(user)}</CardEyebrow>
           <CardTitle className="mt-1 text-xl">
             {publicName(user)} (@{user.handle})
           </CardTitle>
@@ -289,7 +290,7 @@ function PublishedEpkRow({
     <Card className="border-[#007048]/40">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <CardEyebrow>{user.discipline ?? "Artist"}</CardEyebrow>
+          <CardEyebrow>{memberLabel(user)}</CardEyebrow>
           <CardTitle className="mt-1 text-lg">
             {publicName(user)} (@{user.handle})
           </CardTitle>

@@ -15,7 +15,7 @@
  *                    holo-card energy without being garish.
  *
  * Graceful fallback: when `user.avatarPortraitUrl` is null, falls back to
- * the existing Avatar component (initials or profile photo) rendered
+ * the member portrait (studio shot, profile photo, or initials) rendered
  * inside the same card frame. Sandbox phase has no bg-removed portraits
  * yet — the visual lands cleanly without them and gets richer once the
  * photo pipeline is in place.
@@ -26,7 +26,6 @@
  * portrait + brand backdrop.
  */
 import { cn } from "@/lib/cn";
-import { Avatar } from "@/components/Avatar";
 import type { User } from "@/lib/types";
 
 /**
@@ -81,6 +80,19 @@ const TIER_BG_CLASS: Record<TradingCardTier, string> = {
   champion: "fm-card-bg-champion",
 };
 
+/**
+ * Tier accent, used for the initials wash and the rule under them.
+ * Same hues as the borders, at full strength.
+ */
+const TIER_ACCENT: Record<TradingCardTier, string> = {
+  standard: "#8a8780",
+  probation: "#A3A3A3",
+  good_standing: "#017249",
+  promotion_eligible: "#3A4FAA",
+  future_modernist: "#c7228a",
+  champion: "#D4AF37",
+};
+
 const TIER_BORDER: Record<TradingCardTier, string> = {
   standard: "var(--surface-border)",
   probation: "rgba(102, 102, 102, 0.5)",
@@ -97,6 +109,11 @@ export function TradingCard({
   className,
   aspectRatio = "3/4",
 }: TradingCardProps) {
+  // Jersey-style initials for the no-portrait state.
+  const initials =
+    `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase() ||
+    (user.handle?.[0]?.toUpperCase() ?? "FM");
+
   const aspectClass =
     aspectRatio === "square"
       ? "aspect-square"
@@ -108,6 +125,10 @@ export function TradingCard({
     <div
       className={cn(
         "relative isolate overflow-hidden rounded-2xl border bg-[var(--surface-elevated)]",
+        // @container so the initials scale with the card, not the
+        // viewport — these render at wildly different sizes on the
+        // homepage rail versus a profile page.
+        "[container-type:inline-size]",
         aspectClass,
         className,
       )}
@@ -127,23 +148,68 @@ export function TradingCard({
         Future Modern
       </div>
 
-      {/* Portrait foreground — bg-removed full/3-quarter shot when available;
-          falls back to Avatar with initials/profile photo inside a contained box. */}
-      <div className="absolute inset-x-0 bottom-0 flex justify-center">
-        {user.avatarPortraitUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
+      {/* Portrait foreground.
+          
+          Three states, in descending order of how much we have:
+          
+          1. A bg-removed studio portrait — the intended treatment.
+          2. A profile photo — filled to the card and faded into it
+             from below, so it reads as the card's image rather than
+             an avatar someone dropped on top.
+          3. Neither — oversized initials as the graphic, jersey-style.
+          
+          State 3 used to be a size="xl" Avatar: a small circle
+          floating at the bottom of an otherwise empty card. Since
+          nobody has a studio portrait yet, that was what every card
+          actually looked like. Initials at least fill the space they
+          are given and carry the tier colour. */}
+      {user.avatarPortraitUrl ? (
+        <div className="absolute inset-x-0 bottom-0 flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={user.avatarPortraitUrl}
             alt=""
             aria-hidden="true"
             className="h-full max-h-[90%] w-auto object-contain object-bottom"
           />
-        ) : (
-          <div className="mb-6 flex h-32 w-32 items-center justify-center">
-            <Avatar user={user} size="xl" />
-          </div>
-        )}
-      </div>
+        </div>
+      ) : user.profileImageUrl ? (
+        <div className="absolute inset-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={user.profileImageUrl}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover object-top"
+          />
+          {/* Fade the photo into the card so composed content below
+              stays legible without a flat scrim over the face. */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(to top, rgba(13,13,13,0.96) 12%, rgba(13,13,13,0.55) 42%, rgba(13,13,13,0) 72%)",
+            }}
+            aria-hidden
+          />
+        </div>
+      ) : (
+        <div
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          aria-hidden
+        >
+          <span
+            className="font-display font-semibold leading-none opacity-[0.18]"
+            style={{
+              fontSize: "clamp(72px, 38cqw, 190px)",
+              color: TIER_ACCENT[tier],
+              letterSpacing: "-0.04em",
+            }}
+          >
+            {initials}
+          </span>
+        </div>
+      )}
 
       {/* Holographic sheen overlay — only on Champion (legendary) tier */}
       {tier === "champion" && (

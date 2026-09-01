@@ -5,7 +5,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import { getAllUsers } from "@/lib/readers/users";
-import { getAllProjects } from "@/lib/readers/projects";
+import { getAllProjects, getDeletedProjects } from "@/lib/readers/projects";
 import {
   auditLogReader,
   consultationRequestReader,
@@ -61,6 +61,7 @@ export default async function AdminHome() {
     ecosystemPartnerRows,
     affiliateRows,
     jobRows,
+    trashedProjects,
   ] = await Promise.all([
     safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
     safely(() => getAllProjects(), {
@@ -86,7 +87,10 @@ export default async function AdminHome() {
     safely(() => ecosystemPartnerReader.all(), []),
     safely(() => productAffiliateReader.all(), []),
     safely(() => jobReader.all(), []),
+    safely(() => getDeletedProjects(), []),
   ]);
+
+  const trashedCount = trashedProjects.length;
 
   const openJobCount = jobRows.filter((j) => j.status === "open").length;
 
@@ -260,6 +264,12 @@ export default async function AdminHome() {
       title: "Access review",
       count: roster.filter((u) => u.isAdmin).length,
       sub: "Admins carrying the flag · quarterly walk-through cadence",
+    },
+    {
+      href: "/admin/trash",
+      title: "Trash",
+      count: trashedCount,
+      sub: "Deleted projects · restorable for 30 days",
     },
     {
       href: "/admin/walkthrough",

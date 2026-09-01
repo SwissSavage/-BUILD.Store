@@ -32,6 +32,7 @@ import {
 } from "@/lib/milestone-actions";
 import { runAgreementRenewalSweep } from "@/lib/agreement-renewal-actions";
 import { runFraudScan } from "@/lib/fraud-scan";
+import { purgeExpiredProjects } from "@/lib/project-trash-actions";
 import { recomputeAllMvpScores } from "@/lib/writers/mvp-score";
 
 export const runtime = "nodejs";
@@ -77,6 +78,10 @@ export async function GET(request: Request) {
   // function no-ops on non-Sunday even though we call it daily,
   // so the cron config stays a single daily job.
   const fraud = await runFraudScan();
+
+  // Trash retention — clears projects past the restore window along
+  // with their applications and milestones.
+  const trash = await purgeExpiredProjects();
   // MVP recompute. Scores already update the moment a peer review
   // lands, so this exists for the time-dependent half of the formula:
   // compliance penalties expire on a 90-day clock, and without a
@@ -102,6 +107,7 @@ export async function GET(request: Request) {
     weeklyRollup: rollup,
     agreementRenewals: renewals,
     fraudScan: fraud,
+    trashPurge: trash,
     mvpRecompute: mvp,
   });
 }

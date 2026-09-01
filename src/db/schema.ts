@@ -203,6 +203,15 @@ export const projects = pgTable("projects", {
   updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
     .notNull()
     .defaultNow(),
+  /**
+   * Trash bin. A deleted project keeps its row — applications,
+   * milestones, attribution and splits all reference it — and drops
+   * off every surface via a `deleted_at IS NULL` filter. Restorable
+   * until the purge job clears it.
+   */
+  deletedAt: timestamp("deleted_at", { mode: "string", withTimezone: true }),
+  deletedByUserId: text("deleted_by_user_id"),
+  deleteReason: text("delete_reason"),
 });
 
 export const engagementRecoveryPools = pgTable("engagement_recovery_pools", {
@@ -508,6 +517,18 @@ export const inviteLinks = pgTable("invite_links", {
   consumedByUserId: text("consumed_by_user_id").references(() => users.id),
   revokedAt: timestamp("revoked_at", { mode: "string", withTimezone: true }),
   revokedReason: text("revoked_reason"),
+  /**
+   * Contract this person is being invited onto, if any. Drives where
+   * they land after completing the ceremony — a member brought in for
+   * a specific piece of work should arrive at that work, not a
+   * generic welcome page.
+   *
+   * SET NULL on project delete: removing a test contract must not
+   * destroy the invitation record of a real person who accepted it.
+   */
+  targetProjectId: text("target_project_id").references(() => projects.id, {
+    onDelete: "set null",
+  }),
   /**
    * Documenso document id for the LOI generated at invite-creation time.
    * Countersign-first flow: admin countersigns the LOI at generate,

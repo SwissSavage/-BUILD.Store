@@ -23,10 +23,9 @@
  * `dynamic = "force-dynamic"`, or Next.js bakes the result at build
  * time and new rows never appear regardless of this file.
  */
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projects as projectsTable } from "@/db/schema";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
 import type { Project } from "@/lib/types";
 
 export type ReadSource = "postgres" | "seed-fallback";
@@ -36,32 +35,53 @@ export interface ProjectRead {
   source: ReadSource;
 }
 
-/** Every project, newest first. */
+/**
+ * Every live project, newest first.
+ *
+ * Excludes trashed rows. Deletion is soft — the row stays so its
+ * applications, milestones and splits keep resolving — so every read
+ * has to filter or a deleted contract reappears everywhere.
+ *
+ * No fixture fallback. This used to catch database errors and return
+ * MOCK_PROJECTS, which is how a broken read looked identical to a
+ * working one for weeks. If the query fails, it throws and the page's
+ * own `safely()` renders an empty state.
+ */
 export async function getAllProjects(): Promise<ProjectRead> {
-  try {
-    const rows = await db
-      .select()
-      .from(projectsTable)
-      .orderBy(desc(projectsTable.createdAt));
-    return { projects: rows as unknown as Project[], source: "postgres" };
-  } catch {
-    return { projects: MOCK_PROJECTS, source: "seed-fallback" };
-  }
+  const rows = await db
+    .select()
+    .from(projectsTable)
+    .where(isNull(projectsTable.deletedAt))
+    .orderBy(desc(projectsTable.createdAt));
+  return { projects: rows as unknown as Project[], source: "postgres" };
 }
 
-/** One project by id. */
-export async function getProjectById(id: string): Promise<Project | null> {
-  try {
-    const [row] = await db
-      .select()
-      .from(projectsTable)
-      .where(eq(projectsTable.id, id))
-      .limit(1);
-    if (row) return row as unknown as Project;
-    return MOCK_PROJECTS.find((p) => p.id === id) ?? null;
-  } catch {
-    return MOCK_PROJECTS.find((p) => p.id === id) ?? null;
-  }
+/** Trashed projects, closest to purge first. Admin trash view only. */
+export async function getDeletedProjects(): Promise<Project[]> {
+  const rows = await db
+    .select()
+    .from(projectsTable)
+    .where(isNotNull(projectsTable.deletedAt))
+    .orderBy(projectsTable.deletedAt);
+  return rows as unknown as Project[];
+}
+
+/**
+ * One live project by id. Trashed rows resolve as not-found, which is
+ * what every caller wants — a deleted contract should 404, not render.
+ *
+ * `includeDeleted` is for the trash surface and the restore action,
+ * which are the only two places that legitimately need a deleted row.
+ */
+export async function getProjectById(
+  id: string,
+  options: { includeDeleted?: boolean } = {},
+): Promise<Project | null> {
+  const where = options.includeDeleted
+    ? eq(projectsTable.id, id)
+    : and(eq(projectsTable.id, id), isNull(projectsTable.deletedAt));
+  const [row] = await db.select().from(projectsTable).where(where).limit(1);
+  return (row as unknown as Project) ?? null;
 }
 
 /**

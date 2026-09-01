@@ -308,6 +308,10 @@ export const HUBSPOT_STAGE_LABELS: Record<HubspotStage, string> = {
 };
 
 export interface Project {
+  /** Trash bin — set when an admin deletes, cleared on restore. */
+  deletedAt?: string | null;
+  deletedByUserId?: string | null;
+  deleteReason?: string | null;
   id: string;
   title: string;
   description: string;
@@ -4074,6 +4078,13 @@ export type AuditLogAction =
   | "canonization.caption_updated"
   | "canonization.phygital_requested"
   // Cohort onboarding spotlights (forward-looking editorial rail)
+  // Trash bin. Three distinct verbs rather than one reused status
+  // change — the audit log is the record of what happened, and
+  // "purged" and "trashed" are not the same event to anyone reading
+  // it later.
+  | "project.trashed"
+  | "project.restored"
+  | "project.purged"
   | "cohort.spotlight_created"
   | "cohort.spotlight_removed"
   // Cooperative Receipts (post-project client-gated artifact)
@@ -4179,6 +4190,9 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "canonization.frozen": "Canonization frozen",
   "canonization.caption_updated": "Canonization caption updated",
   "canonization.phygital_requested": "Phygital canon card requested",
+  "project.trashed": "Project moved to trash",
+  "project.restored": "Project restored from trash",
+  "project.purged": "Project permanently deleted",
   "cohort.spotlight_created": "Cohort spotlight created",
   "cohort.spotlight_removed": "Cohort spotlight removed",
   "receipt.generated": "Cooperative Receipt generated",

@@ -144,6 +144,7 @@ export default async function CooperativeQuotePage({
         ovr: mvpSnapshot ? mvpSnapshot.ovr : null,
         isProvisional: mvpSnapshot?.isProvisional ?? false,
         isInChampionsCourt: courtIds.has(user.id),
+    membershipTier: user.membershipTier,
       });
       return {
         user: {

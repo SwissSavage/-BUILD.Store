@@ -119,6 +119,18 @@ body {
 }
 
 /* Future Modernist pool (80-89) — magenta dominant. Epic-tier color. */
+/* Member baseline — magenta, held from admission. Membership is not
+   a performance band: you don't stop being a Member because a rating
+   moved. This is the floor a Member's card sits at before any MVP
+   snapshot exists, and what it returns to if scoring lapses. Calmer
+   than Future Modernist so the earned band still reads as a step up. */
+.fm-card-bg-member {
+  background-color: #1A1A1A;
+  background-image:
+    linear-gradient(160deg, rgba(216, 40, 160, 0.30) 0%, rgba(26, 26, 26, 0.0) 72%),
+    radial-gradient(circle at 25% 25%, rgba(80, 112, 240, 0.10) 0%, transparent 55%);
+}
+
 .fm-card-bg-future-modernist {
   background-color: #1A1A1A;
   background-image:

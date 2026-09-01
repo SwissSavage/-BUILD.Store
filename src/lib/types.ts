@@ -3346,6 +3346,7 @@ export interface MemberCanonization {
   /** Frozen rarity tier at year-end. Locked into the card permanently. */
   tier:
     | "standard"
+    | "member"
     | "probation"
     | "good_standing"
     | "promotion_eligible"

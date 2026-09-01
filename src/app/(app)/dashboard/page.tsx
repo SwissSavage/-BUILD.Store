@@ -66,6 +66,7 @@ export default async function DashboardPage() {
     isInChampionsCourt: new Set(
       championsCourtMembers(allScores, allUsers),
     ).has(user.id),
+    membershipTier: user.membershipTier,
   });
   const pillars = userPillars(user);
 

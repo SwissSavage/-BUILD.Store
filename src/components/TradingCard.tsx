@@ -27,7 +27,7 @@
  */
 import Link from "next/link";
 import { cn } from "@/lib/cn";
-import type { User } from "@/lib/types";
+import type { MembershipTier, User } from "@/lib/types";
 
 /**
  * RPG rarity ladder. Each tier maps to an OVR band (or to "no scoring"
@@ -47,6 +47,7 @@ import type { User } from "@/lib/types";
  */
 export type TradingCardTier =
   | "standard"
+  | "member"
   | "probation"
   | "good_standing"
   | "promotion_eligible"
@@ -82,6 +83,7 @@ interface TradingCardProps {
 
 const TIER_BG_CLASS: Record<TradingCardTier, string> = {
   standard: "fm-card-bg-standard",
+  member: "fm-card-bg-member",
   probation: "fm-card-bg-probation",
   good_standing: "fm-card-bg-good-standing",
   promotion_eligible: "fm-card-bg-promotion",
@@ -93,9 +95,37 @@ const TIER_BG_CLASS: Record<TradingCardTier, string> = {
  * Tier accent, used for the initials wash and the rule under them.
  * Same hues as the borders, at full strength.
  */
-/** Human label for the rarity band, shown on the card face. */
+/**
+ * Label for the STANDING band shown on the card face.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * TWO DIFFERENT THINGS, DO NOT CONFLATE (fixed 2026-09-01)
+ *
+ *   membershipTier   viewer | partner | member
+ *                    What you ARE in the cooperative. Set by
+ *                    admission and promotion. Never derived.
+ *
+ *   TradingCardTier  standard | probation | good_standing |
+ *                    promotion_eligible | future_modernist | champion
+ *                    How you are CURRENTLY PERFORMING. Derived from
+ *                    the MVP snapshot on every recompute.
+ *
+ * They are orthogonal. A Member with no published snapshot is tier
+ * `standard`; so is a Partner. A Member on probation is still a
+ * Member. Promotion between membership tiers is an admin decision on
+ * /admin/members/[id], not a consequence of an OVR crossing a line —
+ * `promotion_eligible` says the standing supports a case for it,
+ * nothing more.
+ *
+ * This map used to render `standard` as "Partner", which put a
+ * membership word on a standing band. Jamar, a Member with no
+ * published snapshot, read "Partner" on his own card. The tier was
+ * right; the label was answering a different question.
+ * ─────────────────────────────────────────────────────────────
+ */
 export const CARD_TIER_LABEL: Record<TradingCardTier, string> = {
-  standard: "Partner",
+  standard: "Unrated",
+  member: "Member",
   probation: "Probation",
   good_standing: "Good standing",
   promotion_eligible: "Promotion eligible",
@@ -105,6 +135,7 @@ export const CARD_TIER_LABEL: Record<TradingCardTier, string> = {
 
 const TIER_ACCENT: Record<TradingCardTier, string> = {
   standard: "#8a8780",
+  member: "#c7228a",
   probation: "#A3A3A3",
   good_standing: "#017249",
   promotion_eligible: "#3A4FAA",
@@ -114,6 +145,7 @@ const TIER_ACCENT: Record<TradingCardTier, string> = {
 
 const TIER_BORDER: Record<TradingCardTier, string> = {
   standard: "var(--surface-border)",
+  member: "rgba(199, 34, 138, 0.45)",
   probation: "rgba(102, 102, 102, 0.5)",
   good_standing: "rgba(0, 112, 72, 0.6)",
   promotion_eligible: "rgba(80, 112, 240, 0.6)",
@@ -272,9 +304,18 @@ export function deriveTradingCardTier(input: {
   ovr: number | null;
   isProvisional: boolean;
   isInChampionsCourt: boolean;
+  /**
+   * Membership sets the floor. Without it a Member with no published
+   * snapshot fell to `standard` and rendered in the neutral grey a
+   * Partner gets — which reads as though membership was lost because
+   * a rating hadn't been computed yet.
+   */
+  membershipTier?: MembershipTier;
 }): TradingCardTier {
-  if (input.ovr === null) return "standard";
-  if (input.isProvisional) return "standard";
+  const floor: TradingCardTier =
+    input.membershipTier === "member" ? "member" : "standard";
+  if (input.ovr === null) return floor;
+  if (input.isProvisional) return floor;
   if (input.isInChampionsCourt) return "champion";
   if (input.ovr >= 80) return "future_modernist";
   if (input.ovr >= 75) return "promotion_eligible";

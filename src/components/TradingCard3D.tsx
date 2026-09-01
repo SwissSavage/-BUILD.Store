@@ -42,6 +42,7 @@ const MAX_TILT_DEG = 12;
 
 const TIER_BG_CLASS: Record<TradingCardTier, string> = {
   standard: "fm-card-bg-standard",
+  member: "fm-card-bg-member",
   probation: "fm-card-bg-probation",
   good_standing: "fm-card-bg-good-standing",
   promotion_eligible: "fm-card-bg-promotion",
@@ -56,6 +57,7 @@ const TIER_BG_CLASS: Record<TradingCardTier, string> = {
  */
 const TIER_ACCENT: Record<TradingCardTier, string> = {
   standard: "#8a8780",
+  member: "#c7228a",
   probation: "#A3A3A3",
   good_standing: "#017249",
   promotion_eligible: "#3A4FAA",
@@ -65,6 +67,7 @@ const TIER_ACCENT: Record<TradingCardTier, string> = {
 
 const TIER_BORDER: Record<TradingCardTier, string> = {
   standard: "var(--surface-border)",
+  member: "rgba(199, 34, 138, 0.45)",
   probation: "rgba(102, 102, 102, 0.5)",
   good_standing: "rgba(0, 112, 72, 0.6)",
   promotion_eligible: "rgba(80, 112, 240, 0.6)",

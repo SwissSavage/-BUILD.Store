@@ -10,6 +10,7 @@ import { db } from "@/db/client";
 import { projects as projectsTable } from "@/db/schema";
 import { getAllProjects } from "@/lib/readers/projects";
 import { newContributionCount } from "@/lib/mock-data/prospective-contributions";
+import { trashProject } from "@/lib/project-trash-actions";
 import { INDUSTRY_LABELS, type Project } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -129,6 +130,29 @@ export default async function AdminProjectsPage() {
                       Update
                     </button>
                   </form>
+
+                  {/* Soft delete. Goes to /admin/trash, restorable
+                      for 30 days, and refuses outright if the
+                      contract has dispatched payouts. */}
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-[11px] text-ink-faint hover:text-brand-magenta">
+                      Delete
+                    </summary>
+                    <form action={trashProject} className="mt-2 space-y-1.5">
+                      <input type="hidden" name="id" value={p.id} />
+                      <input
+                        name="reason"
+                        placeholder="Reason (optional)"
+                        className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-xs"
+                      />
+                      <button
+                        type="submit"
+                        className="rounded-md border border-brand-magenta/50 px-2 py-1 text-[11px] text-brand-magenta hover:border-brand-magenta"
+                      >
+                        Move to trash
+                      </button>
+                    </form>
+                  </details>
                 </td>
               </tr>
             ))}

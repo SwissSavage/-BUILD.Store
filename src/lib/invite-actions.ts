@@ -88,6 +88,10 @@ export async function generateInviteLink(formData: FormData) {
     | "";
   const targetName = String(formData.get("targetName") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
+  // Optional: the contract this person is being brought in for. Drives
+  // where they land after the ceremony.
+  const targetProjectId =
+    String(formData.get("targetProjectId") ?? "").trim() || null;
 
   if (!targetEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(targetEmail)) {
     throw new Error("A valid target email is required.");
@@ -106,6 +110,7 @@ export async function generateInviteLink(formData: FormData) {
     targetTier: targetTier as "partner" | "member",
     targetName: targetName.length > 0 ? targetName : null,
     note: note.length > 0 ? note : null,
+    targetProjectId,
     createdByUserId: admin.id,
     createdAt: now.toISOString(),
     expiresAt: new Date(now.getTime() + INVITE_LIFETIME_MS).toISOString(),
@@ -631,5 +636,11 @@ export async function completeInviteSignup(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/agreements");
   revalidatePath("/admin/members");
+  // Land them on the contract they were invited for, when the invite
+  // named one. Someone brought in for a specific piece of work should
+  // arrive at that work rather than a generic welcome page and a hunt.
+  if (invite.targetProjectId) {
+    redirect(`/contracts/${invite.targetProjectId}?welcome=1`);
+  }
   redirect(`/invite/${code}/welcome`);
 }

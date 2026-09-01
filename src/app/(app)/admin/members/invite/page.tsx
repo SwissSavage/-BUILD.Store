@@ -17,6 +17,8 @@
 import Link from "next/link";
 import { desc } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth-stub";
+import { getAllProjects } from "@/lib/readers/projects";
+import { safely } from "@/lib/readers";
 import { db } from "@/db/client";
 import { inviteLinks, users as usersTable } from "@/db/schema";
 import {
@@ -98,6 +100,17 @@ export default async function InviteMemberPage({
     note: (sp.note ?? "").trim().slice(0, 400),
     fromInboundId: (sp.fromInboundId ?? "").trim().slice(0, 40),
   };
+
+  // Contracts an invitee can be pointed at. Cancelled and completed
+  // work is excluded — landing someone on a finished contract as
+  // their first screen tells them nothing.
+  const { projects: allProjects } = await safely(() => getAllProjects(), {
+    projects: [],
+    source: "postgres" as const,
+  });
+  const invitableProjects = allProjects
+    .filter((p) => p.status === "open" || p.status === "in_progress")
+    .sort((a, b) => a.title.localeCompare(b.title));
 
   // Freshest first. Pull the last N invites — 50 is plenty for the
   // admin surface; older ones live in the audit log.
@@ -186,6 +199,26 @@ export default async function InviteMemberPage({
               </span>
             </label>
           </div>
+          <label className="text-xs text-ink-muted block">
+            Invite onto a contract (optional)
+            <select
+              name="targetProjectId"
+              defaultValue=""
+              className="mt-1 block w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink"
+            >
+              <option value="">None — general membership invite</option>
+              {invitableProjects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-[10px] text-ink-faint">
+              Picking one lands them on that contract the moment they
+              finish signup, instead of a generic welcome page.
+            </span>
+          </label>
+
           <label className="text-xs text-ink-muted block">
             Preset name (optional)
             <input

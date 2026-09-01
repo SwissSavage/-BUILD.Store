@@ -1,8 +1,8 @@
 /**
  * Admin: pending membership applications. Approve / reject.
  *
- * Sandbox mutates MOCK_APPLICATIONS + MOCK_USERS in-memory.
- * REPLACE WITH Drizzle UPDATE on membership_applications + users table.
+ * Approve/reject writes membership_applications + users in one
+ * transaction — a half-applied promotion is worse than neither.
  */
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
@@ -91,7 +91,15 @@ export default async function AdminApplicationsPage() {
                   </CardTitle>
                   <p className="mt-2 text-xs text-ink-muted">{user?.email}</p>
                   <p className="mt-3 text-sm text-ink-muted">
-                    {String((app.applicationData as { why?: string }).why ?? "")}
+                    {/* applicationData is jsonb. A row written before
+                        the column had its default — or by any path
+                        that skipped it — comes back null, and
+                        dereferencing that crashes the whole page
+                        render rather than one card. */}
+                    {String(
+                      (app.applicationData as { why?: string } | null)?.why ??
+                        "",
+                    )}
                   </p>
                   <p className="mt-3 text-xs text-ink-faint">
                     Submitted {new Date(app.createdAt).toLocaleDateString()}

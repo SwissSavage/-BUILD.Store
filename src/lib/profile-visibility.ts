@@ -53,6 +53,47 @@ export async function activeRecognitionUserIds(): Promise<Set<string>> {
 }
 
 /**
+ * The founding window.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY THIS EXISTS (2026-09-02)
+ *
+ * The matrix grants automatic discovery to Member tier and to Partners
+ * inside a recognition window. Correct at steady state, and dead on
+ * arrival at launch: nobody holds Member tier yet, and no recognition
+ * period has been run, so the predicate answered "no" for the entire
+ * roster. The homepage cohort rail had nobody to show, not because the
+ * rail was broken but because the gate was answering honestly about an
+ * empty set.
+ *
+ * A cooperative that cannot show anyone who joined cannot demonstrate
+ * that anyone joined. So Partners are treated as inside a recognition
+ * window for the founding year, on Jamar's call: "allow it for all
+ * partners in the recognition window for year 1."
+ *
+ * This is a WINDOW, not a rule change. It expires on a date, and after
+ * that the matrix governs again with no code change. Written as a
+ * constant rather than a feature flag so the expiry is visible in the
+ * file that enforces it, and so nobody has to remember a toggle exists.
+ *
+ * What it deliberately does NOT do:
+ *   - It does not touch Viewers. Signing in is not joining.
+ *   - It does not override profilePublic === false. An explicit opt-out
+ *     stays an opt-out for the whole window.
+ *   - It does not change direct-link behaviour, which was already
+ *     always available, or any contact-exposure rule. Appearing in a
+ *     join feed is not the same as being reachable around the
+ *     cooperative.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const FOUNDING_WINDOW_ENDS_AT = "2027-09-01T00:00:00.000Z";
+
+/** Whether the founding year is still open. */
+export function inFoundingWindow(now: Date = new Date()): boolean {
+  return now.getTime() < Date.parse(FOUNDING_WINDOW_ENDS_AT);
+}
+
+/**
  * Whether the user's profile should appear in public discovery surfaces
  * (showcase, member directory, homepage talent rails, search). Direct-
  * link access to `/u/[handle]` is separate and always available.
@@ -76,9 +117,20 @@ export function publicProfileEligible(
    */
   recognized?: Set<string>,
 ): boolean {
-  // Discovery gate first — opt-out applies regardless of tier.
+  // Discovery gate first — opt-out applies regardless of tier, and
+  // regardless of the founding window below.
   if (user.profilePublic === false) return false;
   if (user.membershipTier === "member") return true;
+
+  // Viewers never appear. Signing in is not joining, and this is the
+  // line that keeps the rail from becoming a directory of anyone who
+  // ever hit the site.
+  if (user.membershipTier === "viewer") return false;
+
+  // Founding year: Partners count as inside a recognition window.
+  // Expires on its own, after which the line below governs again.
+  if (inFoundingWindow()) return true;
+
   return recognized?.has(user.id) ?? false;
 }
 

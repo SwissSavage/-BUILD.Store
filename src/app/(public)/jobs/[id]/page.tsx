@@ -12,6 +12,7 @@
  * this posting in their listings.
  */
 import Link from "next/link";
+import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { notFound } from "next/navigation";
 import { jobReader } from "@/lib/readers";
 import { INDUSTRY_LABELS } from "@/lib/types";
@@ -110,6 +111,7 @@ export default async function JobDetailPage({
           {job.title}
         </h1>
         <Brief text={job.description} title={job.title} className="mt-6" />
+        <AdminObjectControls editHref="/admin/jobs" label="role" />
 
         <div className="mt-8 grid grid-cols-2 gap-6 md:grid-cols-4">
           <Field label="Comp" value={job.compensation} />

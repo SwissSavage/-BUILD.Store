@@ -24,7 +24,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { pushInboundSubmission } from "@/lib/mock-data/inbound-submissions";
+import { insertInboundSubmission } from "@/lib/writers/inbound-submissions";
 import { extractKeywords } from "@/lib/talent-match";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { Industry } from "@/lib/types";
@@ -260,26 +260,38 @@ export async function importInboundCsv(formData: FormData) {
     const body =
       bodyParts.join("\n\n") || "(imported from CSV, no free-text pitch)";
 
-    pushInboundSubmission({
-      kind: "join_talent_signup",
-      status: "new",
-      title: `Join as talent · ${composedName || email}`,
-      submitter: composedName || email,
-      submitterEmail: email || null,
-      submitterCompany: company || null,
-      pillarTags,
-      keywordTags: Array.from(
-        new Set([...declaredSkillTags, ...extractKeywords(body)]),
-      ).slice(0, 50),
-      body,
-      attachments: [],
-      assignedAdminId: null,
-      triageNote: `Imported via CSV by ${admin.firstName ?? admin.handle ?? admin.id}.`,
-      deepLinkHref: null,
-      linkedResourceId: null,
-      derived: false,
-    });
-    imported += 1;
+    // Per row, not per batch. The write can now genuinely fail, where
+    // the in-memory push never could, so one bad row must cost that row
+    // and get reported rather than taking the rest of the import with
+    // it. Counted as skipped so the totals still reconcile.
+    try {
+      await insertInboundSubmission({
+        kind: "join_talent_signup",
+        status: "new",
+        title: `Join as talent · ${composedName || email}`,
+        submitter: composedName || email,
+        submitterEmail: email || null,
+        submitterCompany: company || null,
+        pillarTags,
+        keywordTags: Array.from(
+          new Set([...declaredSkillTags, ...extractKeywords(body)]),
+        ).slice(0, 50),
+        body,
+        attachments: [],
+        assignedAdminId: null,
+        triageNote: `Imported via CSV by ${admin.firstName ?? admin.handle ?? admin.id}.`,
+        deepLinkHref: null,
+        linkedResourceId: null,
+        derived: false,
+      });
+      imported += 1;
+    } catch (err) {
+      skipped += 1;
+      skipReasons.push(
+        `row ${i + 1}: could not be saved (${composedName || email})`,
+      );
+      console.error("CSV_IMPORT_ROW_FAILED", i + 1, err);
+    }
   }
 
   await logAuditEvent({

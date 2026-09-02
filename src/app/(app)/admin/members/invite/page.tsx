@@ -310,12 +310,70 @@ export default async function InviteMemberPage({
                     </div>
                   )}
 
+                  {/* ─────────────────────────────────────────────
+                      WHERE THIS INVITE ACTUALLY IS (2026-09-02)
+
+                      The row showed "Consumed" and nothing else, so an
+                      invitee who signed their LOI and never finished
+                      the ceremony looked identical to one who never
+                      opened the email. Owais signed at 16:59 on 09-02
+                      and was invisible either way.
+
+                      Signing is not joining. Documenso's webhook
+                      deliberately no-ops on invitee completion and the
+                      account is created by the ceremony, so the gap
+                      between "signed" and "joined" is real, common,
+                      and was unobservable. It is also actionable: a
+                      person stuck there needs a nudge, not a new
+                      invite.
+                      ───────────────────────────────────────────── */}
+                  {!invite.consumedAt && !invite.revokedAt && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+                      <span className="text-ink-faint">Progress:</span>
+                      <span
+                        className={
+                          invite.adminCountersignedAt
+                            ? "text-ink-muted"
+                            : "text-ink-faint"
+                        }
+                      >
+                        {invite.adminCountersignedAt ? "✓" : "○"} countersigned
+                      </span>
+                      <span
+                        className={
+                          invite.inviteeEmailSentAt
+                            ? "text-ink-muted"
+                            : "text-ink-faint"
+                        }
+                      >
+                        {invite.inviteeEmailSentAt ? "✓" : "○"} email sent
+                      </span>
+                      <span className="text-ink-faint">○ joined</span>
+                      {invite.inviteeEmailSentAt && (
+                        <span style={{ color: "#d4a752" }}>
+                          Waiting on them. Signing the agreement does not
+                          finish signup.
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   <div className="mt-3 grid gap-x-4 gap-y-1 text-[11px] text-ink-faint md:grid-cols-2">
                     <span>
                       Issued by {issuerName} on{" "}
                       {formatDate(invite.createdAt)}
                     </span>
                     <span>Expires {formatDate(invite.expiresAt)}</span>
+                    {invite.adminCountersignedAt && (
+                      <span>
+                        Countersigned {formatDate(invite.adminCountersignedAt)}
+                      </span>
+                    )}
+                    {invite.inviteeEmailSentAt && (
+                      <span>
+                        Invitee emailed {formatDate(invite.inviteeEmailSentAt)}
+                      </span>
+                    )}
                     {invite.consumedAt && (
                       <span>
                         Consumed {formatDate(invite.consumedAt)}

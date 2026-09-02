@@ -14,7 +14,10 @@ import {
   publicProfileEligible,
 } from "@/lib/profile-visibility";
 import { periodKeyFor } from "@/lib/recognition-period";
-import { TradingCard, type TradingCardTier } from "@/components/TradingCard";
+import {
+  TradingCard,
+  deriveTradingCardTier,
+} from "@/components/TradingCard";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { Avatar } from "@/components/Avatar";
 
@@ -41,7 +44,6 @@ export default async function Home() {
       <ContributorAffiliations />
       <Process />
       <Pillars />
-      <Roster />
       <CohortRail />
       <Partners />
       <FaqSection />
@@ -116,102 +118,6 @@ function ContributorAffiliations() {
  * people belong on it — not as generic avatars but as the branded
  * player cards that signal how the cooperative organizes.
  */
-async function Roster() {
-  // Fixed 5-card lineup showing the RPG rarity ladder end-to-end for
-  // homepage launch-design demonstration. Locked 2026-07-01 per Jamar:
-  // Jamar gold · BBG magenta · Sunny blue · Bayu green · Sahtyre grey.
-  // Sandbox illustration — production replaces with dynamic top-N
-  // discovery-eligible Members computed from MVP snapshot bands.
-  const ROSTER: { userId: string; tier: TradingCardTier }[] = [
-    { userId: "u_jamar", tier: "champion" },
-    { userId: "u_bbg", tier: "future_modernist" },
-    { userId: "u_sunny", tier: "promotion_eligible" },
-    { userId: "u_bayu", tier: "good_standing" },
-    { userId: "u_sahtyre", tier: "probation" },
-  ];
-
-  const { users: roster } = await safely(() => getAllUsers(), {
-    users: [],
-    source: "postgres" as const,
-  });
-  const preview = ROSTER.map(({ userId, tier }) => {
-    const user = roster.find((u) => u.id === userId);
-    return user ? { user, tier } : null;
-  }).filter(
-    (row): row is { user: (typeof roster)[number]; tier: TradingCardTier } =>
-      row !== null,
-  );
-
-  // Unlike the partner list, an empty result here is a fault rather
-  // than a fact — these five are seeded rows that exist. If they come
-  // back empty the database read failed, and silently dropping the
-  // section is how this disappeared in the first place. Log it so it
-  // shows up as a cause instead of an absence.
-  if (preview.length === 0) {
-    // eslint-disable-next-line no-console
-    console.error(
-      "[home] roster preview empty — expected seeded members not found",
-      { rosterSize: roster.length },
-    );
-    return null;
-  }
-
-  return (
-    <section className="fm-below-fold border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <div className="text-xs uppercase tracking-wider text-brand-magenta">
-              The cooperative
-            </div>
-            <h2 className="mt-2 font-display text-4xl font-semibold md:text-5xl">
-              Members shipping the work
-            </h2>
-            <p className="mt-3 max-w-2xl text-ink-muted">
-              Standing on the card. Champion&apos;s Court gold at the top,
-              Future Modernist magenta, promotion-eligible blue, good
-              standing green, probation grey.
-            </p>
-          </div>
-          <Link
-            href="/team"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
-          >
-            View full roster →
-          </Link>
-        </div>
-
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-          {preview.map(({ user, tier }) => (
-            <Link
-              key={user.id}
-              href={`/u/${user.handle}`}
-              className="group block"
-            >
-              <TradingCard
-                user={user}
-                tier={tier}
-                aspectRatio="3/4"
-                className="transition-transform group-hover:-translate-y-1"
-              />
-              <div className="mt-3">
-                <div className="font-display text-lg font-semibold">
-                  {publicName(user)}
-                </div>
-                {memberLabel(user) && (
-                  <div className="mt-0.5 text-xs text-ink-muted">
-                    {memberLabel(user)}
-                  </div>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface)]">
@@ -642,60 +548,90 @@ async function CohortRail() {
           </Link>
         </div>
 
-        <div className="mt-8 grid gap-6 md:grid-cols-[2fr_1fr]">
-          <div>
-            {/* The narrative and the deep link only exist for a
-                curated spotlight. On the automatic path there is no
-                written piece to read, so promising one would be a
-                dead click. */}
-            {curated ? (
-              <>
-                <p className="text-ink-muted">{curated.narrative}</p>
-                <Link
-                  href={`/cohort/${curated.periodKey}`}
-                  className="mt-4 inline-block text-sm text-brand-magenta hover:underline"
-                >
-                  Read the full spotlight →
-                </Link>
-              </>
-            ) : (
-              <p className="text-ink-muted">
-                Newest builders in the cooperative. Every engagement
-                routes through Future Modern.
-              </p>
-            )}
-          </div>
-          {users.length > 0 && (
-            <ul className="space-y-3" data-overflow={overflow}>
+        <div className="mt-4 max-w-2xl">
+          {/* The narrative and the deep link only exist for a curated
+              spotlight. On the automatic path there is no written
+              piece to read, so promising one would be a dead click. */}
+          {curated ? (
+            <>
+              <p className="text-ink-muted">{curated.narrative}</p>
+              <Link
+                href={`/cohort/${curated.periodKey}`}
+                className="mt-4 inline-block text-sm text-brand-magenta hover:underline"
+              >
+                Read the full spotlight →
+              </Link>
+            </>
+          ) : (
+            <p className="text-ink-muted">
+              Newest builders in the cooperative. Every engagement
+              routes through Future Modern.
+            </p>
+          )}
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────
+            A RAIL, NOT A LIST (2026-09-02)
+
+            This was a stacked column beside the copy. At three people
+            it read fine; at eight it was a wall of rows, and it grows
+            every time someone joins. Jamar: "this section just throws
+            the profiles at you."
+
+            Horizontal scroll with snap points, so the page shows a few
+            and the reader moves through the rest at their own pace.
+            CSS only — no autoplay, no carousel library, no JS. A
+            rotating rail that moves on its own takes control away from
+            someone trying to read a name, and it cannot be paused by
+            anyone using a keyboard.
+
+            The card is the profile, so each one is the trading card
+            rather than an avatar in a row, and it links through.
+            ───────────────────────────────────────────────────────── */}
+        {users.length > 0 && (
+          <div className="mt-10 -mx-6 overflow-x-auto px-6 pb-4 [scrollbar-width:thin] snap-x snap-mandatory">
+            <ul className="flex gap-6">
               {users.map((user) => (
-                <li
-                  key={user.id}
-                  className="flex items-center gap-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-4 py-3"
-                >
-                  <Avatar user={user} size="md" />
-                  <div className="min-w-0">
-                    <p className="truncate font-display text-base font-semibold">
-                      {publicName(user)}
-                    </p>
-                    {memberLabel(user) && (
-                      <p className="truncate text-xs text-ink-muted">
-                        {memberLabel(user)}
-                      </p>
-                    )}
-                  </div>
+                <li key={user.id} className="w-44 shrink-0 snap-start md:w-52">
+                  <Link href={`/u/${user.handle}`} className="group block">
+                    <TradingCard
+                      user={user}
+                      tier={deriveTradingCardTier({
+                        ovr: null,
+                        isProvisional: true,
+                        isInChampionsCourt: false,
+                        membershipTier: user.membershipTier,
+                      })}
+                      aspectRatio="3/4"
+                      className="transition-transform group-hover:-translate-y-1"
+                    />
+                    <div className="mt-3">
+                      <div className="truncate font-display text-base font-semibold">
+                        {publicName(user)}
+                      </div>
+                      {memberLabel(user) && (
+                        <div className="mt-0.5 truncate text-xs text-ink-muted">
+                          {memberLabel(user)}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
                 </li>
               ))}
               {overflow > 0 && (
-                <li className="px-4 text-xs text-ink-faint">
-                  + {overflow} more{" "}
-                  <Link href="/cohort" className="text-brand-magenta hover:underline">
-                    in the cohort →
+                <li className="flex w-44 shrink-0 snap-start items-center justify-center md:w-52">
+                  <Link
+                    href="/cohort"
+                    className="rounded-2xl border border-dashed border-[var(--surface-border)] px-5 py-4 text-center text-sm text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+                  >
+                    + {overflow} more
+                    <span className="mt-1 block text-xs">in the cohort →</span>
                   </Link>
                 </li>
               )}
             </ul>
-          )}
-        </div>
+          </div>
+        )}
         {users.length < totalRoster && (
           <AdminRosterNote shown={users.length} total={totalRoster} excluded={excluded} />
         )}

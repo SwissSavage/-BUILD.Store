@@ -27,6 +27,7 @@ import { randomBytes } from "crypto";
 import { requireAdmin } from "@/lib/auth-stub";
 import { createDirectSession, createFmUser } from "@/lib/auth";
 import { db } from "@/db/client";
+import { recordInviteCeremonyAgreements } from "@/lib/writers/agreements";
 import { inviteLinks, users } from "@/db/schema";
 import { MOCK_INVITE_LINKS } from "@/lib/mock-data/invite-links";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
@@ -639,8 +640,26 @@ export async function completeInviteSignup(formData: FormData): Promise<void> {
     })
     .where(eq(inviteLinks.id, invite.id));
 
-  // TODO: persist dataOptIn as a talent-data agreement row.
-  void dataOptIn;
+  // The paperwork this ceremony produced. Both rows land here: the
+  // Documenso-signed LOI or covenant, and the Tier-2 data opt-in that
+  // used to be read off the form and thrown away.
+  await recordInviteCeremonyAgreements({
+    userId,
+    inviteCode: code,
+    targetTier: invite.targetTier,
+    documensoDocumentId: invite.documensoDocumentId ?? null,
+    dataOptIn,
+  });
+
+  // Also reflect the opt-in on the user row, so /profile's toggle and
+  // the agreements list agree with each other rather than telling the
+  // member two different things.
+  if (dataOptIn) {
+    await db
+      .update(users)
+      .set({ dataParticipation: true, updatedAt: now })
+      .where(eq(users.id, userId));
+  }
 
   // Mint the session cookie so the invitee lands on /welcome signed in.
   await createDirectSession(userId);

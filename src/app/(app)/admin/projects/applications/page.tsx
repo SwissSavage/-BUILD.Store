@@ -18,6 +18,10 @@ import { getAllProjects } from "@/lib/readers/projects";
 import { safely } from "@/lib/readers";
 import { decideProjectApplication } from "@/lib/project-application-actions";
 import {
+  withdrawProposalAsAdmin,
+  restoreProposalAsAdmin,
+} from "@/lib/project-edit-actions";
+import {
   PROJECT_APPLICATION_STATUS_LABELS,
   TIER_LABELS,
   adminName,
@@ -274,6 +278,19 @@ function PendingRow({
           </button>
         </div>
       </form>
+
+      {/* Removing is separate from deciding. "Not this round" is a
+          judgement the contractor hears about; this is queue cleanup
+          for test data and mistakes, and it is reversible. */}
+      <form action={withdrawProposalAsAdmin} className="mt-3">
+        <input type="hidden" name="id" value={application.id} />
+        <button
+          type="submit"
+          className="text-xs text-ink-faint underline hover:text-brand-magenta"
+        >
+          Remove from queue
+        </button>
+      </form>
     </Card>
   );
 }
@@ -320,6 +337,17 @@ function DecidedRow({
           style={{ backgroundColor: accent + "22", color: accent }}
         >
           {PROJECT_APPLICATION_STATUS_LABELS[application.status]}
+          {application.status === "withdrawn" && (
+            <form action={restoreProposalAsAdmin} className="mt-1">
+              <input type="hidden" name="id" value={application.id} />
+              <button
+                type="submit"
+                className="text-[11px] text-ink-faint underline hover:text-brand-magenta"
+              >
+                Put back in the queue
+              </button>
+            </form>
+          )}
         </span>
       </div>
       <p className="mt-1 text-xs text-ink-muted">

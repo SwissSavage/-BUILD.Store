@@ -18,6 +18,7 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
 import { Brief } from "@/components/Brief";
 import { Card } from "@/components/Card";
+import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { BidOnContractForm } from "@/components/BidOnContractForm";
 import { computeRateBounds } from "@/lib/rate-bounds";
 import { and, eq, sql } from "drizzle-orm";
@@ -155,6 +156,10 @@ export default async function ContractDetailPage({
           {project.title}
         </h1>
         <Brief text={project.description} title={project.title} className="mt-6" />
+        <AdminObjectControls
+          editHref={`/admin/projects/${project.id}/edit`}
+          label="contract"
+        />
 
         <div className="mt-8 grid grid-cols-2 gap-6 md:grid-cols-3">
           <Field label="Budget" value={compText ?? "—"} />

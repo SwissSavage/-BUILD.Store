@@ -4098,6 +4098,9 @@ export type AuditLogAction =
   // change — the audit log is the record of what happened, and
   // "purged" and "trashed" are not the same event to anyone reading
   // it later.
+  | "project.edited"
+  | "proposal.removed_from_queue"
+  | "proposal.restored_to_queue"
   | "project.trashed"
   | "project.restored"
   | "project.purged"
@@ -4208,6 +4211,9 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "canonization.frozen": "Canonization frozen",
   "canonization.caption_updated": "Canonization caption updated",
   "canonization.phygital_requested": "Phygital canon card requested",
+  "project.edited": "Listing edited",
+  "proposal.removed_from_queue": "Proposal removed from the queue",
+  "proposal.restored_to_queue": "Proposal restored to the queue",
   "project.trashed": "Project moved to trash",
   "project.restored": "Project restored from trash",
   "project.purged": "Project permanently deleted",

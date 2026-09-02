@@ -25,6 +25,7 @@
  * targets stay the same shape.
  */
 import Link from "next/link";
+import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
@@ -170,6 +171,10 @@ export default async function ProjectDetailPage({
           <Card>
             <CardTitle>About this work</CardTitle>
             <Brief text={project.description} title={project.title} className="mt-3" />
+            <AdminObjectControls
+              editHref={`/admin/projects/${project.id}/edit`}
+              label="initiative"
+            />
             <div className="mt-5 flex flex-wrap gap-1.5">
               {project.skillsRequired.map((s) => (
                 <span

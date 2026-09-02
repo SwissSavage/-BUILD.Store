@@ -64,12 +64,12 @@ export function ProfileMenu({
       blurb: "$BUILD balance, payout method, transaction ledger.",
     },
     {
-      href: "/profile/edit#paperwork",
+      href: "/profile/edit/paperwork",
       label: "Signed agreements",
       blurb: "Every LOI, Agreement, and receipt you've signed.",
     },
     {
-      href: "/profile/edit#paperwork",
+      href: "/profile/edit/paperwork",
       label: "Open agreements",
       blurb: "Pending your signature — complete in-app or download.",
     },

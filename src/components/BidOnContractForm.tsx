@@ -52,16 +52,11 @@ type FormState = ProposalResult | null;
  * Components render." A caught error told them nothing.
  */
 async function action(_prev: FormState, formData: FormData): Promise<FormState> {
-  try {
-    return await submitContractBid(formData);
-  } catch {
-    // A genuine fault, not an expected outcome.
-    return {
-      ok: false,
-      message:
-        "Something broke on our end and your proposal was not saved. Try again, and tell us if it keeps happening.",
-    };
-  }
+  // No catch. The action guards itself server-side and returns its
+  // outcome; catching here would swallow the NEXT_REDIRECT that
+  // next/navigation throws to send an expired session to sign-in,
+  // leaving the contractor on a dead form.
+  return submitContractBid(formData);
 }
 
 export function BidOnContractForm({

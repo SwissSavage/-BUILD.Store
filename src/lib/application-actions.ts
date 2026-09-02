@@ -107,32 +107,35 @@ async function submitJobApplicationInner(
     throw err;
   }
 
-  await logAuditEvent({
-    actorUserId: user.id,
-    actorRoleSnapshot: snapshotActorRole(user),
-    action: "user.applied",
-    resourceKind: "user",
-    resourceId: id,
-    before: null,
-    after: { jobId, pitch: pitch.slice(0, 80) },
-    reason: `Job application ${id} for job ${jobId}`,
+  // COMMITTED. Everything below is our bookkeeping, not theirs.
+  await afterCommit("JOB_APPLICATION", async () => {
+    await logAuditEvent({
+      actorUserId: user.id,
+      actorRoleSnapshot: snapshotActorRole(user),
+      action: "user.applied",
+      resourceKind: "user",
+      resourceId: id,
+      before: null,
+      after: { jobId, pitch: pitch.slice(0, 80) },
+      reason: `Job application ${id} for job ${jobId}`,
+    });
+
+    const [job] = await db
+      .select({ title: jobs.title })
+      .from(jobs)
+      .where(eq(jobs.id, jobId))
+      .limit(1);
+
+    await notifyAdminsOfProposal({
+      title: `New application — ${job?.title ?? "job"}`,
+      body: `${publicName(user)} applied. Review in the applications queue.`,
+      href: "/admin/jobs/applications",
+    });
+
+    revalidatePath(`/jobs/${jobId}`);
+    revalidatePath("/admin/jobs/applications");
+    revalidatePath("/notifications");
   });
-
-  const [job] = await db
-    .select({ title: jobs.title })
-    .from(jobs)
-    .where(eq(jobs.id, jobId))
-    .limit(1);
-
-  await notifyAdminsOfProposal({
-    title: `New application — ${job?.title ?? "job"}`,
-    body: `${publicName(user)} applied. Review in the applications queue.`,
-    href: "/admin/jobs/applications",
-  });
-
-  revalidatePath(`/jobs/${jobId}`);
-  revalidatePath("/admin/jobs/applications");
-  revalidatePath("/notifications");
   return {
     ok: true,
     mode: "created",
@@ -187,6 +190,34 @@ function isRedirectError(err: unknown): boolean {
  * and the reference goes to the contractor. They report six characters,
  * we grep the container logs, and the guessing stops.
  */
+/**
+ * Bookkeeping that runs AFTER the row is committed.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-09-01)
+ *
+ * Once the insert commits, the contractor's proposal exists. Anything
+ * after it — audit entry, admin notification, cache revalidation — is
+ * our housekeeping, and a failure in our housekeeping must never be
+ * reported to them as a failed submission.
+ *
+ * That inversion is the likeliest explanation for what Bayu and Billy
+ * both hit: submit, see an error, and have the row land anyway. Bayu's
+ * retry then found his own first proposal and surfaced at the duplicate
+ * check, which is how we learned the first one had saved.
+ *
+ * So post-commit work is isolated. It logs, it never propagates, and
+ * the submission still reports success, because it succeeded.
+ * ─────────────────────────────────────────────────────────────
+ */
+async function afterCommit(label: string, run: () => Promise<void>): Promise<void> {
+  try {
+    await run();
+  } catch (err) {
+    console.error(`${label}_POST_COMMIT_FAILED`, err);
+  }
+}
+
 async function guarded(
   label: string,
   run: () => Promise<ProposalResult>,
@@ -330,26 +361,29 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
       })
       .where(eq(projectApplications.id, existing.id));
 
-    await logAuditEvent({
-      actorUserId: user.id,
-      actorRoleSnapshot: snapshotActorRole(user),
-      action: "user.applied",
-      resourceKind: "user",
-      resourceId: existing.id,
-      before: null,
-      after: { contractId, pitch: pitch.slice(0, 80), revised: true },
-      reason: `Contract bid ${existing.id} revised on contract ${contractId}`,
+    await afterCommit("PROPOSAL_REVISE", async () => {
+      await logAuditEvent({
+        actorUserId: user.id,
+        actorRoleSnapshot: snapshotActorRole(user),
+        action: "user.applied",
+        resourceKind: "user",
+        resourceId: existing.id,
+        before: null,
+        after: { contractId, pitch: pitch.slice(0, 80), revised: true },
+        reason: `Contract bid ${existing.id} revised on contract ${contractId}`,
+      });
+
+      await notifyAdminsOfProposal({
+        title: `Proposal updated — ${contract.title}`,
+        body: `${publicName(user)} revised their proposal. Review it in the proposals queue.`,
+        href: "/admin/projects/applications",
+      });
+
+      revalidatePath(`/contracts/${contractId}`);
+      revalidatePath("/admin/projects/applications");
+      revalidatePath("/notifications");
     });
 
-    await notifyAdminsOfProposal({
-      title: `Proposal updated — ${contract.title}`,
-      body: `${publicName(user)} revised their proposal. Review it in the proposals queue.`,
-      href: "/admin/projects/applications",
-    });
-
-    revalidatePath(`/contracts/${contractId}`);
-    revalidatePath("/admin/projects/applications");
-    revalidatePath("/notifications");
     return {
       ok: true,
       mode: "updated",
@@ -373,26 +407,30 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
     createdAt: now,
   });
 
-  await logAuditEvent({
-    actorUserId: user.id,
-    actorRoleSnapshot: snapshotActorRole(user),
-    action: "user.applied",
-    resourceKind: "user",
-    resourceId: id,
-    before: null,
-    after: { contractId, pitch: pitch.slice(0, 80) },
-    reason: `Contract bid ${id} on contract ${contractId}`,
+  // COMMITTED. Everything below is our bookkeeping, not theirs.
+  await afterCommit("PROPOSAL_SUBMIT", async () => {
+    await logAuditEvent({
+      actorUserId: user.id,
+      actorRoleSnapshot: snapshotActorRole(user),
+      action: "user.applied",
+      resourceKind: "user",
+      resourceId: id,
+      before: null,
+      after: { contractId, pitch: pitch.slice(0, 80) },
+      reason: `Contract bid ${id} on contract ${contractId}`,
+    });
+
+    await notifyAdminsOfProposal({
+      title: `New proposal — ${contract.title}`,
+      body: `${publicName(user)} submitted a proposal. Review it in the proposals queue.`,
+      href: "/admin/projects/applications",
+    });
+
+    revalidatePath(`/contracts/${contractId}`);
+    revalidatePath("/admin/projects/applications");
+    revalidatePath("/notifications");
   });
 
-  await notifyAdminsOfProposal({
-    title: `New proposal — ${contract.title}`,
-    body: `${publicName(user)} submitted a proposal. Review it in the proposals queue.`,
-    href: "/admin/projects/applications",
-  });
-
-  revalidatePath(`/contracts/${contractId}`);
-  revalidatePath("/admin/projects/applications");
-  revalidatePath("/notifications");
   return {
     ok: true,
     mode: "created",

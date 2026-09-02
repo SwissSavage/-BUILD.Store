@@ -48,10 +48,16 @@ data.
 - **A task marked "done" can be lying.** Features got marked complete
   because they worked against mock data. When a queue looks
   suspiciously short, measure the gap.
-- **The sandbox cannot reach the production database** (`dokploy.
-  afuturemodern.com` does not resolve). Any claim about live rows is
-  unverified by definition. Say so, or build the diagnostic into the
-  page so it reports itself.
+- **The sandbox cannot reach the production database.** Any claim about
+  live rows is unverified by definition. Say so, or build the
+  diagnostic into the page so it reports itself.
+- **Production runs on Supabase.** The local `.env` in this repo is a
+  developer file and has been stale before; the source of truth is the
+  Dokploy env. NEVER report which database production uses by reading
+  the local `.env` — that has already produced one confidently wrong
+  answer. Ask, or read it from Dokploy.
+- **The old self-hosted Postgres is not the app database.** If a
+  question is about production data, it is about Supabase.
 
 ## 3. Stop guessing after two failed iterations
 

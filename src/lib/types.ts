@@ -32,8 +32,19 @@ export const TIER_LABELS: Record<MembershipTier, string> = {
  * admin/legal/internal purposes only.
  */
 export function publicName(
-  u: Pick<User, "firstName" | "lastName"> | null | undefined,
+  u:
+    | (Pick<User, "firstName" | "lastName"> & { displayName?: string | null })
+    | null
+    | undefined,
 ): string {
+  // A member's own choice wins. The first-name-plus-initial convention
+  // is a sensible default, not a rule about what someone is called,
+  // and the name it starts from is whatever an admin typed on the
+  // invite. People work under one name, a stage name, or a spelling
+  // the invite got wrong, and none of that is ours to overrule.
+  const chosen = u?.displayName?.trim();
+  if (chosen) return chosen;
+
   const first = u?.firstName?.trim();
   if (!first) return "Member";
   const last = u?.lastName?.trim();
@@ -81,6 +92,11 @@ export interface User {
    * deduped with a suffix if needed) so nothing identifying leaks into URLs.
    */
   handle: string;
+  /**
+   * Member-chosen public name. Overrides the first-name plus
+   * last-initial convention when set; null means use the convention.
+   */
+  displayName?: string | null;
   firstName: string | null;
   lastName: string | null;
   profileImageUrl: string | null;

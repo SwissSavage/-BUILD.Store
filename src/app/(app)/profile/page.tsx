@@ -74,6 +74,9 @@ async function saveProfile(formData: FormData) {
     String(formData.get("firstName") ?? "").trim() || currentUser.firstName;
   const lastName =
     String(formData.get("lastName") ?? "").trim() || currentUser.lastName;
+  // Empty clears it and falls back to the first-name convention, so
+  // someone can undo an alias without an admin.
+  const displayName = String(formData.get("displayName") ?? "").trim() || null;
   const bio = String(formData.get("bio") ?? "").trim() || null;
   const rawTagline = String(formData.get("tagline") ?? "").trim();
   const tagline = rawTagline ? rawTagline.slice(0, 120) : null;
@@ -114,6 +117,7 @@ async function saveProfile(formData: FormData) {
     .update(usersTable)
     .set({
       firstName,
+      displayName,
       lastName,
       bio,
       tagline,
@@ -380,6 +384,24 @@ export default async function ProfilePage() {
             <Field name="firstName" label="First name" defaultValue={user.firstName ?? ""} />
             <Field name="lastName" label="Last name" defaultValue={user.lastName ?? ""} />
           </div>
+
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-brand-magenta">
+              Display name
+            </span>
+            <input
+              name="displayName"
+              defaultValue={user.displayName ?? ""}
+              placeholder="e.g. Sahtyre"
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink"
+            />
+            <span className="mt-1 block text-[11px] text-ink-faint">
+              How your name appears publicly. Leave it empty to use{" "}
+              &ldquo;{[user.firstName, user.lastName?.[0] ? `${user.lastName[0]}.` : null].filter(Boolean).join(" ") || "your first name"}&rdquo;.
+              Set it if you go by one name, a stage name, or the invite
+              spelled yours wrong.
+            </span>
+          </label>
 
           <label className="block">
             <span className="text-xs uppercase tracking-wider text-ink-muted">

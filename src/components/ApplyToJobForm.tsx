@@ -13,6 +13,7 @@
 
 import { useActionState } from "react";
 import { submitJobApplication } from "@/lib/application-actions";
+import type { ProposalResult } from "@/lib/application-actions";
 import { Card } from "@/components/Card";
 
 interface Props {
@@ -20,16 +21,18 @@ interface Props {
   jobTitle: string;
 }
 
-type FormState = { ok: boolean; message: string } | null;
+type FormState = ProposalResult | null;
 
+/**
+ * The action RETURNS its outcome now.
+ *
+ * Catching a thrown error gave the applicant nothing: Next.js strips
+ * server-action error messages in production, so "you already applied"
+ * arrived as "An error occurred in the Server Components render."
+ * A real fault now carries a reference that matches the server log.
+ */
 async function action(_prev: FormState, formData: FormData): Promise<FormState> {
-  try {
-    await submitJobApplication(formData);
-    return { ok: true, message: "Application submitted. Admin will reply soon." };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Something went wrong.";
-    return { ok: false, message: msg };
-  }
+  return submitJobApplication(formData);
 }
 
 export function ApplyToJobForm({ jobId, jobTitle }: Props) {
@@ -38,7 +41,7 @@ export function ApplyToJobForm({ jobId, jobTitle }: Props) {
   if (state?.ok) {
     return (
       <Card>
-        <p className="text-lg font-medium">Thanks — application in.</p>
+        <p className="text-lg font-medium">Application in.</p>
         <p className="mt-2 text-sm text-ink-muted">{state.message}</p>
       </Card>
     );

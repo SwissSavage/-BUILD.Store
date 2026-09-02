@@ -13,6 +13,7 @@
 
 import { useActionState } from "react";
 import { submitContractBid } from "@/lib/application-actions";
+import type { ProposalResult } from "@/lib/application-actions";
 import { Card } from "@/components/Card";
 
 interface Props {
@@ -25,42 +26,81 @@ interface Props {
     maxRate: number;
     reason: string;
   };
+  /**
+   * This contractor's current proposal, if they already have one.
+   * Present means the form is an editor rather than a blank slate.
+   */
+  existing?: {
+    proposedRole: string | null;
+    pitch: string;
+    hoursPerWeek: number | null;
+    hourlyRate: string | null;
+    portfolioLink: string | null;
+    status: string;
+    createdAt: string;
+  } | null;
 }
 
-type FormState = { ok: boolean; message: string } | null;
+type FormState = ProposalResult | null;
 
+/**
+ * The action RETURNS its outcome now.
+ *
+ * This used to be a try/catch around a throwing action. Next.js strips
+ * server-action error messages in production, so "you already bid on
+ * this" reached the contractor as "An error occurred in the Server
+ * Components render." A caught error told them nothing.
+ */
 async function action(_prev: FormState, formData: FormData): Promise<FormState> {
-  try {
-    await submitContractBid(formData);
-    return { ok: true, message: "Bid submitted. Admin will reply soon." };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Something went wrong.";
-    return { ok: false, message: msg };
-  }
+  // No catch. The action guards itself server-side and returns its
+  // outcome; catching here would swallow the NEXT_REDIRECT that
+  // next/navigation throws to send an expired session to sign-in,
+  // leaving the contractor on a dead form.
+  return submitContractBid(formData);
 }
 
 export function BidOnContractForm({
   contractId,
   contractTitle,
   rateBounds,
+  existing,
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
+  const editing = !!existing && existing.status === "pending";
+  const locked = !!existing && existing.status === "approved";
 
   if (state?.ok) {
     return (
       <Card>
-        <p className="text-lg font-medium">Thanks — bid in.</p>
+        <p className="text-lg font-medium">
+          {state.mode === "updated" ? "Proposal updated." : "Proposal in."}
+        </p>
         <p className="mt-2 text-sm text-ink-muted">{state.message}</p>
+      </Card>
+    );
+  }
+
+  if (locked) {
+    return (
+      <Card>
+        <p className="text-lg font-medium">You are on this contract.</p>
+        <p className="mt-2 text-sm text-ink-muted">
+          Your proposal was selected, so the terms are locked for the
+          duration. Message admin if something needs to change.
+        </p>
       </Card>
     );
   }
 
   return (
     <Card>
-      <p className="text-lg font-medium">Bid on {contractTitle}</p>
+      <p className="text-lg font-medium">
+        {editing ? "Your proposal" : `Bid on ${contractTitle}`}
+      </p>
       <p className="mt-2 text-sm text-ink-muted">
-        Admin compiles 3–5 bids for the client; strongest matches surface
-        first.
+        {editing
+          ? "Submitted and awaiting selection. Edit anything below and resubmit to replace it."
+          : "Admin compiles 3–5 proposals for the client; strongest matches surface first."}
       </p>
 
       <form action={formAction} className="mt-6 space-y-4">
@@ -75,6 +115,7 @@ export function BidOnContractForm({
               id="proposedRole"
               name="proposedRole"
               type="text"
+              defaultValue={existing?.proposedRole ?? ""}
               placeholder="e.g. RevOps Strategist"
               className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
             />
@@ -89,6 +130,7 @@ export function BidOnContractForm({
               type="number"
               min={1}
               max={80}
+              defaultValue={existing?.hoursPerWeek ?? ""}
               placeholder="20"
               className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
             />
@@ -105,6 +147,7 @@ export function BidOnContractForm({
               min={rateBounds.minRate}
               max={rateBounds.maxRate}
               step={5}
+              defaultValue={existing?.hourlyRate ?? ""}
               placeholder={`${rateBounds.minRate}–${rateBounds.maxRate}`}
               className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
             />
@@ -132,6 +175,7 @@ export function BidOnContractForm({
             required
             minLength={20}
             rows={5}
+            defaultValue={existing?.pitch ?? ""}
             placeholder="Approach + relevant past work. Depersonalize any client names — Future Modern doesn't expose upstream clients."
             className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
           />
@@ -145,6 +189,7 @@ export function BidOnContractForm({
             id="portfolioLink"
             name="portfolioLink"
             type="url"
+            defaultValue={existing?.portfolioLink ?? ""}
             placeholder="https://…"
             className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
           />
@@ -161,7 +206,13 @@ export function BidOnContractForm({
           disabled={isPending}
           className="rounded-full bg-brand-magenta px-5 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
         >
-          {isPending ? "Submitting…" : "Submit bid"}
+          {isPending
+            ? editing
+              ? "Saving…"
+              : "Submitting…"
+            : editing
+              ? "Update proposal"
+              : "Submit proposal"}
         </button>
       </form>
     </Card>

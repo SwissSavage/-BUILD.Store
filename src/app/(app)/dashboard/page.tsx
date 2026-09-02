@@ -48,9 +48,22 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
 
+  // ─────────────────────────────────────────────────────────────
+  // WHY THESE ARE WRAPPED (2026-09-01)
+  //
+  // /dashboard is where sign-in lands. Every unguarded read here is a
+  // single point of failure for logging in at all: one throw and the
+  // route boundary replaces the whole page with "The route hit an
+  // error", which is what a new member saw on their first login.
+  //
+  // A wallet widget that cannot load its balance should render empty
+  // and log. It should not cost someone their session's landing page.
+  // safely() logs every failure, so a real outage is still visible in
+  // the container log rather than swallowed.
+  // ─────────────────────────────────────────────────────────────
   const [balance, allTx] = await Promise.all([
-    getBalance(user.id),
-    getTransactions(user.id),
+    safely(() => getBalance(user.id), "0"),
+    safely(() => getTransactions(user.id), []),
   ]);
   const recentTx = allTx.slice(0, 3);
 
@@ -116,8 +129,13 @@ export default async function DashboardPage() {
   );
   // Inbox preview — top 3 unread surfaces inline so the dashboard
   // doubles as the daily check-in instead of routing through Nav.
-  const inboxUnreadCount = await unreadNotificationCount(user.id);
-  const inboxPreview = (await notificationsForUser(user.id))
+  const inboxUnreadCount = await safely(
+    () => unreadNotificationCount(user.id),
+    0,
+  );
+  const inboxPreview = (
+    await safely(() => notificationsForUser(user.id), [])
+  )
     .filter((n) => n.readAt === null)
     .slice(0, 3);
 

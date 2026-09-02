@@ -97,10 +97,13 @@ const PRINCIPLES: readonly Principle[] = [
 
 export default async function InviteCodePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string }>;
+  searchParams?: Promise<{ issue?: string }>;
 }) {
   const { code } = await params;
+  const issue = (await searchParams)?.issue ?? null;
 
   const [invite] = await db
     .select()
@@ -131,7 +134,7 @@ export default async function InviteCodePage({
 
       {isMember ? <CodexArtifact /> : <PartnerHeader />}
 
-      <ActivationForm code={code} />
+      <ActivationForm code={code} issue={issue} />
     </div>
   );
 }
@@ -387,7 +390,32 @@ function TitleDivider() {
   );
 }
 
-function ActivationForm({ code }: { code: string }) {
+/**
+ * Copy for each state completeInviteSignup can send us back in.
+ *
+ * These were thrown Errors, which the route boundary rendered as
+ * "The route hit an error" with a digest. An invited member got that
+ * instead of "tick the terms box" on the one page between her and
+ * joining the cooperative.
+ */
+const ISSUE_COPY: Record<string, string> = {
+  terms:
+    "Scroll to the end of the Terms of Service and tick the box to agree. That is the only thing still missing.",
+  notfound:
+    "We could not find this invitation. Check the link in your email, or ask whoever invited you to resend it.",
+  used: "This invitation has already been used. If that was not you, tell us.",
+  revoked:
+    "This invitation has been revoked. Ask whoever invited you for a fresh one.",
+};
+
+function ActivationForm({
+  code,
+  issue,
+}: {
+  code: string;
+  issue?: string | null;
+}) {
+  const issueMessage = issue ? ISSUE_COPY[issue] : null;
   return (
     <form
       action={completeInviteSignup}
@@ -403,6 +431,24 @@ function ActivationForm({ code }: { code: string }) {
       }}
     >
       <input type="hidden" name="code" value={code} />
+
+      {issueMessage && (
+        <p
+          role="alert"
+          style={{
+            margin: "0 0 1.5rem",
+            padding: "12px 16px",
+            borderRadius: "6px",
+            background: "rgba(216,40,160,0.12)",
+            border: "1px solid rgba(216,40,160,0.5)",
+            color: "#f6c9e6",
+            fontSize: "16px",
+            lineHeight: 1.6,
+          }}
+        >
+          {issueMessage}
+        </p>
+      )}
 
       <h2
         style={{

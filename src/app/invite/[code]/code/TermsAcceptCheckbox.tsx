@@ -38,19 +38,51 @@ export function TermsAcceptCheckbox() {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+
     function check() {
       if (!el) return;
       const atBottom =
         el.scrollHeight - el.scrollTop - el.clientHeight <= SCROLL_THRESHOLD_PX;
+      // Content that fits without scrolling can never fire a scroll
+      // event, so "already at the bottom" counts as read.
       if (atBottom) setScrolled(true);
     }
-    // Content that fits without scrolling: no scroll event fires, so
-    // check once at mount.
-    if (el.scrollHeight <= el.clientHeight + SCROLL_THRESHOLD_PX) {
-      setScrolled(true);
+
+    check();
+    el.addEventListener("scroll", check, { passive: true });
+
+    // ─────────────────────────────────────────────────────────────
+    // WHY THE OBSERVERS (2026-09-01)
+    //
+    // The mount-time measurement was the only fallback for content
+    // that fits the box, and it ran before the serif webfont had
+    // loaded. Once the font swapped, the text reflowed and the
+    // measurement was stale — on a viewport where the terms very
+    // nearly fit, the box could sit permanently disabled with no way
+    // to proceed.
+    //
+    // A disabled checkbox is also skipped by `required` and omitted
+    // from the submission entirely, so the form posted with no
+    // termsAccepted and the server threw. That is how an invited
+    // member ended up on a crash page instead of joining.
+    //
+    // Re-measure whenever the box or its contents change size.
+    // ─────────────────────────────────────────────────────────────
+    const ro =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(check) : null;
+    if (ro) {
+      ro.observe(el);
+      for (const child of Array.from(el.children)) ro.observe(child);
     }
-    el.addEventListener("scroll", check);
-    return () => el.removeEventListener("scroll", check);
+
+    // Webfonts settle after mount and change the height again.
+    const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+    fonts?.ready?.then(check).catch(() => {});
+
+    return () => {
+      el.removeEventListener("scroll", check);
+      ro?.disconnect();
+    };
   }, []);
 
   return (
@@ -94,7 +126,16 @@ export function TermsAcceptCheckbox() {
           name="termsAccepted"
           required
           checked={accepted}
-          disabled={!scrolled}
+          // NOT disabled. A disabled checkbox is excluded from the
+          // submission and skipped by `required`, so the form could
+          // post without consent and fail on the server. readOnly
+          // keeps it unticked until the terms have been read while
+          // still letting the browser enforce `required`.
+          readOnly={!scrolled}
+          aria-disabled={!scrolled}
+          onClick={(e) => {
+            if (!scrolled) e.preventDefault();
+          }}
           onChange={(e) => setAccepted(e.target.checked)}
           style={{
             marginTop: "4px",

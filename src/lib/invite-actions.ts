@@ -569,11 +569,20 @@ export async function completeInviteSignup(formData: FormData): Promise<void> {
   const termsAccepted = String(formData.get("termsAccepted") ?? "") === "on";
   const dataOptIn = String(formData.get("dataOptIn") ?? "") === "on";
 
-  if (!code) throw new Error("Invite code is required.");
+  // ─────────────────────────────────────────────────────────────
+  // WHY THESE REDIRECT INSTEAD OF THROWING (2026-09-01)
+  //
+  // A thrown Error here hits the route boundary and the invitee sees
+  // "The route hit an error" with a digest. That is what an invited
+  // member got instead of "tick the terms box", on the one page that
+  // stands between her and joining.
+  //
+  // Every condition below is an expected state of a real invite, not a
+  // fault. They belong on the page that can explain them.
+  // ─────────────────────────────────────────────────────────────
+  if (!code) redirect("/");
   if (!termsAccepted) {
-    throw new Error(
-      "You must accept the Terms of Service to complete signup.",
-    );
+    redirect(`/invite/${encodeURIComponent(code)}/code?issue=terms`);
   }
 
   const [invite] = await db
@@ -581,12 +590,14 @@ export async function completeInviteSignup(formData: FormData): Promise<void> {
     .from(inviteLinks)
     .where(eq(inviteLinks.code, code))
     .limit(1);
-  if (!invite) throw new Error("Invite not found.");
+  if (!invite) {
+    redirect(`/invite/${encodeURIComponent(code)}/code?issue=notfound`);
+  }
   if (invite.consumedAt) {
-    throw new Error("This invitation has already been used.");
+    redirect(`/invite/${encodeURIComponent(code)}/code?issue=used`);
   }
   if (invite.revokedAt) {
-    throw new Error("This invitation has been revoked.");
+    redirect(`/invite/${encodeURIComponent(code)}/code?issue=revoked`);
   }
 
   // Find or create the User row for this invitee. If a viewer-tier

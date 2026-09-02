@@ -30,7 +30,6 @@
 import { randomUUID } from "crypto";
 import { db } from "@/db/client";
 import { notifications as notificationsTable } from "@/db/schema";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import type { Notification } from "@/lib/types";
 
 export interface NotifyInput {
@@ -71,11 +70,29 @@ export async function notify(input: NotifyInput): Promise<Notification> {
       createdAt: row.createdAt,
       readAt: null,
     });
-  } catch {
-    // Postgres unreachable, or the recipient has no users row yet
-    // (seed-only id referenced by not-yet-swapped mock data). Keep the
-    // in-memory copy so the UI still reflects the event this session.
-    MOCK_NOTIFICATIONS.push(row);
+  } catch (err) {
+    // ─────────────────────────────────────────────────────────────
+    // WHY THE FALLBACK IS GONE (2026-09-02)
+    //
+    // This used to push the row onto MOCK_NOTIFICATIONS and return as
+    // if it had succeeded, with a bare catch that logged nothing. So a
+    // notification that never reached Postgres looked delivered, showed
+    // up for whoever happened to hit that container, and vanished on
+    // restart.
+    //
+    // That is the exact failure the no-mock-fallback rule exists to
+    // kill, and it sat on the path where Jamar reported never getting
+    // notified about incoming proposals. A recipient with no users row,
+    // or one connection blip, and the notification was gone silently.
+    //
+    // Now it is loud. The write still does not throw, because a failed
+    // notification must not roll back the thing it is announcing, but
+    // it is no longer invisible.
+    // ─────────────────────────────────────────────────────────────
+    console.error(
+      `NOTIFY_WRITE_FAILED user=${row.userId} kind=${row.kind}`,
+      err,
+    );
   }
 
   return row;

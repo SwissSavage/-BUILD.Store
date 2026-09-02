@@ -18,7 +18,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
 import { memberLabel } from "@/lib/member-label";
-import { listInboundSubmissions } from "@/lib/mock-data/inbound-submissions";
+import { listInboundSubmissionsLive } from "@/lib/readers/inbound-submissions";
 import { getAdminUsers } from "@/lib/readers/users";
 import { safely } from "@/lib/readers";
 import { scoreTalentMatch } from "@/lib/talent-match";
@@ -85,11 +85,15 @@ export default async function AdminInboundPage({
   const status = isStatus(sp.status) ? sp.status : undefined;
   const assignee = sp.assignee ? sp.assignee : undefined;
 
-  const rows = listInboundSubmissions({
-    kind,
-    status,
-    assignedAdminId: assignee,
-  });
+  const rows = await safely(
+    () =>
+      listInboundSubmissionsLive({
+        kind,
+        status,
+        assignedAdminId: assignee,
+      }),
+    [],
+  );
   // Reader swap 2026-08-29: assignment dropdown listed seed admins.
   const { users: admins } = await safely(() => getAdminUsers(), {
     users: [],
@@ -97,7 +101,7 @@ export default async function AdminInboundPage({
   });
 
   // Top-of-page counts.
-  const allRows = listInboundSubmissions();
+  const allRows = await safely(() => listInboundSubmissionsLive(), []);
   const counts: Record<InboundSubmissionStatus, number> = {
     new: 0,
     in_triage: 0,

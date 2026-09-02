@@ -1267,6 +1267,15 @@ export const inboundSubmissions = pgTable("inbound_submissions", {
   submitterCompany: text("submitter_company"),
   pillarTags: jsonb("pillar_tags").$type<string[]>().notNull().default([]),
   keywordTags: jsonb("keyword_tags").$type<string[]>().notNull().default([]),
+  /**
+   * Machine-proposed tags awaiting admin review. Lived only on the
+   * TypeScript type until 0023, so accept and reject had nowhere to
+   * write and never persisted.
+   */
+  proposedKeywordTags: jsonb("proposed_keyword_tags")
+    .$type<string[]>()
+    .notNull()
+    .default([]),
   body: text("body").notNull(),
   attachments: jsonb("attachments").notNull().default([]),
   assignedAdminId: text("assigned_admin_id").references(() => users.id),

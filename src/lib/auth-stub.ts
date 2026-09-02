@@ -22,7 +22,6 @@
  */
 import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
-import { MOCK_USERS } from "@/lib/mock-data/users";
 import { db } from "@/db/client";
 import { users as usersTable } from "@/db/schema";
 import type { User } from "@/lib/types";
@@ -31,24 +30,40 @@ const COOKIE_NAME = "bs_uid";
 const REAL_COOKIE_NAME = "bs_uid_real";
 
 /**
- * Load a user by id from the DB. Falls back to MOCK_USERS if the DB
- * row isn't present (covers the case where seed data wasn't loaded
- * into Postgres yet, or a mock-only user id from the sandbox
- * dropdown). Cast the DB row shape into the domain User interface.
+ * Load a user by id. DATABASE ONLY.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * SECURITY FIX (2026-09-02)
+ *
+ * This used to fall back to MOCK_USERS when the row was missing OR
+ * when the database threw. MOCK_USERS contains u_jamar with
+ * isAdmin: true.
+ *
+ * Combined with the unsigned bs_uid cookie below and a middleware that
+ * counted that cookie as a session, the chain was:
+ *
+ *   1. Set cookie bs_uid=u_jamar in any browser
+ *   2. Middleware sees a "session" and allows /admin/*
+ *   3. loadUserById finds no row, falls back to the fixture
+ *   4. Fixture Jamar has isAdmin: true, so requireAdmin() passes
+ *
+ * Full administrative access from one cookie value, no credentials,
+ * on production. The database being unreachable made it easier rather
+ * than harder, since the catch swallowed the error and fell through.
+ *
+ * A missing row now returns null. An unreachable database now throws
+ * rather than quietly answering with seed data, because "we cannot
+ * verify who you are" must never resolve to "you are an admin".
+ * ─────────────────────────────────────────────────────────────
  */
 async function loadUserById(id: string): Promise<User | null> {
-  try {
-    const [row] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
-    if (row) {
-      // The DB row shape maps 1:1 to the User interface per schema
-      // design. Cast is safe as long as schema.ts and types.ts stay
-      // aligned.
-      return row as unknown as User;
-    }
-  } catch {
-    // DB unreachable / not seeded — fall through to mock lookup.
-  }
-  return MOCK_USERS.find((u) => u.id === id) ?? null;
+  const [row] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, id))
+    .limit(1);
+  // The DB row shape maps 1:1 to the User interface per schema design.
+  return (row as unknown as User) ?? null;
 }
 
 /** Server-component helper. Auth.js session first, then sandbox cookie fallback. */
@@ -68,11 +83,41 @@ export async function getCurrentUser(): Promise<User | null> {
     // Auth.js not configured or errored — fall through to cookie.
   }
 
-  // Sandbox impersonation / view-as cookie.
+  // View-as, and ONLY view-as.
+  //
+  // The bs_uid cookie is unsigned and browser-settable, so it can no
+  // longer establish identity on its own. It is now strictly a lens
+  // applied on top of a real Auth.js session belonging to an admin:
+  // no session means the cookie is ignored, and a non-admin session
+  // means the cookie is ignored.
+  //
+  // Previously this branch ran whenever Auth.js returned nothing,
+  // which is exactly the situation an attacker creates by simply not
+  // signing in.
   const jar = await cookies();
-  const uid = jar.get(COOKIE_NAME)?.value;
+  const uid = jar.get(COOKIE_NAME)?.value?.trim();
   if (!uid) return null;
+
+  const viewer = await currentSessionUser();
+  if (!viewer?.isAdmin) return null;
+
   return loadUserById(uid);
+}
+
+/**
+ * The Auth.js session user, with no cookie fallback of any kind.
+ * Used to decide whether view-as is permitted at all.
+ */
+async function currentSessionUser(): Promise<User | null> {
+  try {
+    const { auth } = await import("@/lib/auth");
+    const session = await auth();
+    const id = (session?.user as { id?: string } | undefined)?.id;
+    if (!id) return null;
+    return await loadUserById(id);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -81,8 +126,14 @@ export async function getCurrentUser(): Promise<User | null> {
  */
 export async function getOriginalAdminUser(): Promise<User | null> {
   const jar = await cookies();
-  const realUid = jar.get(REAL_COOKIE_NAME)?.value;
+  const realUid = jar.get(REAL_COOKIE_NAME)?.value?.trim();
   if (!realUid) return null;
+
+  // Same rule as above: the cookie names who to show, it does not
+  // prove who you are. The Auth.js session does that.
+  const viewer = await currentSessionUser();
+  if (!viewer?.isAdmin) return null;
+
   const user = await loadUserById(realUid);
   return user && user.isAdmin ? user : null;
 }

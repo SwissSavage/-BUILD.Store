@@ -24,7 +24,6 @@ const SESSION_COOKIES = [
   "next-auth.session-token",
   "__Secure-next-auth.session-token",
 ];
-const IMPERSONATION_COOKIE = "bs_uid";
 
 export function middleware(req: NextRequest) {
   const jar = req.cookies;
@@ -35,9 +34,26 @@ export function middleware(req: NextRequest) {
   // dropping it. Treat empty as "no session" so those requests
   // redirect to /signin instead of the app.
   const cookieValue = (name: string) => (jar.get(name)?.value ?? "").trim();
-  const hasSession =
-    SESSION_COOKIES.some((name) => cookieValue(name).length > 0) ||
-    cookieValue(IMPERSONATION_COOKIE).length > 0;
+  // ─────────────────────────────────────────────────────────────
+  // SECURITY FIX (2026-09-02)
+  //
+  // bs_uid used to count as a session here. It is unsigned and
+  // browser-settable, so anyone could set it to a known user id and
+  // this gate would wave them through to /admin/*. getCurrentUser then
+  // resolved that id against MOCK_USERS, which contains an account
+  // with isAdmin: true.
+  //
+  // One cookie, no credentials, full admin. Both halves are now
+  // closed: the cookie no longer establishes identity in auth-stub,
+  // and it no longer counts as a session here.
+  //
+  // It remains a view-as lens, which only applies on top of a real
+  // Auth.js session belonging to an admin. Someone holding only this
+  // cookie has no session and belongs at /signin.
+  // ─────────────────────────────────────────────────────────────
+  const hasSession = SESSION_COOKIES.some(
+    (name) => cookieValue(name).length > 0,
+  );
 
   if (hasSession) return NextResponse.next();
 

@@ -528,46 +528,68 @@ async function CohortRail() {
     safely(() => activeRecognitionUserIds(), new Set<string>()),
   ]);
 
+  const now = new Date();
+  const thisPeriod = periodKeyFor(now, "month");
+
+  // A curated spotlight governs ITS OWN PERIOD ONLY.
+  //
+  // It used to be "the newest spotlight row wins, forever". A curated
+  // row written in July then governed September, and because the rail
+  // rendered exactly its userIds, anyone who joined after it was
+  // invisible. Worse, ids that no longer resolve against the users
+  // table filtered down to an empty array and the whole section
+  // returned null — a hand-written row from two months ago silently
+  // blanking the live join feed.
   const curated =
-    [...spotlights].sort((a, b) =>
-      b.periodKey.localeCompare(a.periodKey),
-    )[0] ?? null;
+    [...spotlights].find((s) => s.periodKey === thisPeriod.key) ?? null;
 
   // Everyone eligible to appear, IN THE ORDER THEY JOINED.
   //
   // Ascending, not newest-first: this is a cohort, and a cohort reads
-  // as the sequence people arrived in. Newest-first also meant the
-  // rail reshuffled every signup, so nobody held a position.
+  // as the sequence people arrived in. Newest-first also reshuffled
+  // the rail on every signup, so nobody held a position.
   const eligible = roster
-    .filter((u) => u.membershipTier !== "viewer")
     .filter((u) => publicProfileEligible(u, recognizedIds))
     .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
 
-  // Accounts that exist but are still sitting at the signup default.
-  //
-  // `createUser` in auth.ts stamps every magic-link signup as
-  // "viewer"; only completing an invite promotes anyone. So people who
-  // were handed the URL and signed in directly land as viewers and are
-  // invisible here — correctly, since a viewer hasn't joined anything,
-  // but indistinguishably from "nobody has signed up", which is the
-  // failure mode this note exists to break.
-  const pendingTier = roster.filter(
-    (u) => u.membershipTier === "viewer",
-  ).length;
+  // Curated picks lead, then everyone else who joined, in join order.
+  // CURATION ADDS, IT NEVER SUBTRACTS. Highlighting one person must not
+  // delete the other six from the feed.
+  const pinned = (curated?.userIds ?? [])
+    .map((id) => roster.find((u) => u.id === id))
+    .filter((u): u is (typeof roster)[number] => !!u)
+    .filter((u) => publicProfileEligible(u, recognizedIds));
 
-  const users = curated
-    ? curated.userIds
-        .map((id) => roster.find((u) => u.id === id))
-        .filter((u): u is (typeof roster)[number] => !!u)
-    : eligible.slice(0, MAX_COHORT);
-  const overflow = curated ? 0 : Math.max(0, eligible.length - users.length);
+  const ordered = [
+    ...pinned,
+    ...eligible.filter((u) => !pinned.some((p) => p.id === u.id)),
+  ];
+  const users = ordered.slice(0, MAX_COHORT);
+  const overflow = Math.max(0, ordered.length - users.length);
+
+  // Why anyone in the roster is NOT on the rail — counted from the
+  // roster, not assumed. Surfaced to admins below, because a rail that
+  // renders nothing is indistinguishable from nobody having signed up.
+  const excluded = {
+    viewer: roster.filter((u) => u.membershipTier === "viewer").length,
+    optedOut: roster.filter((u) => u.profilePublic === false).length,
+    partnerNotRecognized: roster.filter(
+      (u) =>
+        u.membershipTier !== "member" &&
+        u.membershipTier !== "viewer" &&
+        u.profilePublic !== false &&
+        !recognizedIds.has(u.id),
+    ).length,
+  };
+  const totalRoster = roster.length;
 
   if (users.length === 0) {
-    // Nothing eligible. If accounts exist but are all sitting at
-    // "viewer", say so — to an admin only. The silent null here is
-    // what made seven real signups look like zero.
+    // Nothing eligible to show. Report the roster to an admin instead
+    // of rendering null — COUNTED FROM THE ROSTER, not assumed. A rail
+    // that silently disappears is indistinguishable from nobody having
+    // signed up, and guessing at the reason wastes everyone's time.
     const viewer = await safely(() => getCurrentUser(), null);
-    if (!viewer?.isAdmin || pendingTier === 0) return null;
+    if (!viewer?.isAdmin || totalRoster === 0) return null;
     return (
       <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
         <div className="mx-auto max-w-app px-6 py-10">
@@ -575,30 +597,24 @@ async function CohortRail() {
             This month&apos;s cohort · admin only
           </div>
           <p className="mt-2 max-w-2xl text-ink-muted">
-            {pendingTier} {pendingTier === 1 ? "account has" : "accounts have"}{" "}
-            signed up but{" "}
-            {pendingTier === 1 ? "is" : "are"} still set to{" "}
-            <strong className="text-ink">Viewer</strong>, so{" "}
-            {pendingTier === 1 ? "it doesn't" : "they don't"} appear here.
-            Signing in with a magic link doesn&apos;t grant membership —
-            only completing an invite does. Set their tier and they show
-            up in join order.
+            {totalRoster} {totalRoster === 1 ? "account" : "accounts"} in
+            the roster, none eligible for the public rail.
           </p>
+          <RosterBreakdown excluded={excluded} />
           <Link
             href="/admin/members"
             className="mt-4 inline-block rounded-full bg-brand-magenta px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
           >
-            Set member tiers →
+            Open member admin →
           </Link>
         </div>
       </section>
     );
   }
 
-  const now = new Date();
   const spotlight = curated ?? {
-    periodKey: periodKeyFor(now, "month").key,
-    periodLabel: periodKeyFor(now, "month").label,
+    periodKey: thisPeriod.key,
+    periodLabel: thisPeriod.label,
     headline:
       users.length === 1
         ? `${publicName(users[0])} joined the cooperative`
@@ -680,30 +696,65 @@ async function CohortRail() {
             </ul>
           )}
         </div>
-        {pendingTier > 0 && <PendingTierNote count={pendingTier} />}
+        {users.length < totalRoster && (
+          <AdminRosterNote shown={users.length} total={totalRoster} excluded={excluded} />
+        )}
       </div>
     </section>
   );
 }
 
+/** Why roster members aren't on the rail — plain counts, no inference. */
+function RosterBreakdown({
+  excluded,
+}: {
+  excluded: { viewer: number; optedOut: number; partnerNotRecognized: number };
+}) {
+  const reasons = [
+    [excluded.viewer, "still set to Viewer"],
+    [excluded.optedOut, "opted out of a public profile"],
+    [excluded.partnerNotRecognized, "Partners outside a recognition window"],
+  ] as const;
+  const live = reasons.filter(([n]) => n > 0);
+  if (live.length === 0) return null;
+  return (
+    <ul className="mt-3 space-y-1 text-xs text-ink-faint">
+      {live.map(([n, why]) => (
+        <li key={why}>
+          {n} {why}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
- * Admin-only: accounts stuck at the signup default.
+ * Admin-only footer: what the rail is showing vs what's in the roster.
  *
- * Renders nothing for everyone else, so it can sit inside a public
- * section without leaking that anyone is waiting.
+ * Renders nothing for everyone else, so it sits inside a public section
+ * without leaking that anyone is held back.
  */
-async function PendingTierNote({ count }: { count: number }) {
+async function AdminRosterNote({
+  shown,
+  total,
+  excluded,
+}: {
+  shown: number;
+  total: number;
+  excluded: { viewer: number; optedOut: number; partnerNotRecognized: number };
+}) {
   const viewer = await safely(() => getCurrentUser(), null);
   if (!viewer?.isAdmin) return null;
   return (
-    <p className="mt-6 border-t border-[var(--surface-border)] pt-4 text-xs text-ink-faint">
-      Admin only — {count} more{" "}
-      {count === 1 ? "account is" : "accounts are"} signed up at{" "}
-      <strong className="text-ink-muted">Viewer</strong> and not shown.{" "}
-      <Link href="/admin/members" className="text-brand-magenta hover:underline">
-        Set their tier →
-      </Link>
-    </p>
+    <div className="mt-6 border-t border-[var(--surface-border)] pt-4">
+      <p className="text-xs text-ink-faint">
+        Admin only — showing {shown} of {total} accounts.{" "}
+        <Link href="/admin/members" className="text-brand-magenta hover:underline">
+          Member admin →
+        </Link>
+      </p>
+      <RosterBreakdown excluded={excluded} />
+    </div>
   );
 }
 

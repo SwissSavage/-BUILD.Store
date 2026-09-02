@@ -10,6 +10,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth-stub";
+import { getCompletedStepIds } from "@/lib/readers/walkthrough";
 import { getBalance, getTransactions } from "@/lib/wallet-stub";
 import { getAllProjects } from "@/lib/readers/projects";
 import { orderReader, safely } from "@/lib/readers";
@@ -40,7 +41,6 @@ import { getAllUsers } from "@/lib/readers/users";
 import { HubspotStageBadge } from "@/components/HubspotStageBadge";
 import { FeedbackPrompt } from "@/components/FeedbackPrompt";
 import {
-  completedStepIds,
   stepsForUser,
 } from "@/lib/mock-data/walkthroughs";
 
@@ -89,7 +89,10 @@ export default async function DashboardPage() {
     user.membershipTier === "viewer"
       ? []
       : stepsForUser(user.membershipTier, pillars);
-  const walkthroughDone = completedStepIds(user.id);
+  const walkthroughDone = await safely(
+    () => getCompletedStepIds(user.id),
+    new Set<string>(),
+  );
   const walkthroughTotal = walkthroughSteps.length;
   const walkthroughDoneCount = walkthroughSteps.filter((s) =>
     walkthroughDone.has(s.id),

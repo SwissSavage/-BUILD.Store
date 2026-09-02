@@ -11,7 +11,7 @@
 
 import { redirect } from "next/navigation";
 import { createHubspotLead } from "@/lib/crm-stub";
-import { pushInboundSubmission } from "@/lib/mock-data/inbound-submissions";
+import { insertInboundSubmission } from "@/lib/writers/inbound-submissions";
 import { extractKeywords } from "@/lib/talent-match";
 import type { Industry, InboundSubmissionKind } from "@/lib/types";
 import type { SignupIntent } from "./_copy";
@@ -101,7 +101,7 @@ export async function handleSignup(formData: FormData) {
     : []);
   const resolvedPillars: Industry[] =
     pillars.length > 0 ? (pillars as Industry[]) : pillarFallback;
-  pushInboundSubmission({
+  await insertInboundSubmission({
     kind: kindMap[intent],
     status: "new",
     title: `${titlePrefix[intent]} · ${firstName} ${lastName}`.trim(),

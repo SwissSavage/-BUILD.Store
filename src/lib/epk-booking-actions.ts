@@ -25,10 +25,8 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { epkForUser } from "@/lib/mock-data/artist-epk";
 import { MOCK_MEETINGS, meetingById } from "@/lib/mock-data/calendar";
-import {
-  MOCK_INBOUND_SUBMISSIONS,
-  pushInboundSubmission,
-} from "@/lib/mock-data/inbound-submissions";
+import { MOCK_INBOUND_SUBMISSIONS } from "@/lib/mock-data/inbound-submissions";
+import { insertInboundSubmission } from "@/lib/writers/inbound-submissions";
 import { notify } from "@/lib/writers/notifications";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { CalendarMeeting, Notification, NotificationKind } from "@/lib/types";
@@ -126,7 +124,7 @@ export async function createEpkBookingRequest(formData: FormData) {
   // Inbound submission so admin triages the brief alongside other
   // inbound. Status starts "new"; admin moves it through in_triage →
   // converted as they handle.
-  pushInboundSubmission({
+  await insertInboundSubmission({
     kind: "booking_request",
     status: "new",
     title: `Booking request for ${artist.firstName ?? artist.handle} from ${requesterName}`,

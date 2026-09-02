@@ -56,11 +56,17 @@ data.
   Dokploy env. NEVER report which database production uses by reading
   the local `.env` — that has already produced one confidently wrong
   answer. Ask, or read it from Dokploy.
-- **OPEN QUESTION: is Supabase self-hosted or a supabase.com project?**
-  The 2026-08-29 cutover note says Bayu "installed Supabase on
-  Dokploy", which points at self-hosted, but this is NOT confirmed.
-  Until it is, make no claim about where the data physically sits, who
-  holds a copy, or who is responsible for backups.
+- **Supabase is SELF-HOSTED.** Confirmed 2026-09-02 by Kong gateway
+  logs (`/usr/local/kong/kong.yml`, openresty); a supabase.com project
+  never surfaces gateway container logs. So the data sits on our own
+  disk, no third party holds a copy, and backups are entirely our
+  responsibility. A backup that has never been restored is not a
+  backup, and there is no vendor underneath us.
+- **Still unconfirmed: which Postgres the brute-force logs belong to.**
+  Self-hosted Supabase does not establish whether those auth failures
+  hit Supabase's own Postgres or a separate database service on the
+  same host. The port scanning predates the 08-29 cutover by a day,
+  which points at a pre-existing service, but that is inference.
 - **Do not assume any Postgres host is decommissioned.** A host without
   "supabase" in its name can still be the live Supabase Postgres, since
   a self-hosted install runs on your own domain. Checking the hostname

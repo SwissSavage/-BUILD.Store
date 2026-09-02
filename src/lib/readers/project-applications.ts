@@ -93,3 +93,23 @@ export async function findPendingApplication(
     );
   }
 }
+
+/**
+ * Every proposal a member has submitted, newest first.
+ *
+ * Added 2026-09-02. /profile was calling applicationsByUser from
+ * mock-data, so a member's own proposal count read from seed data and
+ * showed zero for everyone real. Billy: "my signed agreements etc are
+ * showing up as if I haven't done anything, whereas I should see at
+ * least 1 signed agreement and 1 proposal sent."
+ */
+export async function getApplicationsForUser(
+  userId: string,
+): Promise<ProjectApplication[]> {
+  const rows = await db
+    .select()
+    .from(projectApplications)
+    .where(eq(projectApplications.userId, userId))
+    .orderBy(desc(projectApplications.createdAt));
+  return rows as unknown as ProjectApplication[];
+}

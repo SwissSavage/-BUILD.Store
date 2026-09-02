@@ -14,7 +14,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users as usersTable } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { applicationsByUser } from "@/lib/mock-data/project-applications";
+import { getApplicationsForUser } from "@/lib/readers/project-applications";
 import {
   getAttributionForUser,
   mvpScoreReader,
@@ -39,7 +39,7 @@ import {
   removeMyTalentTag,
   rescanMyTalentTags,
 } from "@/lib/talent-tag-actions";
-import { agreementsForUser } from "@/lib/mock-data/agreements";
+import { getAgreementsForUser } from "@/lib/readers/agreements";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import {
   AGREEMENT_PROVIDER_LABELS,
@@ -50,6 +50,7 @@ import {
 import { Card, CardEyebrow } from "@/components/Card";
 import { TierBadge } from "@/components/TierBadge";
 import { Avatar } from "@/components/Avatar";
+import { ShareProfileBar } from "@/components/ShareProfileBar";
 import { MvpCard } from "@/components/MvpCard";
 
 const ALL_INDUSTRIES: Industry[] = ["stem", "creative-media", "professional-services"];
@@ -195,7 +196,13 @@ export default async function ProfilePage() {
   // Client-side (users with projects where they're the client) view
   // ships when task #44 magic-link → optional account creation lands;
   // the shape below is talent-first.
-  const myApplications = applicationsByUser(user.id);
+  const myApplications = await safely(
+    () => getApplicationsForUser(user.id),
+    [],
+  );
+  // Hoisted: this used to be fetched inside a JSX IIFE, which cannot
+  // await. Both reads now sit with the rest of the page's data.
+  const myAgreements = await safely(() => getAgreementsForUser(user.id), []);
   const myProposalsSent = myApplications.length;
   const myProposalsAccepted = myApplications.filter(
     (a) => a.status === "approved",
@@ -296,6 +303,8 @@ export default async function ProfilePage() {
           </div>
         </div>
       </section>
+
+      {user.handle && <ShareProfileBar handle={user.handle} />}
 
       {/* Section jump. Sticky under the app nav so scrolling stays
           oriented. Uses native anchor jumps — no JS required. */}
@@ -682,7 +691,6 @@ export default async function ProfilePage() {
       )}
 
       {(() => {
-        const myAgreements = agreementsForUser(user.id);
         return (
           <Card className="mt-6">
             <CardEyebrow>Paperwork on file</CardEyebrow>

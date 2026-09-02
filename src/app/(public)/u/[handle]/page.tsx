@@ -22,10 +22,10 @@ import {
 } from "@/lib/readers";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import {
-  activeRecognitionsForUser,
-  recognitionsForUser,
-} from "@/lib/mock-data/future-modernist-recognitions";
-import { canonizationsForUser } from "@/lib/mock-data/canonizations";
+  getRecognitionsForUser,
+  getCanonizationsForUser,
+  splitActiveRecognitions,
+} from "@/lib/readers/recognitions";
 import { createEpkBookingRequest } from "@/lib/epk-booking-actions";
 import { profileShouldIndex } from "@/lib/profile-visibility";
 import {
@@ -141,6 +141,10 @@ export default async function PublicProfilePage({
   // Partners without an MVP snapshot fall to "standard" — calm brand
   // gradient, falls outside the rarity ladder. Provisional members also
   // get "standard" so unproven track records aren't visually rewarded.
+  const [myRecognitions, myCanonizations] = await Promise.all([
+    safely(() => getRecognitionsForUser(user.id), []),
+    safely(() => getCanonizationsForUser(user.id), []),
+  ]);
   const [mvpSnapshot, allScores, { users: allUsers }] = await Promise.all([
     safely(() => mvpScoreReader.byId(user.id), null),
     safely(() => mvpScoreReader.all(), []),
@@ -374,10 +378,8 @@ export default async function PublicProfilePage({
         // recognition is meant to be celebrated externally). Unlike MVP
         // Score, which is cooperative-internal, recognitions are the
         // public flag that something noteworthy landed.
-        const active = activeRecognitionsForUser(user.id);
-        const past = recognitionsForUser(user.id).filter(
-          (r) => r.id !== active.month?.id && r.id !== active.year?.id,
-        );
+        const active = splitActiveRecognitions(myRecognitions);
+        const past = active.past;
         if (!active.month && !active.year && past.length === 0) return null;
         return (
           <section className="mt-10">
@@ -436,7 +438,7 @@ export default async function PublicProfilePage({
         // bound account. The card's tier (gray / green / blue / magenta /
         // gold) reflects their year-end rarity band — climbing the
         // ladder year-over-year becomes a visible cooperative arc.
-        const canon = canonizationsForUser(user.id);
+        const canon = myCanonizations;
         if (canon.length === 0) return null;
         return (
           <section className="mt-12">

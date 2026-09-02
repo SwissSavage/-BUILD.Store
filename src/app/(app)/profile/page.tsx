@@ -50,6 +50,7 @@ import {
 import { Card, CardEyebrow } from "@/components/Card";
 import { TierBadge } from "@/components/TierBadge";
 import { Avatar } from "@/components/Avatar";
+import { ShareProfileBar } from "@/components/ShareProfileBar";
 import { MvpCard } from "@/components/MvpCard";
 
 const ALL_INDUSTRIES: Industry[] = ["stem", "creative-media", "professional-services"];
@@ -302,6 +303,8 @@ export default async function ProfilePage() {
           </div>
         </div>
       </section>
+
+      {user.handle && <ShareProfileBar handle={user.handle} />}
 
       {/* Section jump. Sticky under the app nav so scrolling stays
           oriented. Uses native anchor jumps — no JS required. */}

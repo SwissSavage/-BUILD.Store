@@ -1,3 +1,4 @@
+import { secureToken } from "@/lib/secure-token";
 /**
  * ============================================================
  * STUB — transactional email (Phase 1.2).
@@ -42,7 +43,7 @@ export async function sendClientProposalEmail(
  * lookup index.
  */
 export function generateProposalToken(): string {
-  const rand = Math.random().toString(36).slice(2, 14);
-  const stamp = Date.now().toString(36);
-  return `tk_${rand}${stamp}`;
+  // The comment above this function asked for exactly this and had
+  // been carrying "in production, swap for..." into production.
+  return secureToken("tk");
 }

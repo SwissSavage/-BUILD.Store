@@ -28,6 +28,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/db/client";
+import { secureToken } from "@/lib/secure-token";
 import { customerFeedback as customerFeedbackTable } from "@/db/schema";
 import { getProjectById } from "@/lib/readers/projects";
 import { customerFeedbackReader, minutesReader } from "@/lib/readers";
@@ -41,9 +42,9 @@ function nextFeedbackId(): string {
 }
 
 function nextConfirmationToken(): string {
-  return `cfconf_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
+  // Documented as "the token IS the credential", so it needs to behave
+  // like one. Six characters from Math.random did not.
+  return secureToken("cfconf");
 }
 
 /**

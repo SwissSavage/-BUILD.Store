@@ -56,11 +56,17 @@ data.
   Dokploy env. NEVER report which database production uses by reading
   the local `.env` — that has already produced one confidently wrong
   answer. Ask, or read it from Dokploy.
-- **OPEN QUESTION: is Supabase self-hosted or a supabase.com project?**
-  The 2026-08-29 cutover note says Bayu "installed Supabase on
-  Dokploy", which points at self-hosted, but this is NOT confirmed.
-  Until it is, make no claim about where the data physically sits, who
-  holds a copy, or who is responsible for backups.
+- **Supabase is SELF-HOSTED.** Confirmed 2026-09-02 by Kong gateway
+  logs (`/usr/local/kong/kong.yml`, openresty); a supabase.com project
+  never surfaces gateway container logs. So the data sits on our own
+  disk, no third party holds a copy, and backups are entirely our
+  responsibility. A backup that has never been restored is not a
+  backup, and there is no vendor underneath us.
+- **Still unconfirmed: which Postgres the brute-force logs belong to.**
+  Self-hosted Supabase does not establish whether those auth failures
+  hit Supabase's own Postgres or a separate database service on the
+  same host. The port scanning predates the 08-29 cutover by a day,
+  which points at a pre-existing service, but that is inference.
 - **Do not assume any Postgres host is decommissioned.** A host without
   "supabase" in its name can still be the live Supabase Postgres, since
   a self-hosted install runs on your own domain. Checking the hostname
@@ -105,6 +111,19 @@ matches the latest commit before assuming the code is wrong.
   reachable-but-empty table is a legitimate answer. Substituting
   fixtures for real data hides a misconfiguration behind fake members,
   which is the exact failure the Postgres cutover exists to kill.
+- **MOVE THE READER AND THE WRITER TOGETHER.** The single most
+  repeated bug in this codebase: a surface writes to Postgres and reads
+  from a fixture, or the reverse. Either way the page shows seed data
+  and real work vanishes, and the reverse is worse because the data
+  lands correctly and is invisible from the moment it arrives. It hit
+  the walkthrough, feedback, inbound submissions, recognitions,
+  canonizations, agreements and the profile. On 2026-09-02 I caused one
+  myself, moving three inbound writers without the reader, hours after
+  writing a commit explaining this exact rule.
+  `npm run typecheck` now runs `scripts/check-fixture-usage.mjs`, a
+  ratchet on the number of files importing `@/lib/mock-data`. It can go
+  down, never up. Vigilance did not work; a number that cannot rise
+  does.
 - **An empty state must be distinguishable from a broken one.** If a
   surface can render nothing, it needs an admin-visible reason counted
   from the data, not inferred. A section that silently returns `null`

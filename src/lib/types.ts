@@ -2117,9 +2117,13 @@ export const PROJECT_APPLICATION_STATUS_LABELS: Record<
   ProjectApplicationStatus,
   string
 > = {
-  pending: "Pending review",
-  approved: "Approved",
-  rejected: "Not this time",
+  // Column values stay pending/approved/rejected — these are the labels
+  // only. A contractor proposes and a team gets assembled from who is
+  // available, so "Approved" framed it as a petition granted, which is
+  // backwards for how the cooperative actually staffs work.
+  pending: "Awaiting selection",
+  approved: "Selected",
+  rejected: "Not this round",
   withdrawn: "Withdrawn",
 };
 

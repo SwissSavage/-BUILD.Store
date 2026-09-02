@@ -21,8 +21,10 @@ import { redirect } from "next/navigation";
 import { randomBytes } from "crypto";
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { jobApplications, projectApplications, projects } from "@/db/schema";
+import { jobApplications, jobs, projectApplications, projects } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
+import { getAdminUsers } from "@/lib/readers/users";
+import { publicName } from "@/lib/types";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import {
@@ -100,8 +102,21 @@ export async function submitJobApplication(formData: FormData): Promise<void> {
     reason: `Job application ${id} for job ${jobId}`,
   });
 
+  const [job] = await db
+    .select({ title: jobs.title })
+    .from(jobs)
+    .where(eq(jobs.id, jobId))
+    .limit(1);
+
+  await notifyAdminsOfProposal({
+    title: `New application — ${job?.title ?? "job"}`,
+    body: `${publicName(user)} applied. Review in the applications queue.`,
+    href: "/admin/jobs/applications",
+  });
+
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/admin/jobs/applications");
+  revalidatePath("/notifications");
 }
 
 /**
@@ -143,6 +158,7 @@ export async function submitContractBid(formData: FormData): Promise<void> {
   const [contract] = await db
     .select({
       id: projects.id,
+      title: projects.title,
       kind: projects.kind,
       status: projects.status,
       isRfp: projects.isRfp,
@@ -210,8 +226,56 @@ export async function submitContractBid(formData: FormData): Promise<void> {
     reason: `Contract bid ${id} on contract ${contractId}`,
   });
 
+  await notifyAdminsOfProposal({
+    title: `New proposal — ${contract.title}`,
+    body: `${publicName(user)} submitted a proposal. Review it in the proposals queue.`,
+    href: "/admin/projects/applications",
+  });
+
   revalidatePath(`/contracts/${contractId}`);
   revalidatePath("/admin/projects/applications");
+  revalidatePath("/notifications");
+}
+
+/**
+ * Tell every admin a proposal came in.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-09-01)
+ *
+ * Both submit paths wrote the row and stopped. Only the DECISION
+ * notified anyone, and it notified the applicant — so a contractor
+ * could submit a proposal and nobody on the FM side learned about it
+ * until someone happened to open the triage queue. Jamar: "still not
+ * getting notifications when proposals are submitted."
+ *
+ * Best-effort by design. A notification that fails must not roll back
+ * a proposal that was already accepted — the contractor did their part
+ * and the row is committed. Failure is logged for the operator instead
+ * of thrown at the applicant.
+ * ─────────────────────────────────────────────────────────────
+ */
+async function notifyAdminsOfProposal(input: {
+  title: string;
+  body: string;
+  href: string;
+}): Promise<void> {
+  try {
+    const { users } = await getAdminUsers();
+    await Promise.all(
+      users.map((admin) =>
+        notify({
+          userId: admin.id,
+          kind: "project_application",
+          title: input.title,
+          body: input.body,
+          href: input.href,
+        }),
+      ),
+    );
+  } catch (err) {
+    console.error("PROPOSAL_NOTIFY_FAILED", input.href, err);
+  }
 }
 
 /**

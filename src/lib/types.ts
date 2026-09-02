@@ -4074,6 +4074,7 @@ export type AuditLogAction =
   | "user.created"
   | "user.membership_tier_changed"
   | "user.profile_public_toggled"
+  | "user.data_participation_changed"
   | "user.admin_flag_changed"
   | "user.suspended"
   | "user.reactivated"
@@ -4188,6 +4189,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "user.failed_signin": "Failed sign-in attempt",
   "user.created": "User created",
   "user.membership_tier_changed": "Membership tier changed",
+  "user.data_participation_changed":
+    "Tier-2 data participation opt-in changed",
   "user.profile_public_toggled": "Profile visibility toggled",
   "user.admin_flag_changed": "Admin flag changed",
   "user.suspended": "Account suspended",

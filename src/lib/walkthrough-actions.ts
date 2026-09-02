@@ -13,9 +13,11 @@
  */
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { randomUUID } from "crypto";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_WALKTHROUGH_PROGRESS } from "@/lib/mock-data/walkthroughs";
-import { MOCK_FEEDBACK } from "@/lib/mock-data/feedback";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { feedbackEntries, walkthroughProgress } from "@/db/schema";
 import type { FeedbackSentiment } from "@/lib/types";
 
 const VALID_SENTIMENTS: FeedbackSentiment[] = [
@@ -36,19 +38,31 @@ export async function completeWalkthroughStep(formData: FormData) {
   const stepId = String(formData.get("stepId") ?? "");
   if (!stepId) return;
 
-  const already = MOCK_WALKTHROUGH_PROGRESS.some(
-    (p) => p.userId === user.id && p.stepId === stepId,
-  );
-  if (!already) {
-    MOCK_WALKTHROUGH_PROGRESS.push({
-      id: `wpr_${Date.now()}`,
+  // ─────────────────────────────────────────────────────────────
+  // WHY THIS IS A DB WRITE NOW (2026-09-02)
+  //
+  // Progress was pushed onto an in-memory array, so a member ticked
+  // their way through onboarding, came back after the next deploy, and
+  // found every step unchecked. During onboarding week, with people
+  // being walked through the product, that is the worst possible thing
+  // to forget.
+  //
+  // ON CONFLICT DO NOTHING rather than a read-then-write: two rapid
+  // submits, or a double-click on a step, should not race into two
+  // rows for the same step.
+  // ─────────────────────────────────────────────────────────────
+  await db
+    .insert(walkthroughProgress)
+    .values({
+      id: `wpr_${randomUUID()}`,
       userId: user.id,
       stepId,
       completedAt: new Date().toISOString(),
-    });
-  }
+    })
+    .onConflictDoNothing();
 
   revalidatePath("/walkthrough");
+  revalidatePath("/dashboard");
 }
 
 /**
@@ -84,8 +98,12 @@ export async function submitFeedback(formData: FormData) {
     return;
   }
 
-  MOCK_FEEDBACK.push({
-    id: `fbk_${Date.now()}`,
+  // Feedback was going to an in-memory array too, so what members
+  // said about the product survived until the next restart and no
+  // further. Jamar: "the feedback is already good" — none of it was
+  // being kept.
+  await db.insert(feedbackEntries).values({
+    id: `fbk_${randomUUID()}`,
     userId: user.id,
     surface,
     surfaceLabel,
@@ -121,14 +139,27 @@ export async function triageFeedback(formData: FormData) {
   const status = String(formData.get("status") ?? "");
   const adminNote = String(formData.get("adminNote") ?? "").trim() || null;
 
-  const row = MOCK_FEEDBACK.find((f) => f.id === id);
-  if (!row) return;
   if (status !== "new" && status !== "triaged" && status !== "resolved") return;
 
-  row.status = status;
-  row.adminNote = adminNote;
-  row.triagedBy = user.id;
-  row.triagedAt = new Date().toISOString();
+  // Was mutating the fixture object in place, so an admin triaged a
+  // piece of feedback, saw it move, and found it back in "new" after
+  // the next restart. Guarded on id and reports nothing found rather
+  // than pretending it worked.
+  const updated = await db
+    .update(feedbackEntries)
+    .set({
+      status,
+      adminNote,
+      triagedBy: user.id,
+      triagedAt: new Date().toISOString(),
+    })
+    .where(eq(feedbackEntries.id, id))
+    .returning({ id: feedbackEntries.id });
+
+  if (updated.length === 0) {
+    console.error(`FEEDBACK_TRIAGE_NOT_FOUND id=${id}`);
+    return;
+  }
 
   revalidatePath("/admin/feedback");
 }

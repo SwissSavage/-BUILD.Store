@@ -17,15 +17,14 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
 import {
-  MOCK_CANONIZATIONS,
-  canonizationForYear,
-} from "@/lib/mock-data/canonizations";
-import {
-  MOCK_FUTURE_MODERNIST_RECOGNITIONS,
-} from "@/lib/mock-data/future-modernist-recognitions";
+  futureModernistRecognitions,
+  memberCanonizations,
+} from "@/db/schema";
+import { getAllUsers, getUserById } from "@/lib/readers/users";
+import { mvpScoreReader } from "@/lib/readers";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import { deriveTradingCardTier } from "@/components/TradingCard";
@@ -50,14 +49,37 @@ export async function canonizeYear(formData: FormData) {
   }
   const year = Math.floor(yearRaw);
 
-  const courtIds = new Set(
-    championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS),
-  );
+  // ─────────────────────────────────────────────────────────────
+  // WHY EVERY READ HERE MOVED (2026-09-02)
+  //
+  // This walked MOCK_USERS, scored against MOCK_MVP_SCORES, and pushed
+  // the result onto MOCK_CANONIZATIONS. Run against production it would
+  // have canonized the seed cast and written the result to memory:
+  // fictional people immortalised for a year, real members skipped,
+  // and the whole thing gone on the next restart.
+  //
+  // /u/[handle] was switched to read canonizations from Postgres
+  // earlier today, so the write had to follow or the ceremony would
+  // produce nothing visible anywhere.
+  // ─────────────────────────────────────────────────────────────
+  const [{ users: roster }, allScores, yearRecognitions, existingRows] =
+    await Promise.all([
+      getAllUsers(),
+      mvpScoreReader.all(),
+      db.select().from(futureModernistRecognitions),
+      db
+        .select({ userId: memberCanonizations.userId })
+        .from(memberCanonizations)
+        .where(eq(memberCanonizations.year, year)),
+    ]);
+
+  const courtIds = new Set(championsCourtMembers(allScores, roster));
+  const alreadyCanonized = new Set(existingRows.map((r) => r.userId));
 
   // Eligibility: active Members (always) + Partners with at least one
   // recognition in the year being canonized. Prospects/viewers excluded.
   const recognizedPartnerIds = new Set(
-    MOCK_FUTURE_MODERNIST_RECOGNITIONS
+    yearRecognitions
       .filter((r) => {
         if (r.periodKind === "year") return r.periodLabel === String(year);
         // monthly periodKey is "YYYY-MM"
@@ -69,23 +91,23 @@ export async function canonizeYear(formData: FormData) {
   let createdCount = 0;
   let skippedCount = 0;
 
-  for (const user of MOCK_USERS) {
+  for (const user of roster) {
     const isMember = user.membershipTier === "member";
     const isRecognizedPartner =
       user.membershipTier === "partner" && recognizedPartnerIds.has(user.id);
     if (!isMember && !isRecognizedPartner) continue;
-    if (canonizationForYear(user.id, year)) {
+    if (alreadyCanonized.has(user.id)) {
       skippedCount++;
       continue;
     }
 
-    const snapshot = MOCK_MVP_SCORES.find((s) => s.userId === user.id);
+    const snapshot = allScores.find((s) => s.userId === user.id) ?? null;
     const tier = deriveTradingCardTier({
       ovr: snapshot ? snapshot.ovr : null,
       isProvisional: snapshot?.isProvisional ?? false,
       isInChampionsCourt: courtIds.has(user.id),
     });
-    const recognitionIds = MOCK_FUTURE_MODERNIST_RECOGNITIONS
+    const recognitionIds = yearRecognitions
       .filter((r) => {
         if (r.userId !== user.id) return false;
         if (r.periodKind === "year") return r.periodLabel === String(year);
@@ -105,7 +127,18 @@ export async function canonizeYear(formData: FormData) {
       tokenId: null,
       tbaAddress: null,
     };
-    MOCK_CANONIZATIONS.push(row);
+    await db.insert(memberCanonizations).values({
+      id: row.id,
+      userId: row.userId,
+      year: row.year,
+      tier: row.tier,
+      ovr: row.ovr,
+      recognitionIds: row.recognitionIds,
+      caption: null,
+      frozenAt: row.frozenAt,
+      tokenId: null,
+      tbaAddress: null,
+    });
     createdCount++;
 
     await logAuditEvent({
@@ -126,7 +159,7 @@ export async function canonizeYear(formData: FormData) {
   }
 
   revalidatePath("/admin/mvp/canonization");
-  for (const user of MOCK_USERS) {
+  for (const user of roster) {
     revalidatePath(`/u/${user.handle}`);
   }
   void createdCount;
@@ -142,10 +175,21 @@ export async function setCanonizationCaption(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();
   const caption = String(formData.get("caption") ?? "").trim();
-  const row = MOCK_CANONIZATIONS.find((c) => c.id === id);
+  const [row] = await db
+    .select({
+      id: memberCanonizations.id,
+      caption: memberCanonizations.caption,
+      userId: memberCanonizations.userId,
+    })
+    .from(memberCanonizations)
+    .where(eq(memberCanonizations.id, id))
+    .limit(1);
   if (!row) throw new Error("Canonization not found");
   const before = row.caption;
-  row.caption = caption.length === 0 ? null : caption;
+  await db
+    .update(memberCanonizations)
+    .set({ caption: caption.length === 0 ? null : caption })
+    .where(eq(memberCanonizations.id, id));
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -154,10 +198,10 @@ export async function setCanonizationCaption(formData: FormData) {
     resourceKind: "canonization",
     resourceId: row.id,
     before: { caption: before },
-    after: { caption: row.caption },
+    after: { caption: caption.length === 0 ? null : caption },
   });
 
-  const target = MOCK_USERS.find((u) => u.id === row.userId);
+  const target = await getUserById(row.userId);
   revalidatePath("/admin/mvp/canonization");
   if (target) revalidatePath(`/u/${target.handle}`);
 }

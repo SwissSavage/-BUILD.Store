@@ -14,12 +14,11 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import {
-  MOCK_FUTURE_MODERNIST_RECOGNITIONS,
-  periodKeyFor,
-  recognitionForPeriod,
-} from "@/lib/mock-data/future-modernist-recognitions";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { futureModernistRecognitions } from "@/db/schema";
+import { getUserById } from "@/lib/readers/users";
+import { periodKeyFor } from "@/lib/recognition-period";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { FutureModernistRecognition } from "@/lib/types";
 
@@ -54,13 +53,21 @@ export async function selectFutureModernist(formData: FormData) {
       "Narrative must be at least 50 characters — recognitions ship with editorial weight.",
     );
   }
-  const target = MOCK_USERS.find((u) => u.id === userId);
+  const target = await getUserById(userId);
   if (!target) throw new Error("Target user not found.");
 
   const date = dateStr ? new Date(dateStr) : new Date();
   const { key, label } = periodKeyFor(date, periodKind);
 
-  if (recognitionForPeriod(key, periodKind)) {
+  // One recognition per period, checked against the table rather than
+  // the fixture. This guard used to consult MOCK data, so it protected
+  // seed rows and ignored real ones.
+  const [clash] = await db
+    .select({ id: futureModernistRecognitions.id })
+    .from(futureModernistRecognitions)
+    .where(eq(futureModernistRecognitions.periodKey, key))
+    .limit(1);
+  if (clash) {
     throw new Error(
       `A recognition already exists for ${label}. Rescind the existing one before selecting a new winner.`,
     );
@@ -76,7 +83,30 @@ export async function selectFutureModernist(formData: FormData) {
     selectedByUserId: admin.id,
     selectedAt: new Date().toISOString(),
   };
-  MOCK_FUTURE_MODERNIST_RECOGNITIONS.push(row);
+  // ─────────────────────────────────────────────────────────────
+  // WHY THIS IS A DB WRITE NOW (2026-09-02)
+  //
+  // Recognitions were pushed onto an in-memory array. /u/[handle] was
+  // switched to read them from Postgres earlier today, so as of that
+  // change awarding a recognition would have written to memory and
+  // rendered from a table it never reached: the honour would appear
+  // nowhere and disappear on restart.
+  //
+  // This is also an input to the discovery gate. publicProfileEligible
+  // reads active recognitions to decide whether a Partner shows in
+  // public surfaces, so a recognition that does not persist is a
+  // permission that does not persist either.
+  // ─────────────────────────────────────────────────────────────
+  await db.insert(futureModernistRecognitions).values({
+    id: row.id,
+    userId: row.userId,
+    periodKind: row.periodKind,
+    periodKey: row.periodKey,
+    periodLabel: row.periodLabel,
+    narrative: row.narrative,
+    selectedByUserId: row.selectedByUserId,
+    selectedAt: row.selectedAt,
+  });
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -108,13 +138,17 @@ export async function rescindFutureModernist(formData: FormData) {
   const admin = await requireAdmin();
   const recognitionId = String(formData.get("recognitionId") ?? "").trim();
   if (!recognitionId) throw new Error("recognitionId is required.");
-  const idx = MOCK_FUTURE_MODERNIST_RECOGNITIONS.findIndex(
-    (r) => r.id === recognitionId,
-  );
-  if (idx < 0) throw new Error("Recognition not found.");
-  const original = MOCK_FUTURE_MODERNIST_RECOGNITIONS[idx];
+  const [original] = await db
+    .select()
+    .from(futureModernistRecognitions)
+    .where(eq(futureModernistRecognitions.id, recognitionId))
+    .limit(1);
+  if (!original) throw new Error("Recognition not found.");
   const userId = original.userId;
-  MOCK_FUTURE_MODERNIST_RECOGNITIONS.splice(idx, 1);
+
+  await db
+    .delete(futureModernistRecognitions)
+    .where(eq(futureModernistRecognitions.id, recognitionId));
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -131,7 +165,7 @@ export async function rescindFutureModernist(formData: FormData) {
     after: null,
   });
 
-  const target = MOCK_USERS.find((u) => u.id === userId);
+  const target = await getUserById(userId);
   revalidatePath("/admin/mvp");
   revalidatePath("/admin/mvp/recognition");
   if (target) revalidatePath(`/u/${target.handle}`);

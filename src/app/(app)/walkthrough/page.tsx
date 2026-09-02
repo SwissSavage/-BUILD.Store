@@ -14,8 +14,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
+import { getCompletedStepIds } from "@/lib/readers/walkthrough";
+import { safely } from "@/lib/readers";
 import {
-  completedStepIds,
   stepsForAdmin,
   stepsForUser,
 } from "@/lib/mock-data/walkthroughs";
@@ -39,7 +40,10 @@ export default async function WalkthroughPage() {
     "viewer"
   >;
   const steps = stepsForUser(tierForWalkthrough, pillars);
-  const completed = completedStepIds(user.id);
+  const completed = await safely(
+    () => getCompletedStepIds(user.id),
+    new Set<string>(),
+  );
   const total = steps.length;
   const doneCount = steps.filter((s) => completed.has(s.id)).length;
   const allDone = doneCount === total && total > 0;

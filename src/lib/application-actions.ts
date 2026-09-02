@@ -43,7 +43,17 @@ function newApplicationId(prefix: "app" | "bid"): string {
  * is still open surfaces as a graceful "already applied" message
  * rather than an error page.
  */
-export async function submitJobApplication(formData: FormData): Promise<void> {
+export async function submitJobApplication(
+  formData: FormData,
+): Promise<ProposalResult> {
+  return guarded("JOB_APPLICATION_FAILED", () =>
+    submitJobApplicationInner(formData),
+  );
+}
+
+async function submitJobApplicationInner(
+  formData: FormData,
+): Promise<ProposalResult> {
   const user = await getCurrentUser();
   if (!user) {
     // Should never happen — form is only rendered for signed-in users.
@@ -59,11 +69,15 @@ export async function submitJobApplication(formData: FormData): Promise<void> {
     formData.get("desiredCompensation") ?? "",
   ).trim();
 
-  if (!jobId) throw new Error("jobId is required");
+  if (!jobId) {
+    return { ok: false, message: "Missing role reference. Reload the page and try again." };
+  }
   if (pitch.length < 20) {
-    throw new Error(
-      "Pitch is too short — write at least a couple sentences so admin can route it properly.",
-    );
+    return {
+      ok: false,
+      message:
+        "Pitch is too short. Write at least a couple of sentences so this can be routed properly.",
+    };
   }
 
   const id = newApplicationId("app");
@@ -84,9 +98,11 @@ export async function submitJobApplication(formData: FormData): Promise<void> {
     // Unique-index collision = user already has an active application.
     // Message stays friendly rather than dumping the raw DB error.
     if (isUniqueViolation(err)) {
-      throw new Error(
-        "You've already applied to this role. Admin will reply soon.",
-      );
+      return {
+        ok: false,
+        message:
+          "You have already applied to this role. Your application is in the queue awaiting selection.",
+      };
     }
     throw err;
   }
@@ -117,6 +133,11 @@ export async function submitJobApplication(formData: FormData): Promise<void> {
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/admin/jobs/applications");
   revalidatePath("/notifications");
+  return {
+    ok: true,
+    mode: "created",
+    message: "Application submitted. You will hear back once the team is picked.",
+  };
 }
 
 /**
@@ -135,7 +156,54 @@ export type ProposalResult = {
   ok: boolean;
   message: string;
   mode?: "created" | "updated";
+  /** Correlation id for a server-side fault. Matches the server log. */
+  ref?: string;
 };
+
+/**
+ * A `redirect()` in flight, not a failure.
+ *
+ * next/navigation implements redirect by throwing. A bare catch around
+ * an action swallows it, and the user sits on a dead form instead of
+ * being sent to sign in.
+ */
+function isRedirectError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const digest = (err as { digest?: unknown }).digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
+}
+
+/**
+ * Run the write half of a submission, converting an unexpected fault
+ * into something the contractor can report.
+ *
+ * Next.js strips server-action error messages in production, so a
+ * thrown exception reaches the browser as "An error occurred in the
+ * Server Components render." That is unreadable to the person hitting
+ * it AND useless to us: two contractors hit it and we could not tell
+ * whether it was the same cause.
+ *
+ * So the real error gets logged server-side against a short reference,
+ * and the reference goes to the contractor. They report six characters,
+ * we grep the container logs, and the guessing stops.
+ */
+async function guarded(
+  label: string,
+  run: () => Promise<ProposalResult>,
+): Promise<ProposalResult> {
+  try {
+    return await run();
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    const ref = randomBytes(3).toString("hex").toUpperCase();
+    console.error(`${label} ref=${ref}`, err);
+    return {
+      ok: false,
+      ref,
+      message: `Something broke on our end and this was not saved. Nothing you did caused it. Send admin reference ${ref} and we can pull the exact cause from the logs.`,
+    };
+  }
+}
 
 /**
  * Submit or revise a proposal on a contract. Called from the
@@ -151,6 +219,18 @@ export type ProposalResult = {
 export async function submitContractBid(
   formData: FormData,
 ): Promise<ProposalResult> {
+  return guarded("PROPOSAL_SUBMIT_FAILED", () =>
+    submitContractBidInner(formData),
+  );
+}
+
+async function submitContractBidInner(
+  formData: FormData,
+): Promise<ProposalResult> {
+  return guarded("PROPOSAL_SUBMIT_FAILED", () => contractBid(formData));
+}
+
+async function contractBid(formData: FormData): Promise<ProposalResult> {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
 

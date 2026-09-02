@@ -20,6 +20,10 @@ import { Brief } from "@/components/Brief";
 import { Card } from "@/components/Card";
 import { BidOnContractForm } from "@/components/BidOnContractForm";
 import { computeRateBounds } from "@/lib/rate-bounds";
+import { and, eq, sql } from "drizzle-orm";
+import { db } from "@/db/client";
+import { projectApplications } from "@/db/schema";
+import { safely } from "@/lib/readers/factory";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -65,6 +69,37 @@ export default async function ContractDetailPage({
 
   const currentUser = await getCurrentUser();
   const isSignedIn = !!currentUser;
+
+  // This viewer's current proposal, so the form opens as an editor
+  // rather than pretending they have not bid. Without it a second
+  // submission hit the duplicate check and failed illegibly.
+  const existingProposal = currentUser
+    ? ((
+        await safely(
+          () =>
+            db
+              .select({
+                proposedRole: projectApplications.proposedRole,
+                pitch: projectApplications.pitch,
+                hoursPerWeek: projectApplications.hoursPerWeek,
+                hourlyRate: projectApplications.hourlyRate,
+                portfolioLink: projectApplications.portfolioLink,
+                status: projectApplications.status,
+                createdAt: projectApplications.createdAt,
+              })
+              .from(projectApplications)
+              .where(
+                and(
+                  eq(projectApplications.projectId, id),
+                  eq(projectApplications.userId, currentUser.id),
+                  sql`${projectApplications.status} IN ('pending', 'approved')`,
+                ),
+              )
+              .limit(1),
+          [],
+        )
+      )[0] ?? null)
+    : null;
 
   // Bid range for the signed-in bidder (task #48). Flat platform
   // range for everyone — talent sets their own rates; admin handles
@@ -157,6 +192,7 @@ export default async function ContractDetailPage({
               contractId={project.id}
               contractTitle={project.title}
               rateBounds={rateBounds}
+              existing={existingProposal}
             />
           ) : (
             <Card>

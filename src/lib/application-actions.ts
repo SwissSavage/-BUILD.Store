@@ -120,12 +120,37 @@ export async function submitJobApplication(formData: FormData): Promise<void> {
 }
 
 /**
- * Submit a bid on a contract. Called from the sign-in-gated form on
- * /contracts/[id]. Reuses the project_applications table since
- * contracts are projects (kind='contract'). Admin queue lives at
- * /admin/projects/applications.
+ * Result of a proposal submission.
+ *
+ * RETURNED, NOT THROWN. Next.js strips server-action error messages in
+ * production builds, so every `throw new Error("...")` in here reached
+ * the contractor as "An error occurred in the Server Components render.
+ * The specific message is omitted in production builds." Bayu hit that
+ * resubmitting a proposal and had no way to know his first one had
+ * actually saved.
+ *
+ * Expected outcomes are values. Only genuine faults throw.
  */
-export async function submitContractBid(formData: FormData): Promise<void> {
+export type ProposalResult = {
+  ok: boolean;
+  message: string;
+  mode?: "created" | "updated";
+};
+
+/**
+ * Submit or revise a proposal on a contract. Called from the
+ * sign-in-gated form on /contracts/[id]. Reuses the
+ * project_applications table since contracts are projects
+ * (kind='contract'). Admin queue lives at /admin/projects/applications.
+ *
+ * A second submission while the first is still pending is an EDIT, not
+ * an error. Someone revising their pitch is doing the thing the form is
+ * for, and the old behaviour — refuse, and refuse illegibly — treated a
+ * correction as a violation.
+ */
+export async function submitContractBid(
+  formData: FormData,
+): Promise<ProposalResult> {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
 
@@ -136,11 +161,15 @@ export async function submitContractBid(formData: FormData): Promise<void> {
   const hourlyRateRaw = String(formData.get("hourlyRate") ?? "").trim();
   const portfolioLink = String(formData.get("portfolioLink") ?? "").trim();
 
-  if (!contractId) throw new Error("contractId is required");
+  if (!contractId) {
+    return { ok: false, message: "Missing contract reference. Reload the page and try again." };
+  }
   if (pitch.length < 20) {
-    throw new Error(
-      "Pitch is too short — write at least a couple sentences so admin can route it properly.",
-    );
+    return {
+      ok: false,
+      message:
+        "Pitch is too short. Write at least a couple of sentences so this can be routed properly.",
+    };
   }
 
   // Global bid range validation (task #48). Talent sets their own
@@ -150,7 +179,7 @@ export async function submitContractBid(formData: FormData): Promise<void> {
   const proposedRate = Number.parseFloat(hourlyRateRaw);
   const rateBounds = computeRateBounds(user);
   const rateError = validateRateAgainstBounds(proposedRate, rateBounds);
-  if (rateError) throw new Error(rateError);
+  if (rateError) return { ok: false, message: rateError };
 
   // Verify the contract exists, is an approved-RFP open contract.
   // Cheap sanity — the form only renders for valid contracts, but
@@ -175,14 +204,15 @@ export async function submitContractBid(formData: FormData): Promise<void> {
     contract.status !== "open" ||
     !contract.rfpApprovedAt
   ) {
-    throw new Error("Contract is not open for bidding.");
+    return {
+      ok: false,
+      message: "This contract is no longer open for proposals.",
+    };
   }
 
-  // Duplicate check — project_applications doesn't have a unique index
-  // by default, so check explicitly. Race-safe enough for MVP; a
-  // stricter guarantee lands with the index migration.
+  // An existing proposal is an EDIT TARGET, not a collision.
   const [existing] = await db
-    .select({ id: projectApplications.id })
+    .select({ id: projectApplications.id, status: projectApplications.status })
     .from(projectApplications)
     .where(
       and(
@@ -192,15 +222,63 @@ export async function submitContractBid(formData: FormData): Promise<void> {
       ),
     )
     .limit(1);
+
+  const hoursPerWeekParsed = Number.parseInt(hoursPerWeekRaw, 10) || 0;
+
+  if (existing && existing.status === "approved") {
+    // Already selected. Terms are locked at acceptance, so a silent
+    // rewrite here would change an engagement that both sides agreed
+    // to. Say what happened and route them to a human.
+    return {
+      ok: false,
+      message:
+        "You have already been selected for this contract, so the terms are locked. Message admin if something needs to change.",
+    };
+  }
+
   if (existing) {
-    throw new Error(
-      "You've already bid on this contract. Admin will reply soon.",
-    );
+    // Revise in place. Same row, so the admin queue shows one current
+    // proposal per contractor rather than a pile of near-duplicates.
+    await db
+      .update(projectApplications)
+      .set({
+        proposedRole: proposedRole.length > 0 ? proposedRole : "Contractor",
+        pitch,
+        hoursPerWeek: hoursPerWeekParsed,
+        hourlyRate: proposedRate.toFixed(2),
+        portfolioLink: portfolioLink.length > 0 ? portfolioLink : null,
+      })
+      .where(eq(projectApplications.id, existing.id));
+
+    await logAuditEvent({
+      actorUserId: user.id,
+      actorRoleSnapshot: snapshotActorRole(user),
+      action: "user.applied",
+      resourceKind: "user",
+      resourceId: existing.id,
+      before: null,
+      after: { contractId, pitch: pitch.slice(0, 80), revised: true },
+      reason: `Contract bid ${existing.id} revised on contract ${contractId}`,
+    });
+
+    await notifyAdminsOfProposal({
+      title: `Proposal updated — ${contract.title}`,
+      body: `${publicName(user)} revised their proposal. Review it in the proposals queue.`,
+      href: "/admin/projects/applications",
+    });
+
+    revalidatePath(`/contracts/${contractId}`);
+    revalidatePath("/admin/projects/applications");
+    revalidatePath("/notifications");
+    return {
+      ok: true,
+      mode: "updated",
+      message: "Proposal updated. Your earlier version has been replaced.",
+    };
   }
 
   const id = newApplicationId("bid");
   const now = new Date().toISOString();
-  const hoursPerWeek = Number.parseInt(hoursPerWeekRaw, 10) || 0;
 
   await db.insert(projectApplications).values({
     id,
@@ -208,7 +286,7 @@ export async function submitContractBid(formData: FormData): Promise<void> {
     userId: user.id,
     proposedRole: proposedRole.length > 0 ? proposedRole : "Contractor",
     pitch,
-    hoursPerWeek,
+    hoursPerWeek: hoursPerWeekParsed,
     hourlyRate: proposedRate.toFixed(2),
     portfolioLink: portfolioLink.length > 0 ? portfolioLink : null,
     status: "pending",
@@ -235,6 +313,11 @@ export async function submitContractBid(formData: FormData): Promise<void> {
   revalidatePath(`/contracts/${contractId}`);
   revalidatePath("/admin/projects/applications");
   revalidatePath("/notifications");
+  return {
+    ok: true,
+    mode: "created",
+    message: "Proposal submitted. You can revise it any time before selection.",
+  };
 }
 
 /**

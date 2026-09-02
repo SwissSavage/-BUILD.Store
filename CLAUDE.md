@@ -56,8 +56,17 @@ data.
   Dokploy env. NEVER report which database production uses by reading
   the local `.env` — that has already produced one confidently wrong
   answer. Ask, or read it from Dokploy.
-- **The old self-hosted Postgres is not the app database.** If a
-  question is about production data, it is about Supabase.
+- **OPEN QUESTION: is Supabase self-hosted or a supabase.com project?**
+  The 2026-08-29 cutover note says Bayu "installed Supabase on
+  Dokploy", which points at self-hosted, but this is NOT confirmed.
+  Until it is, make no claim about where the data physically sits, who
+  holds a copy, or who is responsible for backups.
+- **Do not assume any Postgres host is decommissioned.** A host without
+  "supabase" in its name can still be the live Supabase Postgres, since
+  a self-hosted install runs on your own domain. Checking the hostname
+  for the word "supabase" is not a test, and treating it as one already
+  produced advice to snapshot and destroy what may be the production
+  database.
 
 ## 3. Stop guessing after two failed iterations
 

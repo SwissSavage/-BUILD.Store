@@ -31,6 +31,7 @@ interface Props {
    * Present means the form is an editor rather than a blank slate.
    */
   existing?: {
+    attachments?: { name: string; sizeBytes: number }[] | null;
     proposedRole: string | null;
     pitch: string;
     hoursPerWeek: number | null;
@@ -67,6 +68,7 @@ export function BidOnContractForm({
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const editing = !!existing && existing.status === "pending";
+  const existingDocs = existing?.attachments ?? [];
   const locked = !!existing && existing.status === "approved";
 
   if (state?.ok) {
@@ -179,6 +181,32 @@ export function BidOnContractForm({
             placeholder="Approach + relevant past work. Depersonalize any client names — Future Modern doesn't expose upstream clients."
             className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
           />
+        </div>
+
+        <div>
+          <label htmlFor="attachments" className="text-sm font-medium">
+            Portfolio documents{" "}
+            <span className="text-ink-muted">(optional)</span>
+          </label>
+          <p className="mt-1 text-xs text-ink-faint">
+            Case studies, decks, a resume. Up to 3 files, 2 MB each.
+            Visible to admin only, never on the public board.
+          </p>
+          <input
+            id="attachments"
+            name="attachments"
+            type="file"
+            multiple
+            accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.txt,.md"
+            className="mt-2 w-full text-sm text-ink-muted file:mr-3 file:rounded-full file:border-0 file:bg-brand-magenta file:px-4 file:py-2 file:text-sm file:text-white hover:file:opacity-90"
+          />
+          {editing && existingDocs.length > 0 && (
+            <p className="mt-2 text-xs text-ink-faint">
+              Already attached: {existingDocs.map((d) => d.name).join(", ")}.
+              Picking new files replaces them; leaving this empty keeps
+              them.
+            </p>
+          )}
         </div>
 
         <div>

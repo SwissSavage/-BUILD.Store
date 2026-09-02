@@ -1161,6 +1161,14 @@ export const projectApplications = pgTable("project_applications", {
    */
   hourlyRate: numeric("hourly_rate", { precision: 10, scale: 2 }),
   portfolioLink: text("portfolio_link"),
+  /**
+   * Portfolio documents attached to the proposal. Base64 inline,
+   * mirroring projects.rfp_attachments — a link assumes the work is
+   * public and linkable, and the strongest evidence is often a case
+   * study PDF or a deck that was never posted anywhere. Drains to R2
+   * signed URLs with #58.
+   */
+  attachments: jsonb("attachments").notNull().default([]),
   status: text("status", {
     enum: ["pending", "approved", "rejected", "withdrawn"],
   }).notNull(),

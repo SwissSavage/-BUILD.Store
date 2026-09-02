@@ -187,6 +187,29 @@ function PendingRow({
             "{application.pitch}"
           </p>
 
+          {(application.attachments ?? []).length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs uppercase tracking-wider text-ink-faint">
+                Portfolio documents
+              </p>
+              <ul className="mt-2 space-y-1">
+                {(application.attachments ?? []).map((doc, i) => (
+                  <li key={i}>
+                    <a
+                      href={`/api/proposals/${application.id}/attachments/${i}`}
+                      className="text-sm text-brand-magenta hover:underline"
+                    >
+                      {doc.name}
+                    </a>{" "}
+                    <span className="text-xs text-ink-faint">
+                      {(doc.sizeBytes / 1024).toFixed(0)} KB
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {application.portfolioLink && (
             <p className="mt-3 text-xs">
               <span className="text-ink-muted">Reference: </span>

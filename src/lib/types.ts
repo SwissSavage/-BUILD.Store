@@ -2156,6 +2156,16 @@ export interface ProjectApplication {
   hoursPerWeek: number;
   /** Optional URL to relevant past work (overrides their Profile portfolio link). */
   portfolioLink: string | null;
+  /**
+   * Portfolio documents attached to the proposal. Admin and the owner
+   * only, served through /api/proposals/[id]/attachments/[idx] — never
+   * exposed on a public surface.
+   */
+  attachments?: Array<{
+    name: string;
+    mimeType: string;
+    sizeBytes: number;
+  }> | null;
   status: ProjectApplicationStatus;
   /** Admin who approved/rejected. Null while pending or after withdraw. */
   reviewedBy: string | null;

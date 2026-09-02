@@ -36,6 +36,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
+import { secureToken } from "@/lib/secure-token";
 import { invoices, projects, users } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
@@ -324,9 +325,9 @@ export async function generateExternalInvoice(
     issuerId: admin.id,
     recipientId: clientRecipientId,
     number: nextInvoiceNumber(""),
-    clientToken: `tok_ext_${Date.now().toString(36)}_${Math.random()
-      .toString(36)
-      .slice(2, 6)}`,
+    // Was tok_ext_<timestamp>_<4 random chars>: 36^4 combinations with
+    // a guessable prefix, so every client invoice was enumerable.
+    clientToken: secureToken("tok_ext"),
     status: "issued",
     paymentMethod: "ach_mercury",
     acceptsCard: false,

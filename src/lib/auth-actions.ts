@@ -26,38 +26,18 @@ function sessionCookieOptions() {
   };
 }
 
-export async function signIn(formData: FormData) {
-  const uid = String(formData.get("uid") ?? "");
-  const user = await getUserById(uid);
-  if (!user) {
-    // Log the failed attempt without leaking the (nonexistent) uid.
-    await logAuditEvent({
-      actorUserId: null,
-      actorRoleSnapshot: "system",
-      action: "user.failed_signin",
-      resourceKind: "user",
-      resourceId: uid.slice(0, 40) || "<empty>",
-      before: null,
-      after: null,
-      reason: "Unknown user id supplied",
-    });
-    throw new Error("Unknown user id");
-  }
-  const jar = await cookies();
-  jar.set(SESSION_COOKIE, uid, sessionCookieOptions());
-  // Signing in as a real user clears any stale view-as breadcrumb.
-  jar.delete(REAL_SESSION_COOKIE);
-
-  await logAuditEvent({
-    actorUserId: user.id,
-    actorRoleSnapshot: snapshotActorRole(user),
-    action: "user.signed_in",
-    resourceKind: "user",
-    resourceId: user.id,
-  });
-
-  redirect("/dashboard");
-}
+/**
+ * REMOVED 2026-09-02: signIn(formData).
+ *
+ * It took any user id, checked only that the row existed, and set the
+ * session cookie. No password, no verification, no admin check. An
+ * unauthenticated "become any user, including an administrator"
+ * endpoint, and an exported server action is reachable whether or not
+ * any UI calls it. Nothing did.
+ *
+ * Real sign-in is the Auth.js magic link at /signin. View-as for
+ * admins is viewAsUser below, which checks isAdmin first.
+ */
 
 export async function signOut() {
   const jar = await cookies();

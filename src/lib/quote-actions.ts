@@ -32,6 +32,7 @@ import { revalidatePath } from "next/cache";
 import { notify } from "@/lib/writers/notifications";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
+import { secureToken } from "@/lib/secure-token";
 import {
   cooperativeQuotes,
   projects,
@@ -59,9 +60,13 @@ function newQuoteId(): string {
     .slice(2, 5)}`;
 }
 
-function newClientToken(projectId: string): string {
-  const rand = Math.random().toString(36).slice(2, 8);
-  return `q_${projectId.replace(/^p_/, "")}_${rand}`;
+function newClientToken(_projectId: string): string {
+  // The project id used to be embedded here, and project ids appear in
+  // public URLs, so six random characters were all that separated a
+  // known contract from its quote. A token must not describe what it
+  // unlocks.
+  void _projectId;
+  return secureToken("q");
 }
 
 /**

@@ -126,14 +126,27 @@ export function TermsAcceptCheckbox() {
           name="termsAccepted"
           required
           checked={accepted}
-          // NOT disabled. A disabled checkbox is excluded from the
-          // submission and skipped by `required`, so the form could
-          // post without consent and fail on the server. readOnly
-          // keeps it unticked until the terms have been read while
-          // still letting the browser enforce `required`.
+          // NEVER disabled. `disabled` removes a field from the
+          // submission AND from constraint validation, so disabled +
+          // required cancel each other out: the moment the gate locked,
+          // the requirement stopped existing on the client and the form
+          // posted without consent. That is the bug that put an invited
+          // member on a crash page.
+          //
+          // Leaving it enabled means `required` is live, so the browser
+          // itself refuses to submit an unticked box. The read-gate is
+          // the onClick below — note that `readOnly` does nothing on a
+          // checkbox, browsers ignore it; it and aria-disabled are here
+          // for assistive tech only.
+          //
+          // If scripting fails, the gate goes with it but the
+          // requirement stays. That is the right direction to fail:
+          // toward someone being able to finish signing up, not toward
+          // locking them out of it.
           readOnly={!scrolled}
           aria-disabled={!scrolled}
           onClick={(e) => {
+            // Fires for pointer and for keyboard activation alike.
             if (!scrolled) e.preventDefault();
           }}
           onChange={(e) => setAccepted(e.target.checked)}

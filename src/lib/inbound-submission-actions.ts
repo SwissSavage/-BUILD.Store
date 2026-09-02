@@ -18,6 +18,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-stub";
 import {
+  getStoredSubmission,
+  isDerivedSubmission,
+  updateInboundSubmission,
+} from "@/lib/writers/inbound-submissions-update";
+import {
   MOCK_INBOUND_SUBMISSIONS,
   findInboundSubmission,
 } from "@/lib/mock-data/inbound-submissions";
@@ -42,11 +47,16 @@ export async function setInboundStatus(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const status = coerceStatus(formData.get("status"));
   if (!status) throw new Error("Invalid status");
-  const row = findInboundSubmission(id);
-  if (!row) throw new Error("Submission not found");
+  const row = await getStoredSubmission(id);
+  if (!row) {
+    throw new Error(
+      isDerivedSubmission(id)
+        ? "This entry is derived from an RFP, chat or application and cannot be triaged here."
+        : "Submission not found.",
+    );
+  }
   const previous = row.status;
-  row.status = status;
-  row.updatedAt = new Date().toISOString();
+  await updateInboundSubmission(id, { status });
 
   // Audit — for the RFP intake kind, "converted" ≈ approved and
   // "closed_no_action" ≈ rejected. Emit the specific rfp verb so
@@ -86,20 +96,14 @@ export async function assignInbound(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const target = String(formData.get("assigneeUserId") ?? "").trim();
-  const row = findInboundSubmission(id);
-  if (!row) throw new Error("Submission not found");
-  row.assignedAdminId = target || admin.id;
-  row.updatedAt = new Date().toISOString();
+  await updateInboundSubmission(id, { assignedAdminId: target || admin.id });
   revalidatePath("/admin/inbound");
 }
 
 export async function unassignInbound(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  const row = findInboundSubmission(id);
-  if (!row) throw new Error("Submission not found");
-  row.assignedAdminId = null;
-  row.updatedAt = new Date().toISOString();
+  await updateInboundSubmission(id, { assignedAdminId: null });
   revalidatePath("/admin/inbound");
 }
 
@@ -107,10 +111,9 @@ export async function setInboundTriageNote(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const note = String(formData.get("triageNote") ?? "").trim();
-  const row = findInboundSubmission(id);
-  if (!row) throw new Error("Submission not found");
-  row.triageNote = note.length === 0 ? null : note;
-  row.updatedAt = new Date().toISOString();
+  await updateInboundSubmission(id, {
+    triageNote: note.length === 0 ? null : note,
+  });
   revalidatePath("/admin/inbound");
 }
 
@@ -124,16 +127,17 @@ export async function appendInboundKeywordTags(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const tagsRaw = String(formData.get("tags") ?? "");
-  const row = findInboundSubmission(id);
-  if (!row) throw new Error("Submission not found");
+  const row = await getStoredSubmission(id);
+  if (!row) throw new Error("Submission not found.");
   const additions = tagsRaw
     .toLowerCase()
     .split(/[\s,]+/)
     .map((t) => t.trim())
     .filter((t) => t.length > 0);
-  const next = new Set([...row.keywordTags, ...additions]);
-  row.keywordTags = Array.from(next).slice(0, 50);
-  row.updatedAt = new Date().toISOString();
+  const next = new Set([...(row.keywordTags ?? []), ...additions]);
+  await updateInboundSubmission(id, {
+    keywordTags: Array.from(next).slice(0, 50),
+  });
   revalidatePath("/admin/inbound");
 }
 
@@ -154,8 +158,8 @@ export async function appendInboundKeywordTags(formData: FormData) {
 export async function promoteInboundToInvite(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  const row = findInboundSubmission(id);
-  if (!row) throw new Error("Submission not found");
+  const row = await getStoredSubmission(id);
+  if (!row) throw new Error("Submission not found.");
   if (row.kind !== "join_talent_signup") {
     throw new Error(
       "Promote-to-invite is only for join_talent_signup submissions.",
@@ -172,8 +176,7 @@ export async function promoteInboundToInvite(formData: FormData) {
   // states alone.
   if (row.status === "new") {
     const previous = row.status;
-    row.status = "in_triage";
-    row.updatedAt = new Date().toISOString();
+    await updateInboundSubmission(id, { status: "in_triage" });
     await logAuditEvent({
       actorUserId: admin.id,
       actorRoleSnapshot: snapshotActorRole(admin),
@@ -219,18 +222,19 @@ export async function acceptProposedInboundTag(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const tag = String(formData.get("tag") ?? "").trim().toLowerCase();
   if (!tag) throw new Error("Missing tag");
-  const row = findInboundSubmission(id);
-  if (!row) throw new Error("Submission not found");
+  const row = await getStoredSubmission(id);
+  if (!row) throw new Error("Submission not found.");
   const proposed = row.proposedKeywordTags ?? [];
   if (!proposed.includes(tag)) {
     // Idempotent: silently succeed if the tag was already handled.
     revalidatePath("/admin/inbound");
     return;
   }
-  row.proposedKeywordTags = proposed.filter((t) => t !== tag);
-  const nextCanonical = new Set([...row.keywordTags, tag]);
-  row.keywordTags = Array.from(nextCanonical).slice(0, 50);
-  row.updatedAt = new Date().toISOString();
+  const nextCanonical = new Set([...(row.keywordTags ?? []), tag]);
+  await updateInboundSubmission(id, {
+    proposedKeywordTags: proposed.filter((t) => t !== tag),
+    keywordTags: Array.from(nextCanonical).slice(0, 50),
+  });
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -255,15 +259,16 @@ export async function rejectProposedInboundTag(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const tag = String(formData.get("tag") ?? "").trim().toLowerCase();
   if (!tag) throw new Error("Missing tag");
-  const row = findInboundSubmission(id);
-  if (!row) throw new Error("Submission not found");
+  const row = await getStoredSubmission(id);
+  if (!row) throw new Error("Submission not found.");
   const proposed = row.proposedKeywordTags ?? [];
   if (!proposed.includes(tag)) {
     revalidatePath("/admin/inbound");
     return;
   }
-  row.proposedKeywordTags = proposed.filter((t) => t !== tag);
-  row.updatedAt = new Date().toISOString();
+  await updateInboundSubmission(id, {
+    proposedKeywordTags: proposed.filter((t) => t !== tag),
+  });
 
   await logAuditEvent({
     actorUserId: admin.id,

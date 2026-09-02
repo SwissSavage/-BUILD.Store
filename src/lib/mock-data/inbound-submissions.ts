@@ -244,6 +244,19 @@ function deriveFromQuotes(): InboundSubmission[] {
 }
 
 /** Combined view: persisted rows + derived rows, newest-first. */
+/**
+ * Rows derived from other tables rather than stored as submissions.
+ * Exported so the live reader can compose them with the real ones.
+ */
+export function derivedInboundSubmissions(): InboundSubmission[] {
+  return [
+    ...deriveFromRfps(),
+    ...deriveFromChat(),
+    ...deriveFromApplications(),
+    ...deriveFromQuotes(),
+  ];
+}
+
 export function listInboundSubmissions(opts?: {
   kind?: InboundSubmissionKind;
   status?: InboundSubmissionStatus;

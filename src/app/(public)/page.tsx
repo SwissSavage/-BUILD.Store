@@ -3,6 +3,7 @@
  * pillars, restyled against the codified Tailwind palette so the
  * whole app lives on one visual system.
  */
+import { Fragment } from "react";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
@@ -425,7 +426,18 @@ function FaqSection() {
  * everyone beyond that still shows, so a growing cooperative reads as
  * growing rather than as a list that stopped.
  */
-const MAX_COHORT = 8;
+/**
+ * "September 2026" from an ISO timestamp, for the rail's month
+ * dividers. Scrolling past the current month should land somewhere
+ * labelled rather than in an unexplained continuation.
+ */
+function monthLabel(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? ""
+    : d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
 
 async function CohortRail() {
   const [spotlights, { users: roster }, recognizedIds] = await Promise.all([
@@ -456,7 +468,10 @@ async function CohortRail() {
   // the rail on every signup, so nobody held a position.
   const eligible = roster
     .filter((u) => publicProfileEligible(u, recognizedIds))
-    .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
+    // Newest first. The rail resets each month in the sense that the
+    // current month leads it, and earlier months follow in the same
+    // continuous scroll rather than being hidden behind a link.
+    .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
 
   // Curated picks lead, then everyone else who joined, in join order.
   // CURATION ADDS, IT NEVER SUBTRACTS. Highlighting one person must not
@@ -470,8 +485,14 @@ async function CohortRail() {
     ...pinned,
     ...eligible.filter((u) => !pinned.some((p) => p.id === u.id)),
   ];
-  const users = ordered.slice(0, MAX_COHORT);
-  const overflow = Math.max(0, ordered.length - users.length);
+  // No cap. Capping produced a "+N more" card that hid the people it
+  // was counting, on the one section whose job is to show that people
+  // are joining.
+  const users = ordered;
+  const thisMonthKey = thisPeriod.key;
+  const joinedThisMonth = users.filter((u) =>
+    (u.createdAt ?? "").startsWith(thisMonthKey),
+  ).length;
 
   // Why anyone in the roster is NOT on the rail — counted from the
   // roster, not assumed. Surfaced to admins below, because a rail that
@@ -522,9 +543,11 @@ async function CohortRail() {
     periodKey: thisPeriod.key,
     periodLabel: thisPeriod.label,
     headline:
-      users.length === 1
+      joinedThisMonth === 1
         ? `${publicName(users[0])} joined the cooperative`
-        : `${users.length} builders joined the cooperative`,
+        : joinedThisMonth > 1
+          ? `${joinedThisMonth} builders joined the cooperative`
+          : "The builders of the cooperative",
     narrative: "",
   };
 
@@ -533,8 +556,12 @@ async function CohortRail() {
       <div className="mx-auto max-w-app px-6 py-16">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
+            {/* "Cohort" removed 2026-09-02. Jamar: "We don't say
+                cohort, it's an empty word." Not replaced with a
+                synonym, because the headline underneath already says
+                the thing plainly. */}
             <div className="text-xs uppercase tracking-wider text-brand-blue">
-              This month&apos;s cohort · {spotlight.periodLabel}
+              {spotlight.periodLabel}
             </div>
             <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
               {spotlight.headline}
@@ -544,7 +571,7 @@ async function CohortRail() {
             href="/cohort"
             className="text-sm text-brand-magenta hover:underline"
           >
-            All spotlights →
+            Everyone who has joined →
           </Link>
         </div>
 
@@ -591,8 +618,26 @@ async function CohortRail() {
         {users.length > 0 && (
           <div className="mt-10 -mx-6 overflow-x-auto px-6 pb-4 [scrollbar-width:thin] snap-x snap-mandatory">
             <ul className="flex gap-6">
-              {users.map((user) => (
-                <li key={user.id} className="w-44 shrink-0 snap-start md:w-52">
+              {users.map((user, i) => {
+                // A divider whenever the month changes, so scrolling
+                // past the current month lands you in the previous one
+                // with a label rather than an unexplained jump. The
+                // rail resets monthly at the head and keeps the history
+                // behind it in one continuous scroll.
+                const month = (user.createdAt ?? "").slice(0, 7);
+                const prevMonth =
+                  i === 0 ? null : (users[i - 1].createdAt ?? "").slice(0, 7);
+                const showDivider = i > 0 && month !== prevMonth;
+                return (
+                  <Fragment key={user.id}>
+                    {showDivider && (
+                      <li className="flex w-28 shrink-0 snap-start items-center justify-center border-l border-[var(--surface-border)] pl-4">
+                        <span className="text-xs uppercase tracking-wider text-ink-faint">
+                          {monthLabel(user.createdAt)}
+                        </span>
+                      </li>
+                    )}
+                    <li className="w-44 shrink-0 snap-start md:w-52">
                   <Link href={`/u/${user.handle}`} className="group block">
                     <TradingCard
                       user={user}
@@ -615,20 +660,11 @@ async function CohortRail() {
                         </div>
                       )}
                     </div>
-                  </Link>
-                </li>
-              ))}
-              {overflow > 0 && (
-                <li className="flex w-44 shrink-0 snap-start items-center justify-center md:w-52">
-                  <Link
-                    href="/cohort"
-                    className="rounded-2xl border border-dashed border-[var(--surface-border)] px-5 py-4 text-center text-sm text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
-                  >
-                    + {overflow} more
-                    <span className="mt-1 block text-xs">in the cohort →</span>
-                  </Link>
-                </li>
-              )}
+                      </Link>
+                    </li>
+                  </Fragment>
+                );
+              })}
             </ul>
           </div>
         )}

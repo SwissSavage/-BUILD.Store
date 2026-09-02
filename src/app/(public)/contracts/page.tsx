@@ -20,6 +20,7 @@ import Link from "next/link";
 import { PostListingButton } from "@/components/PostListingButton";
 import { getAllProjects } from "@/lib/readers/projects";
 import { INDUSTRY_LABELS } from "@/lib/types";
+import { briefSummary } from "@/components/Brief";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 export const metadata = {
@@ -107,8 +108,8 @@ export default async function ContractsPage() {
                   </span>
                 </div>
                 <CardTitle className="mt-2">{p.title}</CardTitle>
-                <p className="mt-3 line-clamp-3 text-sm text-ink-muted">
-                  {p.description}
+                <p className="mt-3 text-sm text-ink-muted">
+                  {briefSummary(p.description, { skipTitle: p.title })}
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-1.5">

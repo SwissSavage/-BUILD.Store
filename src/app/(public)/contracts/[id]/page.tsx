@@ -16,6 +16,7 @@ import { getProjectById } from "@/lib/readers/projects";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
+import { Brief } from "@/components/Brief";
 import { Card } from "@/components/Card";
 import { BidOnContractForm } from "@/components/BidOnContractForm";
 import { computeRateBounds } from "@/lib/rate-bounds";
@@ -118,7 +119,7 @@ export default async function ContractDetailPage({
         <h1 className="mt-2 font-display text-4xl font-semibold">
           {project.title}
         </h1>
-        <p className="mt-4 text-lg text-ink-muted">{project.description}</p>
+        <Brief text={project.description} title={project.title} className="mt-6" />
 
         <div className="mt-8 grid grid-cols-2 gap-6 md:grid-cols-3">
           <Field label="Budget" value={compText ?? "—"} />

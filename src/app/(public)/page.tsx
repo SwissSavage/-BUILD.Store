@@ -4,6 +4,7 @@
  * whole app lives on one visual system.
  */
 import Link from "next/link";
+import { getCurrentUser } from "@/lib/auth-stub";
 import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
 import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
@@ -511,6 +512,15 @@ function FaqSection() {
  * someone can work through to reach talent directly.
  * ─────────────────────────────────────────────────────────────
  */
+/**
+ * How many joiners the rail carries before it overflows.
+ *
+ * Eight fits the column without the rail eating the page. The count of
+ * everyone beyond that still shows, so a growing cooperative reads as
+ * growing rather than as a list that stopped.
+ */
+const MAX_COHORT = 8;
+
 async function CohortRail() {
   const [spotlights, { users: roster }, recognizedIds] = await Promise.all([
     safely(() => spotlightReader.all(), []),
@@ -518,29 +528,93 @@ async function CohortRail() {
     safely(() => activeRecognitionUserIds(), new Set<string>()),
   ]);
 
-  const curated =
-    [...spotlights].sort((a, b) =>
-      b.periodKey.localeCompare(a.periodKey),
-    )[0] ?? null;
-
-  // Everyone eligible to appear, newest first.
-  const eligible = roster
-    .filter((u) => u.membershipTier !== "viewer")
-    .filter((u) => publicProfileEligible(u, recognizedIds))
-    .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
-
-  const users = curated
-    ? curated.userIds
-        .map((id) => roster.find((u) => u.id === id))
-        .filter((u): u is (typeof roster)[number] => !!u)
-    : eligible.slice(0, 3);
-
-  if (users.length === 0) return null;
-
   const now = new Date();
+  const thisPeriod = periodKeyFor(now, "month");
+
+  // A curated spotlight governs ITS OWN PERIOD ONLY.
+  //
+  // It used to be "the newest spotlight row wins, forever". A curated
+  // row written in July then governed September, and because the rail
+  // rendered exactly its userIds, anyone who joined after it was
+  // invisible. Worse, ids that no longer resolve against the users
+  // table filtered down to an empty array and the whole section
+  // returned null — a hand-written row from two months ago silently
+  // blanking the live join feed.
+  const curated =
+    [...spotlights].find((s) => s.periodKey === thisPeriod.key) ?? null;
+
+  // Everyone eligible to appear, IN THE ORDER THEY JOINED.
+  //
+  // Ascending, not newest-first: this is a cohort, and a cohort reads
+  // as the sequence people arrived in. Newest-first also reshuffled
+  // the rail on every signup, so nobody held a position.
+  const eligible = roster
+    .filter((u) => publicProfileEligible(u, recognizedIds))
+    .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
+
+  // Curated picks lead, then everyone else who joined, in join order.
+  // CURATION ADDS, IT NEVER SUBTRACTS. Highlighting one person must not
+  // delete the other six from the feed.
+  const pinned = (curated?.userIds ?? [])
+    .map((id) => roster.find((u) => u.id === id))
+    .filter((u): u is (typeof roster)[number] => !!u)
+    .filter((u) => publicProfileEligible(u, recognizedIds));
+
+  const ordered = [
+    ...pinned,
+    ...eligible.filter((u) => !pinned.some((p) => p.id === u.id)),
+  ];
+  const users = ordered.slice(0, MAX_COHORT);
+  const overflow = Math.max(0, ordered.length - users.length);
+
+  // Why anyone in the roster is NOT on the rail — counted from the
+  // roster, not assumed. Surfaced to admins below, because a rail that
+  // renders nothing is indistinguishable from nobody having signed up.
+  const excluded = {
+    viewer: roster.filter((u) => u.membershipTier === "viewer").length,
+    optedOut: roster.filter((u) => u.profilePublic === false).length,
+    partnerNotRecognized: roster.filter(
+      (u) =>
+        u.membershipTier !== "member" &&
+        u.membershipTier !== "viewer" &&
+        u.profilePublic !== false &&
+        !recognizedIds.has(u.id),
+    ).length,
+  };
+  const totalRoster = roster.length;
+
+  if (users.length === 0) {
+    // Nothing eligible to show. Report the roster to an admin instead
+    // of rendering null — COUNTED FROM THE ROSTER, not assumed. A rail
+    // that silently disappears is indistinguishable from nobody having
+    // signed up, and guessing at the reason wastes everyone's time.
+    const viewer = await safely(() => getCurrentUser(), null);
+    if (!viewer?.isAdmin || totalRoster === 0) return null;
+    return (
+      <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+        <div className="mx-auto max-w-app px-6 py-10">
+          <div className="text-xs uppercase tracking-wider text-brand-blue">
+            This month&apos;s cohort · admin only
+          </div>
+          <p className="mt-2 max-w-2xl text-ink-muted">
+            {totalRoster} {totalRoster === 1 ? "account" : "accounts"} in
+            the roster, none eligible for the public rail.
+          </p>
+          <RosterBreakdown excluded={excluded} />
+          <Link
+            href="/admin/members"
+            className="mt-4 inline-block rounded-full bg-brand-magenta px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+          >
+            Open member admin →
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   const spotlight = curated ?? {
-    periodKey: periodKeyFor(now, "month").key,
-    periodLabel: periodKeyFor(now, "month").label,
+    periodKey: thisPeriod.key,
+    periodLabel: thisPeriod.label,
     headline:
       users.length === 1
         ? `${publicName(users[0])} joined the cooperative`
@@ -592,7 +666,7 @@ async function CohortRail() {
             )}
           </div>
           {users.length > 0 && (
-            <ul className="space-y-3">
+            <ul className="space-y-3" data-overflow={overflow}>
               {users.map((user) => (
                 <li
                   key={user.id}
@@ -611,11 +685,76 @@ async function CohortRail() {
                   </div>
                 </li>
               ))}
+              {overflow > 0 && (
+                <li className="px-4 text-xs text-ink-faint">
+                  + {overflow} more{" "}
+                  <Link href="/cohort" className="text-brand-magenta hover:underline">
+                    in the cohort →
+                  </Link>
+                </li>
+              )}
             </ul>
           )}
         </div>
+        {users.length < totalRoster && (
+          <AdminRosterNote shown={users.length} total={totalRoster} excluded={excluded} />
+        )}
       </div>
     </section>
+  );
+}
+
+/** Why roster members aren't on the rail — plain counts, no inference. */
+function RosterBreakdown({
+  excluded,
+}: {
+  excluded: { viewer: number; optedOut: number; partnerNotRecognized: number };
+}) {
+  const reasons = [
+    [excluded.viewer, "still set to Viewer"],
+    [excluded.optedOut, "opted out of a public profile"],
+    [excluded.partnerNotRecognized, "Partners outside a recognition window"],
+  ] as const;
+  const live = reasons.filter(([n]) => n > 0);
+  if (live.length === 0) return null;
+  return (
+    <ul className="mt-3 space-y-1 text-xs text-ink-faint">
+      {live.map(([n, why]) => (
+        <li key={why}>
+          {n} {why}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Admin-only footer: what the rail is showing vs what's in the roster.
+ *
+ * Renders nothing for everyone else, so it sits inside a public section
+ * without leaking that anyone is held back.
+ */
+async function AdminRosterNote({
+  shown,
+  total,
+  excluded,
+}: {
+  shown: number;
+  total: number;
+  excluded: { viewer: number; optedOut: number; partnerNotRecognized: number };
+}) {
+  const viewer = await safely(() => getCurrentUser(), null);
+  if (!viewer?.isAdmin) return null;
+  return (
+    <div className="mt-6 border-t border-[var(--surface-border)] pt-4">
+      <p className="text-xs text-ink-faint">
+        Admin only — showing {shown} of {total} accounts.{" "}
+        <Link href="/admin/members" className="text-brand-magenta hover:underline">
+          Member admin →
+        </Link>
+      </p>
+      <RosterBreakdown excluded={excluded} />
+    </div>
   );
 }
 

@@ -71,11 +71,14 @@ export default async function AdminProjectApplicationsPage() {
         <div>
           <CardEyebrow>Admin · Projects</CardEyebrow>
           <h1 className="mt-2 font-display text-4xl font-semibold">
-            Application queue
+            Proposals
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-ink-muted">
-            Members pitching themselves into internal cooperative projects.
-            Approve auto-adds them to the team and fires an inbox ping.
+            Contractors who have proposed themselves for this work. Build
+            the team from who is available — selecting adds them to the
+            roster for the engagement and pings their inbox. Passing on
+            someone here is about fit for this piece, not a judgment on
+            them.
           </p>
         </div>
         <Link
@@ -225,7 +228,7 @@ function PendingRow({
           id={`note-${application.id}`}
           name="adminNote"
           rows={2}
-          placeholder="Optional. Pair them with another contributor, set scope, or leave a softer 'try again next round.'"
+          placeholder="Optional. Pair them with another contractor, set scope, or note what this round needed instead."
           className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
         />
         <div className="flex flex-wrap gap-2">
@@ -236,7 +239,7 @@ function PendingRow({
             className="rounded-full px-4 py-2 text-sm font-medium text-white"
             style={{ backgroundColor: "#007048" }}
           >
-            Approve &amp; add to team
+            Select for the team
           </button>
           <button
             type="submit"
@@ -244,7 +247,7 @@ function PendingRow({
             value="reject"
             className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
           >
-            Decline
+            Not this round
           </button>
         </div>
       </form>

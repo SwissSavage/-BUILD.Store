@@ -50,6 +50,7 @@ import {
   type ProjectApplication,
   type User,
 } from "@/lib/types";
+import { Brief } from "@/components/Brief";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { PeerReviewSection } from "@/components/PeerReviewSection";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
@@ -168,9 +169,7 @@ export default async function ProjectDetailPage({
         <div className="space-y-6">
           <Card>
             <CardTitle>About this work</CardTitle>
-            <p className="mt-3 text-sm text-ink-muted whitespace-pre-line">
-              {project.description}
-            </p>
+            <Brief text={project.description} title={project.title} className="mt-3" />
             <div className="mt-5 flex flex-wrap gap-1.5">
               {project.skillsRequired.map((s) => (
                 <span

@@ -144,6 +144,63 @@ async function submitJobApplicationInner(
 }
 
 /**
+ * Portfolio documents attached to a proposal.
+ *
+ * Same shape and same limits as RFP attachments, deliberately: one
+ * mental model, one migration when R2 lands.
+ */
+const MAX_PROPOSAL_ATTACHMENTS = 3;
+const MAX_PROPOSAL_ATTACHMENT_BYTES = 2 * 1024 * 1024;
+
+export interface ProposalAttachment {
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  base64: string;
+}
+
+/**
+ * Read attached portfolio docs off the form.
+ *
+ * Returns a rejection message instead of throwing, because an
+ * oversized file is an expected outcome the contractor needs to read.
+ * Browsers send empty File slots for untouched inputs, so those are
+ * dropped rather than counted against the cap.
+ */
+async function readProposalAttachments(
+  formData: FormData,
+): Promise<{ files: ProposalAttachment[]; error?: string }> {
+  const raw = formData
+    .getAll("attachments")
+    .filter((v): v is File => v instanceof File && v.size > 0);
+
+  if (raw.length > MAX_PROPOSAL_ATTACHMENTS) {
+    return {
+      files: [],
+      error: `Attach up to ${MAX_PROPOSAL_ATTACHMENTS} documents. Pick your strongest few.`,
+    };
+  }
+
+  const files: ProposalAttachment[] = [];
+  for (const f of raw) {
+    if (f.size > MAX_PROPOSAL_ATTACHMENT_BYTES) {
+      return {
+        files: [],
+        error: `"${f.name}" is ${(f.size / 1024 / 1024).toFixed(1)} MB. Max per file is 2 MB. Link anything larger.`,
+      };
+    }
+    const buf = Buffer.from(await f.arrayBuffer());
+    files.push({
+      name: f.name.slice(0, 200),
+      mimeType: f.type || "application/octet-stream",
+      sizeBytes: f.size,
+      base64: buf.toString("base64"),
+    });
+  }
+  return { files };
+}
+
+/**
  * Result of a proposal submission.
  *
  * RETURNED, NOT THROWN. Next.js strips server-action error messages in
@@ -292,6 +349,10 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
   const rateError = validateRateAgainstBounds(proposedRate, rateBounds);
   if (rateError) return { ok: false, message: rateError };
 
+  const { files: attachedDocs, error: attachmentError } =
+    await readProposalAttachments(formData);
+  if (attachmentError) return { ok: false, message: attachmentError };
+
   // Verify the contract exists, is an approved-RFP open contract.
   // Cheap sanity — the form only renders for valid contracts, but
   // don't trust the FormData over the source of truth.
@@ -358,6 +419,10 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
         hoursPerWeek: hoursPerWeekParsed,
         hourlyRate: proposedRate.toFixed(2),
         portfolioLink: portfolioLink.length > 0 ? portfolioLink : null,
+        // Only overwrite when new files were picked. A browser cannot
+        // re-populate a file input, so an edit that changes only the
+        // pitch would otherwise silently delete the attachments.
+        ...(attachedDocs.length > 0 ? { attachments: attachedDocs } : {}),
       })
       .where(eq(projectApplications.id, existing.id));
 
@@ -403,6 +468,7 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
     hoursPerWeek: hoursPerWeekParsed,
     hourlyRate: proposedRate.toFixed(2),
     portfolioLink: portfolioLink.length > 0 ? portfolioLink : null,
+    attachments: attachedDocs,
     status: "pending",
     createdAt: now,
   });

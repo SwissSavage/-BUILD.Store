@@ -40,19 +40,7 @@ import {
   sendDocument,
 } from "@/lib/documenso";
 import { dispatchInviteEmail } from "@/lib/invite-email";
-
-/** Admin countersigner defaults when no admin-specific override is set. */
-function adminSenderName(admin: {
-  firstName?: string | null;
-  lastName?: string | null;
-  handle?: string;
-}): string {
-  return (
-    [admin.firstName, admin.lastName].filter(Boolean).join(" ") ||
-    admin.handle ||
-    "Future Modern"
-  );
-}
+import { adminSenderName, countersignerEmail } from "@/lib/countersigner";
 
 // Default invite lifetime — 14 days from issue.
 const INVITE_LIFETIME_MS = 14 * 24 * 60 * 60 * 1000;
@@ -166,10 +154,7 @@ export async function generateInviteLink(formData: FormData) {
 
   const adminName = adminSenderName(admin);
   const inviteeName = invite.targetName ?? invite.targetEmail;
-  const adminEmail =
-    process.env.FM_COUNTERSIGNER_EMAIL ??
-    admin.email ??
-    "hello@afuturemodern.com";
+  const adminEmail = countersignerEmail(admin);
 
   // Fill recipients in template order. First slot = admin countersigner,
   // remaining = invitee (any additional slots also get invitee — templates

@@ -31,11 +31,13 @@ import type { Agreement, User } from "@/lib/types";
 import {
   AGREEMENT_PROVIDER_LABELS,
   AGREEMENT_TYPE_LABELS,
+  adminName,
 } from "@/lib/types";
 import { createAgreement, removeAgreement, sendLoiForSignature, sendNcndaForSignature } from "@/lib/agreement-actions";
 
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
+import { listCounterparties } from "@/lib/writers/counterparties";
 
 /**
  * Pick the user roster the author form allows to attach agreements
@@ -56,16 +58,37 @@ function agreementCandidates(roster: User[]) {
     );
 }
 
-/** Group agreements by user, freshest signature first within each group. */
+/**
+ * Sort key for an agreement.
+ *
+ * signedAt is null while an envelope is still out, so an unsigned row
+ * would sort as if it were the oldest thing on file. It falls back to
+ * createdAt, which for a sent-but-unsigned envelope is when it went
+ * out, and that is the date an admin actually cares about while
+ * chasing it.
+ */
+function agreementDate(a: Agreement): string {
+  return a.signedAt ?? a.createdAt ?? "";
+}
+
+/**
+ * Group agreements by the party they belong to, freshest first.
+ *
+ * Keyed on userId when it is a member and counterpartyId when it is an
+ * outside party, because userId is nullable since migration 0025.
+ * Grouping on userId alone would have collapsed every NCNDA in the
+ * system into one bucket keyed on null.
+ */
 function groupAgreementsByUser(rows: Agreement[]): Map<string, Agreement[]> {
   const byUser = new Map<string, Agreement[]>();
   for (const row of rows) {
-    const list = byUser.get(row.userId) ?? [];
+    const key = row.userId ?? row.counterpartyId ?? "unattached";
+    const list = byUser.get(key) ?? [];
     list.push(row);
-    byUser.set(row.userId, list);
+    byUser.set(key, list);
   }
   for (const list of byUser.values()) {
-    list.sort((a, b) => b.signedAt.localeCompare(a.signedAt));
+    list.sort((a, b) => agreementDate(b).localeCompare(agreementDate(a)));
   }
   return byUser;
 }
@@ -105,14 +128,39 @@ export default async function AdminAgreementsPage() {
 
   // Reader swap 2026-08-29: signed agreements and the candidate list
   // both read seed data, so a real member's signed LOI never appeared.
-  const [allAgreements, { users: roster }] = await Promise.all([
+  const [allAgreements, { users: roster }, counterparties] = await Promise.all([
     safely(() => agreementReader.all(), []),
     safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => listCounterparties(), []),
   ]);
   const userById = new Map(roster.map((u) => [u.id, u]));
+  const counterpartyById = new Map(counterparties.map((c) => [c.id, c]));
+
+  // Envelopes that have gone out and not come back.
+  //
+  // Before 2026-09-03 there was nowhere to see this. Rows were only
+  // created when Documenso reported completion, so a sent-but-unsigned
+  // agreement existed nowhere except the audit log. Jamar: "I just
+  // sent out another NCNDA to Aftab, but I'm not seeing it in my
+  // inbox." He was right, and there was nothing to see.
+  const outstanding = allAgreements
+    .filter((a) => !a.signedAt)
+    .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+
+  const partyName = (a: Agreement): string => {
+    if (a.userId) {
+      const u = userById.get(a.userId);
+      return u ? adminName(u) : a.userId;
+    }
+    if (a.counterpartyId) {
+      const c = counterpartyById.get(a.counterpartyId);
+      if (c) return c.company ? `${c.name} (${c.company})` : c.name;
+    }
+    return "Unattached";
+  };
 
   const rows = [...allAgreements].sort((a, b) =>
-    b.signedAt.localeCompare(a.signedAt),
+    agreementDate(b).localeCompare(agreementDate(a)),
   );
   const grouped = groupAgreementsByUser(rows);
   const candidates = agreementCandidates(roster);
@@ -151,6 +199,33 @@ export default async function AdminAgreementsPage() {
       </div>
 
       {/* Send Talent Partner LOI via Documenso */}
+      {outstanding.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-display text-2xl font-semibold">
+            Awaiting signature ({outstanding.length})
+          </h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            Sent and not yet returned. Chase these.
+          </p>
+          <div className="mt-4 space-y-2">
+            {outstanding.map((a) => (
+              <Card key={a.id} className="flex flex-wrap items-baseline justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{partyName(a)}</p>
+                  <p className="mt-0.5 text-xs text-ink-faint">
+                    {AGREEMENT_TYPE_LABELS[a.agreementType]}
+                    {a.notes ? ` · ${a.notes}` : ""}
+                  </p>
+                </div>
+                <p className="shrink-0 text-xs text-ink-muted">
+                  sent {(a.createdAt ?? "").slice(0, 10)}
+                </p>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="mt-10">
         <h2 className="font-display text-2xl font-semibold">
           Send Talent Partner LOI for signature
@@ -608,9 +683,15 @@ export default async function AdminAgreementsPage() {
                                 <p className="text-[11px] text-ink-faint">
                                   {AGREEMENT_PROVIDER_LABELS[row.provider]}
                                   {" · "}
-                                  <span title={row.signedAt}>
-                                    Signed {formatSignedAt(row.signedAt)}
-                                  </span>
+                                  {row.signedAt ? (
+                                    <span title={row.signedAt}>
+                                      Signed {formatSignedAt(row.signedAt)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-brand-magentaText">
+                                      Awaiting signature
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                               <form action={removeAgreement}>

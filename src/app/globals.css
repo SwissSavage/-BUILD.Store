@@ -29,7 +29,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Marquee-style scroll for the header banner */
+/* Marquee-style scroll for the header banner.
+ *
+ * The track is exactly two identical halves and the animation runs
+ * 0 to -50%, so at the end of a cycle the second half sits precisely
+ * where the first started and the loop is seamless. See
+ * components/Marquee.tsx: adding a third copy breaks that seam.
+ *
+ * 2026-09-03: each half is now 50vw rather than a short phrase with
+ * px-8 either side, so one line crosses per cycle instead of three
+ * sitting on screen at once. That makes the travel distance a full
+ * viewport, hence the slower duration. */
 @keyframes marquee {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
@@ -38,7 +48,7 @@ body {
 .marquee {
   display: flex;
   width: max-content;
-  animation: marquee 30s linear infinite;
+  animation: marquee 26s linear infinite;
 }
 
 /* ============================================================ */

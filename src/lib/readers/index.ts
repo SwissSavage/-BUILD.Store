@@ -19,11 +19,12 @@
  * means the first person to try it sees their own data rather than
  * somebody's seed fixture.
  */
-import { and, desc, eq, inArray, isNull, not } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, lt, not } from "drizzle-orm";
 import {
   agreements,
   artistEpks,
   buildVouchers,
+  calendarAvailability,
   calendarMeetings,
   chatMessages,
   chatThreads,
@@ -479,8 +480,56 @@ export function getMeetingsForUser(
   return meetingReader.where(eq(calendarMeetings.organizerId, userId));
 }
 
+type CalendarAvailabilityRow = typeof calendarAvailability.$inferSelect;
+
+export const availabilityReader = makeReader<CalendarAvailabilityRow>(
+  calendarAvailability,
+  { orderBy: calendarAvailability.dayOfWeek, direction: "asc", idColumn: calendarAvailability.id },
+);
+
+/** One member's declared weekly availability windows. */
+export async function getAvailabilityForUser(
+  userId: string,
+): Promise<CalendarAvailabilityRow[]> {
+  const rows = await availabilityReader.where(
+    eq(calendarAvailability.userId, userId),
+  );
+  return rows.sort(
+    (a, b) => a.dayOfWeek - b.dayOfWeek || a.startMinute - b.startMinute,
+  );
+}
+
+/**
+ * Cooperative meetings starting inside the window.
+ *
+ * Bounded in SQL rather than by pulling every meeting ever scheduled
+ * and filtering in the page, because this list grows forever and the
+ * page only ever wants the next fortnight.
+ */
+export async function getUpcomingMeetings(
+  windowDays = 14,
+): Promise<CalendarMeetingRow[]> {
+  const now = new Date().toISOString();
+  const horizon = new Date();
+  horizon.setUTCDate(horizon.getUTCDate() + windowDays);
+  const rows = await meetingReader.where(
+    and(
+      gt(calendarMeetings.startsAt, now),
+      lt(calendarMeetings.startsAt, horizon.toISOString()),
+    )!,
+  );
+  return rows.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+}
+
+/** The minute filed against one meeting, if anyone captured it. */
+export function getMinuteForMeeting(
+  meetingId: string,
+): Promise<MeetingMinute | null> {
+  return minutesReader.one(eq(meetingMinutes.meetingId, meetingId));
+}
+
 /** Re-exported so callers can build their own predicates. */
-export { and, desc, eq, inArray, isNull, not };
+export { and, desc, eq, gt, inArray, isNull, lt, not };
 
 // ──────────────────────────────────────────────────────────────
 //  Profile aggregates

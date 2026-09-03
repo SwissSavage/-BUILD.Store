@@ -13,10 +13,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
 import { memberLabel } from "@/lib/member-label";
-import {
-  MOCK_ARTIST_EPKS,
-  pendingEpkSubmissions,
-} from "@/lib/mock-data/artist-epk";
 import { getAllUsers } from "@/lib/readers/users";
 import { epkReader, getPendingEpks, safely } from "@/lib/readers";
 import {

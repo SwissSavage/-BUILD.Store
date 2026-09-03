@@ -28,6 +28,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { randomUUID } from "crypto";
 import { requireAdmin } from "@/lib/auth-stub";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -41,7 +43,17 @@ import {
   type AgreementProvider,
   type AgreementType,
 } from "@/lib/types";
-import { DOCUMENSO_TEMPLATES, DocumensoError, inviteRecipientToTemplate, inviteRecipientsToTemplate, type DocumensoRecipient } from "@/lib/documenso";
+import {
+  DOCUMENSO_TEMPLATES,
+  DocumensoError,
+  generateDocumentFromTemplate,
+  getTemplate,
+  inviteRecipientToTemplate,
+  sendDocument,
+  type DocumensoRecipient,
+} from "@/lib/documenso";
+import { upsertCounterparty } from "@/lib/writers/counterparties";
+import { adminSenderName, countersignerEmail } from "@/lib/countersigner";
 
 // Local guards mirror the union — allows the parser to fail loudly
 // on typos in FormData string values without pulling in a full zod
@@ -149,6 +161,7 @@ export async function createAgreement(formData: FormData): Promise<void> {
   const row: Agreement = {
     id: newAgreementId(),
     userId,
+    counterpartyId: null,
     agreementType,
     version,
     signedAt,
@@ -480,45 +493,72 @@ export async function sendNcndaForSignature(
     throw new Error("Add at least one counterparty before sending.");
   }
 
-  const recipients: DocumensoRecipient[] = raw.map((r) => ({
-    name: r.company ? `${r.name} (${r.company})` : r.name,
-    email: r.email,
-    role: "SIGNER",
-  }));
+  // ── Countersign-first ────────────────────────────────────────
+  //
+  // Jamar: "I also want the NCNDA to go out with me signing first like
+  // the agreements."
+  //
+  // Same shape as the LOI invite flow in invite-actions: FM takes the
+  // first placeholder slot, the counterparties take the rest, the
+  // envelope is activated with Documenso's own emails suppressed, and
+  // the admin is redirected straight into their signing URL. The
+  // counterparty then opens a document FM has already signed rather
+  // than being asked to go first.
+  //
+  // The template therefore needs one more placeholder recipient than
+  // it did before. That is a Documenso-side change, and the error
+  // below says so plainly rather than failing with a shape mismatch.
+  const template = await getTemplate(templateId);
+  const placeholders = template.Recipient ?? [];
+  const needed = raw.length + 1;
+  if (placeholders.length < needed) {
+    throw new Error(
+      `NCNDA template ${templateId} has ${placeholders.length} placeholder recipient(s) but this send needs ${needed}: one for the FM countersigner plus ${raw.length} counterpart${raw.length === 1 ? "y" : "ies"}. Add the missing slot in Documenso before sending.`,
+    );
+  }
+
+  const fmSignerEmail = countersignerEmail(admin);
+  const fmSignerName = adminSenderName(admin);
+
+  // Slot 0 is FM. Slots 1..n are the counterparties, in form order.
+  const recipients = placeholders
+    .slice(0, needed)
+    .map((slot, idx) =>
+      idx === 0
+        ? { id: slot.id, email: fmSignerEmail, name: fmSignerName }
+        : {
+            id: slot.id,
+            email: raw[idx - 1].email,
+            name: raw[idx - 1].company
+              ? `${raw[idx - 1].name} (${raw[idx - 1].company})`
+              : raw[idx - 1].name,
+          },
+    );
 
   const titleSuffix =
     raw.length === 1
       ? raw[0].company || raw[0].name
       : raw.map((r) => r.company || r.name).join(" / ");
-  const title = `FM Mutual NCNDA — ${titleSuffix}`;
+  const title = `FM Mutual NCNDA: ${titleSuffix}`;
 
   let envelopeId: string;
+  let fmSigningUrl: string | undefined;
   try {
-    // externalId format: agreement:ncnda:<variant>. Webhook parses this
-    // to know we've sent an NCNDA and which template variant it was.
-    // For NCNDAs the FM-side Agreement row (if any) is created against
-    // the primary counterparty on completion; multi-party variants log
-    // one Agreement per completed signer per Documenso's per-recipient
-    // completion events. See webhook route.
-    const externalId = `agreement:ncnda:${variant}`;
-    const envelope =
-      variant === "bilateral"
-        ? await inviteRecipientToTemplate({
-            templateEnvelopeId: templateId,
-            recipient: recipients[0],
-            title,
-            externalId,
-          })
-        : await inviteRecipientsToTemplate({
-            templateEnvelopeId: templateId,
-            recipients,
-            title,
-            externalId,
-          });
-    // v1 responses return `documentId` from generate-document; the shim
-    // exposes both `documentId` and `id` on DocumensoDocument. Prefer
-    // documentId; fall back to id for any legacy path.
-    envelopeId = String(envelope.documentId ?? envelope.id ?? "");
+    const origin = (
+      process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? ""
+    ).replace(/\/$/, "");
+
+    // externalId format: agreement:ncnda:<variant>. The webhook parses
+    // this to know an NCNDA came back and which variant it was.
+    const generated = await generateDocumentFromTemplate({
+      templateId,
+      recipients,
+      title,
+      externalId: `agreement:ncnda:${variant}`,
+      meta: { redirectUrl: `${origin}/admin/agreements?countersigned=ncnda` },
+    });
+
+    envelopeId = String(generated.documentId ?? generated.id ?? "");
     if (!envelopeId) {
       throw new DocumensoError(
         "Documenso returned no document id from generate-document. The send may not have completed.",
@@ -526,6 +566,18 @@ export async function sendNcndaForSignature(
         null,
       );
     }
+
+    // Match by email rather than position: Documenso does not promise
+    // to return recipients in the order they were submitted.
+    fmSigningUrl = generated.recipients?.find(
+      (r) => r.email?.toLowerCase() === fmSignerEmail.toLowerCase(),
+    )?.signingUrl;
+
+    // DRAFT to PENDING so the signing URLs go live. sendEmail: false
+    // because FM is being redirected in directly, and the
+    // counterparties should not be emailed until FM has signed. The
+    // webhook releases them once the countersignature lands.
+    await sendDocument(envelopeId, { sendEmail: false });
   } catch (err) {
     if (err instanceof DocumensoError) {
       throw new Error(
@@ -534,6 +586,51 @@ export async function sendNcndaForSignature(
       );
     }
     throw err;
+  }
+
+  // ── Record it now, not on completion ─────────────────────────
+  //
+  // Rows used to be created only when the envelope came back signed,
+  // so a sent NCNDA existed nowhere FM could see it. That is the
+  // reported symptom: "I just sent out another NCNDA to Aftab, but
+  // I'm not seeing it in my inbox."
+  //
+  // Best-effort. The envelope is already out and already correct by
+  // this point, so throwing here would report a failure for a send
+  // that succeeded, which is the inversion that had contractors
+  // seeing errors for proposals that saved.
+  const now = new Date().toISOString();
+  for (const party of raw) {
+    try {
+      const counterpartyId = await upsertCounterparty({
+        email: party.email,
+        name: party.name,
+        company: party.company,
+      });
+      await db.insert(agreementsTable).values({
+        id: `agreement_${randomUUID()}`,
+        userId: null,
+        counterpartyId,
+        agreementType: "other",
+        version: now.slice(0, 10),
+        signedAt: null,
+        provider: "documenso",
+        externalRef: envelopeId,
+        storageUrl: null,
+        notes: `Mutual NCNDA (${variant}) sent ${now}. FM countersigns first.`,
+        documensoEnvelopeId: envelopeId,
+        signatureStatus: "sent",
+        signatureCompletedAt: null,
+        createdBy: admin.id,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (err) {
+      console.error(
+        `NCNDA_RECORD_FAILED envelope=${envelopeId} counterparty=${party.email}`,
+        err,
+      );
+    }
   }
 
   await logAuditEvent({
@@ -549,10 +646,21 @@ export async function sendNcndaForSignature(
       agreementType: "other",
       purpose: "ncnda",
       variant,
-      recipients: recipients.map((r) => ({ name: r.name, email: r.email })),
+      countersignFirst: true,
+      recipients: raw.map((r) => ({ name: r.name, email: r.email })),
     },
-    reason: `Mutual NCNDA (${variant}) sent to ${recipients.map((r) => `${r.name} <${r.email}>`).join(", ")} via Documenso.`,
+    reason: `Mutual NCNDA (${variant}) sent to ${raw.map((r) => `${r.name} <${r.email}>`).join(", ")} via Documenso. FM countersigns first.`,
   });
 
   revalidatePath("/admin/agreements");
+
+  if (!fmSigningUrl) {
+    throw new Error(
+      "The NCNDA was created and is on file, but Documenso returned no signing URL for the FM countersigner. Open it in Documenso to sign.",
+    );
+  }
+
+  // Straight into Documenso to countersign. The counterparties are
+  // emailed by the webhook once this signature lands.
+  redirect(fmSigningUrl);
 }

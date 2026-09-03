@@ -1481,9 +1481,46 @@ export const communityMessages = pgTable("community_messages", {
     .defaultNow(),
 });
 
+/**
+ * An outside party we have paperwork with.
+ *
+ * Not an FM member and not trying to become one: a client contact, a
+ * partner firm, anyone who signs a mutual NCNDA. Keyed on email so the
+ * same person across three agreements over two years is one row.
+ */
+export const counterparties = pgTable("counterparties", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  company: text("company"),
+  notes: text("notes"),
+  firstSeenAt: timestamp("first_seen_at", { mode: "string", withTimezone: true }).notNull(),
+  lastSeenAt: timestamp("last_seen_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
 export const agreements = pgTable("agreements", {
   id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  /**
+   * The FM member this agreement belongs to, when there is one.
+   *
+   * NULLABLE since migration 0025. A mutual NCNDA is signed by an
+   * outside company that has no user row, and the webhook used to
+   * store `ncnda:<email>` here to cope. That cannot satisfy the
+   * foreign key, so every NCNDA insert threw and no NCNDA was ever
+   * recorded. Outside parties now live in the counterparty columns
+   * below and this column means what it says.
+   */
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  /**
+   * Set instead of userId when the signer is not an FM member.
+   *
+   * A row of its own rather than name/email/company columns here,
+   * because Jamar expects these firms back: "we want to keep them on
+   * file, because ideally they will be using our system a lot more."
+   * Denormalising would have fixed the crash and left "what has this
+   * firm signed with us" unanswerable.
+   */
+  counterpartyId: text("counterparty_id").references(() => counterparties.id),
   agreementType: text("agreement_type", {
     enum: [
       "talent_data",
@@ -1495,7 +1532,13 @@ export const agreements = pgTable("agreements", {
     ],
   }).notNull(),
   version: text("version").notNull(),
-  signedAt: timestamp("signed_at", { mode: "string", withTimezone: true }).notNull(),
+  /**
+   * Null while an envelope is out for signature. Rows are created at
+   * SEND time now, not only on completion, so "who has not signed"
+   * is answerable. The webhook fills this in when Documenso reports
+   * the envelope complete.
+   */
+  signedAt: timestamp("signed_at", { mode: "string", withTimezone: true }),
   provider: text("provider", {
     enum: [
       "adobesign",

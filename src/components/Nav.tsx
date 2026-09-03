@@ -29,6 +29,7 @@ import { StoreDropdown } from "@/components/StoreDropdown";
 import { JobsDropdown } from "@/components/JobsDropdown";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { MobileMenuApp } from "@/components/MobileMenuApp";
+import { Marquee } from "@/components/Marquee";
 
 const VIEW_AS_TIER_ORDER: MembershipTier[] = [
   "partner", "member",
@@ -79,14 +80,7 @@ export async function Nav() {
           </span>
         </Link>
 
-        <div className="hidden flex-1 overflow-hidden md:block">
-          <div className="marquee whitespace-nowrap text-xs text-ink-muted">
-            <span className="px-8">world-$BUILDing people+products.</span>
-            <span className="px-8">world-$BUILDing people+products.</span>
-            <span className="px-8">world-$BUILDing people+products.</span>
-            <span className="px-8">world-$BUILDing people+products.</span>
-          </div>
-        </div>
+        <Marquee />
 
         {/* Desktop nav — hidden on mobile so 10+ auth links don't wrap
             into a mess. Mobile users get the MobileMenuApp drawer

@@ -257,9 +257,9 @@ export default async function PaperworkEditPage() {
                       </span>
                       <span
                         className="font-mono text-[10px] text-ink-faint"
-                        title={a.signedAt}
+                        title={a.signedAt ?? "Sent, not yet signed"}
                       >
-                        {a.signedAt.slice(0, 10)}
+                        {a.signedAt ? a.signedAt.slice(0, 10) : "unsigned"}
                       </span>
                     </div>
                     <p className="mt-1 text-[11px] text-ink-faint">

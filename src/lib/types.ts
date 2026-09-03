@@ -4049,10 +4049,36 @@ export const SIGNATURE_STATUS_LABELS: Record<SignatureStatus, string> = {
  *    holders — it's an onboarding backlog signal, not a compliance
  *    failure.
  */
+/**
+ * An outside party we have paperwork with. Not a member, and not
+ * trying to be: a client contact, a partner firm, anyone who signs a
+ * mutual NCNDA. Kept on file so the same firm across several
+ * agreements is one record.
+ */
+export interface Counterparty {
+  id: string;
+  /** The identity. Lowercased on write. */
+  email: string;
+  name: string;
+  company: string | null;
+  notes: string | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+}
+
 export interface Agreement {
   id: string;
-  /** Who signed. */
-  userId: string;
+  /**
+   * The member who signed, when it is a member.
+   *
+   * NULL for an outside counterparty. This was `string` and NOT NULL
+   * with a foreign key, and the webhook stored `ncnda:<email>` here
+   * for NCNDA signers, which could not satisfy the constraint. Every
+   * NCNDA insert threw and none were recorded. See migration 0025.
+   */
+  userId: string | null;
+  /** Set instead of userId when the signer is not an FM member. */
+  counterpartyId: string | null;
   agreementType: AgreementType;
   /** Version string for the document itself — e.g. "1.0", "2026-04",
    *  "v2-post-multisig". Lets the covenant evolve without losing the
@@ -4060,8 +4086,12 @@ export interface Agreement {
    *  cooperative maintains it. */
   version: string;
   /** When the countersigned event actually happened (ISO). NOT when
-   *  the row was created in the registry. */
-  signedAt: string;
+   *  the row was created in the registry.
+   *
+   *  NULL while an envelope is out for signature. Rows are created at
+   *  SEND time now, so "who has not signed yet" is answerable, and a
+   *  row that has not come back has no signature date to report. */
+  signedAt: string | null;
   provider: AgreementProvider;
   /** Provider-native identifier (Adobe Sign envelope ID, DocuSign
    *  envelope ID, etc.). Null for manual / in_app entries. */

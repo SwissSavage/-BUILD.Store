@@ -19,11 +19,11 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
-import { safely } from "@/lib/readers";
 import {
-  availabilityForUser,
-  upcomingCooperativeMeetings,
-} from "@/lib/mock-data/calendar";
+  availabilityReader,
+  getUpcomingMeetings,
+  safely,
+} from "@/lib/readers";
 import {
   CALENDAR_MEETING_KIND_LABELS,
   CALENDAR_MEETING_STATUS_LABELS,
@@ -53,7 +53,9 @@ function fmtDateTime(iso: string): string {
   });
 }
 
-function groupByDate(meetings: ReturnType<typeof upcomingCooperativeMeetings>) {
+function groupByDate(
+  meetings: Awaited<ReturnType<typeof getUpcomingMeetings>>,
+) {
   const groups: Record<string, typeof meetings> = {};
   for (const m of meetings) {
     const date = new Date(m.startsAt).toLocaleDateString(undefined, {
@@ -97,7 +99,32 @@ export default async function CooperativeCalendarPage() {
     source: "postgres" as const,
   });
   const members = roster.filter((u) => u.membershipTier === "member");
-  const meetings = upcomingCooperativeMeetings(14);
+
+  // Reader swap 2026-09-03. Meetings and availability both came from
+  // fixtures, so the cooperative calendar showed seed meetings that
+  // were never scheduled and seed availability windows for people who
+  // had declared none. Anyone booking off this was booking fiction.
+  //
+  // Availability loads once and groups in memory rather than querying
+  // per member inside the render loop below, which would be one round
+  // trip per Member on every page view.
+  const [meetings, allAvailability] = await Promise.all([
+    safely(() => getUpcomingMeetings(14), []),
+    safely(() => availabilityReader.all(), []),
+  ]);
+
+  const availabilityByUser = new Map<string, typeof allAvailability>();
+  for (const a of allAvailability) {
+    const list = availabilityByUser.get(a.userId) ?? [];
+    list.push(a);
+    availabilityByUser.set(a.userId, list);
+  }
+  for (const list of availabilityByUser.values()) {
+    list.sort(
+      (a, b) => a.dayOfWeek - b.dayOfWeek || a.startMinute - b.startMinute,
+    );
+  }
+
   const meetingsByDay = groupByDate(meetings);
 
   return (
@@ -133,7 +160,7 @@ export default async function CooperativeCalendarPage() {
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {members.map((m) => {
-            const windows = availabilityForUser(m.id);
+            const windows = availabilityByUser.get(m.id) ?? [];
             return (
               <Card key={m.id}>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">

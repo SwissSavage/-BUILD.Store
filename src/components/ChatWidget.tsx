@@ -358,7 +358,7 @@ function MessageRow({ message }: { message: ChatMessage }) {
       <div
         className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${
           fromVisitor
-            ? "bg-brand-magenta text-white"
+            ? "fm-btn-primary"
             : "bg-[var(--surface-inset)] text-ink"
         }`}
       >

@@ -79,7 +79,7 @@ const INPUT =
   "w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm";
 const LABEL = "block text-xs uppercase tracking-wider text-ink-muted";
 const PRIMARY =
-  "rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-white hover:opacity-90";
+  "rounded-full fm-btn-primary px-5 py-2 text-sm font-medium";
 const QUIET =
   "rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-sm hover:border-brand-magenta hover:text-brand-magentaText";
 

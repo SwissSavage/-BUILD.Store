@@ -205,7 +205,7 @@ export function BidOnContractForm({
             type="file"
             multiple
             accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.txt,.md"
-            className="mt-2 w-full text-sm text-ink-muted file:mr-3 file:rounded-full file:border-0 file:bg-brand-magenta file:px-4 file:py-2 file:text-sm file:text-white hover:file:opacity-90"
+            className="mt-2 w-full text-sm text-ink-muted file:mr-3 file:rounded-full file:border-0 file:bg-[var(--fm-grad-from)] file:text-black file:px-4 file:py-2 file:text-sm file:text-white hover:file:opacity-90"
           />
           {editing && existingDocs.length > 0 && (
             <p className="mt-2 text-xs text-ink-faint">

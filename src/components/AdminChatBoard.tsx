@@ -320,7 +320,7 @@ function Bubble({ message }: { message: ChatMessage }) {
       <div
         className={`max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${
           fromAdmin
-            ? "bg-brand-magenta text-white"
+            ? "fm-btn-primary"
             : "bg-[var(--surface-inset)] text-ink"
         }`}
       >

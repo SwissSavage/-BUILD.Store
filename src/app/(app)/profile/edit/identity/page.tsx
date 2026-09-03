@@ -131,7 +131,7 @@ export default async function IdentityEditPage() {
               name="image"
               accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/tiff"
               required
-              className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-magenta file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
+              className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-[var(--fm-grad-from)] file:text-black file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
             />
             <p className="mt-1.5 text-[11px] text-ink-faint">
               JPEG / PNG / WebP up to 25 MB. Resized to three variants

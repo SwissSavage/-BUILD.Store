@@ -112,7 +112,7 @@ export default async function ProfilePage() {
 
       <div className="mt-4 flex justify-end">
         <Link
-          href="/profile/edit"
+          href="/profile/edit/identity"
           className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-white hover:opacity-90"
         >
           Edit profile
@@ -132,7 +132,7 @@ export default async function ProfilePage() {
               ? "Name, display name, tagline and pillars."
               : "No tagline yet. It is the line clients read first."
           }
-          href="/profile/edit#identity"
+          href="/profile/edit/identity"
         />
         <AreaCard
           eyebrow="Work"
@@ -142,7 +142,7 @@ export default async function ProfilePage() {
               : `${myApplications.length} proposals sent`
           }
           detail="Proposals, contracts and the work you are on."
-          href="/profile/edit#work"
+          href="/profile/edit/work"
         />
         <AreaCard
           eyebrow="Paperwork"
@@ -152,7 +152,7 @@ export default async function ProfilePage() {
               : `${myAgreements.length} signed agreements`
           }
           detail="Agreements on file and what you have consented to."
-          href="/profile/edit#paperwork"
+          href="/profile/edit/paperwork"
         />
         <AreaCard
           eyebrow="Portfolio"
@@ -160,13 +160,13 @@ export default async function ProfilePage() {
             published === 1 ? "1 published piece" : `${published} published`
           }
           detail="The work shown on your public profile."
-          href="/profile/edit#portfolio"
+          href="/profile/edit/portfolio"
         />
         <AreaCard
           eyebrow="Money"
           title="Payouts and wallet"
           detail="How you get paid and what has been paid."
-          href="/profile/edit#money"
+          href="/profile/edit/money"
         />
         <AreaCard
           eyebrow="Data"
@@ -174,7 +174,7 @@ export default async function ProfilePage() {
             user.dataParticipation ? "Opted in" : "Not opted in"
           }
           detail="Tier-2 data participation and your export rights."
-          href="/profile/edit#data"
+          href="/profile/edit/data"
         />
       </div>
     </div>

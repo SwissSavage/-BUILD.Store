@@ -15,6 +15,7 @@
  */
 import { signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth-stub";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,33 @@ export default async function SignInPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const { next } = await searchParams;
+
+  // ─────────────────────────────────────────────────────────────
+  // WHY (2026-09-02)
+  //
+  // This page never checked whether you were already signed in, so a
+  // member with a live session who landed here was shown the sign-in
+  // form again and asked to prove who they were for a second time.
+  // Bayu: "took me to another sign-in page that don't detect that i'm
+  // already signed in, i think that's the bigger problem."
+  //
+  // He is right that it is the bigger problem. A sign-in screen shown
+  // to someone already signed in reads as "your session broke", which
+  // is exactly the wrong thing to tell a member during onboarding.
+  //
+  // Send them where they were going instead. Internal paths only: a
+  // `next` value is attacker-controllable through the query string, so
+  // an absolute URL here would turn our own sign-in page into an open
+  // redirect for phishing.
+  // ─────────────────────────────────────────────────────────────
+  const existing = await getCurrentUser();
+  if (existing) {
+    const target =
+      next && next.startsWith("/") && !next.startsWith("//")
+        ? next
+        : "/dashboard";
+    redirect(target);
+  }
 
   return (
     <div className="mx-auto max-w-md px-6 py-20">

@@ -2,7 +2,7 @@
  * $BUILD voucher ledger admin actions.
  *
  * Issue, mark-pending-swap, complete-swap, forfeit. Sandbox mutates
- * MOCK_BUILD_VOUCHERS in memory; production persists to the Drizzle
+ * Postgres via build_vouchers. Issuance holds the supply-cap advisory
  * `build_vouchers` table (see src/db/schema.ts).
  *
  * Design posture:
@@ -36,8 +36,14 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_BUILD_VOUCHERS } from "@/lib/mock-data/vouchers";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { buildVouchers } from "@/db/schema";
+import { getUserById } from "@/lib/readers/users";
+import {
+  getVoucherById,
+  transitionVoucher,
+} from "@/lib/writers/vouchers";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { issueVoucherInternal } from "@/lib/voucher-issuance";
 import {
@@ -71,10 +77,17 @@ export async function totalIssuedSupply(
     "swapped",
   ],
 ): Promise<number> {
-  return MOCK_BUILD_VOUCHERS.filter((v) => statuses.includes(v.swapStatus)).reduce(
-    (sum, v) => sum + Number(v.amount),
-    0,
-  );
+  // Was summing MOCK_BUILD_VOUCHERS while real issuance wrote to
+  // Postgres, so "X of 10M issued" on the admin surface described the
+  // seed data. The cap itself was never at risk, since
+  // voucher-issuance.ts enforces it inside the advisory lock against
+  // the real table, but the number shown to a human was fiction.
+  const rows = await db
+    .select({ amount: buildVouchers.amount, swapStatus: buildVouchers.swapStatus })
+    .from(buildVouchers);
+  return rows
+    .filter((v) => statuses.includes(v.swapStatus as BuildVoucher["swapStatus"]))
+    .reduce((sum, v) => sum + Number(v.amount), 0);
 }
 
 /**
@@ -136,7 +149,9 @@ export async function issueVoucher(formData: FormData): Promise<void> {
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
   if (!userId) throw new Error("Pick a user to issue the voucher to.");
-  const user = MOCK_USERS.find((u) => u.id === userId);
+  // Was MOCK_USERS.find, which misses every real member, so issuing a
+  // voucher to an actual person threw "Unknown user".
+  const user = await getUserById(userId);
   if (!user) throw new Error(`Unknown user: ${userId}`);
 
   const amount = parseVoucherAmount(amountRaw);
@@ -180,7 +195,7 @@ export async function markVoucherPendingSwap(formData: FormData): Promise<void> 
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("Voucher id is required.");
 
-  const row = MOCK_BUILD_VOUCHERS.find((v) => v.id === id);
+  const row = await getVoucherById(id);
   if (!row) throw new Error("Voucher not found.");
   if (row.swapStatus !== "unswapped") {
     throw new Error(
@@ -189,8 +204,7 @@ export async function markVoucherPendingSwap(formData: FormData): Promise<void> 
   }
 
   const before = { swapStatus: row.swapStatus };
-  row.swapStatus = "pending_swap";
-  row.updatedAt = new Date().toISOString();
+  await transitionVoucher(id, "unswapped", "pending_swap");
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -219,7 +233,7 @@ export async function cancelPendingSwap(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("Voucher id is required.");
 
-  const row = MOCK_BUILD_VOUCHERS.find((v) => v.id === id);
+  const row = await getVoucherById(id);
   if (!row) throw new Error("Voucher not found.");
   if (row.swapStatus !== "pending_swap") {
     throw new Error(
@@ -228,8 +242,7 @@ export async function cancelPendingSwap(formData: FormData): Promise<void> {
   }
 
   const before = { swapStatus: row.swapStatus };
-  row.swapStatus = "unswapped";
-  row.updatedAt = new Date().toISOString();
+  await transitionVoucher(id, "pending_swap", "unswapped");
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -268,7 +281,7 @@ export async function completeVoucherSwap(formData: FormData): Promise<void> {
     );
   }
 
-  const row = MOCK_BUILD_VOUCHERS.find((v) => v.id === id);
+  const row = await getVoucherById(id);
   if (!row) throw new Error("Voucher not found.");
   if (row.swapStatus === "swapped") {
     throw new Error("This voucher has already been swapped.");
@@ -283,10 +296,13 @@ export async function completeVoucherSwap(formData: FormData): Promise<void> {
     swappedAt: row.swappedAt,
   };
   const now = new Date().toISOString();
-  row.swapStatus = "swapped";
-  row.swappedToTxHash = txHash;
-  row.swappedAt = now;
-  row.updatedAt = now;
+  await transitionVoucher(id, row.swapStatus, "swapped", {
+    swappedAt: now,
+  });
+  await db
+    .update(buildVouchers)
+    .set({ swappedToTxHash: txHash })
+    .where(eq(buildVouchers.id, id));
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -327,7 +343,7 @@ export async function forfeitVoucher(formData: FormData): Promise<void> {
     );
   }
 
-  const row = MOCK_BUILD_VOUCHERS.find((v) => v.id === id);
+  const row = await getVoucherById(id);
   if (!row) throw new Error("Voucher not found.");
   if (row.swapStatus === "swapped") {
     throw new Error(
@@ -339,8 +355,7 @@ export async function forfeitVoucher(formData: FormData): Promise<void> {
   }
 
   const before = { swapStatus: row.swapStatus };
-  row.swapStatus = "forfeited";
-  row.updatedAt = new Date().toISOString();
+  await transitionVoucher(id, row.swapStatus, "forfeited");
 
   await logAuditEvent({
     actorUserId: admin.id,

@@ -19,6 +19,7 @@ import { portfolioItems } from "@/db/schema";
 import { getPortfolioForUser, safely } from "@/lib/readers";
 import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { DepersonalizeNotice } from "@/components/DepersonalizeNotice";
 
 const ALL_INDUSTRIES: Industry[] = ["stem", "creative-media", "professional-services"];
 
@@ -210,7 +211,8 @@ export default async function PortfolioEditorPage() {
 
       <Card className="mt-10">
         <CardEyebrow>Add a piece</CardEyebrow>
-        <form action={createItem} className="mt-4 space-y-5">
+        <DepersonalizeNotice context="portfolio" className="mt-4" />
+        <form action={createItem} className="mt-5 space-y-5">
           <Field name="title" label="Title" required />
 
           <label className="block">
@@ -260,6 +262,9 @@ export default async function PortfolioEditorPage() {
           </button>
           <p className="text-xs text-ink-faint">
             Goes into the admin queue. You&apos;ll see status updates here.
+            Pieces that still name a client come back as &ldquo;needs
+            revision&rdquo; rather than being published, so it is worth a
+            second read before you send it.
           </p>
         </form>
       </Card>

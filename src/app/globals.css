@@ -449,6 +449,13 @@ body {
   transform-style: preserve-3d;
 }
 
+/* The FM mark sits above the portrait rather than behind it. Same
+   plane as the composed content, so a full-bleed profile photo
+   cannot bury it. */
+.fm-card-3d-layer-mark {
+  transform: translateZ(50px);
+}
+
 /* Sheen: radial gradient tracks the cursor via the custom
    properties updated by the component's mousemove handler. */
 .fm-card-3d-sheen {
@@ -490,6 +497,7 @@ body {
   .fm-card-3d-layer-back,
   .fm-card-3d-layer-mid,
   .fm-card-3d-layer-front,
+  .fm-card-3d-layer-mark,
   .fm-card-3d-sheen,
   .fm-card-3d-content {
     transform: none;
@@ -497,4 +505,32 @@ body {
   .fm-card-3d-sheen {
     display: none;
   }
+}
+
+/* ============================================================ */
+/* Inline profile editing (2026-09-03)                          */
+/*                                                              */
+/* /profile shows the profile itself; each block carries its    */
+/* own form behind a <details>. Opening the form replaces the   */
+/* presented value in place rather than pushing it down the     */
+/* page, which is what makes it read as editing the thing you   */
+/* are looking at instead of a settings panel bolted above it.  */
+/*                                                              */
+/* Done in CSS on purpose. The conditional-render version needs */
+/* state, state needs a client component, and that would mean   */
+/* marking every field on the profile "use client" to get a     */
+/* pencil icon.                                                 */
+/* ============================================================ */
+
+.fm-editable[open] ~ .fm-editable-view {
+  display: none;
+}
+
+/* Kill the native disclosure triangle. The Edit control is the
+   affordance; a triangle next to it reads as a second one. */
+.fm-editable > summary {
+  list-style: none;
+}
+.fm-editable > summary::-webkit-details-marker {
+  display: none;
 }

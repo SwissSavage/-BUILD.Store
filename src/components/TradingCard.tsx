@@ -192,14 +192,6 @@ export function TradingCard({
         aria-hidden
       />
 
-      {/* FM logo watermark — top-right corner, faint */}
-      <div
-        className="pointer-events-none absolute right-4 top-4 select-none text-[10px] font-bold uppercase tracking-[0.2em] text-white/40"
-        aria-hidden
-      >
-        Future Modern
-      </div>
-
       {/* Portrait foreground.
           
           Three states, in descending order of how much we have:
@@ -262,6 +254,25 @@ export function TradingCard({
           </span>
         </div>
       )}
+
+      {/* FM logo watermark — top-right corner, faint.
+
+          PAINTED AFTER THE PORTRAIT (2026-09-02). It used to sit
+          before it in DOM order, and both are absolutely positioned
+          across the whole card, so a profile photo covered it. With
+          initials the layer is mostly transparent and the watermark
+          showed through, which is why it looked like the mark
+          "disappeared when you upload a profile pic" rather than like
+          a stacking bug. Bayu caught it.
+
+          z-10 as well as source order, so composed content added later
+          cannot bury it again by accident. */}
+      <div
+        className="pointer-events-none absolute right-4 top-4 z-10 select-none text-[10px] font-bold uppercase tracking-[0.2em] text-white/70 mix-blend-screen"
+        aria-hidden
+      >
+        Future Modern
+      </div>
 
       {/* Holographic sheen overlay — only on Champion (legendary) tier */}
       {tier === "champion" && (

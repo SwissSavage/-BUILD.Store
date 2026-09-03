@@ -20,6 +20,7 @@ import { quoteSheets } from "@/db/schema";
 import { quoteSheetReader, safely } from "@/lib/readers";
 import { INDUSTRY_LABELS, type QuoteSheetSample } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
+import { DepersonalizeNotice } from "@/components/DepersonalizeNotice";
 
 async function submitQuote(formData: FormData) {
   "use server";
@@ -212,6 +213,12 @@ export default async function QuoteSubmitPage({
           reason for rejection.
         </p>
 
+        {/* Work samples on a quote sheet go to the client, so the same
+            rule applies here as on the portfolio. Contact info is
+            stripped inline and is never a rejection; a named client is
+            a different thing and does get the sheet sent back. */}
+        <DepersonalizeNotice context="proposal" className="mt-4" />
+
         <form action={submitQuote} className="mt-5 space-y-5">
           <input type="hidden" name="projectId" value={project.id} />
 
@@ -264,7 +271,7 @@ export default async function QuoteSubmitPage({
               name="memberNote"
               rows={2}
               className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
-              placeholder="Conflicts, prior relationships, anything we should know."
+              placeholder="Conflicts, prior relationships, anything we should know. Name names here if it helps; this field never leaves the cooperative."
             />
           </label>
 

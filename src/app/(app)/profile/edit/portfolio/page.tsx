@@ -208,8 +208,9 @@ export default async function PortfolioEditPage() {
           <div>
             <CardEyebrow>Portfolio</CardEyebrow>
             <p className="mt-2 text-sm text-ink-muted">
-              Submit work samples — admins scrub PII before pieces appear on your
-              public profile or the showcase.
+              Submit work samples. Scrub client names and identifying
+              details first: pieces that still carry them are sent back for
+              revision rather than published.
             </p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
               <span className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-ink-muted">

@@ -6,13 +6,22 @@
  * here drives both the public Store dropdown and the /store filter
  * chips, so this is the source of truth until Payload CMS lands.
  *
+ * READS THE SAME READER THE PUBLIC STORE DOES (2026-09-03). It used to
+ * read allCategoriesForAdmin() from the fixture module while /store and
+ * StoreDropdown read storeCategoryReader from Postgres. Since the
+ * actions wrote to that same fixture, an admin creating a category saw
+ * it appear right here and had no way to know a customer would never
+ * see it, or that it would vanish on the next deploy. Reading through
+ * storeCategoryReader is what makes this page able to tell the truth
+ * about what exists.
+ *
  * Production swap: Payload admin UI replaces this surface (preferred
  * per the locked CMS posture). Until then, admins manage categories
  * here without touching code.
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
-import { allCategoriesForAdmin } from "@/lib/mock-data/store-categories";
+import { storeCategoryReader, safely } from "@/lib/readers";
 import {
   archiveStoreCategory,
   createStoreCategory,
@@ -26,6 +35,11 @@ import {
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
+// Mandatory on any page that reads the database. CI builds with a
+// dummy DATABASE_URL, so a static render bakes in an empty category
+// list and ships it.
+export const dynamic = "force-dynamic";
+
 const VERTICAL_OPTIONS: ReadonlyArray<MarketplaceCategory> = [
   "goods",
   "saas",
@@ -36,7 +50,9 @@ const VERTICAL_OPTIONS: ReadonlyArray<MarketplaceCategory> = [
 
 export default async function AdminCategoriesPage() {
   await requireAdmin();
-  const categories = allCategoriesForAdmin();
+  const categories = (await safely(() => storeCategoryReader.all(), [])).sort(
+    (a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name),
+  );
   const active = categories.filter((c) => c.isActive);
   const archived = categories.filter((c) => !c.isActive);
 
@@ -120,6 +136,16 @@ export default async function AdminCategoriesPage() {
                 No active categories. Add one above to start populating the
                 dropdown.
               </p>
+              {categories.length === 0 && (
+                <p className="mt-2 text-xs text-ink-faint">
+                  The `store_categories` table is empty, which is also
+                  what the public Store dropdown is reading. If you
+                  expected the seeded taxonomy to be here, it was never
+                  written to this database. Until this session this page
+                  read a fixture list, so it looked populated while the
+                  store showed nothing.
+                </p>
+              )}
             </Card>
           ) : (
             active.map((c) => <CategoryRow key={c.id} category={c} />)

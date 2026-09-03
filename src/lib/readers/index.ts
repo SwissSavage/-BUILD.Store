@@ -610,6 +610,18 @@ export const productReader = makeReader<Product>(products, {
   idColumn: products.id,
 });
 
+/**
+ * One seller's listings, every status included.
+ *
+ * Scoped in SQL rather than by filtering `productReader.all()` in the
+ * page. A seller's own listing page should not be pulling the whole
+ * store into memory to find their four rows, and a filter written in
+ * a component is one refactor away from being dropped.
+ */
+export function getProductsForSeller(sellerId: string): Promise<Product[]> {
+  return productReader.where(eq(products.sellerId, sellerId));
+}
+
 export const mediaAssetReader = makeReader<MediaAsset>(mediaAssets, {
   orderBy: mediaAssets.id,
   idColumn: mediaAssets.id,

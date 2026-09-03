@@ -136,13 +136,21 @@ export default async function PortfolioEditPage() {
                 real time.
               </p>
             </div>
-            <Link
-              href="/profile/seller/orders"
-              className="rounded-full px-5 py-2.5 text-sm font-medium text-white shadow-sm"
-              style={{ backgroundColor: "#D828A0" }}
-            >
-              Open fulfillment dashboard →
-            </Link>
+            <div className="flex shrink-0 flex-col gap-2">
+              <Link
+                href="/profile/seller/orders"
+                className="rounded-full px-5 py-2.5 text-center text-sm font-medium text-white shadow-sm"
+                style={{ backgroundColor: "#D828A0" }}
+              >
+                Open fulfillment dashboard →
+              </Link>
+              <Link
+                href="/profile/seller/products"
+                className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-center text-sm hover:border-brand-magenta hover:text-brand-magenta"
+              >
+                Your listings →
+              </Link>
+            </div>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-4">
             <SellerStat

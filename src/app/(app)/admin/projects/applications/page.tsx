@@ -11,6 +11,7 @@
  * `users` + `projects`. Server actions stay the same shape.
  */
 import Link from "next/link";
+import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth-stub";
 import { getAllApplications } from "@/lib/readers/project-applications";
 import { getAllUsers } from "@/lib/readers/users";
@@ -259,23 +260,21 @@ function PendingRow({
           className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
         />
         <div className="flex flex-wrap gap-2">
-          <button
-            type="submit"
+          <SubmitButton pendingLabel="Saving…"
             name="decision"
             value="approve"
             className="rounded-full px-4 py-2 text-sm font-medium text-white"
             style={{ backgroundColor: "#007048" }}
           >
             Select for the team
-          </button>
-          <button
-            type="submit"
+          </SubmitButton>
+          <SubmitButton pendingLabel="Saving…"
             name="decision"
             value="reject"
             className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
           >
             Not this round
-          </button>
+          </SubmitButton>
         </div>
       </form>
 
@@ -284,12 +283,11 @@ function PendingRow({
           for test data and mistakes, and it is reversible. */}
       <form action={withdrawProposalAsAdmin} className="mt-3">
         <input type="hidden" name="id" value={application.id} />
-        <button
-          type="submit"
+        <SubmitButton pendingLabel="Saving…"
           className="text-xs text-ink-faint underline hover:text-brand-magenta"
         >
           Remove from queue
-        </button>
+        </SubmitButton>
       </form>
     </Card>
   );
@@ -340,12 +338,11 @@ function DecidedRow({
           {application.status === "withdrawn" && (
             <form action={restoreProposalAsAdmin} className="mt-1">
               <input type="hidden" name="id" value={application.id} />
-              <button
-                type="submit"
+              <SubmitButton pendingLabel="Saving…"
                 className="text-[11px] text-ink-faint underline hover:text-brand-magenta"
               >
                 Put back in the queue
-              </button>
+              </SubmitButton>
             </form>
           )}
         </span>

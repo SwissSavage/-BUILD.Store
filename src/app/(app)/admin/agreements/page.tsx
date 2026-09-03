@@ -21,6 +21,7 @@
  * Gated to admin. Every mutation writes to the audit log.
  */
 import Link from "next/link";
+import { SubmitButton } from "@/components/SubmitButton";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getAllUsers } from "@/lib/readers/users";
@@ -215,12 +216,11 @@ export default async function AdminAgreementsPage() {
             </div>
           </div>
           <div className="flex justify-end">
-            <button
-              type="submit"
+            <SubmitButton pendingLabel="Sending…"
               className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
             >
               Send LOI for signature
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </section>
@@ -299,12 +299,11 @@ export default async function AdminAgreementsPage() {
             </div>
           </div>
           <div className="flex justify-end">
-            <button
-              type="submit"
+            <SubmitButton pendingLabel="Sending…"
               className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
             >
               Send bilateral NCNDA
-            </button>
+            </SubmitButton>
           </div>
         </form>
 
@@ -372,12 +371,11 @@ export default async function AdminAgreementsPage() {
             </div>
           ))}
           <div className="flex justify-end">
-            <button
-              type="submit"
+            <SubmitButton pendingLabel="Sending…"
               className="rounded-full bg-brand-blue px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-blue/20 transition-colors hover:bg-brand-blue/90"
             >
               Send multi-party NCNDA
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </section>
@@ -555,12 +553,11 @@ export default async function AdminAgreementsPage() {
           </div>
 
           <div className="flex justify-end">
-            <button
-              type="submit"
+            <SubmitButton pendingLabel="Sending…"
               className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
             >
               Log agreement
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </section>
@@ -622,12 +619,11 @@ export default async function AdminAgreementsPage() {
                                   name="id"
                                   value={row.id}
                                 />
-                                <button
-                                  type="submit"
+                                <SubmitButton pendingLabel="Sending…"
                                   className="text-xs text-ink-faint hover:text-brand-magenta"
                                 >
                                   Remove
-                                </button>
+                                </SubmitButton>
                               </form>
                             </div>
 

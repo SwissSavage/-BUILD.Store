@@ -18,6 +18,7 @@
  * Gated to admin. Every mutation writes to the audit log.
  */
 import Link from "next/link";
+import { SubmitButton } from "@/components/SubmitButton";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getAllUsers } from "@/lib/readers/users";
@@ -316,12 +317,11 @@ export default async function AdminVouchersPage() {
           </div>
 
           <div className="flex justify-end">
-            <button
-              type="submit"
+            <SubmitButton pendingLabel="Issuing…"
               className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
             >
               Issue voucher
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </section>
@@ -392,22 +392,20 @@ export default async function AdminVouchersPage() {
                           className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-xs"
                         />
                       </div>
-                      <button
-                        type="submit"
+                      <SubmitButton pendingLabel="Issuing…"
                         className="rounded-full bg-brand-magenta px-4 py-2 text-xs font-medium text-brand-white hover:bg-brand-magenta/90"
                       >
                         Complete swap
-                      </button>
+                      </SubmitButton>
                     </form>
 
                     <form action={cancelPendingSwap} className="mt-2">
                       <input type="hidden" name="id" value={row.id} />
-                      <button
-                        type="submit"
+                      <SubmitButton pendingLabel="Issuing…"
                         className="text-[11px] text-ink-faint hover:text-brand-magenta"
                       >
                         Cancel — revert to unswapped
-                      </button>
+                      </SubmitButton>
                     </form>
                   </Card>
                 </li>
@@ -542,12 +540,11 @@ function VoucherRowActions({ row }: { row: BuildVoucher }) {
       {row.swapStatus === "unswapped" && (
         <form action={markVoucherPendingSwap}>
           <input type="hidden" name="id" value={row.id} />
-          <button
-            type="submit"
+          <SubmitButton pendingLabel="Issuing…"
             className="text-xs text-ink-muted hover:text-brand-magenta"
           >
             Queue for swap
-          </button>
+          </SubmitButton>
         </form>
       )}
       <form
@@ -562,12 +559,11 @@ function VoucherRowActions({ row }: { row: BuildVoucher }) {
           required
           className="w-56 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-[11px]"
         />
-        <button
-          type="submit"
+        <SubmitButton pendingLabel="Issuing…"
           className="text-[11px] text-ink-faint hover:text-brand-magenta"
         >
           Forfeit
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

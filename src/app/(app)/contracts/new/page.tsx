@@ -8,6 +8,7 @@
  *     rfpApprovedAt=null. Admin scrubs + approves via /admin/rfps.
  */
 import { redirect } from "next/navigation";
+import { SubmitButton } from "@/components/SubmitButton";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { projects } from "@/db/schema";
@@ -226,13 +227,12 @@ export default async function NewContractPage() {
             </p>
           </label>
 
-          <button
-            type="submit"
+          <SubmitButton pendingLabel="Submitting…"
             className="rounded-full px-6 py-2.5 text-sm font-medium text-white"
             style={{ backgroundColor: "#D828A0" }}
           >
             Submit RFP
-          </button>
+          </SubmitButton>
         </form>
       </Card>
     </div>

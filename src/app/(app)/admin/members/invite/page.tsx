@@ -15,6 +15,7 @@
  * user.invite_consumed on redemption (fired from the signup route).
  */
 import Link from "next/link";
+import { SubmitButton } from "@/components/SubmitButton";
 import { desc } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth-stub";
 import { getAllProjects } from "@/lib/readers/projects";
@@ -406,12 +407,12 @@ export default async function InviteMemberPage({
                           name="inviteId"
                           value={invite.id}
                         />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel="Sending…"
                           className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[11px] text-brand-magenta hover:border-brand-magenta hover:bg-brand-magenta/10"
                         >
                           Resend email
-                        </button>
+                        </SubmitButton>
                       </form>
                       <form action={extendInviteExpiry}>
                         <input
@@ -419,12 +420,12 @@ export default async function InviteMemberPage({
                           name="inviteId"
                           value={invite.id}
                         />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel="Extending…"
                           className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
                         >
                           Extend +14 days
-                        </button>
+                        </SubmitButton>
                       </form>
                       <details className="grow">
                         <summary className="cursor-pointer text-[11px] text-ink-faint hover:text-brand-magenta">
@@ -445,12 +446,12 @@ export default async function InviteMemberPage({
                             className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-2 py-1 text-xs text-ink"
                             placeholder="Optional reason (recorded)"
                           />
-                          <button
-                            type="submit"
+                          <SubmitButton
+                            pendingLabel="Revoking…"
                             className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magenta hover:border-brand-magenta"
                           >
                             Revoke
-                          </button>
+                          </SubmitButton>
                         </form>
                       </details>
                     </div>

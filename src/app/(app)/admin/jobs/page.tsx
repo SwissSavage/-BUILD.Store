@@ -11,6 +11,7 @@
  * see what they applied to.
  */
 import Link from "next/link";
+import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth-stub";
 import { jobReader, jobApplicationReader, safely } from "@/lib/readers";
 import { setJobStatus, upsertJob } from "@/lib/job-actions";
@@ -167,9 +168,9 @@ export default async function AdminJobsPage() {
             <textarea name="skillsRequired" rows={3} className={inputClass} />
           </label>
 
-          <button type="submit" className={primaryButton}>
+          <SubmitButton pendingLabel="Saving…" className={primaryButton}>
             Post job
-          </button>
+          </SubmitButton>
         </form>
       </Card>
 
@@ -356,9 +357,9 @@ function JobRow({
             />
           </label>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="submit" className={primaryButton}>
+            <SubmitButton pendingLabel="Saving…" className={primaryButton}>
               Save
-            </button>
+            </SubmitButton>
             <Link href={`/jobs/${job.id}`} className={ghostButton}>
               View public listing
             </Link>
@@ -370,16 +371,16 @@ function JobRow({
             <form action={setJobStatus}>
               <input type="hidden" name="id" value={job.id} />
               <input type="hidden" name="status" value="filled" />
-              <button type="submit" className={ghostButton}>
+              <SubmitButton pendingLabel="Saving…" className={ghostButton}>
                 Mark filled
-              </button>
+              </SubmitButton>
             </form>
             <form action={setJobStatus}>
               <input type="hidden" name="id" value={job.id} />
               <input type="hidden" name="status" value="closed" />
-              <button type="submit" className={ghostButton}>
+              <SubmitButton pendingLabel="Saving…" className={ghostButton}>
                 Close posting
-              </button>
+              </SubmitButton>
             </form>
           </div>
         )}

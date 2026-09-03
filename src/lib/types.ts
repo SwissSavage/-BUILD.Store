@@ -33,7 +33,10 @@ export const TIER_LABELS: Record<MembershipTier, string> = {
  */
 export function publicName(
   u:
-    | (Pick<User, "firstName" | "lastName"> & { displayName?: string | null })
+    | (Pick<User, "firstName" | "lastName"> & {
+        displayName?: string | null;
+        handle?: string | null;
+      })
     | null
     | undefined,
 ): string {
@@ -46,9 +49,22 @@ export function publicName(
   if (chosen) return chosen;
 
   const first = u?.firstName?.trim();
-  if (!first) return "Member";
-  const last = u?.lastName?.trim();
-  return last ? `${first} ${last[0]}.` : first;
+  if (first) {
+    const last = u?.lastName?.trim();
+    return last ? `${first} ${last[0]}.` : first;
+  }
+
+  // No first name. Fall back to the handle, which the member chose and
+  // which is unique, before anything generic.
+  //
+  // This used to return the literal "Member", which rendered as a name
+  // on the homepage rail: two cards read "Member" in the name slot
+  // with "Partner" as the label underneath, so the card contradicted
+  // itself and neither line identified anybody.
+  const handle = u?.handle?.trim();
+  if (handle) return `@${handle}`;
+
+  return "Unnamed";
 }
 
 /**

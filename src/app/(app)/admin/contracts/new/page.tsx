@@ -6,6 +6,7 @@
  * immediately, because the admin posting it is the vetting step.
  */
 import Link from "next/link";
+import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth-stub";
 import { postContract } from "@/lib/contract-post-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
@@ -111,12 +112,11 @@ export default async function AdminNewContractPage() {
             <textarea name="skillsRequired" rows={3} className={inputClass} />
           </label>
 
-          <button
-            type="submit"
+          <SubmitButton pendingLabel="Posting…"
             className="rounded-full bg-brand-magenta px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
           >
             Post it
-          </button>
+          </SubmitButton>
         </form>
       </Card>
 

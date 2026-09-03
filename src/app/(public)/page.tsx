@@ -48,7 +48,6 @@ export default async function Home() {
       <CohortRail />
       <Partners />
       <FaqSection />
-      <SandboxBanner />
     </>
   );
 }
@@ -730,15 +729,16 @@ async function AdminRosterNote({
   );
 }
 
-function SandboxBanner() {
-  return (
-    <section className="fm-below-fold bg-brand-magenta/10">
-      <div className="mx-auto max-w-app px-6 py-8 text-center text-sm">
-        <strong className="text-brand-magenta">Sandbox build.</strong>{" "}
-        <span className="text-ink-muted">
-          Click <Link href="/signin" className="underline">Sign in</Link> to explore the member and admin surfaces with mock data.
-        </span>
-      </div>
-    </section>
-  );
-}
+/*
+ * SandboxBanner REMOVED 2026-09-02.
+ *
+ * It sat at the bottom of the public homepage saying "Sandbox build.
+ * Click Sign in to explore the member and admin surfaces with mock
+ * data." Every part of that is now false: the data is real, the
+ * members are real, and the person reading it may well already be
+ * signed in. Bayu hit exactly that.
+ *
+ * It was also on the page Jamar wants members sharing as marketing.
+ * Telling a prospective client the platform is a sandbox full of fake
+ * data is the opposite of what that page is for.
+ */

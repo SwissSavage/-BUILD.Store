@@ -16,11 +16,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { mvpScoreForUser, MOCK_MVP_SCORES } from "@/lib/mock-data/mvp-scores";
+import { eq } from "drizzle-orm";
+import { mvpScores } from "@/db/schema";
 import { championsCourtMembers } from "@/lib/mvp-score";
-import { canonizationsForUser } from "@/lib/mock-data/canonizations";
-import { recognitionsForUser } from "@/lib/mock-data/future-modernist-recognitions";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { mvpScoreReader, safely } from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
+import {
+  getCanonizationsForUser,
+  getRecognitionsForUser,
+} from "@/lib/readers/recognitions";
 import { requestPhygitalCanonCard } from "@/lib/canon-phygital-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import {
@@ -28,6 +32,10 @@ import {
   deriveTradingCardTier,
   type TradingCardTier,
 } from "@/components/TradingCard";
+
+// Reads canonizations, recognitions and MVP scores. Mandatory now
+// that this is a database read.
+export const dynamic = "force-dynamic";
 
 const TIER_LABELS: Record<TradingCardTier, string> = {
   standard: "Unrated",
@@ -76,10 +84,20 @@ export default async function MemberCanonPage() {
     );
   }
 
-  const past = canonizationsForUser(user.id);
-  const recognitions = recognitionsForUser(user.id);
-  const snapshot = mvpScoreForUser(user.id);
-  const courtIds = new Set(championsCourtMembers(MOCK_MVP_SCORES, MOCK_USERS));
+  // Reader swap 2026-09-03. Canonizations, recognitions and the MVP
+  // snapshot were all read from fixture arrays, so a member opening
+  // their own canon page saw somebody else's seed standing. The
+  // Champion's Court check was computed from seed scores against seed
+  // users, which is what let a fake champion tier render.
+  const [past, recognitions, snapshot, allScores, { users: allUsers }] =
+    await Promise.all([
+      safely(() => getCanonizationsForUser(user.id), []),
+      safely(() => getRecognitionsForUser(user.id), []),
+      safely(() => mvpScoreReader.one(eq(mvpScores.userId, user.id)), null),
+      safely(() => mvpScoreReader.all(), []),
+      safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    ]);
+  const courtIds = new Set(championsCourtMembers(allScores, allUsers));
   const currentYear = new Date().getUTCFullYear();
   const currentTier: TradingCardTier = deriveTradingCardTier({
     ovr: snapshot?.ovr ?? null,

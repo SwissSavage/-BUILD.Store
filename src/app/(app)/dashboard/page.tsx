@@ -14,7 +14,7 @@ import { getCompletedStepIds } from "@/lib/readers/walkthrough";
 import { getBalance, getTransactions } from "@/lib/wallet-stub";
 import { getAllProjects } from "@/lib/readers/projects";
 import { orderReader, safely } from "@/lib/readers";
-import { applicationsByUser } from "@/lib/mock-data/project-applications";
+import { getApplicationsForUser } from "@/lib/readers/project-applications";
 import { isApprovedSeller as checkApprovedSeller } from "@/lib/readers";
 import {
   notificationsForUser,
@@ -43,6 +43,12 @@ import { FeedbackPrompt } from "@/components/FeedbackPrompt";
 import {
   stepsForUser,
 } from "@/lib/mock-data/walkthroughs";
+
+// Reads the database. These pages already render dynamically because
+// getCurrentUser/requireAdmin read cookies, but the rule in CLAUDE.md
+// is that a database read declares it rather than relying on a side
+// effect of the auth call staying where it is.
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -126,7 +132,13 @@ export default async function DashboardPage() {
   // Project applications the member has submitted — gives them a single
   // place to track pending pitches without needing to remember which
   // project they applied to.
-  const myApplications = applicationsByUser(user.id);
+  // Reader swap 2026-09-03. Was applicationsByUser() off a fixture
+  // array, so the dashboard showed seed proposals while /profile read
+  // the real project_applications table. Same member, two numbers.
+  const myApplications = await safely(
+    () => getApplicationsForUser(user.id),
+    [],
+  );
   const activeApplications = myApplications.filter(
     (a) => a.status === "pending" || a.status === "approved",
   );

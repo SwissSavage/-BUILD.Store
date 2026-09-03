@@ -21,9 +21,14 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { db } from "@/db/client";
 import { jobApplications, jobs, users } from "@/db/schema";
 import { reviewJobApplication } from "@/lib/application-actions";
-import { MOCK_USERS } from "@/lib/mock-data/users";
 import { adminName, publicName } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+
+// Reads the database. These pages already render dynamically because
+// getCurrentUser/requireAdmin read cookies, but the rule in CLAUDE.md
+// is that a database read declares it rather than relying on a side
+// effect of the auth call staying where it is.
+export const dynamic = "force-dynamic";
 
 type ApplicationRow = typeof jobApplications.$inferSelect;
 
@@ -73,16 +78,19 @@ export default async function AdminJobsApplicationsPage() {
       ? db.select().from(users).where(inArray(users.id, userIds))
       : Promise.resolve([]),
   ]);
-  // Small in-flight join — union with MOCK_USERS as fallback for seed
-  // users that haven't been backfilled into Postgres yet. Value typed
-  // as `unknown` because the Drizzle row shape (users.$inferSelect,
-  // includes name/emailVerified/image from Auth.js) and MOCK_USERS
-  // shape (User from types.ts, FM cooperative fields) don't unify;
-  // downstream duck-type checks disambiguate.
+  // Small in-flight join. Value typed as `unknown` because the Drizzle
+  // row shape (users.$inferSelect, which carries name/emailVerified/
+  // image from Auth.js) and the FM User type do not unify; the
+  // duck-type check in nameFor disambiguates.
   const jobById = new Map(jobRows.map((j) => [j.id, j]));
   const userById = new Map<string, unknown>();
   for (const u of userRows) userById.set(u.id, u);
-  for (const u of MOCK_USERS) if (!userById.has(u.id)) userById.set(u.id, u);
+  // The MOCK_USERS union that used to sit here was removed on
+  // 2026-09-03. Its stated purpose was a fallback for seed rows, but
+  // in practice it meant a real applicant whose row failed to load was
+  // silently replaced by a fixture person with a different name, and
+  // an admin reviewing job applications could not tell. An unresolved
+  // id renders as the id, which is ugly and true.
 
   function jobTitleFor(id: string): string {
     return jobById.get(id)?.title ?? id;
@@ -91,8 +99,8 @@ export default async function AdminJobsApplicationsPage() {
     if (!id) return "—";
     const u = userById.get(id);
     if (!u) return id;
-    // Real Postgres users may only have `name`; MOCK_USERS have firstName/lastName.
-    // publicName + adminName handle both shapes via the User type.
+    // Real Postgres users may only have `name`; FM-shaped rows carry
+    // firstName/lastName. publicName and adminName handle both.
     const hasFmShape = typeof (u as { firstName?: unknown }).firstName !== "undefined";
     return hasFmShape
       ? adminName(u as Parameters<typeof adminName>[0])

@@ -23,7 +23,7 @@
  */
 import { cookies } from "next/headers";
 import { subscribeChatEvents } from "@/lib/chat-events";
-import { getThreadByVisitorToken } from "@/lib/mock-data/chat";
+import { getThreadByVisitorToken } from "@/lib/writers/chat";
 
 // SSE needs the Node runtime (or Edge w/ streaming) — the Edge
 // runtime works in modern Next, but Node is the safer baseline given
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
   if (!token) {
     return new Response("Missing visitor token", { status: 401 });
   }
-  const thread = getThreadByVisitorToken(token);
+  const thread = await getThreadByVisitorToken(token);
   if (!thread) {
     return new Response("Thread not found", { status: 404 });
   }

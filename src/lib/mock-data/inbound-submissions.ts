@@ -20,11 +20,6 @@ import type {
   InboundSubmissionKind,
   InboundSubmissionStatus,
 } from "@/lib/types";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { listThreads as listChatThreads } from "@/lib/mock-data/chat";
-import { MOCK_APPLICATIONS } from "@/lib/mock-data/applications";
-import { MOCK_QUOTES } from "@/lib/mock-data/quotes";
-import { MOCK_USERS } from "@/lib/mock-data/users";
 
 /** Persisted submissions (sandbox seeds + runtime writes). */
 export const MOCK_INBOUND_SUBMISSIONS: InboundSubmission[] = [
@@ -121,163 +116,14 @@ export function pushInboundSubmission(
 }
 
 /**
- * Derive read-only rows from RFP projects, chat threads, applications,
- * and quote sheets so the unified queue is complete without requiring
- * every writer to also persist into `MOCK_INBOUND_SUBMISSIONS`. The
- * production swap can drop these once each writer inserts directly.
+ * Derived rows moved to lib/readers/inbound-submissions.ts on
+ * 2026-09-03. They used to be built here from MOCK_PROJECTS, the
+ * in-memory chat store, MOCK_APPLICATIONS and MOCK_QUOTES, so the
+ * admin inbound queue showed July seed RFPs, seed tier applications
+ * and seed quote sheets next to real stored submissions, and a real
+ * RFP awaiting approval did not appear at all. A reader belongs with
+ * the readers.
  */
-function deriveFromRfps(): InboundSubmission[] {
-  return MOCK_PROJECTS.filter(
-    (p) =>
-      p.kind === "contract" &&
-      p.isRfp &&
-      !p.rfpApprovedAt &&
-      p.status !== "cancelled",
-  ).map<InboundSubmission>((p) => ({
-    id: `in_rfp_${p.id}`,
-    kind: "rfp_intake",
-    status: "in_triage",
-    title: p.title,
-    submitter: p.clientId,
-    submitterEmail: null,
-    submitterCompany: p.clientId,
-    pillarTags: [p.industry],
-    keywordTags: p.skillsRequired ?? [],
-    body: p.description ?? "",
-    attachments: [],
-    assignedAdminId: p.adminUserIds[0] ?? null,
-    triageNote: p.rfpAdminNote,
-    deepLinkHref: `/admin/rfps`,
-    linkedResourceId: null,
-    derived: true,
-    createdAt: p.createdAt,
-    updatedAt: p.updatedAt,
-  }));
-}
-
-function deriveFromChat(): InboundSubmission[] {
-  return listChatThreads().map<InboundSubmission>((t) => ({
-    id: `in_chat_${t.id}`,
-    kind: "chat_inquiry",
-    status:
-      t.status === "closed"
-        ? "closed_no_action"
-        : t.assignedAdminId
-          ? "in_triage"
-          : "new",
-    title: `Chat with ${t.visitorName}`,
-    submitter: t.visitorName,
-    submitterEmail: t.visitorEmail,
-    submitterCompany: null,
-    pillarTags: [],
-    keywordTags: [],
-    body: t.adminNote ?? "(live chat thread — open to read transcript)",
-    attachments: [],
-    assignedAdminId: t.assignedAdminId,
-    triageNote: t.adminNote,
-    deepLinkHref: `/admin/chat`,
-    linkedResourceId: null,
-    derived: true,
-    createdAt: t.createdAt,
-    updatedAt: t.lastMessageAt,
-  }));
-}
-
-function deriveFromApplications(): InboundSubmission[] {
-  return MOCK_APPLICATIONS
-    .filter((a) => a.status === "pending")
-    .map<InboundSubmission>((a) => {
-      const u = MOCK_USERS.find((x) => x.id === a.userId);
-      const name = u ? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() : a.userId;
-      return {
-        id: `in_app_${a.id}`,
-        kind: "join_talent_signup",
-        status: "in_triage",
-        title: `Tier upgrade — ${name || a.userId} → ${a.requestedTier}`,
-        submitter: name || a.userId,
-        submitterEmail: u?.email ?? null,
-        submitterCompany: null,
-        pillarTags: u?.primaryIndustry ? [u.primaryIndustry] : [],
-        keywordTags: u?.skills ?? [],
-        body: JSON.stringify(a.applicationData ?? {}, null, 2),
-        attachments: [],
-        assignedAdminId: a.reviewedBy,
-        triageNote: null,
-        deepLinkHref: `/admin/applications`,
-        linkedResourceId: null,
-    derived: true,
-        createdAt: a.createdAt,
-        updatedAt: a.reviewedAt ?? a.createdAt,
-      };
-    });
-}
-
-function deriveFromQuotes(): InboundSubmission[] {
-  return MOCK_QUOTES
-    .filter((q) => !q.approvedAt && !q.rejectedAt)
-    .map<InboundSubmission>((q) => {
-      const project = MOCK_PROJECTS.find((p) => p.id === q.projectId);
-      const member = MOCK_USERS.find((u) => u.id === q.userId);
-      return {
-        id: `in_q_${q.id}`,
-        kind: "custom_quote_request",
-        status: "in_triage",
-        title: project ? `Quote — ${project.title}` : `Quote sheet ${q.id}`,
-        submitter: member
-          ? `${member.firstName ?? ""} ${member.lastName ?? ""}`.trim()
-          : q.userId,
-        submitterEmail: member?.email ?? null,
-        submitterCompany: project?.clientId ?? null,
-        pillarTags: project ? [project.industry] : [],
-        keywordTags: project?.skillsRequired ?? [],
-        body: q.memberNote ?? `${q.price} · ${q.timeline}`,
-        attachments: [],
-        assignedAdminId: null,
-        triageNote: null,
-        deepLinkHref: `/admin/quotes`,
-        linkedResourceId: null,
-    derived: true,
-        createdAt: q.createdAt,
-        updatedAt: q.createdAt,
-      };
-    });
-}
-
-/** Combined view: persisted rows + derived rows, newest-first. */
-/**
- * Rows derived from other tables rather than stored as submissions.
- * Exported so the live reader can compose them with the real ones.
- */
-export function derivedInboundSubmissions(): InboundSubmission[] {
-  return [
-    ...deriveFromRfps(),
-    ...deriveFromChat(),
-    ...deriveFromApplications(),
-    ...deriveFromQuotes(),
-  ];
-}
-
-export function listInboundSubmissions(opts?: {
-  kind?: InboundSubmissionKind;
-  status?: InboundSubmissionStatus;
-  assignedAdminId?: string;
-}): InboundSubmission[] {
-  const all = [
-    ...MOCK_INBOUND_SUBMISSIONS,
-    ...deriveFromRfps(),
-    ...deriveFromChat(),
-    ...deriveFromApplications(),
-    ...deriveFromQuotes(),
-  ];
-  return all
-    .filter((s) => !opts?.kind || s.kind === opts.kind)
-    .filter((s) => !opts?.status || s.status === opts.status)
-    .filter(
-      (s) =>
-        !opts?.assignedAdminId || s.assignedAdminId === opts.assignedAdminId,
-    )
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-}
 
 export function findInboundSubmission(id: string): InboundSubmission | null {
   return MOCK_INBOUND_SUBMISSIONS.find((s) => s.id === id) ?? null;

@@ -22,10 +22,6 @@ import {
   isDerivedSubmission,
   updateInboundSubmission,
 } from "@/lib/writers/inbound-submissions-update";
-import {
-  MOCK_INBOUND_SUBMISSIONS,
-  findInboundSubmission,
-} from "@/lib/mock-data/inbound-submissions";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { InboundSubmissionStatus } from "@/lib/types";
 
@@ -283,4 +279,3 @@ export async function rejectProposedInboundTag(formData: FormData) {
   revalidatePath("/admin/inbound");
 }
 
-void MOCK_INBOUND_SUBMISSIONS; // keep linter happy if mutations move via helpers later

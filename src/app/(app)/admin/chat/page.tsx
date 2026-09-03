@@ -11,8 +11,13 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { listThreads, listMessages } from "@/lib/mock-data/chat";
+import { listThreads, listMessages } from "@/lib/writers/chat";
 import { AdminChatBoard } from "@/components/AdminChatBoard";
+
+// Reads chat_threads and chat_messages. Mandatory now that this is
+// a database read: CI builds with a dummy DATABASE_URL, so a static
+// render would bake in an empty queue and ship it.
+export const dynamic = "force-dynamic";
 
 export default async function AdminChatPage({
   searchParams,
@@ -23,12 +28,14 @@ export default async function AdminChatPage({
   if (!user || !user.isAdmin) redirect("/");
 
   const { thread: threadParam } = await searchParams;
-  const threads = listThreads();
+  const threads = await listThreads();
   const initialThreadId =
     threadParam && threads.some((t) => t.id === threadParam)
       ? threadParam
       : (threads[0]?.id ?? null);
-  const initialMessages = initialThreadId ? listMessages(initialThreadId) : [];
+  const initialMessages = initialThreadId
+    ? await listMessages(initialThreadId)
+    : [];
 
   return (
     <div className="mx-auto max-w-app px-6 py-10">

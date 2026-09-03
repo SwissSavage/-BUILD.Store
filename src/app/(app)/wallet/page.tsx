@@ -9,7 +9,9 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getBalance, getTransactions } from "@/lib/wallet-stub";
-import { vouchersForUser } from "@/lib/mock-data/vouchers";
+import { getVouchersForUser } from "@/lib/writers/vouchers";
+import { safely } from "@/lib/readers";
+import type { BuildVoucher } from "@/lib/types";
 import {
   BUILD_VOUCHER_SOURCE_TYPE_LABELS,
   BUILD_VOUCHER_SWAP_STATUS_LABELS,
@@ -27,6 +29,14 @@ const NUMBER_FMT = new Intl.NumberFormat("en-US", {
 export default async function WalletPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
+
+  // Was vouchersForUser from the fixture, so a member's $BUILD
+  // holdings on this page were seed data: real vouchers issued to them
+  // did not appear, and vouchers they never received did.
+  const myVouchers = await safely<BuildVoucher[]>(
+    () => getVouchersForUser(user.id),
+    [],
+  );
 
   const [balance, txs] = await Promise.all([
     getBalance(user.id),
@@ -74,7 +84,7 @@ export default async function WalletPage() {
       </div>
 
       {(() => {
-        const vouchers = vouchersForUser(user.id);
+        const vouchers = myVouchers;
         const unswapped = vouchers
           .filter((v) => v.swapStatus === "unswapped")
           .reduce((sum, v) => sum + Number(v.amount), 0);

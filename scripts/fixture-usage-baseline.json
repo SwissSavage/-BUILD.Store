@@ -1,5 +1,5 @@
 {
-  "count": 55,
+  "count": 53,
   "files": [
     "src/app/(app)/admin/categories/page.tsx",
     "src/app/(app)/admin/chat/page.tsx",
@@ -23,7 +23,6 @@
     "src/app/(app)/profile/epk/page.tsx",
     "src/app/(app)/projects/[id]/page.tsx",
     "src/app/(app)/walkthrough/page.tsx",
-    "src/app/(app)/wallet/page.tsx",
     "src/app/(public)/articles/page.tsx",
     "src/app/(public)/cohort/[period]/page.tsx",
     "src/app/api/chat/admin/messages/route.ts",
@@ -54,7 +53,6 @@
     "src/lib/store-category-actions.ts",
     "src/lib/talent-match.ts",
     "src/lib/talent-tag-actions.ts",
-    "src/lib/voucher-actions.ts",
     "src/lib/wallet-connect-actions.ts"
   ]
 }

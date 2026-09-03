@@ -109,7 +109,7 @@ export default async function AdminPeerReviewsPage({
             href={`/admin/peer-reviews?show=${f.key}`}
             className={
               active === f.key
-                ? "rounded-full bg-brand-magenta px-4 py-1.5 font-medium text-white"
+                ? "rounded-full fm-btn-primary px-4 py-1.5 font-medium"
                 : "rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
             }
           >

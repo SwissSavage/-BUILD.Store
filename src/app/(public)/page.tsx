@@ -256,7 +256,7 @@ function Pillars() {
 
   const styles = {
     blue:    { ring: "hover:border-brand-blue",    text: "text-brand-blue",    dot: "bg-brand-blue" },
-    magenta: { ring: "hover:border-brand-magenta", text: "text-brand-magentaText", dot: "bg-brand-magenta" },
+    magenta: { ring: "hover:border-brand-magenta", text: "text-brand-magentaText", dot: "fm-btn-primary" },
     green:   { ring: "hover:border-brand-green",   text: "text-brand-green",   dot: "bg-brand-green" },
   } as const;
 

@@ -8,6 +8,7 @@
  * Redacted portfolio fields are resolved via `publicPortfolioView()` so admin
  * overrides (scrubbed titles, hidden projectUrls) take effect automatically.
  */
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { memberLabel } from "@/lib/member-label";
@@ -90,10 +91,44 @@ export async function generateMetadata({
   return { title: `${publicName(user)} · Future Modern` };
 }
 
+/**
+ * A pencil, the way every social profile does it.
+ *
+ * Only rendered when `owner` is set, which only /profile does. Jamar,
+ * after four attempts at a separate editing page: "make editing the
+ * way it works on any other social media, make a small pencil or icon
+ * they can click to change or edit their profile or sections." And:
+ * "The profile page is not a place to edit the profile. The profile
+ * page needs to BE the profile."
+ *
+ * So the profile renders as itself and the pencils sit on it. They
+ * link to the section editors that already exist rather than opening
+ * anything inline, because an inline form on this page is how it
+ * turned back into a settings screen the last four times.
+ */
+function EditPencil({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      title={label}
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--surface-border)] text-sm text-ink-faint transition-colors hover:border-brand-magenta hover:text-brand-magentaText"
+    >
+      <span aria-hidden>✎</span>
+    </Link>
+  );
+}
+
 export default async function PublicProfilePage({
   params,
+  owner = false,
 }: {
   params: Promise<{ handle: string }>;
+  /**
+   * Renders the owner's pencils. Set only by /profile. The router
+   * never supplies it, so the public route is untouched.
+   */
+  owner?: boolean;
 }) {
   const { handle } = await params;
   // Reader swap 2026-08-28: was MOCK_USERS, so a real member's public
@@ -279,11 +314,25 @@ export default async function PublicProfilePage({
           </div>
         </TradingCard3D>
         <div className="flex-1">
-          <h1 className="font-display text-4xl font-semibold md:text-5xl">
-            {displayName}
-          </h1>
-          {user.tagline && (
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="font-display text-4xl font-semibold md:text-5xl">
+              {displayName}
+            </h1>
+            {owner && (
+              <EditPencil
+                href="/profile/edit/identity"
+                label="Edit your name, photo and tagline"
+              />
+            )}
+          </div>
+          {user.tagline ? (
             <p className="mt-2 text-lg text-ink-muted">{user.tagline}</p>
+          ) : (
+            owner && (
+              <p className="mt-2 text-lg italic text-ink-faint">
+                No tagline yet. It is the line clients read first.
+              </p>
+            )
           )}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <TierBadge tier={user.membershipTier} />
@@ -602,9 +651,14 @@ export default async function PublicProfilePage({
       )}
 
       <section className="mt-14">
-        <h2 className="font-display text-2xl font-semibold">
-          {showEpk ? "Cooperative portfolio" : "Portfolio"}
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-display text-2xl font-semibold">
+            {showEpk ? "Cooperative portfolio" : "Portfolio"}
+          </h2>
+          {owner && (
+            <EditPencil href="/profile/portfolio" label="Add or manage work" />
+          )}
+        </div>
         <p className="mt-1 text-sm text-ink-muted">
           {items.length === 0
             ? `No published work from ${publicName(user)} yet.`

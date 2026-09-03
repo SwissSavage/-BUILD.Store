@@ -31,6 +31,9 @@ export const MOCK_PEER_REVIEWS: PeerReview[] = [
     prose:
       "Michael ran the operational scorecard end-to-end and pulled in regional benchmarks I didn't know existed. Decisive on scope, never made me chase. Pair again, no hesitation.",
     createdAt: "2026-04-20T15:30:00Z",
+    voidedAt: null,
+    voidedBy: null,
+    voidReason: null,
   },
   {
     id: "pr_002",
@@ -47,6 +50,9 @@ export const MOCK_PEER_REVIEWS: PeerReview[] = [
     prose:
       "Rob's market selection memo was the spine of the whole deliverable. Caught one timeline slip mid-week — owned it, recovered it, no drama. Strong builder.",
     createdAt: "2026-04-21T10:12:00Z",
+    voidedAt: null,
+    voidedBy: null,
+    voidReason: null,
   },
 
   // ── p_103 (internal, Chibu + Trevor) — only Chibu has reviewed Trevor;
@@ -67,6 +73,9 @@ export const MOCK_PEER_REVIEWS: PeerReview[] = [
     prose:
       "Trevor's voting-weight prototype was tight — clean Solidity, sane gas profile. Comms on standups were lighter than I'd want for a longer engagement, but for a prototype sprint it landed.",
     createdAt: "2026-04-23T19:45:00Z",
+    voidedAt: null,
+    voidedBy: null,
+    voidReason: null,
   },
 ];
 

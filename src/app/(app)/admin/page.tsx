@@ -10,21 +10,22 @@ import {
   auditLogReader,
   consultationRequestReader,
   customerFeedbackReader,
+  ecosystemPartnerReader,
   feedbackReader,
+  getAllPeerReviews,
   inboundReader,
   invoiceReader,
+  jobReader,
   membershipApplicationReader,
   mvpScoreReader,
   portfolioReader,
+  productAffiliateReader,
   productReader,
   quoteSheetReader,
   safely,
   sellerApplicationReader,
-  splitReader,
   servicePartnerReader,
-  ecosystemPartnerReader,
-  productAffiliateReader,
-  jobReader,
+  splitReader,
   tokenReader,
   whitelistPurchaseReader,
 } from "@/lib/readers";
@@ -85,6 +86,7 @@ export default async function AdminHome() {
     whitelistRows,
     consultRows,
     feedbackRows,
+    peerReviewRows,
     customerFeedbackRows,
     inboundRows,
     auditRows,
@@ -111,6 +113,7 @@ export default async function AdminHome() {
     safely(() => whitelistPurchaseReader.all(), []),
     safely(() => consultationRequestReader.all(), []),
     safely(() => feedbackReader.all(), []),
+    safely(() => getAllPeerReviews(), []),
     safely(() => customerFeedbackReader.all(), []),
     safely(() => inboundReader.all(), []),
     safely(() => auditLogReader.all(), []),
@@ -170,6 +173,7 @@ export default async function AdminHome() {
   ).length;
   const whitelistQueue = whitelistOpen + consultNew;
   const feedbackNew = feedbackRows.filter((f) => f.status === "new").length;
+  const peerReviewsVoided = peerReviewRows.filter((r) => r.voidedAt).length;
   const testimonialsPending = customerFeedbackRows.filter(
     (f) => f.publishedAt === null,
   ).length;
@@ -289,6 +293,13 @@ export default async function AdminHome() {
       title: "Beta feedback",
       count: feedbackNew,
       sub: `${feedbackRows.length} total · ${feedbackNew} untriaged`,
+    },
+    {
+      href: "/admin/peer-reviews",
+      group: "queues",
+      title: "Peer reviews",
+      count: peerReviewRows.length - peerReviewsVoided,
+      sub: `${peerReviewRows.length} written · ${peerReviewsVoided} voided`,
     },
     {
       href: "/admin/testimonials",

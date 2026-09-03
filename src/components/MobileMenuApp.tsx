@@ -78,6 +78,7 @@ const adminLinks = [
   { href: "/admin/clients", label: "Client patterns" },
   { href: "/admin/referrals", label: "Partner referrals" },
   { href: "/admin/feedback", label: "Beta feedback" },
+  { href: "/admin/peer-reviews", label: "Peer reviews" },
   { href: "/admin/testimonials", label: "Customer testimonials" },
   { href: "/admin/epk", label: "EPK approvals" },
   { href: "/admin/categories", label: "Store categories" },

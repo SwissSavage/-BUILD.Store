@@ -145,14 +145,64 @@ export const peerReviewReader = makeReader<PeerReview>(peerReviews, {
   idColumn: peerReviews.id,
 });
 
-/** Reviews written about someone. Feeds their MVP aggregate. */
+/**
+ * Reviews written about someone. Feeds their MVP aggregate.
+ *
+ * VOIDED REVIEWS ARE EXCLUDED HERE, and this is deliberately the only
+ * place that filter lives. Both `aggregateRating` (the public star
+ * rating) and `recomputeMvpScore` (OVR, standing band, card tier,
+ * promotion eligibility) call this function. Filtering in one of them
+ * and not the other would mean a member's displayed rating and their
+ * actual standing were computed from different sets of reviews, which
+ * is the reader/writer split this codebase keeps getting bitten by,
+ * wearing a different hat.
+ *
+ * If you need voided rows, use `getAllReviewsOf` and be explicit.
+ */
 export function getReviewsOf(revieweeId: string): Promise<PeerReview[]> {
+  return peerReviewReader.where(
+    and(eq(peerReviews.revieweeId, revieweeId), isNull(peerReviews.voidedAt))!,
+  );
+}
+
+/**
+ * Every review about someone, voided ones included. Admin triage only.
+ * A void that cannot be seen cannot be reversed or audited.
+ */
+export function getAllReviewsOf(revieweeId: string): Promise<PeerReview[]> {
   return peerReviewReader.where(eq(peerReviews.revieweeId, revieweeId));
 }
 
 /** Reviews someone has written. Used to nag for outstanding ones. */
 export function getReviewsBy(reviewerId: string): Promise<PeerReview[]> {
-  return peerReviewReader.where(eq(peerReviews.reviewerId, reviewerId));
+  return peerReviewReader.where(
+    and(eq(peerReviews.reviewerId, reviewerId), isNull(peerReviews.voidedAt))!,
+  );
+}
+
+/**
+ * Live reviews attached to one engagement.
+ *
+ * MONEY READS THIS. `evaluateBonusGate` decides whether talent gets
+ * paid the bonus or the cooperative reclaims it, and the reserve
+ * release reads the same rows. A voided review counting toward a bonus
+ * gate would mean an admin voided a review, watched the rating change,
+ * and had money move on it anyway.
+ */
+export function getReviewsForProject(projectId: string): Promise<PeerReview[]> {
+  return peerReviewReader.where(
+    and(eq(peerReviews.contextId, projectId), isNull(peerReviews.voidedAt))!,
+  );
+}
+
+/** Every live review in the system. */
+export function getLivePeerReviews(): Promise<PeerReview[]> {
+  return peerReviewReader.where(isNull(peerReviews.voidedAt));
+}
+
+/** Every review in the system, voided included. Admin triage board. */
+export function getAllPeerReviews(): Promise<PeerReview[]> {
+  return peerReviewReader.all();
 }
 
 export const mvpScoreReader = makeReader<MvpScore>(mvpScores, {

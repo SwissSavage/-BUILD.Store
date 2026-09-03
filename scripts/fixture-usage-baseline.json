@@ -1,5 +1,5 @@
 {
-  "count": 53,
+  "count": 52,
   "files": [
     "src/app/(app)/admin/categories/page.tsx",
     "src/app/(app)/admin/chat/page.tsx",
@@ -46,7 +46,6 @@
     "src/lib/inbound-submission-actions.ts",
     "src/lib/invite-actions.ts",
     "src/lib/partner-referral-actions.ts",
-    "src/lib/peer-review-actions.ts",
     "src/lib/pool-balances.ts",
     "src/lib/readers/inbound-submissions.ts",
     "src/lib/readers/project-applications.ts",

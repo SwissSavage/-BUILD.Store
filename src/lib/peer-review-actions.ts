@@ -24,7 +24,6 @@ import { db } from "@/db/client";
 import { peerReviews } from "@/db/schema";
 import { getProjectById } from "@/lib/readers/projects";
 
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import type { Notification, PeerReview, ReviewContextKind } from "@/lib/types";
 import { notify } from "@/lib/writers/notifications";
 import { recomputeMvpScore } from "@/lib/writers/mvp-score";
@@ -129,6 +128,11 @@ export async function submitPeerReview(formData: FormData) {
     communication,
     prose,
     createdAt: new Date().toISOString(),
+    // A new review always counts. Voiding is an admin decision taken
+    // afterwards, on /admin/peer-reviews.
+    voidedAt: null,
+    voidedBy: null,
+    voidReason: null,
   };
   // Writer swap 2026-08-28: was an in-memory push, so peer reviews
   // never reached the MVP score aggregation that depends on them.

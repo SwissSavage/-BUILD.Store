@@ -2336,6 +2336,18 @@ export interface PeerReview {
   /** Free-text. Visible to reviewee + admin. */
   prose: string;
   createdAt: string;
+  /**
+   * Set when an admin voids the review. A voided review still exists
+   * but counts for nothing: `getReviewsOf` filters it out, and that is
+   * the reader behind both the public aggregate and the MVP recompute,
+   * so the two cannot disagree about which reviews are live.
+   *
+   * Null on every review that has not been voided, which is nearly all
+   * of them.
+   */
+  voidedAt: string | null;
+  voidedBy: string | null;
+  voidReason: string | null;
 }
 
 /**
@@ -4119,6 +4131,10 @@ export type AuditLogAction =
   | "mvp.compliance_penalty_rescinded"
   | "mvp.provisional_promoted"
   | "mvp.provisional_demoted"
+  // Peer reviews. Void and restore only; an admin cannot edit what a
+  // reviewer said or scored, because that would be editing standing.
+  | "peer_review.voided"
+  | "peer_review.restored"
   // Recognition + canonization
   | "recognition.selected"
   | "recognition.revoked"
@@ -4236,6 +4252,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "mvp.sub_rating_set": "MVP sub-rating set",
   "mvp.compliance_penalty_applied": "Compliance penalty applied",
   "mvp.compliance_penalty_rescinded": "Compliance penalty rescinded",
+  "peer_review.voided": "Peer review voided",
+  "peer_review.restored": "Peer review reinstated",
   "mvp.provisional_promoted": "Provisional promoted",
   "mvp.provisional_demoted": "Provisional demoted",
   "recognition.selected": "Recognition selected",

@@ -22,12 +22,14 @@ import { and, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   customerFeedback,
-  peerReviews,
   projects as projectsTable,
 } from "@/db/schema";
 import { getProjectById } from "@/lib/readers/projects";
 import { getUserById } from "@/lib/readers/users";
-import { customerFeedbackReader, peerReviewReader } from "@/lib/readers";
+import {
+  customerFeedbackReader,
+  getReviewsForProject,
+} from "@/lib/readers";
 import {
   getComposite,
   hasReserveCredit,
@@ -232,7 +234,7 @@ export async function executeGraduatedBonusRelease(
   // find the handful that belong to this one, and the loops below
   // would otherwise re-query per contributor.
   const [projectReviews, projectFeedback] = await Promise.all([
-    peerReviewReader.where(eq(peerReviews.contextId, projectId)),
+    getReviewsForProject(projectId),
     customerFeedbackReader.where(eq(customerFeedback.contextId, projectId)),
   ]);
 

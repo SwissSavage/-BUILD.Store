@@ -15,8 +15,10 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
 import { distributeBuild } from "@/lib/wallet-stub";
 import { getAllUsers } from "@/lib/readers/users";
-import { safely } from "@/lib/readers";
-import { MOCK_TRANSACTIONS } from "@/lib/mock-data/tokens";
+import {
+  safely,
+  tokenReader,
+} from "@/lib/readers";
 import type { TokenTransaction } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -57,7 +59,10 @@ export default async function AdminTokensPage() {
   });
   const userById = new Map(roster.map((u) => [u.id, u]));
 
-  const recent = [...MOCK_TRANSACTIONS]
+  // Reader swap 2026-09-03. This is the $BUILD distribution console
+  // and it listed seed transactions, so every real distribution made
+  // through it was invisible on the page that made it.
+  const recent = (await safely(() => tokenReader.all(), []))
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
     .slice(0, 25);
 

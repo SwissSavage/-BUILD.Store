@@ -13,21 +13,54 @@
  * surfaces like /receipts/[token] and /invoices/[token] — they're
  * addressed by credential, not by URL discovery.
  *
- * Production posture: this route is edge-cached once per build. As
- * routes stabilize, extend `staticRoutes` and pull dynamic segments
- * from the live data layer.
+ * ─────────────────────────────────────────────────────────────
+ * READS LIVE DATA (2026-09-03)
+ *
+ * Every dynamic section here used to be built from fixtures:
+ * MOCK_JOBS, MOCK_PROJECTS, MOCK_USERS and the cohort spotlight
+ * array. So the sitemap handed search engines URLs for seed jobs,
+ * seed contracts and seed member profiles that do not exist, while
+ * every real open role, real contract and real member profile was
+ * absent from it. This is the one fixture read in the codebase that
+ * was addressed to the outside world.
+ *
+ * Talent routes now go through `profileShouldIndex`, the same
+ * visibility matrix `/u/[handle]`'s generateMetadata uses. Before,
+ * the sitemap filtered on `profilePublic !== false` while the page
+ * itself set `robots: noindex` for anyone the matrix excluded, so the
+ * two disagreed about who should be indexed. When they disagree,
+ * assume the sitemap is the one over-exposing people.
+ * ─────────────────────────────────────────────────────────────
  */
 import type { MetadataRoute } from "next";
-import { cohortSpotlightsByRecency } from "@/lib/mock-data/cohort-spotlights";
-import { MOCK_JOBS } from "@/lib/mock-data/jobs";
-import { MOCK_PROJECTS } from "@/lib/mock-data/projects";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllProjects } from "@/lib/readers/projects";
+import { getAllUsers } from "@/lib/readers/users";
+import { getOpenJobs, spotlightReader, safely } from "@/lib/readers";
+import { profileShouldIndex } from "@/lib/profile-visibility";
+
+// Reads the database. CI builds with a dummy DATABASE_URL, so without
+// this the sitemap is rendered once at build time against an empty
+// database and ships a file with nothing dynamic in it.
+export const dynamic = "force-dynamic";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+
+  // Every source is wrapped. A sitemap that 500s is worse than a
+  // sitemap missing one section, because a crawler treats the error as
+  // the answer for the whole file.
+  const [openJobs, { projects }, { users }, spotlights] = await Promise.all([
+    safely(() => getOpenJobs(), []),
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => spotlightReader.all(), []),
+  ]);
 
   /**
    * Static marketing routes — the surfaces that don't take dynamic
@@ -66,9 +99,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
    * emits JobPosting JSON-LD. datePosted from the record so Google
    * knows when it went live.
    */
-  const jobRoutes: MetadataRoute.Sitemap = MOCK_JOBS
-    .filter((j) => j.status === "open")
-    .map((j) => ({
+  const jobRoutes: MetadataRoute.Sitemap = openJobs.map((j) => ({
       url: `${SITE_URL}/jobs/${j.id}`,
       lastModified: new Date(j.createdAt),
       changeFrequency: "weekly",
@@ -80,7 +111,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
    * schema markup as jobs (JobPosting with employmentType=CONTRACTOR)
    * so Google Jobs picks them up alongside FT/PT roles.
    */
-  const contractRoutes: MetadataRoute.Sitemap = MOCK_PROJECTS
+  const contractRoutes: MetadataRoute.Sitemap = projects
     .filter(
       (p) =>
         p.kind === "contract" &&
@@ -99,7 +130,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
    * Cohort spotlight pages — one indexable URL per period. Each is a
    * long-tail landing that ranks for the spotlighted builders.
    */
-  const cohortRoutes: MetadataRoute.Sitemap = cohortSpotlightsByRecency().map(
+  const cohortRoutes: MetadataRoute.Sitemap = spotlights.map(
     (spotlight) => ({
       url: `${SITE_URL}/cohort/${spotlight.periodKey}`,
       lastModified: new Date(spotlight.publishedAt),
@@ -114,8 +145,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
    * portfolio CreativeWork entries so search indexes each talent as
    * a discoverable entity.
    */
-  const talentRoutes: MetadataRoute.Sitemap = MOCK_USERS
-    .filter((u) => u.profilePublic !== false && !u.suspendedAt)
+  const talentRoutes: MetadataRoute.Sitemap = users
+    .filter((u) => !u.suspendedAt && !!u.handle && profileShouldIndex(u))
     .map((u) => ({
       url: `${SITE_URL}/u/${u.handle}`,
       lastModified: new Date(u.updatedAt ?? u.createdAt ?? now),
@@ -128,7 +159,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
    * CreativeWork entries. datePublished stamped from collectedAt so
    * Google knows delivery timing.
    */
-  const caseStudyRoutes: MetadataRoute.Sitemap = MOCK_PROJECTS
+  const caseStudyRoutes: MetadataRoute.Sitemap = projects
     .filter(
       (p) =>
         p.kind === "contract" &&

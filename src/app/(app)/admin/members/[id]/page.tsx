@@ -43,7 +43,7 @@ import {
   toggleProfilePublic,
 } from "@/lib/member-management-actions";
 import { inviteMemberToDocumenso } from "@/lib/documenso-member-actions";
-import { agreementsForUser } from "@/lib/mock-data/agreements";
+import { getAgreementsForUser } from "@/lib/readers/agreements";
 import {
   AGREEMENT_PROVIDER_LABELS,
   AGREEMENT_TYPE_LABELS,
@@ -55,6 +55,12 @@ import {
 import { Avatar } from "@/components/Avatar";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { TierBadge } from "@/components/TierBadge";
+
+// Reads the database. These pages already render dynamically because
+// getCurrentUser/requireAdmin read cookies, but the rule in CLAUDE.md
+// is that a database read declares it rather than relying on a side
+// effect of the auth call staying where it is.
+export const dynamic = "force-dynamic";
 
 const TIERS: MembershipTier[] = ["viewer", "partner", "member"];
 
@@ -124,9 +130,15 @@ export default async function MemberDrillDown({
     (sum, tx) => sum + Number(tx.amount),
     0,
   );
-  const [recognitions, canonizations] = await Promise.all([
+  const [recognitions, canonizations, agreements] = await Promise.all([
     safely(() => getRecognitionsForUser(user.id), []),
     safely(() => getCanonizationsForUser(user.id), []),
+    // Reader swap 2026-09-03. Was agreementsForUser() off a fixture,
+    // read inline in the JSX below. So a member who signed an LOI
+    // through Documenso showed "No agreements on file" here while the
+    // row sat in Postgres. This is Billy's complaint again, on the
+    // admin side of the same data.
+    safely(() => getAgreementsForUser(user.id), []),
   ]);
   const auditEntries = await readAuditLog({
     resourceKind: "user",
@@ -473,7 +485,6 @@ export default async function MemberDrillDown({
           .
         </p>
         {(() => {
-          const agreements = agreementsForUser(user.id);
           if (agreements.length === 0) {
             return (
               <Card className="mt-4">

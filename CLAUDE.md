@@ -151,16 +151,18 @@ matches the latest commit before assuming the code is wrong.
 - **Members keep their tier until the community removes them.** A
   rating change does not cost someone membership.
 - **First name, last initial** on profiles.
-- **`/profile` IS the profile.** Not a settings screen, and not a
-  summary page that links to one. Jamar rejected both shapes: *"When
-  you get on facebook, you just see your profile and there are fields
-  you can edit. Viewing your profile should be what you see when you
-  click your profile, not a secondary option."* Each block presents its
-  value and swaps it for a form in place. Because the forms are
-  per-block, they save through `saveProfileSection`, which patches only
-  the named block. The full-row `saveProfile` writes every column on
-  every submit, so pointing a single-field form at it silently blanks
-  everything the form did not contain.
+- **`/profile` IS the profile.** Not a settings screen, not summary
+  cards, not the same content with the captions stripped and pencils
+  added. Four attempts died on this. Jamar, in the end: *"The profile
+  page is not a place to edit the profile. The profile page needs to
+  BE the profile."* And: *"make editing the way it works on any other
+  social media, make a small pencil or icon they can click."*
+  `/profile` now renders `PublicProfilePage` itself, the same component
+  serving `/u/[handle]`, with `owner` set. Not a copy, the same
+  component, so the two cannot drift. `owner` adds pencils that link to
+  the section editors that already exist. Do not add a form to this
+  page. Do not caption a value with its field name. If a value needs
+  editing, it gets a pencil that goes to `/profile/edit/<section>`.
 - **Depersonalize before submit, and say so at the upload.** Guidance
   in a `placeholder` does not count; it disappears on the first
   keystroke, which is why nearly every early portfolio and attachment

@@ -204,7 +204,7 @@ function FilterChip({
       href={href}
       className={`rounded-full border px-3 py-1.5 transition-colors ${
         active
-          ? "border-brand-magenta bg-brand-magenta text-white"
+          ? "border-brand-magenta fm-btn-primary"
           : "border-[var(--surface-border)] hover:border-brand-magenta hover:text-brand-magentaText"
       }`}
     >

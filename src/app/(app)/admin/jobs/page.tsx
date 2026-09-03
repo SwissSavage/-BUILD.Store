@@ -24,7 +24,7 @@ const inputClass =
   "mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink";
 const labelClass = "block text-xs text-ink-muted";
 const primaryButton =
-  "rounded-full bg-brand-magenta px-4 py-2 text-xs font-medium text-white hover:opacity-90";
+  "rounded-full fm-btn-primary px-4 py-2 text-xs font-medium";
 const ghostButton =
   "rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText";
 

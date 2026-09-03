@@ -507,33 +507,6 @@ body {
   }
 }
 
-/* ============================================================ */
-/* Inline profile editing (2026-09-03)                          */
-/*                                                              */
-/* /profile shows the profile itself; each block carries its    */
-/* own form behind a <details>. Opening the form replaces the   */
-/* presented value in place rather than pushing it down the     */
-/* page, which is what makes it read as editing the thing you   */
-/* are looking at instead of a settings panel bolted above it.  */
-/*                                                              */
-/* Done in CSS on purpose. The conditional-render version needs */
-/* state, state needs a client component, and that would mean   */
-/* marking every field on the profile "use client" to get a     */
-/* pencil icon.                                                 */
-/* ============================================================ */
-
-.fm-editable[open] ~ .fm-editable-view {
-  display: none;
-}
-
-/* Kill the native disclosure triangle. The Edit control is the
-   affordance; a triangle next to it reads as a second one. */
-.fm-editable > summary {
-  list-style: none;
-}
-.fm-editable > summary::-webkit-details-marker {
-  display: none;
-}
 
 /* ============================================================ */
 /* Colour accessibility pass (2026-09-03)                       */

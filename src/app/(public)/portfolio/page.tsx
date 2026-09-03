@@ -105,7 +105,7 @@ function PillarFilter({ active }: { active: Industry | null }) {
         href={href}
         className={`rounded-full border px-3 py-1 text-xs transition-colors ${
           isActive
-            ? "border-brand-magenta bg-brand-magenta text-brand-white"
+            ? "border-brand-magenta fm-btn-primary text-brand-white"
             : "border-[var(--surface-border)] text-ink-muted hover:bg-[var(--surface-inset)]"
         }`}
       >

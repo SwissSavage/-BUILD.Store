@@ -242,6 +242,7 @@ function AdminDropdown({ self }: { self: User }) {
             Customer testimonials
           </AdminLink>
           <AdminLink href="/admin/feedback">Beta feedback</AdminLink>
+          <AdminLink href="/admin/peer-reviews">Peer reviews</AdminLink>
           <AdminLink href="/admin/categories">Store categories</AdminLink>
           <AdminLink href="/admin/locker">Locker moderation</AdminLink>
         </AdminSection>

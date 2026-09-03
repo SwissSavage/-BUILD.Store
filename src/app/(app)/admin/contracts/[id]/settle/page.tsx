@@ -39,7 +39,7 @@ import { projects, revenueSplits } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
 import {
   attributionReader,
-  peerReviewReader,
+  getLivePeerReviews,
   safely,
 } from "@/lib/readers";
 import { RESERVE_RECIPIENTS } from "@/lib/mock-data/splits";
@@ -282,7 +282,9 @@ export default async function SettlePage({
     await Promise.all([
       safely(() => attributionReader.all(), []),
       safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
-      safely(() => peerReviewReader.all(), []),
+      // Live reviews only. A voided review must not show up in a
+      // settlement sheet that decides what people are paid.
+      safely(() => getLivePeerReviews(), []),
     ]);
   const userById = new Map(roster.map((u) => [u.id, u]));
   const labelForRecipient = makeLabelForRecipient(userById);

@@ -22,10 +22,11 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { and, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
-  peerReviews as peerReviewsTable,
   projects as projectsTable,
 } from "@/db/schema";
-import { peerReviewReader } from "@/lib/readers";
+import {
+  getReviewsForProject,
+} from "@/lib/readers";
 import { getProjectById } from "@/lib/readers/projects";
 import { customerFeedback as customerFeedbackTable } from "@/db/schema";
 import { customerFeedbackReader } from "@/lib/readers";
@@ -147,9 +148,7 @@ export async function executeBonusDecision(formData: FormData) {
   // Scoped to this project in the query. A bonus-gate evaluation must
   // not read every review in the cooperative to find the handful
   // attached to this contract.
-  const peerReviews = await peerReviewReader.where(
-    eq(peerReviewsTable.contextId, projectId),
-  );
+  const peerReviews = await getReviewsForProject(projectId);
   const decision = evaluateBonusGate({
     feedback,
     peerReviews,

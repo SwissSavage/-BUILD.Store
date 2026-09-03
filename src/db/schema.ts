@@ -962,6 +962,18 @@ export const peerReviews = pgTable("peer_reviews", {
   communication: integer("communication"),
   prose: text("prose").notNull(),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  /**
+   * Void marker (migration 0024). A voided review keeps its row but is
+   * excluded from every aggregate by `getReviewsOf`, which is the one
+   * reader both `aggregateRating` and `recomputeMvpScore` go through.
+   *
+   * Soft rather than DELETE on purpose: a reviewer whose reviews keep
+   * getting voided is a pattern an admin needs to be able to see, and
+   * that pattern does not survive deleting the rows.
+   */
+  voidedAt: timestamp("voided_at", { mode: "string", withTimezone: true }),
+  voidedBy: text("voided_by").references(() => users.id),
+  voidReason: text("void_reason"),
 }, (t) => ({
   uniqueReview: uniqueIndex("peer_reviews_unique").on(
     t.contextKind, t.contextId, t.reviewerId, t.revieweeId,

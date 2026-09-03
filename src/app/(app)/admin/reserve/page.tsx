@@ -13,13 +13,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { eq } from "drizzle-orm";
-import { customerFeedback, peerReviews } from "@/db/schema";
+import { customerFeedback } from "@/db/schema";
 import { getAllProjects } from "@/lib/readers/projects";
 import { getAllUsers } from "@/lib/readers/users";
 import {
   customerFeedbackReader,
+  getReviewsForProject,
   minutesReader,
-  peerReviewReader,
   safely,
 } from "@/lib/readers";
 import {
@@ -191,7 +191,7 @@ async function ReserveCard({
       safely(() => reservePoolLedgerForProject(project.id), []),
       safely(() => getCompositesForProject(project.id), []),
       safely(
-        () => peerReviewReader.where(eq(peerReviews.contextId, project.id)),
+        () => getReviewsForProject(project.id),
         [],
       ),
       safely(

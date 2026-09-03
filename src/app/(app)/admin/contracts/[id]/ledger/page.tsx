@@ -431,7 +431,7 @@ export default async function ContractLedgerPage({
           Mirrors the split engine. Read-only here — for changes, run{" "}
           <Link
             href={`/admin/contracts/${id}/settle`}
-            className="underline hover:text-brand-magenta"
+            className="underline hover:text-brand-magentaText"
           >
             settlement
           </Link>
@@ -610,7 +610,7 @@ export default async function ContractLedgerPage({
                 </td>
                 <td
                   className="py-2 text-right font-mono text-xs"
-                  style={{ color: "#007048" }}
+                  style={{ color: "var(--fm-green-text)" }}
                 >
                   ${Number(invoice.paidAmount).toLocaleString()}
                 </td>
@@ -642,8 +642,7 @@ export default async function ContractLedgerPage({
               />
               <button
                 type="submit"
-                className="rounded-full px-3 py-1.5 text-xs font-medium text-white"
-                style={{ backgroundColor: "#D828A0" }}
+                className="fm-btn-primary rounded-full px-3 py-1.5 text-xs font-medium"
               >
                 Issue invoice
               </button>

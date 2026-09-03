@@ -35,7 +35,7 @@ export default function PrivacyPolicy() {
       >
         <p
           className="text-[11px] uppercase tracking-wider"
-          style={{ color: "#5070F0" }}
+          style={{ color: "var(--fm-blue-text)" }}
         >
           Sandbox draft
         </p>
@@ -118,7 +118,7 @@ export default function PrivacyPolicy() {
           See the{" "}
           <Link
             href="/policies/subprocessors"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             Subprocessor Registry
           </Link>{" "}
@@ -146,7 +146,7 @@ export default function PrivacyPolicy() {
             <strong className="text-ink">Audit log:</strong> twelve
             months hot for operational review; seven years cold for
             financial and compliance subset. See{" "}
-            <Link href="/admin/compliance" className="text-brand-magenta hover:underline">
+            <Link href="/admin/compliance" className="text-brand-magentaText hover:underline">
               compliance controls
             </Link>{" "}
             (admin-only) for the mapping.
@@ -173,7 +173,7 @@ export default function PrivacyPolicy() {
           The self-service surface is at{" "}
           <Link
             href="/profile/data-rights"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             /profile/data-rights
           </Link>
@@ -199,7 +199,7 @@ export default function PrivacyPolicy() {
           facing summary at{" "}
           <Link
             href="/trust"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             /trust
           </Link>
@@ -230,7 +230,7 @@ export default function PrivacyPolicy() {
         <p className="mt-2 text-sm">
           Privacy questions: <code>privacy@buildstore</code> (production).
           Sandbox: use the{" "}
-          <Link href="/contact" className="text-brand-magenta hover:underline">
+          <Link href="/contact" className="text-brand-magentaText hover:underline">
             /contact
           </Link>{" "}
           form.

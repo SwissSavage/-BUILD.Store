@@ -110,7 +110,7 @@ export default async function NotificationsPage() {
           <form action={markAllNotificationsRead}>
             <button
               type="submit"
-              className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+              className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Mark all read ({unreadCount})
             </button>
@@ -124,7 +124,7 @@ export default async function NotificationsPage() {
             Nothing in the inbox yet. As soon as anything moves on a
             contract, order, or application that touches you, it lands
             here.{" "}
-            <Link href="/dashboard" className="text-brand-magenta hover:underline">
+            <Link href="/dashboard" className="text-brand-magentaText hover:underline">
               Back to dashboard →
             </Link>
           </p>
@@ -197,7 +197,7 @@ function NotificationRow({
                 {NOTIFICATION_KIND_LABELS[n.kind]}
               </span>
               {unread && (
-                <span className="ml-1 rounded-full bg-brand-magenta px-1.5 py-0.5 text-[9px] font-medium text-white">
+                <span className="fm-btn-primary ml-1 rounded-full px-1.5 py-0.5 text-[9px] font-medium">
                   NEW
                 </span>
               )}

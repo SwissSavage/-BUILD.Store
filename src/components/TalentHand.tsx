@@ -185,7 +185,7 @@ export function TalentHand({
   return (
     <section className="relative">
       {contextLabel && (
-        <p className="mb-4 text-[11px] uppercase tracking-[0.18em] text-brand-magenta">
+        <p className="mb-4 text-[11px] uppercase tracking-[0.18em] text-brand-magentaText">
           {contextLabel}
         </p>
       )}
@@ -248,7 +248,7 @@ export function TalentHand({
 
                 {entry.quoteLine && (
                   <div className="mt-3 rounded-xl border border-brand-magenta/30 bg-brand-magenta/5 px-3 py-2">
-                    <p className="font-display text-lg font-semibold text-brand-magenta">
+                    <p className="font-display text-lg font-semibold text-brand-magentaText">
                       {entry.quoteLine.pricingHeadline}
                     </p>
                     <p className="text-[10px] uppercase tracking-wider text-ink-muted">
@@ -269,7 +269,7 @@ export function TalentHand({
                       <li key={work.id}>
                         <Link
                           href={work.href}
-                          className="inline-block rounded-full border border-[var(--surface-border)] px-2.5 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted transition-colors hover:border-brand-magenta hover:text-brand-magenta"
+                          className="inline-block rounded-full border border-[var(--surface-border)] px-2.5 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted transition-colors hover:border-brand-magenta hover:text-brand-magentaText"
                         >
                           {work.label}
                         </Link>

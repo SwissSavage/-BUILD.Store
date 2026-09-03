@@ -293,7 +293,7 @@ export default async function PublicProfilePage({
                 className="rounded-full px-2.5 py-0.5 text-xs"
                 style={{
                   backgroundColor: "rgba(216, 40, 160, 0.12)",
-                  color: "#D828A0",
+                  color: "var(--fm-magenta-text)",
                 }}
               >
                 {memberLabel(user)}
@@ -332,7 +332,7 @@ export default async function PublicProfilePage({
           </div>
           {canDm && (
             <details className="mt-5 max-w-md">
-              <summary className="inline-block cursor-pointer rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs font-medium hover:border-brand-magenta hover:text-brand-magenta">
+              <summary className="inline-block cursor-pointer rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs font-medium hover:border-brand-magenta hover:text-brand-magentaText">
                 Send {publicName(user)} a message →
               </summary>
               <form
@@ -357,8 +357,7 @@ export default async function PublicProfilePage({
                 />
                 <button
                   type="submit"
-                  className="rounded-full px-4 py-1.5 text-xs font-medium text-white"
-                  style={{ backgroundColor: "#D828A0" }}
+                  className="fm-btn-primary rounded-full px-4 py-1.5 text-xs font-medium"
                 >
                   Send
                 </button>
@@ -392,7 +391,7 @@ export default async function PublicProfilePage({
                     "linear-gradient(135deg, rgba(0,112,72,0.10), rgba(80,112,240,0.04))",
                 }}
               >
-                <div className="text-[10px] uppercase tracking-wider" style={{ color: "#007048" }}>
+                <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--fm-green-text)" }}>
                   ★ Constellation of {active.year.periodLabel}
                 </div>
                 <p className="mt-2 text-sm text-ink">{active.year.narrative}</p>
@@ -407,7 +406,7 @@ export default async function PublicProfilePage({
                     "linear-gradient(135deg, rgba(216,40,160,0.08), rgba(80,112,240,0.04))",
                 }}
               >
-                <div className="text-[10px] uppercase tracking-wider text-brand-magenta">
+                <div className="text-[10px] uppercase tracking-wider text-brand-magentaText">
                   ★ Future Modernist of {active.month.periodLabel}
                 </div>
                 <p className="mt-2 text-sm text-ink">{active.month.narrative}</p>
@@ -637,7 +636,7 @@ export default async function PublicProfilePage({
                       className="rounded-full px-2 py-0.5 font-medium"
                       style={{
                         backgroundColor: "rgba(80,112,240,0.15)",
-                        color: "#5070F0",
+                        color: "var(--fm-blue-text)",
                       }}
                     >
                       Featured
@@ -651,7 +650,7 @@ export default async function PublicProfilePage({
                       target="_blank"
                       rel="noreferrer"
                       className="hover:underline"
-                      style={{ color: "#D828A0" }}
+                      style={{ color: "var(--fm-magenta-text)" }}
                     >
                       View →
                     </a>
@@ -829,7 +828,7 @@ function EpkShell({
 
       {epk.bioLong && (
         <details className="max-w-prose">
-          <summary className="cursor-pointer text-sm text-brand-magenta hover:underline">
+          <summary className="cursor-pointer text-sm text-brand-magentaText hover:underline">
             Read the long bio
           </summary>
           <div className="mt-3 whitespace-pre-line text-sm text-ink-muted">
@@ -900,7 +899,7 @@ function EpkShell({
                         href={h.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-brand-magenta hover:underline"
+                        className="text-brand-magentaText hover:underline"
                       >
                         {PLATFORM_DISPLAY[h.platform] ?? h.platform}
                         {h.handle ? ` · ${h.handle}` : ""}
@@ -923,7 +922,7 @@ function EpkShell({
                           href={w.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-brand-magenta hover:underline"
+                          className="text-brand-magentaText hover:underline"
                         >
                           {PLATFORM_DISPLAY[w.platform] ?? w.platform}
                           {w.handle ? ` · ${w.handle}` : ""}
@@ -1058,7 +1057,7 @@ function FeaturedWorkCard({ work }: { work: FeaturedWorkEntry }) {
           target="_blank"
           rel="noreferrer"
           className="mt-4 inline-block text-sm hover:underline"
-          style={{ color: "#D828A0" }}
+          style={{ color: "var(--fm-magenta-text)" }}
         >
           Listen / view →
         </a>

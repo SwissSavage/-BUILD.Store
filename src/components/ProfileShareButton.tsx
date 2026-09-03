@@ -51,7 +51,7 @@ export function ProfileShareButton({ handle, className }: ProfileShareButtonProp
       onClick={handleCopy}
       className={
         className ??
-        "inline-flex items-center gap-1.5 rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+        "inline-flex items-center gap-1.5 rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
       }
       aria-live="polite"
     >

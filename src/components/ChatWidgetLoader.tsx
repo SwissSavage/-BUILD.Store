@@ -44,7 +44,7 @@ export function ChatWidgetLoader() {
     <button
       type="button"
       onClick={() => setOpened(true)}
-      className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-brand-magenta px-4 py-3 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/25 transition-colors hover:bg-brand-magenta/90"
+      className="fm-btn-primary fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium shadow-lg shadow-brand-magenta/25 transition-colors"
       aria-label="Open chat"
     >
       <span

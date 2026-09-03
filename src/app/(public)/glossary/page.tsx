@@ -54,7 +54,7 @@ export default function GlossaryPage() {
           aria-label="Glossary term index"
           className="mt-10 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
         >
-          <p className="text-xs font-medium uppercase tracking-wider text-brand-magenta">
+          <p className="text-xs font-medium uppercase tracking-wider text-brand-magentaText">
             Terms
           </p>
           <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
@@ -62,7 +62,7 @@ export default function GlossaryPage() {
               <li key={entry.slug}>
                 <a
                   href={`#${entry.slug}`}
-                  className="text-ink hover:text-brand-magenta"
+                  className="text-ink hover:text-brand-magentaText"
                 >
                   {entry.term}
                 </a>
@@ -92,14 +92,14 @@ export default function GlossaryPage() {
 
               {entry.authoritativeFor.length > 0 && (
                 <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
-                  <span className="text-xs font-medium uppercase tracking-wider text-brand-magenta">
+                  <span className="text-xs font-medium uppercase tracking-wider text-brand-magentaText">
                     Authoritatively defined on
                   </span>
                   {entry.authoritativeFor.map((path, i) => (
                     <span key={path}>
                       <Link
                         href={path}
-                        className="text-ink hover:text-brand-magenta"
+                        className="text-ink hover:text-brand-magentaText"
                       >
                         {path}
                       </Link>
@@ -113,7 +113,7 @@ export default function GlossaryPage() {
 
               {entry.relatedTerms.length > 0 && (
                 <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
-                  <span className="text-xs font-medium uppercase tracking-wider text-brand-magenta">
+                  <span className="text-xs font-medium uppercase tracking-wider text-brand-magentaText">
                     See also
                   </span>
                   {entry.relatedTerms.map((slug, i) => {
@@ -123,7 +123,7 @@ export default function GlossaryPage() {
                       <span key={slug}>
                         <a
                           href={`#${slug}`}
-                          className="text-ink hover:text-brand-magenta"
+                          className="text-ink hover:text-brand-magentaText"
                         >
                           {related.term}
                         </a>
@@ -143,7 +143,7 @@ export default function GlossaryPage() {
           If you cite Future Modern terminology in your own work, this is
           the canonical source. Attribute to Future Modern Builderberg
           LLC and link the specific anchor (e.g.,{" "}
-          <code className="text-brand-magenta">/glossary#venture-labor</code>
+          <code className="text-brand-magentaText">/glossary#venture-labor</code>
           ). If a term you need is missing, that's a coined-term gap on
           our end. Let us know.
         </p>

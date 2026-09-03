@@ -73,9 +73,9 @@ async function submitQuote(formData: FormData) {
 }
 
 function statusLabel(q: { approvedAt: string | null; rejectedAt: string | null }) {
-  if (q.rejectedAt) return { text: "Rejected", color: "#E53E3E" };
-  if (q.approvedAt) return { text: "Sent to client", color: "#007048" };
-  return { text: "Pending review", color: "#5070F0" };
+  if (q.rejectedAt) return { text: "Rejected", color: "var(--fm-red-text)" };
+  if (q.approvedAt) return { text: "Sent to client", color: "var(--fm-green-text)" };
+  return { text: "Pending review", color: "var(--fm-blue-text)" };
 }
 
 export const dynamic = "force-dynamic";
@@ -154,7 +154,7 @@ export default async function QuoteSubmitPage({
                       )}
                       {q.rejectionNote && (
                         <div className="mt-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] p-3 text-xs">
-                          <div className="font-medium" style={{ color: "#E53E3E" }}>
+                          <div className="font-medium" style={{ color: "var(--fm-red-text)" }}>
                             Admin note
                           </div>
                           <div className="mt-1 text-ink-muted">

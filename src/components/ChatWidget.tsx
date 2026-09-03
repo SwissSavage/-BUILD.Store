@@ -192,8 +192,7 @@ export function ChatWidget() {
           type="button"
           onClick={() => setIsOpen(true)}
           aria-label="Open chat with the cooperative"
-          className="fixed bottom-6 right-6 z-50 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-white shadow-lg transition-opacity hover:opacity-90"
-          style={{ backgroundColor: "#D828A0" }}
+          className="fm-btn-primary fixed bottom-6 right-6 z-50 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium shadow-lg transition-opacity"
         >
           <span>Chat with us</span>
         </button>
@@ -278,7 +277,7 @@ export function ChatWidget() {
                 />
               </label>
               {error && (
-                <div className="text-xs text-brand-magenta">{error}</div>
+                <div className="text-xs text-brand-magentaText">{error}</div>
               )}
               <button
                 type="submit"
@@ -313,7 +312,7 @@ export function ChatWidget() {
                 }}
               >
                 {error && (
-                  <div className="mb-2 text-xs text-brand-magenta">
+                  <div className="mb-2 text-xs text-brand-magentaText">
                     {error}
                   </div>
                 )}
@@ -336,8 +335,7 @@ export function ChatWidget() {
                   <button
                     type="submit"
                     disabled={pending}
-                    className="rounded-full px-3 py-2 text-xs font-medium text-white disabled:opacity-60"
-                    style={{ backgroundColor: "#D828A0" }}
+                    className="fm-btn-primary rounded-full px-3 py-2 text-xs font-medium disabled:opacity-60"
                   >
                     Send
                   </button>

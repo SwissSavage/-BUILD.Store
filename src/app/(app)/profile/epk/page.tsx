@@ -143,7 +143,7 @@ function StatusCard({
           className="mt-3 rounded-lg p-3 text-sm"
           style={{ backgroundColor: "rgba(216, 40, 160, 0.08)" }}
         >
-          <span className="text-[11px] uppercase tracking-wider text-brand-magenta">
+          <span className="text-[11px] uppercase tracking-wider text-brand-magentaText">
             Admin note
           </span>
           <p className="mt-1 text-ink">{epk.adminRevisionNote}</p>
@@ -272,7 +272,7 @@ function FeaturedWorkSection({ entries }: { entries: FeaturedWorkEntry[] }) {
                 <input type="hidden" name="id" value={e.id} />
                 <button
                   type="submit"
-                  className="text-[11px] text-brand-magenta underline hover:opacity-80"
+                  className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                 >
                   Remove
                 </button>
@@ -308,8 +308,7 @@ function FeaturedWorkSection({ entries }: { entries: FeaturedWorkEntry[] }) {
         />
         <button
           type="submit"
-          className="rounded-full px-4 py-1.5 text-xs font-medium text-white"
-          style={{ backgroundColor: "#D828A0" }}
+          className="fm-btn-primary rounded-full px-4 py-1.5 text-xs font-medium"
         >
           Add featured work
         </button>
@@ -351,7 +350,7 @@ function PressSection({ clips }: { clips: PressClip[] }) {
                 <input type="hidden" name="id" value={c.id} />
                 <button
                   type="submit"
-                  className="text-[11px] text-brand-magenta underline hover:opacity-80"
+                  className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                 >
                   Remove
                 </button>
@@ -476,7 +475,7 @@ function MetricsSection({ metrics }: { metrics: ArtistMetricSnapshot[] }) {
                 <input type="hidden" name="index" value={i} />
                 <button
                   type="submit"
-                  className="text-[11px] text-brand-magenta underline hover:opacity-80"
+                  className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                 >
                   Remove
                 </button>
@@ -532,7 +531,7 @@ function SocialHandlesSection({ handles }: { handles: ArtistSocialHandle[] }) {
                 <input type="hidden" name="index" value={i} />
                 <button
                   type="submit"
-                  className="text-[11px] text-brand-magenta underline hover:opacity-80"
+                  className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                 >
                   Remove
                 </button>
@@ -548,8 +547,7 @@ function SocialHandlesSection({ handles }: { handles: ArtistSocialHandle[] }) {
         <Field name="handle" label="Handle (optional)" placeholder="handle" />
         <button
           type="submit"
-          className="rounded-full px-4 py-1.5 text-xs font-medium text-white"
-          style={{ backgroundColor: "#D828A0" }}
+          className="fm-btn-primary rounded-full px-4 py-1.5 text-xs font-medium"
         >
           Add social
         </button>
@@ -597,7 +595,7 @@ function Web3ProfilesSection({ profiles }: { profiles: Web3MarketplaceProfile[] 
                 <input type="hidden" name="index" value={i} />
                 <button
                   type="submit"
-                  className="text-[11px] text-brand-magenta underline hover:opacity-80"
+                  className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                 >
                   Remove
                 </button>
@@ -678,7 +676,7 @@ function SubmitSection({ epk }: { epk: ArtistEpk | null }) {
         or sends it back with revision notes.
       </p>
       {!ready && (
-        <p className="mt-3 text-xs text-brand-magenta">
+        <p className="mt-3 text-xs text-brand-magentaText">
           Short bio must be at least 20 characters before you can submit.
         </p>
       )}

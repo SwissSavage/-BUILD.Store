@@ -61,16 +61,16 @@ export function EditableBlock({
       <details className="fm-editable group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
           <span className="flex items-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-brand-magenta">
+            <span className="text-xs uppercase tracking-wider text-brand-magentaText">
               {label}
             </span>
             {saved && (
-              <span className="rounded-full bg-brand-magenta/15 px-2 py-0.5 text-[11px] text-brand-magenta">
+              <span className="rounded-full bg-brand-magenta/15 px-2 py-0.5 text-[11px] text-brand-magentaText">
                 Saved
               </span>
             )}
           </span>
-          <span className="shrink-0 rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs text-ink-muted group-hover:border-brand-magenta group-hover:text-brand-magenta">
+          <span className="shrink-0 rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs text-ink-muted group-hover:border-brand-magenta group-hover:text-brand-magentaText">
             {/* Swaps label with the block's open state, so the control
                 always says what the next click does. */}
             <span className="group-open:hidden">Edit</span>

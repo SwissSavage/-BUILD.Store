@@ -71,7 +71,7 @@ export default async function DataRightsPage() {
             </label>
             <button
               type="submit"
-              className="rounded-full bg-brand-magenta px-5 py-2 text-sm text-white hover:opacity-90"
+              className="fm-btn-primary rounded-full px-5 py-2 text-sm"
             >
               Request export
             </button>
@@ -104,7 +104,7 @@ export default async function DataRightsPage() {
               />
             </label>
             <label className="block text-xs text-ink-muted">
-              Confirmation — type <code className="text-brand-magenta">ERASE MY ACCOUNT</code>
+              Confirmation — type <code className="text-brand-magentaText">ERASE MY ACCOUNT</code>
               <input
                 type="text"
                 name="confirmation"
@@ -115,7 +115,7 @@ export default async function DataRightsPage() {
             </label>
             <button
               type="submit"
-              className="rounded-full border border-brand-magenta px-5 py-2 text-sm text-brand-magenta hover:bg-brand-magenta hover:text-white"
+              className="rounded-full border border-brand-magenta px-5 py-2 text-sm text-brand-magentaText hover:bg-brand-magenta hover:text-black"
             >
               Begin erasure (30-day window)
             </button>
@@ -137,7 +137,7 @@ export default async function DataRightsPage() {
                 className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-4 py-3"
               >
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-xs uppercase tracking-wider text-brand-magenta">
+                  <span className="text-xs uppercase tracking-wider text-brand-magentaText">
                     {e.action === "data.subject_export_requested"
                       ? "Export requested"
                       : "Erasure requested"}
@@ -167,11 +167,11 @@ export default async function DataRightsPage() {
           Requests are recorded in the append-only audit log
           (SOC 2 CC7.2 / ISO 27001 A.12.4). The mapping to production
           fulfillment lives in{" "}
-          <code className="text-brand-magenta">
+          <code className="text-brand-magentaText">
             deliverables/compliance/soc2-iso27001-readiness.md
           </code>
           . If you have questions about how your data is handled,{" "}
-          <Link href="/policies/privacy" className="text-brand-magenta hover:underline">
+          <Link href="/policies/privacy" className="text-brand-magentaText hover:underline">
             see the privacy policy →
           </Link>
         </p>

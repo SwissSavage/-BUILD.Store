@@ -84,7 +84,7 @@ export function MobileMenu() {
                 className="h-9 w-9 object-contain"
               />
               <span>
-                $BUILD<span style={{ color: "#D828A0" }}>.</span>Store
+                $BUILD<span style={{ color: "var(--fm-magenta-text)" }}>.</span>Store
               </span>
             </Link>
             <button
@@ -149,7 +149,7 @@ export function MobileMenu() {
             <Link
               href="/signup"
               onClick={() => setOpen(false)}
-              className="block rounded-full bg-brand-magenta px-5 py-3 text-center text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+              className="fm-btn-primary block rounded-full px-5 py-3 text-center text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
             >
               $BUILD a team
             </Link>

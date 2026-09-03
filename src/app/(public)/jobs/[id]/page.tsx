@@ -97,7 +97,7 @@ export default async function JobDetailPage({
             className="rounded-full px-2.5 py-0.5 text-xs font-medium"
             style={{
               backgroundColor: "rgba(0,112,72,0.15)",
-              color: "#007048",
+              color: "var(--fm-green-text)",
             }}
           >
             {TYPE_LABEL[job.employmentType] ?? job.employmentType}
@@ -156,7 +156,7 @@ export default async function JobDetailPage({
               <div className="mt-4 flex gap-3">
                 <Link
                   href={`/signin?next=/jobs/${job.id}`}
-                  className="rounded-full bg-brand-magenta px-5 py-2 text-sm text-white hover:opacity-90"
+                  className="fm-btn-primary rounded-full px-5 py-2 text-sm"
                 >
                   Sign in
                 </Link>

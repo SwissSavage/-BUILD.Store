@@ -534,3 +534,74 @@ body {
 .fm-editable > summary::-webkit-details-marker {
   display: none;
 }
+
+/* ============================================================ */
+/* Colour accessibility pass (2026-09-03)                       */
+/*                                                              */
+/* Rob: magenta "may be hard to see for color blind people."    */
+/*                                                              */
+/* Measured, because the fix depends on the numbers:            */
+/*                                                              */
+/*   white text on #D828A0 buttons ....... 4.44  FAILS AA       */
+/*   #D828A0 text on a #1A1A1A card ...... 3.92  FAILS AA       */
+/*   magenta / blue / red luminance ...... 0.19 / 0.20 / 0.20   */
+/*                                                              */
+/* That last line is the real problem, and it is not really     */
+/* about magenta. Colour-blind users fall back on LIGHTNESS,    */
+/* and three of our status colours sit at the same lightness,   */
+/* so they are mutually indistinguishable in greyscale. Meaning */
+/* was riding on hue alone.                                     */
+/*                                                              */
+/* Jamar: "we still want our color schemes, not to move to      */
+/* bleak black and white for the least common denominator, get  */
+/* creative."                                                   */
+/*                                                              */
+/* So the primary button is the FM magenta-to-blue sweep, which */
+/* is already the brand's signature (it is what the scrollbar   */
+/* does), carrying a BLACK label. Lightening both stops to 65%  */
+/* puts the WORST point on the gradient at 5.45, so the label   */
+/* clears AA everywhere along it, not just in the middle.       */
+/*                                                              */
+/* Magenta keeps every job where it is not being asked to carry */
+/* reading: borders, hover, eyebrows, marks, the card gradients,*/
+/* the rarity ladder, the scrollbar. Translucent magenta tints  */
+/* (bg-brand-magenta/5 and friends) are backgrounds, not        */
+/* buttons, and are deliberately left alone.                    */
+/* ============================================================ */
+
+:root {
+  --fm-grad-from: #E468BC;
+  --fm-grad-to: #5B79F1;
+  --fm-magenta-text: #E052B3;
+  --fm-blue-text: #5B79F1;
+  --fm-green-text: #2FD39B;
+  --fm-red-text: #EA6262;
+}
+
+.fm-btn-primary {
+  background-image: linear-gradient(
+    100deg,
+    var(--fm-grad-from) 0%,
+    var(--fm-grad-to) 100%
+  );
+  color: #000000;
+  font-weight: 600;
+  border: none;
+}
+
+.fm-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.fm-btn-primary:focus-visible {
+  outline: 2px solid #FFFFFF;
+  outline-offset: 2px;
+}
+
+/* Windows high-contrast mode discards the gradient, so give the
+   button an edge it is allowed to keep. */
+@media (forced-colors: active) {
+  .fm-btn-primary {
+    border: 1px solid ButtonText;
+  }
+}

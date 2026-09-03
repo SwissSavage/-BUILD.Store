@@ -31,7 +31,7 @@ export default async function WhitelistThanksPage({
       </Card>
       <Link
         href="/whitelist"
-        className="mt-6 inline-block text-sm text-brand-magenta hover:underline"
+        className="mt-6 inline-block text-sm text-brand-magentaText hover:underline"
       >
         ← Back to whitelist
       </Link>

@@ -128,7 +128,7 @@ export default async function PaperworkEditPage() {
           only. Opt out anytime. Read the{" "}
           <Link
             href="/data-use-policy"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             Data Use Policy
           </Link>{" "}
@@ -150,7 +150,7 @@ export default async function PaperworkEditPage() {
             <form action={optOutDataParticipation}>
               <button
                 type="submit"
-                className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+                className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
               >
                 Opt out
               </button>
@@ -190,7 +190,7 @@ export default async function PaperworkEditPage() {
                 }
                 target="_blank"
                 rel="noreferrer"
-                className="text-brand-magenta hover:underline"
+                className="text-brand-magentaText hover:underline"
               >
                 sign.afuturemodern.com
               </a>
@@ -207,7 +207,7 @@ export default async function PaperworkEditPage() {
               <form action={claimDocumensoAccount} className="mt-3">
                 <button
                   type="submit"
-                  className="rounded-full border border-brand-magenta px-4 py-1.5 text-xs font-medium text-brand-magenta hover:bg-brand-magenta hover:text-white"
+                  className="rounded-full border border-brand-magenta px-4 py-1.5 text-xs font-medium text-brand-magentaText hover:bg-brand-magenta hover:text-black"
                 >
                   I've claimed my account
                 </button>

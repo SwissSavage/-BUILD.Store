@@ -93,13 +93,13 @@ export default async function AdminProjectContributionsPage() {
         <div className="flex flex-wrap gap-3 text-xs">
           <Link
             href="/admin/projects/applications"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             ← Member applications
           </Link>
           <Link
             href="/admin/projects"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             All projects
           </Link>
@@ -162,7 +162,7 @@ function OpenRow({
           <p className="mt-1 text-xs text-ink-muted">
             <a
               href={`mailto:${row.contactEmail}`}
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               {row.contactEmail}
             </a>{" "}
@@ -179,7 +179,7 @@ function OpenRow({
           </span>
           <Link
             href={project ? `/projects/${project.id}` : "/projects"}
-            className="text-xs text-brand-magenta hover:underline"
+            className="text-xs text-brand-magentaText hover:underline"
           >
             {project ? project.title : "Project missing"} →
           </Link>
@@ -204,7 +204,7 @@ function OpenRow({
               href={row.portfolioLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               {row.portfolioLink}
             </a>
@@ -246,8 +246,7 @@ function OpenRow({
               type="submit"
               name="status"
               value="contacted"
-              className="rounded-full px-4 py-2 text-sm font-medium text-white"
-              style={{ backgroundColor: "#D828A0" }}
+              className="fm-btn-primary rounded-full px-4 py-2 text-sm font-medium"
             >
               Mark contacted
             </button>
@@ -265,7 +264,7 @@ function OpenRow({
             type="submit"
             name="status"
             value="dismissed"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Dismiss
           </button>
@@ -299,7 +298,7 @@ function ClosedRow({
           {project && (
             <Link
               href={`/projects/${project.id}`}
-              className="ml-2 text-xs text-brand-magenta hover:underline"
+              className="ml-2 text-xs text-brand-magentaText hover:underline"
             >
               {project.title} →
             </Link>

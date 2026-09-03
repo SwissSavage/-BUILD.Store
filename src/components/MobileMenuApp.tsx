@@ -122,7 +122,7 @@ export function MobileMenuApp({
         {isLoggedIn && unread > 0 && (
           <span
             aria-hidden
-            className="absolute right-1.5 top-1.5 inline-block h-2 w-2 rounded-full bg-brand-magenta"
+            className="fm-btn-primary absolute right-1.5 top-1.5 inline-block h-2 w-2 rounded-full"
           />
         )}
       </button>
@@ -150,7 +150,7 @@ export function MobileMenuApp({
                 className="h-9 w-9 object-contain"
               />
               <span>
-                $BUILD<span style={{ color: "#D828A0" }}>.</span>Store
+                $BUILD<span style={{ color: "var(--fm-magenta-text)" }}>.</span>Store
               </span>
             </Link>
             <button
@@ -200,7 +200,7 @@ export function MobileMenuApp({
                     >
                       <span>🔔 Notifications</span>
                       {unread > 0 && (
-                        <span className="inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-brand-magenta px-2 text-xs font-medium text-white">
+                        <span className="fm-btn-primary inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-2 text-xs font-medium">
                           {unread > 9 ? "9+" : unread}
                         </span>
                       )}
@@ -234,7 +234,7 @@ export function MobileMenuApp({
                 {isAdmin && (
                   <>
                     <div className="my-6 border-t border-[var(--surface-border)]" />
-                    <p className="px-4 pb-2 text-[11px] uppercase tracking-wider text-brand-magenta">
+                    <p className="px-4 pb-2 text-[11px] uppercase tracking-wider text-brand-magentaText">
                       Admin
                     </p>
                     <ul className="space-y-1 text-base">
@@ -309,7 +309,7 @@ export function MobileMenuApp({
               <Link
                 href="/signup"
                 onClick={() => setOpen(false)}
-                className="block rounded-full bg-brand-magenta px-5 py-3 text-center text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+                className="fm-btn-primary block rounded-full px-5 py-3 text-center text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
               >
                 $BUILD a team
               </Link>

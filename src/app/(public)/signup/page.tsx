@@ -85,7 +85,7 @@ function IntentCard({ intent }: { intent: SignupIntent }) {
         <CardEyebrow>{copy.label}</CardEyebrow>
         <CardTitle className="mt-2">{copy.headline}</CardTitle>
         <p className="mt-3 flex-1 text-sm text-ink-muted">{copy.blurb}</p>
-        <span className="mt-6 text-sm font-medium text-brand-magenta group-hover:underline">
+        <span className="mt-6 text-sm font-medium text-brand-magentaText group-hover:underline">
           Start →
         </span>
       </Card>

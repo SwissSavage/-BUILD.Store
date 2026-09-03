@@ -140,7 +140,7 @@ export default async function AdminVouchersPage() {
         </div>
         <Link
           href="/admin/audit-log?resource=build_voucher"
-          className="text-xs text-brand-magenta hover:underline"
+          className="text-xs text-brand-magentaText hover:underline"
         >
           Voucher audit trail →
         </Link>
@@ -175,7 +175,7 @@ export default async function AdminVouchersPage() {
           </div>
           <div className="mt-4 h-2 rounded-full bg-[var(--surface-inset)]">
             <div
-              className="h-2 rounded-full bg-brand-magenta"
+              className="fm-btn-primary h-2 rounded-full"
               style={{ width: `${Math.min(utilizationPct, 100)}%` }}
             />
           </div>
@@ -318,7 +318,7 @@ export default async function AdminVouchersPage() {
 
           <div className="flex justify-end">
             <SubmitButton pendingLabel="Issuing…"
-              className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+              className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
             >
               Issue voucher
             </SubmitButton>
@@ -393,7 +393,7 @@ export default async function AdminVouchersPage() {
                         />
                       </div>
                       <SubmitButton pendingLabel="Issuing…"
-                        className="rounded-full bg-brand-magenta px-4 py-2 text-xs font-medium text-brand-white hover:bg-brand-magenta/90"
+                        className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
                       >
                         Complete swap
                       </SubmitButton>
@@ -402,7 +402,7 @@ export default async function AdminVouchersPage() {
                     <form action={cancelPendingSwap} className="mt-2">
                       <input type="hidden" name="id" value={row.id} />
                       <SubmitButton pendingLabel="Issuing…"
-                        className="text-[11px] text-ink-faint hover:text-brand-magenta"
+                        className="text-[11px] text-ink-faint hover:text-brand-magentaText"
                       >
                         Cancel — revert to unswapped
                       </SubmitButton>
@@ -541,7 +541,7 @@ function VoucherRowActions({ row }: { row: BuildVoucher }) {
         <form action={markVoucherPendingSwap}>
           <input type="hidden" name="id" value={row.id} />
           <SubmitButton pendingLabel="Issuing…"
-            className="text-xs text-ink-muted hover:text-brand-magenta"
+            className="text-xs text-ink-muted hover:text-brand-magentaText"
           >
             Queue for swap
           </SubmitButton>
@@ -560,7 +560,7 @@ function VoucherRowActions({ row }: { row: BuildVoucher }) {
           className="w-56 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-[11px]"
         />
         <SubmitButton pendingLabel="Issuing…"
-          className="text-[11px] text-ink-faint hover:text-brand-magenta"
+          className="text-[11px] text-ink-faint hover:text-brand-magentaText"
         >
           Forfeit
         </SubmitButton>

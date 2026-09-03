@@ -32,7 +32,7 @@ export default async function AdminNewContractPage() {
         Goes live immediately — no vetting queue, because you are the
         vetting step. For client-submitted work that still needs
         review, send them to{" "}
-        <Link href="/contracts/new" className="text-brand-magenta hover:underline">
+        <Link href="/contracts/new" className="text-brand-magentaText hover:underline">
           /contracts/new
         </Link>{" "}
         instead.
@@ -113,7 +113,7 @@ export default async function AdminNewContractPage() {
           </label>
 
           <SubmitButton pendingLabel="Posting…"
-            className="rounded-full bg-brand-magenta px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+            className="fm-btn-primary rounded-full px-5 py-2.5 text-sm font-medium"
           >
             Post it
           </SubmitButton>
@@ -128,7 +128,7 @@ export default async function AdminNewContractPage() {
             2. Invite people onto it from{" "}
             <Link
               href="/admin/members/invite"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               /admin/members/invite
             </Link>{" "}
@@ -139,7 +139,7 @@ export default async function AdminNewContractPage() {
             3. Bids arrive in{" "}
             <Link
               href="/admin/projects/applications"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               the triage queue
             </Link>

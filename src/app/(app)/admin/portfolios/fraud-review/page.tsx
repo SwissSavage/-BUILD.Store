@@ -119,7 +119,7 @@ export default async function FraudReviewPage() {
         <form action={runScanNow}>
           <button
             type="submit"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Run scan now
           </button>
@@ -154,7 +154,7 @@ export default async function FraudReviewPage() {
                   className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4"
                 >
                   <div className="flex items-baseline justify-between">
-                    <span className="text-[11px] uppercase tracking-wider text-brand-magenta">
+                    <span className="text-[11px] uppercase tracking-wider text-brand-magentaText">
                       {s.kind.replace(/_/g, " ")}
                     </span>
                     <span className="text-[10px] text-ink-faint">

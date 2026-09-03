@@ -143,7 +143,7 @@ export default async function TalentTagsEditPage() {
                   className="group rounded-full px-3 py-1 text-xs"
                   style={{
                     backgroundColor: "rgba(216, 40, 160, 0.10)",
-                    color: "#D828A0",
+                    color: "var(--fm-magenta-text)",
                   }}
                   title="Click to remove"
                 >
@@ -168,8 +168,7 @@ export default async function TalentTagsEditPage() {
           </label>
           <button
             type="submit"
-            className="rounded-full px-4 py-1.5 text-xs font-medium text-white"
-            style={{ backgroundColor: "#D828A0" }}
+            className="fm-btn-primary rounded-full px-4 py-1.5 text-xs font-medium"
           >
             Append
           </button>
@@ -178,7 +177,7 @@ export default async function TalentTagsEditPage() {
         <form action={rescanMyTalentTags} className="mt-3">
           <button
             type="submit"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Rescan from bio + skills + portfolio
           </button>

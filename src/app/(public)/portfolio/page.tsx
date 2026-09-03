@@ -190,7 +190,7 @@ function Grid({
                   target="_blank"
                   rel="noreferrer"
                   className="text-xs hover:underline"
-                  style={{ color: "#D828A0" }}
+                  style={{ color: "var(--fm-magenta-text)" }}
                 >
                   View →
                 </a>

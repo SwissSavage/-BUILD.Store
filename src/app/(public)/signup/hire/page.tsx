@@ -35,7 +35,7 @@ export default function HireTalentSignupPage() {
         <ContactFields />
 
         <section className="space-y-3">
-          <h2 className="text-xs uppercase tracking-wider text-brand-magenta">
+          <h2 className="text-xs uppercase tracking-wider text-brand-magentaText">
             JD / opportunity brief
           </h2>
           <p className="text-xs text-ink-muted">

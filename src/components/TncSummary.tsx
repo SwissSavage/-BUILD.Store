@@ -74,7 +74,7 @@ export function TncSummary({ variant = "policy" }: TncSummaryProps) {
   // /policies/covenant.
   return (
     <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-6 py-5">
-      <p className="text-xs uppercase tracking-wider text-brand-magenta">
+      <p className="text-xs uppercase tracking-wider text-brand-magentaText">
         At a glance
       </p>
       <p className="mt-2 text-sm font-medium">

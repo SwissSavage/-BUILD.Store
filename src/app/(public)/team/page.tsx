@@ -82,7 +82,7 @@ export default async function TeamPage({
         <p className="mt-3 text-sm text-ink-muted">
           The cooperative roster is a Member-tier surface. Public
           browsing of the cooperative&apos;s work lives at{" "}
-          <Link href="/portfolio" className="text-brand-magenta hover:underline">
+          <Link href="/portfolio" className="text-brand-magentaText hover:underline">
             /showcase
           </Link>
           .
@@ -146,7 +146,7 @@ export default async function TeamPage({
         </div>
         <Link
           href="/calendar"
-          className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+          className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
         >
           Shared calendar →
         </Link>
@@ -263,7 +263,7 @@ function FilterPill({
       className={`rounded-full border px-3 py-1.5 transition-colors ${
         active
           ? "border-brand-magenta bg-brand-magenta text-white"
-          : "border-[var(--surface-border)] hover:border-brand-magenta hover:text-brand-magenta"
+          : "border-[var(--surface-border)] hover:border-brand-magenta hover:text-brand-magentaText"
       }`}
     >
       {label}

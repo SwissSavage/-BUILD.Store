@@ -59,8 +59,7 @@ export function BuyerFeedbackSection({ orderId }: { orderId: string }) {
 
         <button
           type="submit"
-          className="rounded-full px-5 py-2 text-sm font-medium text-white"
-          style={{ backgroundColor: "#D828A0" }}
+          className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
         >
           Submit feedback
         </button>

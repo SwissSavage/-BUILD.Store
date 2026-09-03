@@ -131,7 +131,7 @@ export default async function AdminInvoicesPage() {
         </div>
         <Link
           href="/admin/audit-log?resource=cooperative_quote"
-          className="text-xs text-brand-magenta hover:underline"
+          className="text-xs text-brand-magentaText hover:underline"
         >
           Document audit trail →
         </Link>
@@ -172,7 +172,7 @@ export default async function AdminInvoicesPage() {
                       <input type="hidden" name="id" value={inv.id} />
                       <button
                         type="submit"
-                        className="rounded-full bg-brand-magenta px-4 py-1.5 text-xs font-medium text-brand-white hover:bg-brand-magenta/90"
+                        className="fm-btn-primary rounded-full px-4 py-1.5 text-xs font-medium"
                       >
                         Approve
                       </button>
@@ -257,7 +257,7 @@ export default async function AdminInvoicesPage() {
                       </div>
                       <button
                         type="submit"
-                        className="rounded-full bg-brand-magenta px-4 py-2 text-xs font-medium text-brand-white hover:bg-brand-magenta/90"
+                        className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
                       >
                         Generate external
                       </button>
@@ -359,7 +359,7 @@ export default async function AdminInvoicesPage() {
                         </label>
                         <button
                           type="submit"
-                          className="rounded-full bg-brand-magenta px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:opacity-90"
+                          className="fm-btn-primary rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider"
                         >
                           Log payment
                         </button>
@@ -492,7 +492,7 @@ export default async function AdminInvoicesPage() {
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="rounded-full bg-brand-magenta px-4 py-2 text-xs font-medium text-brand-white hover:bg-brand-magenta/90"
+                className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
               >
                 Create retroactive receipt
               </button>
@@ -621,7 +621,7 @@ function InvoiceRow({
               </div>
               <button
                 type="submit"
-                className="rounded-full border border-brand-magenta px-3 py-1.5 text-[11px] font-medium text-brand-magenta hover:bg-brand-magenta hover:text-brand-white"
+                className="rounded-full border border-brand-magenta px-3 py-1.5 text-[11px] font-medium text-brand-magentaText hover:bg-brand-magenta hover:text-black"
               >
                 Send for signature
               </button>

@@ -36,7 +36,7 @@ export default function ContactPage() {
             href="https://calendly.com/properpreparationism"
             target="_blank"
             rel="noreferrer"
-            className="mt-3 inline-block text-sm text-brand-magenta hover:underline"
+            className="mt-3 inline-block text-sm text-brand-magentaText hover:underline"
           >
             Schedule a call →
           </a>
@@ -51,12 +51,12 @@ export default function ContactPage() {
             Members can self-serve export or erasure at{" "}
             <Link
               href="/profile/data-rights"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               /profile/data-rights
             </Link>
             . For anything else,{" "}
-            <code className="text-brand-magenta">privacy@buildstore</code>{" "}
+            <code className="text-brand-magentaText">privacy@buildstore</code>{" "}
             (production).
           </p>
         </Card>
@@ -66,7 +66,7 @@ export default function ContactPage() {
           <CardTitle className="mt-2 text-lg">Report a vulnerability</CardTitle>
           <p className="mt-2 text-sm text-ink-muted">
             Responsible disclosure to{" "}
-            <code className="text-brand-magenta">security@buildstore</code>{" "}
+            <code className="text-brand-magentaText">security@buildstore</code>{" "}
             (production). Public repo policy at{" "}
             <code>SECURITY.md</code> when it lands.
           </p>
@@ -81,7 +81,7 @@ export default function ContactPage() {
               href="https://github.com/SwissSavage/-BUILD.Store"
               target="_blank"
               rel="noreferrer"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               github.com/SwissSavage/-BUILD.Store
             </a>
@@ -96,7 +96,7 @@ export default function ContactPage() {
           </CardTitle>
           <p className="mt-2 text-sm text-ink-muted">
             Email{" "}
-            <code className="text-brand-magenta">conduct@buildstore</code>{" "}
+            <code className="text-brand-magentaText">conduct@buildstore</code>{" "}
             (production). Acknowledged within 3 business days.
           </p>
         </Card>

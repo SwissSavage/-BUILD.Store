@@ -201,7 +201,7 @@ export default async function PayoutsPage() {
                       {s.notes && s.payoutStatus === "failed" && (
                         <p
                           className="mt-0.5 text-xs"
-                          style={{ color: "#E53E3E" }}
+                          style={{ color: "var(--fm-red-text)" }}
                         >
                           {s.notes}
                         </p>
@@ -290,14 +290,14 @@ function NotConnected() {
         </p>
         <ul className="mt-4 space-y-2 text-sm">
           <li className="flex gap-2">
-            <span className="text-brand-magenta">•</span>
+            <span className="text-brand-magentaText">•</span>
             <span>
               <strong>Express, not Standard.</strong> The contributor experience
               stays under our brand — Stripe only hosts the KYC + tax surfaces.
             </span>
           </li>
           <li className="flex gap-2">
-            <span className="text-brand-magenta">•</span>
+            <span className="text-brand-magentaText">•</span>
             <span>
               <strong>Per-contract failure isolation.</strong> If one transfer
               fails (KYC lapse, account issue), it doesn&apos;t block payouts
@@ -305,7 +305,7 @@ function NotConnected() {
             </span>
           </li>
           <li className="flex gap-2">
-            <span className="text-brand-magenta">•</span>
+            <span className="text-brand-magentaText">•</span>
             <span>
               <strong>Tax forms handled.</strong> Stripe issues your 1099-NEC
               at year-end based on lifetime payouts.

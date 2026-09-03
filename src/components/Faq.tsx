@@ -70,7 +70,7 @@ export function Faq({
                 <span>{item.question}</span>
                 <span
                   aria-hidden="true"
-                  className="mt-1 shrink-0 text-brand-magenta transition-transform group-open:rotate-45"
+                  className="mt-1 shrink-0 text-brand-magentaText transition-transform group-open:rotate-45"
                 >
                   +
                 </span>

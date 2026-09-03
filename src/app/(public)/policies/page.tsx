@@ -101,7 +101,7 @@ export default function PoliciesIndex() {
             <CardTitle className="mt-2 text-xl">
               <Link
                 href={`/policies/${p.slug}`}
-                className="hover:text-brand-magenta"
+                className="hover:text-brand-magentaText"
               >
                 {p.title} →
               </Link>

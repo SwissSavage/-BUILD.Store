@@ -124,7 +124,7 @@ export default async function AdminMvpUserPage({
                 <input type="hidden" name="userId" value={user.id} />
                 <button
                   type="submit"
-                  className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+                  className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
                 >
                   Demote to provisional (override)
                 </button>
@@ -175,8 +175,7 @@ export default async function AdminMvpUserPage({
           </label>
           <button
             type="submit"
-            className="rounded-full px-5 py-2 text-sm font-medium text-white"
-            style={{ backgroundColor: "#D828A0" }}
+            className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
           >
             Apply -9 OVR penalty
           </button>
@@ -209,7 +208,7 @@ export default async function AdminMvpUserPage({
                     <div>
                       <span
                         className={`text-[10px] uppercase tracking-wider ${
-                          isActive ? "text-brand-magenta" : "text-ink-faint"
+                          isActive ? "text-brand-magentaText" : "text-ink-faint"
                         }`}
                       >
                         {isActive ? "Active" : "Expired"}
@@ -229,7 +228,7 @@ export default async function AdminMvpUserPage({
                       <input type="hidden" name="penaltyId" value={p.id} />
                       <button
                         type="submit"
-                        className="text-[11px] text-brand-magenta underline hover:opacity-80"
+                        className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                       >
                         Rescind (admin override)
                       </button>
@@ -290,7 +289,7 @@ export default async function AdminMvpUserPage({
                         />
                         <button
                           type="submit"
-                          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+                          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                         >
                           Set
                         </button>

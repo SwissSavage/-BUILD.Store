@@ -186,10 +186,10 @@ function SelfBody({
           style={{ backgroundColor: "rgba(216, 40, 160, 0.08)" }}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wider text-brand-magenta">
+            <span className="text-[11px] uppercase tracking-wider text-brand-magentaText">
               Active compliance penalties
             </span>
-            <span className="text-[11px] font-medium text-brand-magenta">
+            <span className="text-[11px] font-medium text-brand-magentaText">
               {snapshot.activePenalties.length} ×{" "}
               {snapshot.activePenalties[0]?.ovrImpact} OVR
             </span>
@@ -230,7 +230,7 @@ function PeerBody({
           className="mt-3 rounded-lg p-3 text-xs"
           style={{ backgroundColor: "rgba(216, 40, 160, 0.08)" }}
         >
-          <span className="text-[11px] uppercase tracking-wider text-brand-magenta">
+          <span className="text-[11px] uppercase tracking-wider text-brand-magentaText">
             Active compliance signal
           </span>
           <p className="mt-1 text-ink">
@@ -357,7 +357,7 @@ function ProvisionalCard({
             )}
             <span
               className="mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
-              style={{ backgroundColor: "rgba(80, 112, 240, 0.12)", color: "#5070F0" }}
+              style={{ backgroundColor: "rgba(80, 112, 240, 0.12)", color: "var(--fm-blue-text)" }}
             >
               Provisional · Good standing
             </span>
@@ -370,7 +370,7 @@ function ProvisionalCard({
           </div>
           <div
             className="font-display text-5xl font-bold leading-none"
-            style={{ color: "#5070F0" }}
+            style={{ color: "var(--fm-blue-text)" }}
             aria-label="OVR not yet scored"
           >
             ·

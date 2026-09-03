@@ -98,7 +98,7 @@ export function WalletConnectCard({
 
   return (
     <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
-      <div className="text-xs uppercase tracking-wider text-brand-magenta">
+      <div className="text-xs uppercase tracking-wider text-brand-magentaText">
         External wallet
       </div>
       <h2 className="mt-1 font-display text-xl font-semibold">
@@ -128,15 +128,14 @@ export function WalletConnectCard({
               type="button"
               onClick={handleConnect}
               disabled={!hasInjected || connecting}
-              className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta disabled:opacity-50"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText disabled:opacity-50"
             >
               {connecting ? "Reconnecting…" : "Reconnect / switch"}
             </button>
             <form action={disconnectWallet}>
               <button
                 type="submit"
-                className="rounded-full px-3 py-1.5 text-xs font-medium text-white"
-                style={{ backgroundColor: "#D828A0" }}
+                className="fm-btn-primary rounded-full px-3 py-1.5 text-xs font-medium"
               >
                 Disconnect
               </button>
@@ -172,7 +171,7 @@ export function WalletConnectCard({
             </p>
           )}
           {error && (
-            <p className="text-[11px] text-brand-magenta">{error}</p>
+            <p className="text-[11px] text-brand-magentaText">{error}</p>
           )}
         </div>
       )}

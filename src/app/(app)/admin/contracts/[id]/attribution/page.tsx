@@ -156,7 +156,7 @@ export default async function AttributionLedgerPage({
                             {ATTRIBUTION_ROLE_LABELS[e.role]}
                           </span>
                         </div>
-                        <div className="text-sm font-medium" style={{ color: "#5070F0" }}>
+                        <div className="text-sm font-medium" style={{ color: "var(--fm-blue-text)" }}>
                           weight {e.weight.toFixed(2)}
                         </div>
                       </div>

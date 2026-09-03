@@ -171,12 +171,12 @@ export default async function MemberDrillDown({
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <TierBadge tier={user.membershipTier} />
               {user.isAdmin && (
-                <span className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-brand-magenta">
+                <span className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-brand-magentaText">
                   Admin
                 </span>
               )}
               {user.suspendedAt && (
-                <span className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-brand-magenta">
+                <span className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-brand-magentaText">
                   Suspended
                 </span>
               )}
@@ -203,20 +203,20 @@ export default async function MemberDrillDown({
         <div className="flex flex-col gap-2 text-xs">
           <Link
             href={`/u/${user.handle}`}
-            className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
           >
             View public profile →
           </Link>
           <Link
             href={`/admin/audit-log?resource=user&actor=${user.id}`}
-            className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Full audit trail →
           </Link>
           {snapshot && (
             <Link
               href={`/admin/mvp/${user.id}`}
-              className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
             >
               MVP score detail →
             </Link>
@@ -227,7 +227,7 @@ export default async function MemberDrillDown({
       {/* Suspension banner if suspended */}
       {user.suspendedAt && (
         <div className="mt-6 rounded-2xl border border-brand-magenta/40 bg-brand-magenta/5 px-5 py-4">
-          <p className="text-[11px] uppercase tracking-wider text-brand-magenta">
+          <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
             Suspended
           </p>
           <p className="mt-1 text-sm text-ink">
@@ -251,7 +251,7 @@ export default async function MemberDrillDown({
             </label>
             <button
               type="submit"
-              className="rounded-full bg-brand-magenta px-4 py-1.5 text-xs text-white hover:opacity-90"
+              className="fm-btn-primary rounded-full px-4 py-1.5 text-xs"
             >
               Reactivate account
             </button>
@@ -340,7 +340,7 @@ export default async function MemberDrillDown({
               </select>
               <button
                 type="submit"
-                className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magenta hover:border-brand-magenta"
+                className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta"
               >
                 Change tier
               </button>
@@ -362,7 +362,7 @@ export default async function MemberDrillDown({
               <input type="hidden" name="uid" value={user.id} />
               <button
                 type="submit"
-                className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magenta hover:border-brand-magenta"
+                className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta"
               >
                 {user.profilePublic
                   ? "Hide from discovery"
@@ -381,7 +381,7 @@ export default async function MemberDrillDown({
               Self-toggle is blocked to prevent lockout. Use{" "}
               <Link
                 href="/admin/access-review"
-                className="text-brand-magenta hover:underline"
+                className="text-brand-magentaText hover:underline"
               >
                 access review
               </Link>{" "}
@@ -392,7 +392,7 @@ export default async function MemberDrillDown({
                 <input type="hidden" name="uid" value={user.id} />
                 <button
                   type="submit"
-                  className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magenta hover:border-brand-magenta"
+                  className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta"
                 >
                   {user.isAdmin ? "Revoke admin" : "Grant admin"}
                 </button>
@@ -423,7 +423,7 @@ export default async function MemberDrillDown({
                   <input type="hidden" name="userId" value={user.id} />
                   <button
                     type="submit"
-                    className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magenta hover:border-brand-magenta"
+                    className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta"
                   >
                     {user.documensoInvitedAt
                       ? "Re-send invite"
@@ -458,7 +458,7 @@ export default async function MemberDrillDown({
                 />
                 <button
                   type="submit"
-                  className="rounded-full bg-brand-magenta px-3 py-1 text-xs text-white hover:opacity-90"
+                  className="fm-btn-primary rounded-full px-3 py-1 text-xs"
                 >
                   Suspend
                 </button>
@@ -478,7 +478,7 @@ export default async function MemberDrillDown({
           remove entries on{" "}
           <Link
             href="/admin/agreements"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             /admin/agreements
           </Link>
@@ -552,7 +552,7 @@ export default async function MemberDrillDown({
           Last 30 audit entries scoped to this user. Full trail on{" "}
           <Link
             href={`/admin/audit-log?resource=user&actor=${user.id}`}
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             /admin/audit-log
           </Link>
@@ -573,7 +573,7 @@ export default async function MemberDrillDown({
                 className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-4 py-3 text-xs"
               >
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-brand-magenta">{e.action}</span>
+                  <span className="text-brand-magentaText">{e.action}</span>
                   <span className="font-mono text-[10px] text-ink-faint">
                     {new Date(e.createdAt).toLocaleString()}
                   </span>

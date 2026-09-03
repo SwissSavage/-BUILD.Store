@@ -81,7 +81,7 @@ const LABEL = "block text-xs uppercase tracking-wider text-ink-muted";
 const PRIMARY =
   "rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-white hover:opacity-90";
 const QUIET =
-  "rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-sm hover:border-brand-magenta hover:text-brand-magenta";
+  "rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-sm hover:border-brand-magenta hover:text-brand-magentaText";
 
 export default async function SellerProductsPage() {
   const user = await getCurrentUser();
@@ -334,7 +334,7 @@ function ListingCard({
       </div>
 
       <details className="mt-4 border-t border-[var(--surface-border)] pt-4">
-        <summary className="cursor-pointer text-sm text-ink-muted hover:text-brand-magenta">
+        <summary className="cursor-pointer text-sm text-ink-muted hover:text-brand-magentaText">
           Edit this listing
         </summary>
         <form action={updateProduct} className="mt-4 space-y-4">

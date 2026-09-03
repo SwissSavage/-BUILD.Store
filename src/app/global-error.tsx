@@ -54,7 +54,7 @@ export default function GlobalError({
               fontSize: 11,
               textTransform: "uppercase",
               letterSpacing: "0.1em",
-              color: "#D828A0",
+              color: "var(--fm-magenta-text)",
               marginBottom: 12,
             }}
           >

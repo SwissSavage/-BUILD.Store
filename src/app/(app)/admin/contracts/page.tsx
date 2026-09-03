@@ -249,7 +249,7 @@ function ContractRow({
           Sits on this page as well as /admin/projects because this is
           where you come looking for a contract. */}
       <details className="mt-3">
-        <summary className="cursor-pointer text-[11px] text-ink-faint hover:text-brand-magenta">
+        <summary className="cursor-pointer text-[11px] text-ink-faint hover:text-brand-magentaText">
           Delete contract
         </summary>
         <form action={trashProject} className="mt-2 max-w-sm space-y-2">
@@ -261,7 +261,7 @@ function ContractRow({
           />
           <button
             type="submit"
-            className="rounded-full border border-brand-magenta/50 px-3 py-1.5 text-[11px] text-brand-magenta hover:border-brand-magenta"
+            className="rounded-full border border-brand-magenta/50 px-3 py-1.5 text-[11px] text-brand-magentaText hover:border-brand-magenta"
           >
             Move to trash
           </button>

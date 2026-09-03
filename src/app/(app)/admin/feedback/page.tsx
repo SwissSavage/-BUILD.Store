@@ -111,7 +111,7 @@ export default async function AdminFeedbackPage({
           </h1>
           <p className="mt-2 text-sm text-ink-muted">
             {allFeedback.length} total entries · {totalNew} untriaged ·{" "}
-            <span className="text-brand-magenta">{totalBlockers} open blockers</span>
+            <span className="text-brand-magentaText">{totalBlockers} open blockers</span>
           </p>
         </div>
         <Link
@@ -229,7 +229,7 @@ export default async function AdminFeedbackPage({
                   </label>
                   <button
                     type="submit"
-                    className="rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+                    className="rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
                   >
                     Save
                   </button>
@@ -317,7 +317,7 @@ function FilterBar({
       <div className="flex items-center gap-2 md:col-span-5">
         <button
           type="submit"
-          className="rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+          className="rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
         >
           Apply filters
         </button>

@@ -372,8 +372,7 @@ export default async function AdminWhitelistPage() {
                                   <input type="hidden" name="id" value={p.id} />
                                   <button
                                     type="submit"
-                                    className="rounded-full px-3 py-1 text-[11px] font-medium text-white"
-                                    style={{ backgroundColor: "#D828A0" }}
+                                    className="fm-btn-primary rounded-full px-3 py-1 text-[11px] font-medium"
                                   >
                                     Run split
                                   </button>

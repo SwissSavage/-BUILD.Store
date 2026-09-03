@@ -142,8 +142,7 @@ export default async function LockerUploadPage() {
           <div className="flex flex-wrap items-center gap-3 border-t border-[var(--surface-border)] pt-5">
             <button
               type="submit"
-              className="rounded-full px-5 py-2 text-xs font-medium text-white"
-              style={{ backgroundColor: "#D828A0" }}
+              className="fm-btn-primary rounded-full px-5 py-2 text-xs font-medium"
             >
               Submit for review
             </button>
@@ -175,7 +174,7 @@ function Field({
     <label className="block">
       <span className="block text-[11px] uppercase tracking-wider text-ink-faint">
         {label}
-        {required && <span className="ml-1 text-brand-magenta">*</span>}
+        {required && <span className="ml-1 text-brand-magentaText">*</span>}
       </span>
       <span className="mt-1 block">{children}</span>
     </label>

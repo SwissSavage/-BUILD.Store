@@ -10,7 +10,7 @@ export default function NotFound() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-20">
       <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-6 py-8">
-        <p className="text-[11px] uppercase tracking-wider text-brand-magenta">
+        <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
           404
         </p>
         <h1 className="mt-2 font-display text-3xl font-semibold">
@@ -22,13 +22,13 @@ export default function NotFound() {
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/"
-            className="rounded-full bg-brand-magenta px-5 py-2 text-sm text-white hover:opacity-90"
+            className="fm-btn-primary rounded-full px-5 py-2 text-sm"
           >
             Home
           </Link>
           <Link
             href="/portfolio"
-            className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Portfolio
           </Link>

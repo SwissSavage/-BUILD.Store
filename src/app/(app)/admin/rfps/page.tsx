@@ -178,7 +178,7 @@ export default async function AdminRfpQueuePage() {
                             <li key={i} className="text-xs">
                               <a
                                 href={`/api/rfps/${p.id}/attachments/${i}`}
-                                className="text-brand-magenta hover:underline"
+                                className="text-brand-magentaText hover:underline"
                                 download
                               >
                                 {a.name}
@@ -308,7 +308,7 @@ export default async function AdminRfpQueuePage() {
                     <button
                       type="submit"
                       className="text-xs"
-                      style={{ color: "#E53E3E" }}
+                      style={{ color: "var(--fm-red-text)" }}
                     >
                       Decline
                     </button>

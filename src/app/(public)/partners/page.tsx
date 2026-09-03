@@ -44,7 +44,7 @@ export default async function PartnersPage() {
   return (
     <div className="mx-auto max-w-app px-6 py-12">
       <header>
-        <div className="text-xs uppercase tracking-wider text-brand-magenta">
+        <div className="text-xs uppercase tracking-wider text-brand-magentaText">
           $BUILD.Store
         </div>
         <h1 className="mt-2 font-display text-4xl font-semibold md:text-5xl">
@@ -57,7 +57,7 @@ export default async function PartnersPage() {
           use. Talent members live on{" "}
           <Link
             href="/team"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             /team
           </Link>
@@ -97,7 +97,7 @@ export default async function PartnersPage() {
                   target="_blank"
                   rel="noreferrer sponsored"
                   className="mt-2 inline-block text-[11px] hover:underline"
-                  style={{ color: "#5070F0" }}
+                  style={{ color: "var(--fm-blue-text)" }}
                 >
                   Visit ↗
                 </a>
@@ -138,7 +138,7 @@ export default async function PartnersPage() {
                   target="_blank"
                   rel="noreferrer sponsored"
                   className="mt-2 inline-block text-[11px] hover:underline"
-                  style={{ color: "#007048" }}
+                  style={{ color: "var(--fm-green-text)" }}
                 >
                   Visit ↗
                 </a>
@@ -163,7 +163,7 @@ export default async function PartnersPage() {
           looking to join as a Builder,{" "}
           <Link
             href="/signup"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             apply here
           </Link>{" "}
@@ -172,13 +172,13 @@ export default async function PartnersPage() {
         <div className="mt-4 flex flex-wrap gap-3">
           <Link
             href="/about"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             About the cooperative
           </Link>
           <Link
             href="/team"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Talent roster
           </Link>

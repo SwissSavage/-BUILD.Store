@@ -116,7 +116,7 @@ export default async function EditProjectPage({
 
           <button
             type="submit"
-            className="rounded-full bg-brand-magenta px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+            className="fm-btn-primary rounded-full px-5 py-2.5 text-sm font-medium"
           >
             Save changes
           </button>
@@ -127,7 +127,7 @@ export default async function EditProjectPage({
         <CardTitle className="text-lg">Move to trash</CardTitle>
         <p className="mt-2 text-sm text-ink-muted">
           Hides it from every board and keeps it restorable from{" "}
-          <Link href="/admin/trash" className="text-brand-magenta hover:underline">
+          <Link href="/admin/trash" className="text-brand-magentaText hover:underline">
             the trash
           </Link>
           . Refuses if any payout has already been dispatched against it.
@@ -144,7 +144,7 @@ export default async function EditProjectPage({
           </label>
           <button
             type="submit"
-            className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Move to trash
           </button>

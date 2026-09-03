@@ -251,7 +251,7 @@ export default async function WalletPage() {
                       <td className="p-4 text-ink-muted">
                         {tx.description ?? "—"}
                         {isWithheld && tx.withholdReason && (
-                          <div className="mt-1 text-[11px] text-brand-magenta">
+                          <div className="mt-1 text-[11px] text-brand-magentaText">
                             Reason: {tx.withholdReason}
                           </div>
                         )}

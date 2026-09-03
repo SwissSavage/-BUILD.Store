@@ -127,7 +127,7 @@ export default async function AdminInboundPage({
             </h1>
             <Link
               href="/admin/inbound/import"
-              className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magenta hover:border-brand-magenta hover:bg-brand-magenta/10"
+              className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta hover:bg-brand-magenta/10"
             >
               Import CSV →
             </Link>
@@ -205,7 +205,7 @@ function FilterChip({
       className={`rounded-full border px-3 py-1.5 transition-colors ${
         active
           ? "border-brand-magenta bg-brand-magenta text-white"
-          : "border-[var(--surface-border)] hover:border-brand-magenta hover:text-brand-magenta"
+          : "border-[var(--surface-border)] hover:border-brand-magenta hover:text-brand-magentaText"
       }`}
     >
       {label}
@@ -264,7 +264,7 @@ function SubmissionRow({
             <span
               key={p}
               className="rounded-full px-2 py-0.5"
-              style={{ backgroundColor: "rgba(80, 112, 240, 0.12)", color: "#5070F0" }}
+              style={{ backgroundColor: "rgba(80, 112, 240, 0.12)", color: "var(--fm-blue-text)" }}
             >
               {INDUSTRY_LABELS[p]}
             </span>
@@ -273,7 +273,7 @@ function SubmissionRow({
             <span
               key={t}
               className="rounded-full px-2 py-0.5"
-              style={{ backgroundColor: "rgba(216, 40, 160, 0.10)", color: "#D828A0" }}
+              style={{ backgroundColor: "rgba(216, 40, 160, 0.10)", color: "var(--fm-magenta-text)" }}
             >
               #{t}
             </span>
@@ -307,7 +307,7 @@ function SubmissionRow({
           >
             <span
               className="text-[11px] uppercase tracking-wider"
-              style={{ color: "#5070F0" }}
+              style={{ color: "var(--fm-blue-text)" }}
             >
               EPK booking · approve or decline
             </span>
@@ -341,7 +341,7 @@ function SubmissionRow({
                 />
                 <button
                   type="submit"
-                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                 >
                   Decline
                 </button>
@@ -378,7 +378,7 @@ function SubmissionRow({
                 </label>
                 <button
                   type="submit"
-                  className="rounded-full bg-ink px-3 py-1 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+                  className="rounded-full bg-ink px-3 py-1 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
                 >
                   Update
                 </button>
@@ -406,7 +406,7 @@ function SubmissionRow({
                 </label>
                 <button
                   type="submit"
-                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                 >
                   Assign
                 </button>
@@ -417,7 +417,7 @@ function SubmissionRow({
                   <input type="hidden" name="id" value={row.id} />
                   <button
                     type="submit"
-                    className="text-[11px] text-brand-magenta underline hover:opacity-80"
+                    className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                   >
                     Unassign {assignee ? publicName(assignee) : ""}
                   </button>
@@ -437,7 +437,7 @@ function SubmissionRow({
                 </label>
                 <button
                   type="submit"
-                  className="mt-2 rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+                  className="mt-2 rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                 >
                   Save note
                 </button>
@@ -448,7 +448,7 @@ function SubmissionRow({
                   <input type="hidden" name="id" value={row.id} />
                   <button
                     type="submit"
-                    className="rounded-full bg-brand-magenta px-3 py-1.5 text-[11px] font-medium text-white hover:opacity-90"
+                    className="fm-btn-primary rounded-full px-3 py-1.5 text-[11px] font-medium"
                     title="Prefill /admin/members/invite with this applicant's email + name and jump you there. Countersign-first invite ceremony fires from that page."
                   >
                     Promote to invite →
@@ -515,7 +515,7 @@ function SubmissionRow({
                 </label>
                 <button
                   type="submit"
-                  className="mt-2 rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+                  className="mt-2 rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                 >
                   Append tags
                 </button>
@@ -538,7 +538,7 @@ function SubmissionRow({
           {row.deepLinkHref && (
             <Link
               href={row.deepLinkHref}
-              className="mt-3 inline-block text-[11px] text-brand-magenta underline hover:opacity-80"
+              className="mt-3 inline-block text-[11px] text-brand-magentaText underline hover:opacity-80"
             >
               Open in {row.deepLinkHref.replace("/admin/", "")} ↗
             </Link>

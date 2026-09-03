@@ -88,7 +88,7 @@ export default async function AdminProjectApplicationsPage() {
         </div>
         <Link
           href="/admin/projects"
-          className="text-xs text-brand-magenta hover:underline"
+          className="text-xs text-brand-magentaText hover:underline"
         >
           ← All projects
         </Link>
@@ -172,7 +172,7 @@ function PendingRow({
         </div>
         <Link
           href={project ? `/projects/${project.id}` : "/projects"}
-          className="text-xs text-brand-magenta hover:underline"
+          className="text-xs text-brand-magentaText hover:underline"
         >
           {project ? project.title : "Project missing"} →
         </Link>
@@ -202,7 +202,7 @@ function PendingRow({
                   <li key={i}>
                     <a
                       href={`/api/proposals/${application.id}/attachments/${i}`}
-                      className="text-sm text-brand-magenta hover:underline"
+                      className="text-sm text-brand-magentaText hover:underline"
                     >
                       {doc.name}
                     </a>{" "}
@@ -222,7 +222,7 @@ function PendingRow({
                 href={application.portfolioLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-brand-magenta hover:underline"
+                className="text-brand-magentaText hover:underline"
               >
                 {application.portfolioLink}
               </a>
@@ -271,7 +271,7 @@ function PendingRow({
           <SubmitButton pendingLabel="Saving…"
             name="decision"
             value="reject"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Not this round
           </SubmitButton>
@@ -284,7 +284,7 @@ function PendingRow({
       <form action={withdrawProposalAsAdmin} className="mt-3">
         <input type="hidden" name="id" value={application.id} />
         <SubmitButton pendingLabel="Saving…"
-          className="text-xs text-ink-faint underline hover:text-brand-magenta"
+          className="text-xs text-ink-faint underline hover:text-brand-magentaText"
         >
           Remove from queue
         </SubmitButton>
@@ -324,7 +324,7 @@ function DecidedRow({
           {project && (
             <Link
               href={`/projects/${project.id}`}
-              className="ml-2 text-xs text-brand-magenta hover:underline"
+              className="ml-2 text-xs text-brand-magentaText hover:underline"
             >
               {project.title} →
             </Link>
@@ -339,7 +339,7 @@ function DecidedRow({
             <form action={restoreProposalAsAdmin} className="mt-1">
               <input type="hidden" name="id" value={application.id} />
               <SubmitButton pendingLabel="Saving…"
-                className="text-[11px] text-ink-faint underline hover:text-brand-magenta"
+                className="text-[11px] text-ink-faint underline hover:text-brand-magentaText"
               >
                 Put back in the queue
               </SubmitButton>

@@ -267,7 +267,7 @@ function PendingEpkRow({
           </label>
           <button
             type="submit"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Send back
           </button>
@@ -303,7 +303,7 @@ function PublishedEpkRow({
       <div className="mt-3 flex flex-wrap gap-2">
         <Link
           href={`/u/${user.handle}`}
-          className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+          className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
         >
           View on profile ↗
         </Link>

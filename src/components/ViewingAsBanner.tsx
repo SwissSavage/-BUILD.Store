@@ -34,8 +34,7 @@ export async function ViewingAsBanner() {
         <form action={returnToOriginalUser}>
           <button
             type="submit"
-            className="rounded-full px-3 py-1 text-xs font-medium text-white"
-            style={{ backgroundColor: "#D828A0" }}
+            className="fm-btn-primary rounded-full px-3 py-1 text-xs font-medium"
           >
             Return to your admin account
           </button>

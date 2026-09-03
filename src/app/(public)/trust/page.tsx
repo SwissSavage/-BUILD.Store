@@ -145,7 +145,7 @@ export default function TrustPage() {
           <li>
             <Link
               href="/policies/privacy"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               Privacy Policy →
             </Link>{" "}
@@ -156,7 +156,7 @@ export default function TrustPage() {
           <li>
             <Link
               href="/policies/covenant"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               Cooperative Covenant →
             </Link>{" "}
@@ -167,7 +167,7 @@ export default function TrustPage() {
           <li>
             <Link
               href="/policies/subprocessors"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               Subprocessor Registry →
             </Link>{" "}
@@ -178,7 +178,7 @@ export default function TrustPage() {
           <li>
             <Link
               href="/policies"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               All policies →
             </Link>
@@ -190,9 +190,9 @@ export default function TrustPage() {
         <h2 className="font-display text-2xl font-semibold">Questions</h2>
         <p className="mt-3 text-sm text-ink-muted">
           Engagement questions: your account admin. Policy questions:{" "}
-          <code className="text-brand-magenta">security@buildstore</code>{" "}
+          <code className="text-brand-magentaText">security@buildstore</code>{" "}
           in production,{" "}
-          <Link href="/contact" className="text-brand-magenta hover:underline">
+          <Link href="/contact" className="text-brand-magentaText hover:underline">
             /contact
           </Link>{" "}
           in sandbox.
@@ -236,7 +236,7 @@ function Pillar({
       {href && hrefLabel && (
         <Link
           href={href}
-          className="mt-2 inline-block text-xs text-brand-magenta hover:underline"
+          className="mt-2 inline-block text-xs text-brand-magentaText hover:underline"
         >
           {hrefLabel}
         </Link>

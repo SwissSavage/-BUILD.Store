@@ -272,7 +272,7 @@ export default async function AdminReceiptsPage() {
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+                className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
               >
                 Generate receipt
               </button>
@@ -340,7 +340,7 @@ export default async function AdminReceiptsPage() {
                     <div className="mt-4 flex items-center gap-3">
                       <Link
                         href={`/receipts/${receipt.clientToken}`}
-                        className="text-xs text-brand-magenta hover:underline"
+                        className="text-xs text-brand-magentaText hover:underline"
                       >
                         Preview client view →
                       </Link>
@@ -352,7 +352,7 @@ export default async function AdminReceiptsPage() {
                         />
                         <button
                           type="submit"
-                          className="text-xs text-ink-faint hover:text-brand-magenta"
+                          className="text-xs text-ink-faint hover:text-brand-magentaText"
                         >
                           Remove
                         </button>

@@ -228,8 +228,7 @@ export default async function NewContractPage() {
           </label>
 
           <SubmitButton pendingLabel="Submitting…"
-            className="rounded-full px-6 py-2.5 text-sm font-medium text-white"
-            style={{ backgroundColor: "#D828A0" }}
+            className="fm-btn-primary rounded-full px-6 py-2.5 text-sm font-medium"
           >
             Submit RFP
           </SubmitButton>

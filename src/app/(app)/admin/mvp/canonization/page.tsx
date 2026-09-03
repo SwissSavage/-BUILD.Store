@@ -82,7 +82,7 @@ export default async function AdminCanonizationPage() {
           backgroundColor: "rgba(216, 40, 160, 0.06)",
         }}
       >
-        <span className="text-[11px] uppercase tracking-wider text-brand-magenta">
+        <span className="text-[11px] uppercase tracking-wider text-brand-magentaText">
           Sandbox illustration · not cooperative canon
         </span>
         <p className="mt-1 text-ink">
@@ -221,7 +221,7 @@ function YearSection({
                     </span>
                   )}
                   {c.recognitionIds.length > 0 && (
-                    <span className="text-[11px] text-brand-magenta">
+                    <span className="text-[11px] text-brand-magentaText">
                       ★ {c.recognitionIds.length} recognition
                       {c.recognitionIds.length === 1 ? "" : "s"}
                     </span>
@@ -255,7 +255,7 @@ function YearSection({
                 </label>
                 <button
                   type="submit"
-                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                 >
                   Save caption
                 </button>

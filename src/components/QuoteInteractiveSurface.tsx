@@ -267,7 +267,7 @@ export function QuoteInteractiveSurface({
             >
               <span
                 aria-hidden
-                className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-brand-magenta"
+                className="fm-btn-primary mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full"
               />
               <span className="text-ink">{deliverable}</span>
             </li>
@@ -304,7 +304,7 @@ export function QuoteInteractiveSurface({
 
       {/* Decision panel */}
       <section className="mt-20 rounded-2xl border border-brand-magenta/30 bg-brand-magenta/5 px-6 py-8">
-        <h2 className="font-display text-2xl font-semibold text-brand-magenta">
+        <h2 className="font-display text-2xl font-semibold text-brand-magentaText">
           Ready to $BUILD together?
         </h2>
         {leadName ? (
@@ -364,7 +364,7 @@ export function QuoteInteractiveSurface({
             type="button"
             onClick={handleApprove}
             disabled={!selectedLeadUserId || pending}
-            className="inline-flex items-center rounded-full bg-brand-magenta px-6 py-2.5 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="fm-btn-primary inline-flex items-center rounded-full px-6 py-2.5 text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending
               ? "Approving…"
@@ -420,7 +420,7 @@ export function QuoteInteractiveSurface({
         {error && (
           <p
             className="mt-4 text-sm"
-            style={{ color: "#E53E3E" }}
+            style={{ color: "var(--fm-red-text)" }}
             role="alert"
           >
             {error}

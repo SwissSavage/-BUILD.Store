@@ -74,7 +74,7 @@ export default async function ClientTrackerPage({
         </p>
         <Link
           href="/"
-          className="mt-6 inline-block text-sm text-brand-magenta hover:underline"
+          className="mt-6 inline-block text-sm text-brand-magentaText hover:underline"
         >
           ← $BUILD.Store home
         </Link>
@@ -102,7 +102,7 @@ export default async function ClientTrackerPage({
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
-      <div className="text-xs uppercase tracking-wider text-brand-magenta">
+      <div className="text-xs uppercase tracking-wider text-brand-magentaText">
         Project tracker
       </div>
       <h1 className="mt-2 font-display text-4xl font-semibold">

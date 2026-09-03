@@ -45,14 +45,14 @@ export function ShareProfileBar({ handle }: { handle: string }) {
     <div className="mt-4 flex flex-wrap items-center gap-3">
       <a
         href={path}
-        className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-white hover:opacity-90"
+        className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
       >
         View my public profile
       </a>
       <button
         type="button"
         onClick={copy}
-        className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+        className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
       >
         {copied ? "Link copied" : "Copy share link"}
       </button>

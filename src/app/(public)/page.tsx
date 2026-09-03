@@ -149,7 +149,7 @@ function Hero() {
         <div className="mt-10 flex flex-col gap-3 sm:flex-row">
           <Link
             href="/signup"
-            className="inline-flex items-center justify-center rounded-full bg-brand-magenta px-8 py-3 font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+            className="fm-btn-primary inline-flex items-center justify-center rounded-full px-8 py-3 font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
           >
             Get started
           </Link>
@@ -171,7 +171,7 @@ function Hero() {
           <li className="flex items-center gap-2">
             <span
               aria-hidden
-              className="inline-block h-1.5 w-1.5 rounded-full bg-brand-magenta"
+              className="fm-btn-primary inline-block h-1.5 w-1.5 rounded-full"
             />
             <Link
               href="/governance#canonization"
@@ -219,7 +219,7 @@ function Process() {
   ] as const;
 
   const accentClass = {
-    magenta: "text-brand-magenta border-t-brand-magenta",
+    magenta: "text-brand-magentaText border-t-brand-magenta",
     blue:    "text-brand-blue border-t-brand-blue",
     green:   "text-brand-green border-t-brand-green",
   } as const;
@@ -256,7 +256,7 @@ function Pillars() {
 
   const styles = {
     blue:    { ring: "hover:border-brand-blue",    text: "text-brand-blue",    dot: "bg-brand-blue" },
-    magenta: { ring: "hover:border-brand-magenta", text: "text-brand-magenta", dot: "bg-brand-magenta" },
+    magenta: { ring: "hover:border-brand-magenta", text: "text-brand-magentaText", dot: "bg-brand-magenta" },
     green:   { ring: "hover:border-brand-green",   text: "text-brand-green",   dot: "bg-brand-green" },
   } as const;
 
@@ -315,7 +315,7 @@ async function Partners() {
           </div>
           <Link
             href="/partners"
-            className="text-sm text-brand-magenta hover:underline"
+            className="text-sm text-brand-magentaText hover:underline"
           >
             See full ecosystem →
           </Link>
@@ -529,7 +529,7 @@ async function CohortRail() {
           <RosterBreakdown excluded={excluded} />
           <Link
             href="/admin/members"
-            className="mt-4 inline-block rounded-full bg-brand-magenta px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+            className="fm-btn-primary mt-4 inline-block rounded-full px-5 py-2.5 text-sm font-medium"
           >
             Open member admin →
           </Link>
@@ -568,7 +568,7 @@ async function CohortRail() {
           </div>
           <Link
             href="/cohort"
-            className="text-sm text-brand-magenta hover:underline"
+            className="text-sm text-brand-magentaText hover:underline"
           >
             Everyone who has joined →
           </Link>
@@ -583,7 +583,7 @@ async function CohortRail() {
               <p className="text-ink-muted">{curated.narrative}</p>
               <Link
                 href={`/cohort/${curated.periodKey}`}
-                className="mt-4 inline-block text-sm text-brand-magenta hover:underline"
+                className="mt-4 inline-block text-sm text-brand-magentaText hover:underline"
               >
                 Read the full spotlight →
               </Link>
@@ -720,7 +720,7 @@ async function AdminRosterNote({
     <div className="mt-6 border-t border-[var(--surface-border)] pt-4">
       <p className="text-xs text-ink-faint">
         Admin only — showing {shown} of {total} accounts.{" "}
-        <Link href="/admin/members" className="text-brand-magenta hover:underline">
+        <Link href="/admin/members" className="text-brand-magentaText hover:underline">
           Member admin →
         </Link>
       </p>

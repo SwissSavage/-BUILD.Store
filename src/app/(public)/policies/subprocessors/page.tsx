@@ -144,7 +144,7 @@ export default function SubprocessorRegistry() {
       >
         <p
           className="text-[11px] uppercase tracking-wider"
-          style={{ color: "#5070F0" }}
+          style={{ color: "var(--fm-blue-text)" }}
         >
           Sandbox draft
         </p>
@@ -226,7 +226,7 @@ export default function SubprocessorRegistry() {
           email. Members who object can exercise their data rights at{" "}
           <a
             href="/profile/data-rights"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             /profile/data-rights
           </a>{" "}

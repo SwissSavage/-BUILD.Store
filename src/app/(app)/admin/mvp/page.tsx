@@ -84,7 +84,7 @@ export default async function AdminMvpPage() {
           </div>
           <Link
             href="/admin/mvp/recognition"
-            className="mt-2 inline-block text-[11px] text-brand-magenta hover:underline"
+            className="mt-2 inline-block text-[11px] text-brand-magentaText hover:underline"
           >
             Future Modernist selection →
           </Link>
@@ -168,7 +168,7 @@ export default async function AdminMvpPage() {
                           className="inline-block rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider"
                           style={{
                             backgroundColor: "rgba(80, 112, 240, 0.12)",
-                            color: "#5070F0",
+                            color: "var(--fm-blue-text)",
                           }}
                         >
                           Provisional · Good standing
@@ -181,7 +181,7 @@ export default async function AdminMvpPage() {
                       {s.isProvisional ? (
                         <span className="text-ink-faint">N/A</span>
                       ) : s.activePenalties.length > 0 ? (
-                        <span className="text-brand-magenta">
+                        <span className="text-brand-magentaText">
                           {s.activePenalties.length} active
                         </span>
                       ) : (
@@ -194,7 +194,7 @@ export default async function AdminMvpPage() {
                     <td className="py-2 pr-3 text-right">
                       <Link
                         href={`/admin/mvp/${user.id}`}
-                        className="text-[11px] text-brand-magenta hover:underline"
+                        className="text-[11px] text-brand-magentaText hover:underline"
                       >
                         Manage ↗
                       </Link>

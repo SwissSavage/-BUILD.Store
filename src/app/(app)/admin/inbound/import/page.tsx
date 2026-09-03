@@ -56,7 +56,7 @@ export default async function InboundCsvImportPage() {
 
           <button
             type="submit"
-            className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
           >
             Import to inbound queue
           </button>
@@ -64,7 +64,7 @@ export default async function InboundCsvImportPage() {
             After import, review the new rows at{" "}
             <Link
               href="/admin/inbound"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               /admin/inbound
             </Link>{" "}

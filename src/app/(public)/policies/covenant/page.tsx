@@ -47,7 +47,7 @@ export default function CovenantPolicy() {
       >
         <p
           className="text-[11px] uppercase tracking-wider"
-          style={{ color: "#5070F0" }}
+          style={{ color: "var(--fm-blue-text)" }}
         >
           Sandbox draft
         </p>
@@ -263,7 +263,7 @@ export default function CovenantPolicy() {
             subject erasure is available at{" "}
             <Link
               href="/profile/data-rights"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               /profile/data-rights
             </Link>{" "}
@@ -271,7 +271,7 @@ export default function CovenantPolicy() {
             per legal-hold policy documented in{" "}
             <Link
               href="/policies/privacy"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               the Privacy Policy
             </Link>

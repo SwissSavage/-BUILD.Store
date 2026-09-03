@@ -35,7 +35,7 @@ export default async function ContributeThanksPage({
         <p className="mt-3 text-sm text-ink-muted">
           If you&apos;d like to learn more about the cooperative while
           you wait,{" "}
-          <Link href="/about" className="text-brand-magenta hover:underline">
+          <Link href="/about" className="text-brand-magentaText hover:underline">
             here&apos;s what we&apos;re building
           </Link>
           .
@@ -43,7 +43,7 @@ export default async function ContributeThanksPage({
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/projects"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Back to projects
           </Link>

@@ -179,13 +179,13 @@ export default async function AuditLogPage({
           <div className="flex items-end gap-2">
             <button
               type="submit"
-              className="rounded-full bg-brand-magenta px-4 py-2 text-xs text-white hover:opacity-90"
+              className="fm-btn-primary rounded-full px-4 py-2 text-xs"
             >
               Apply
             </button>
             <Link
               href="/admin/audit-log"
-              className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+              className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Clear
             </Link>
@@ -238,13 +238,13 @@ export default async function AuditLogPage({
                 <div className="mt-2 grid gap-2 md:grid-cols-2">
                   {e.before && (
                     <pre className="overflow-x-auto rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] p-3 text-[10px] text-ink-muted">
-                      <span className="text-brand-magenta">before:</span>{"\n"}
+                      <span className="text-brand-magentaText">before:</span>{"\n"}
                       {JSON.stringify(e.before, null, 2)}
                     </pre>
                   )}
                   {e.after && (
                     <pre className="overflow-x-auto rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] p-3 text-[10px] text-ink-muted">
-                      <span className="text-brand-magenta">after:</span>{"\n"}
+                      <span className="text-brand-magentaText">after:</span>{"\n"}
                       {JSON.stringify(e.after, null, 2)}
                     </pre>
                   )}

@@ -46,7 +46,7 @@ export default async function SignInErrorPage({
 
   return (
     <div className="mx-auto max-w-md px-6 py-20 text-center">
-      <p className="text-xs uppercase tracking-wider text-brand-magenta">
+      <p className="text-xs uppercase tracking-wider text-brand-magentaText">
         Sign-in issue
       </p>
       <h1 className="mt-2 font-display text-3xl font-semibold">{title}</h1>

@@ -89,12 +89,12 @@ export async function NotificationStrip({
       }}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-[11px] uppercase tracking-wider text-brand-magenta">
+        <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
           {unread.length} new in {surfaceLabel}
         </p>
         <Link
           href="/notifications"
-          className="text-[11px] text-brand-magenta hover:underline"
+          className="text-[11px] text-brand-magentaText hover:underline"
         >
           Open inbox →
         </Link>

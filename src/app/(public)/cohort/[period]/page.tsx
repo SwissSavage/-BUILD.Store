@@ -76,7 +76,7 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
     <div className="mx-auto max-w-3xl px-6 py-16">
       <Link
         href="/cohort"
-        className="text-xs uppercase tracking-wider text-ink-muted hover:text-brand-magenta"
+        className="text-xs uppercase tracking-wider text-ink-muted hover:text-brand-magentaText"
       >
         ← All cohort spotlights
       </Link>
@@ -97,7 +97,7 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
               href={`${PARAGRAPH_BASE}/${spotlight.paragraphSlug}`}
               target="_blank"
               rel="noreferrer"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               Read the full piece on Paragraph ↗
             </a>
@@ -107,7 +107,7 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
 
       {spotlightUsers.length > 0 && (
         <section className="mt-12">
-          <h2 className="font-display text-xl font-semibold text-brand-magenta">
+          <h2 className="font-display text-xl font-semibold text-brand-magentaText">
             {spotlightUsers.length === 1
               ? "In the cooperative"
               : "In the cooperative this month"}
@@ -138,7 +138,7 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
                       {publicProfileEligible(user, recognizedIds) && (
                         <Link
                           href={`/u/${user.handle}`}
-                          className="mt-2 inline-block text-xs text-brand-magenta hover:underline"
+                          className="mt-2 inline-block text-xs text-brand-magentaText hover:underline"
                         >
                           Visit profile →
                         </Link>
@@ -153,7 +153,7 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
       )}
 
       <div className="mt-16 rounded-2xl border border-brand-magenta/30 bg-brand-magenta/5 px-6 py-6">
-        <h2 className="font-display text-xl font-semibold text-brand-magenta">
+        <h2 className="font-display text-xl font-semibold text-brand-magentaText">
           Want to join?
         </h2>
         <p className="mt-2 text-sm text-ink-muted">
@@ -162,7 +162,7 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
         </p>
         <Link
           href="/whitelist"
-          className="mt-4 inline-flex items-center rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+          className="fm-btn-primary mt-4 inline-flex items-center rounded-full px-5 py-2 text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
         >
           Apply to the whitelist →
         </Link>

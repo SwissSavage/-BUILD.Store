@@ -213,7 +213,7 @@ export default async function WhitelistPage() {
     <div className="mx-auto max-w-app px-6 py-12">
       {/* ───── Hero — "Not for sale" ───── */}
       <header>
-        <div className="inline-block rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-brand-magenta">
+        <div className="inline-block rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-brand-magentaText">
           Not for sale
         </div>
         <h1 className="mt-3 font-display text-4xl font-semibold md:text-5xl">
@@ -246,13 +246,13 @@ export default async function WhitelistPage() {
         <div className="mt-6 flex flex-wrap gap-3 text-sm">
           <Link
             href="/governance"
-            className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-4 py-2 text-brand-magenta hover:bg-brand-magenta/20"
+            className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-4 py-2 text-brand-magentaText hover:bg-brand-magenta/20"
           >
             See how the network works →
           </Link>
           <Link
             href="/policies/covenant"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Cooperative Covenant →
           </Link>
@@ -286,8 +286,7 @@ export default async function WhitelistPage() {
           </Card>
           <Card>
             <div
-              className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white"
-              style={{ backgroundColor: "#D828A0" }}
+              className="fm-btn-primary inline-block rounded-full px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider"
             >
               Path 2 · Application
             </div>
@@ -353,7 +352,7 @@ export default async function WhitelistPage() {
           </p>
           <ul className="mt-3 max-w-3xl space-y-1 text-sm text-ink-muted">
             <li className="flex gap-2">
-              <span className="text-brand-magenta">·</span>
+              <span className="text-brand-magentaText">·</span>
               <span>
                 A donation does <strong className="text-ink">not</strong>{" "}
                 grant access, perks, standing, governance, or any future
@@ -361,7 +360,7 @@ export default async function WhitelistPage() {
               </span>
             </li>
             <li className="flex gap-2">
-              <span className="text-brand-magenta">·</span>
+              <span className="text-brand-magentaText">·</span>
               <span>
                 100% routes 50/50 to the Treasury + the Liquidity Pool.
                 No individual payout. No ops cut. Every dollar compounds
@@ -370,7 +369,7 @@ export default async function WhitelistPage() {
               </span>
             </li>
             <li className="flex gap-2">
-              <span className="text-brand-magenta">·</span>
+              <span className="text-brand-magentaText">·</span>
               <span>
                 Refundable inside 14 days, no questions asked.
               </span>

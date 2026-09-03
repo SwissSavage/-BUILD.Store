@@ -41,7 +41,7 @@ export default function BuildTeamSignupPage() {
         <PillarMultiSelect />
 
         <section className="space-y-3">
-          <h2 className="text-xs uppercase tracking-wider text-brand-magenta">
+          <h2 className="text-xs uppercase tracking-wider text-brand-magentaText">
             Team scope
           </h2>
           <p className="text-xs text-ink-muted">

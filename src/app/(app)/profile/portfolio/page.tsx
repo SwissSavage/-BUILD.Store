@@ -89,9 +89,9 @@ function statusLabel(item: {
   publishedAt: string | null;
   rejectedAt: string | null;
 }) {
-  if (item.rejectedAt) return { text: "Rejected", color: "#E53E3E" };
-  if (item.publishedAt) return { text: "Published", color: "#007048" };
-  return { text: "Pending review", color: "#5070F0" };
+  if (item.rejectedAt) return { text: "Rejected", color: "var(--fm-red-text)" };
+  if (item.publishedAt) return { text: "Published", color: "var(--fm-green-text)" };
+  return { text: "Pending review", color: "var(--fm-blue-text)" };
 }
 
 export const dynamic = "force-dynamic";
@@ -172,7 +172,7 @@ export default async function PortfolioEditorPage() {
                       )}
                       {item.rejectionNote && (
                         <div className="mt-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] p-3 text-xs">
-                          <div className="font-medium" style={{ color: "#E53E3E" }}>
+                          <div className="font-medium" style={{ color: "var(--fm-red-text)" }}>
                             Admin note
                           </div>
                           <div className="mt-1 text-ink-muted">

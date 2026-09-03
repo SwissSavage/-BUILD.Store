@@ -185,7 +185,7 @@ export default async function AccessReviewPage() {
                     </span>
                   ) : (
                     <details className="w-full max-w-xs">
-                      <summary className="cursor-pointer rounded-full border border-brand-magenta/40 px-4 py-2 text-xs text-brand-magenta hover:border-brand-magenta">
+                      <summary className="cursor-pointer rounded-full border border-brand-magenta/40 px-4 py-2 text-xs text-brand-magentaText hover:border-brand-magenta">
                         Revoke access
                       </summary>
                       <form
@@ -210,7 +210,7 @@ export default async function AccessReviewPage() {
                         </label>
                         <button
                           type="submit"
-                          className="w-full rounded-full bg-brand-magenta px-4 py-2 text-xs text-white hover:opacity-90"
+                          className="fm-btn-primary w-full rounded-full px-4 py-2 text-xs"
                         >
                           Revoke admin flag
                         </button>
@@ -247,7 +247,7 @@ export default async function AccessReviewPage() {
           </label>
           <button
             type="submit"
-            className="rounded-full bg-brand-magenta px-5 py-2 text-sm text-white hover:opacity-90"
+            className="fm-btn-primary rounded-full px-5 py-2 text-sm"
           >
             Record review complete
           </button>

@@ -57,7 +57,7 @@ export function DepersonalizeNotice({
         className,
       )}
     >
-      <p className="text-sm font-semibold text-brand-magenta">
+      <p className="text-sm font-semibold text-brand-magentaText">
         Scrub client details before you submit
       </p>
       <p className="mt-1 text-sm text-ink-muted">{LEAD[context]}</p>
@@ -74,7 +74,7 @@ export function DepersonalizeNotice({
           22%.&rdquo;
         </p>
         <p className="text-ink-muted">
-          <span className="font-semibold uppercase tracking-wider text-brand-magenta">
+          <span className="font-semibold uppercase tracking-wider text-brand-magentaText">
             Works:
           </span>{" "}
           &ldquo;Rebuilt checkout for a regional grocery chain, cut cart
@@ -83,7 +83,7 @@ export function DepersonalizeNotice({
       </div>
 
       <details className="mt-3 text-sm">
-        <summary className="cursor-pointer text-ink-muted hover:text-brand-magenta">
+        <summary className="cursor-pointer text-ink-muted hover:text-brand-magentaText">
           What counts as a client detail
         </summary>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-muted">

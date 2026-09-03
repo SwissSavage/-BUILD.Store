@@ -55,7 +55,7 @@ export default async function OrdersPage() {
         <Card className="mt-8">
           <p className="text-sm text-ink-muted">
             No orders yet.{" "}
-            <Link href="/store" className="text-brand-magenta hover:underline">
+            <Link href="/store" className="text-brand-magentaText hover:underline">
               Browse the store →
             </Link>
           </p>

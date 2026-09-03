@@ -210,7 +210,7 @@ export default async function AdminReferralsPage() {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="rounded-full bg-brand-magenta px-4 py-2 text-xs font-medium text-brand-white hover:bg-brand-magenta/90"
+              className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
             >
               Log referral
             </button>
@@ -334,7 +334,7 @@ function ReferralCard({
               ? "bg-[#007048]/15 text-[#007048]"
               : r.status === "declined" || r.status === "expired"
                 ? "bg-ink/10 text-ink-faint"
-                : "bg-brand-magenta/15 text-brand-magenta"
+                : "bg-brand-magenta/15 text-brand-magentaText"
           }`}
         >
           {PARTNER_REFERRAL_STATUS_LABELS[r.status].split(" — ")[0]}

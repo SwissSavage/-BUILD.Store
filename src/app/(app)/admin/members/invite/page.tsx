@@ -60,7 +60,7 @@ function inviteStatus(invite: InviteRow): {
   color: string;
 } {
   if (invite.consumedAt) {
-    return { label: "Consumed", color: "#007048" };
+    return { label: "Consumed", color: "var(--fm-green-text)" };
   }
   if (invite.revokedAt) {
     return { label: "Revoked", color: "#666666" };
@@ -68,7 +68,7 @@ function inviteStatus(invite: InviteRow): {
   if (new Date(invite.expiresAt).getTime() < Date.now()) {
     return { label: "Expired", color: "#666666" };
   }
-  return { label: "Live", color: "#5070F0" };
+  return { label: "Live", color: "var(--fm-blue-text)" };
 }
 
 function inviteUrl(code: string): string {
@@ -243,7 +243,7 @@ export default async function InviteMemberPage({
           </label>
           <button
             type="submit"
-            className="rounded-full bg-brand-magenta px-5 py-2 text-sm text-white hover:opacity-90"
+            className="fm-btn-primary rounded-full px-5 py-2 text-sm"
           >
             Generate invite link
           </button>
@@ -305,7 +305,7 @@ export default async function InviteMemberPage({
                       <p className="text-[10px] uppercase tracking-wider text-ink-faint">
                         Redemption URL — copy and send to target
                       </p>
-                      <code className="mt-1 block break-all font-mono text-xs text-brand-magenta">
+                      <code className="mt-1 block break-all font-mono text-xs text-brand-magentaText">
                         {inviteUrl(invite.code)}
                       </code>
                     </div>
@@ -409,7 +409,7 @@ export default async function InviteMemberPage({
                         />
                         <SubmitButton
                           pendingLabel="Sending…"
-                          className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[11px] text-brand-magenta hover:border-brand-magenta hover:bg-brand-magenta/10"
+                          className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[11px] text-brand-magentaText hover:border-brand-magenta hover:bg-brand-magenta/10"
                         >
                           Resend email
                         </SubmitButton>
@@ -422,13 +422,13 @@ export default async function InviteMemberPage({
                         />
                         <SubmitButton
                           pendingLabel="Extending…"
-                          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+                          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
                         >
                           Extend +14 days
                         </SubmitButton>
                       </form>
                       <details className="grow">
-                        <summary className="cursor-pointer text-[11px] text-ink-faint hover:text-brand-magenta">
+                        <summary className="cursor-pointer text-[11px] text-ink-faint hover:text-brand-magentaText">
                           Revoke →
                         </summary>
                         <form
@@ -448,7 +448,7 @@ export default async function InviteMemberPage({
                           />
                           <SubmitButton
                             pendingLabel="Revoking…"
-                            className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magenta hover:border-brand-magenta"
+                            className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta"
                           >
                             Revoke
                           </SubmitButton>

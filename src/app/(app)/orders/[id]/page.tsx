@@ -63,7 +63,7 @@ export default async function OrderDetailPage({
         </p>
         <Link
           href="/store"
-          className="mt-6 inline-block text-sm text-brand-magenta hover:underline"
+          className="mt-6 inline-block text-sm text-brand-magentaText hover:underline"
         >
           ← Back to the store
         </Link>
@@ -276,7 +276,7 @@ export default async function OrderDetailPage({
                 type="submit"
                 name="status"
                 value={status}
-                className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+                className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
               >
                 Move to {ORDER_STATUS_LABELS[status]}
               </button>
@@ -306,7 +306,7 @@ export default async function OrderDetailPage({
             </label>
             <button
               type="submit"
-              className="rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+              className="rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
             >
               Save
             </button>

@@ -21,7 +21,7 @@ export default function VerifyRequestPage() {
       </p>
       <p className="mt-8 text-xs text-ink-faint">
         Nothing arrived? Check spam, then try again from{" "}
-        <a href="/signin" className="text-brand-magenta hover:underline">
+        <a href="/signin" className="text-brand-magentaText hover:underline">
           the sign-in page
         </a>
         .

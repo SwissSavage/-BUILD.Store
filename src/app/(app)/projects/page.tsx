@@ -80,7 +80,7 @@ export default async function ProjectsPage() {
             way it is for everyone else (see{" "}
             <Link
               href="/whitelist"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               /whitelist
             </Link>
@@ -176,7 +176,7 @@ function Grid({ items }: { items: Project[] }) {
             <div className="mt-5 flex items-center justify-between">
               <span
                 className="rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-                style={{ backgroundColor: "rgba(80,112,240,0.15)", color: "#5070F0" }}
+                style={{ backgroundColor: "rgba(80,112,240,0.15)", color: "var(--fm-blue-text)" }}
               >
                 {p.status.replace("_", " ")}
               </span>
@@ -186,7 +186,7 @@ function Grid({ items }: { items: Project[] }) {
                   : "Help wanted"}
               </span>
             </div>
-            <div className="mt-3 text-xs text-brand-magenta">
+            <div className="mt-3 text-xs text-brand-magentaText">
               View project →
             </div>
           </Card>

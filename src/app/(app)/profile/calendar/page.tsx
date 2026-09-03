@@ -93,7 +93,7 @@ export default async function ProfileCalendarPage() {
         </p>
         <Link
           href="/profile"
-          className="mt-6 inline-block text-sm text-brand-magenta hover:underline"
+          className="mt-6 inline-block text-sm text-brand-magentaText hover:underline"
         >
           ← Back to profile
         </Link>
@@ -200,7 +200,7 @@ export default async function ProfileCalendarPage() {
                     <p className="mt-2 text-xs text-ink-muted">{m.description}</p>
                   )}
                   {m.kind === "peer_internal" && (
-                    <p className="mt-1 text-[11px] text-brand-magenta">
+                    <p className="mt-1 text-[11px] text-brand-magentaText">
                       Member-to-Member meetings require minutes or recording.
                       Capture after the call.
                     </p>
@@ -223,7 +223,7 @@ export default async function ProfileCalendarPage() {
                         <input type="hidden" name="id" value={m.id} />
                         <button
                           type="submit"
-                          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+                          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                         >
                           Decline
                         </button>
@@ -235,7 +235,7 @@ export default async function ProfileCalendarPage() {
                           <input type="hidden" name="id" value={m.id} />
                           <button
                             type="submit"
-                            className="text-[11px] text-brand-magenta underline hover:opacity-80"
+                            className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                           >
                             Cancel meeting
                           </button>
@@ -250,7 +250,7 @@ export default async function ProfileCalendarPage() {
                     const minute = minuteForMeeting(m.id);
                     return (
                       <details className="mt-3 rounded-lg bg-[var(--surface)] p-3">
-                        <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-brand-magenta">
+                        <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-brand-magentaText">
                           {minute ? "Minutes on file" : "Capture minutes or recording"}
                         </summary>
                         {minute && (
@@ -265,7 +265,7 @@ export default async function ProfileCalendarPage() {
                                 href={minute.recordingUrl ?? "#"}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-brand-magenta underline"
+                                className="text-brand-magentaText underline"
                               >
                                 Recording ↗
                               </a>
@@ -284,7 +284,7 @@ export default async function ProfileCalendarPage() {
                                     href={minute.uploadedFile.url}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="ml-2 text-brand-magenta underline"
+                                    className="ml-2 text-brand-magentaText underline"
                                   >
                                     Open ↗
                                   </a>
@@ -334,7 +334,7 @@ export default async function ProfileCalendarPage() {
                               />
                               <button
                                 type="submit"
-                                className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[10px] hover:border-brand-magenta hover:text-brand-magenta"
+                                className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[10px] hover:border-brand-magenta hover:text-brand-magentaText"
                               >
                                 Append
                               </button>
@@ -530,7 +530,7 @@ export default async function ProfileCalendarPage() {
                   <input type="hidden" name="id" value={a.id} />
                   <button
                     type="submit"
-                    className="text-[11px] text-brand-magenta underline hover:opacity-80"
+                    className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                   >
                     Remove
                   </button>
@@ -600,7 +600,7 @@ export default async function ProfileCalendarPage() {
           <div className="md:col-span-4">
             <button
               type="submit"
-              className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+              className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Add window
             </button>
@@ -639,7 +639,7 @@ export default async function ProfileCalendarPage() {
                   <input type="hidden" name="id" value={b.id} />
                   <button
                     type="submit"
-                    className="text-[11px] text-brand-magenta underline hover:opacity-80"
+                    className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                   >
                     Remove
                   </button>
@@ -685,7 +685,7 @@ export default async function ProfileCalendarPage() {
           <div className="md:col-span-3">
             <button
               type="submit"
-              className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+              className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Add block
             </button>

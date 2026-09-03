@@ -172,7 +172,7 @@ export function QuoteFlipReveal({
                       face reveal. */}
                   {isFlipped && (
                     <div className="mt-3 rounded-xl border border-brand-magenta/30 bg-brand-magenta/5 px-3 py-2">
-                      <p className="font-display text-base font-semibold text-brand-magenta">
+                      <p className="font-display text-base font-semibold text-brand-magentaText">
                         {member.quoteLine.pricingHeadline}
                       </p>
                       <p className="text-[10px] uppercase tracking-wider text-ink-muted">
@@ -189,7 +189,7 @@ export function QuoteFlipReveal({
             <button
               type="button"
               onClick={flipAll}
-              className="inline-flex items-center justify-center rounded-full bg-brand-magenta px-8 py-3 font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+              className="fm-btn-primary inline-flex items-center justify-center rounded-full px-8 py-3 font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
             >
               {flippedIds.size === 0
                 ? "Reveal all →"

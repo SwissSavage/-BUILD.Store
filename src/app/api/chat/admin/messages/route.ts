@@ -7,7 +7,7 @@
  */
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { listMessages } from "@/lib/mock-data/chat";
+import { listMessages } from "@/lib/writers/chat";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,5 +22,5 @@ export async function GET(request: Request) {
   if (!threadId) {
     return NextResponse.json({ messages: [] });
   }
-  return NextResponse.json({ messages: listMessages(threadId) });
+  return NextResponse.json({ messages: await listMessages(threadId) });
 }

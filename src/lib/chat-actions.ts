@@ -33,7 +33,7 @@ import {
   markAdminRead,
   markVisitorRead,
   setThreadStatus,
-} from "@/lib/mock-data/chat";
+} from "@/lib/writers/chat";
 
 const VISITOR_COOKIE = "chat_visitor_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -62,8 +62,11 @@ export async function startVisitorThread(
     return { ok: false, error: "That's a long one — keep it under 4000 chars." };
   }
 
-  const { thread, visitorToken } = createThread({ visitorName, visitorEmail });
-  const result = appendMessage({
+  const { thread, visitorToken } = await createThread({
+    visitorName,
+    visitorEmail,
+  });
+  const result = await appendMessage({
     threadId: thread.id,
     sender: "visitor",
     senderId: null,
@@ -126,10 +129,10 @@ export async function sendVisitorMessage(
   const token = jar.get(VISITOR_COOKIE)?.value;
   if (!token) return { ok: false, error: "Session expired — refresh." };
 
-  const thread = getThreadByVisitorToken(token);
+  const thread = await getThreadByVisitorToken(token);
   if (!thread) return { ok: false, error: "Thread not found." };
 
-  const result = appendMessage({
+  const result = await appendMessage({
     threadId: thread.id,
     sender: "visitor",
     senderId: null,
@@ -150,7 +153,7 @@ export async function markVisitorThreadRead(): Promise<void> {
   const jar = await cookies();
   const token = jar.get(VISITOR_COOKIE)?.value;
   if (!token) return;
-  const thread = markVisitorRead(token);
+  const thread = await markVisitorRead(token);
   if (thread) emitChatEvent({ kind: "thread.updated", thread });
 }
 
@@ -162,10 +165,10 @@ export async function sendAdminReply(formData: FormData): Promise<void> {
   const body = trim(formData.get("body"));
   if (!threadId || !body) return;
 
-  const thread = getThreadById(threadId);
+  const thread = await getThreadById(threadId);
   if (!thread) return;
 
-  const result = appendMessage({
+  const result = await appendMessage({
     threadId,
     sender: "admin",
     senderId: admin.id,
@@ -186,7 +189,7 @@ export async function closeChatThread(formData: FormData): Promise<void> {
   const admin = await requireAdmin();
   const threadId = trim(formData.get("threadId"));
   if (!threadId) return;
-  const thread = setThreadStatus(threadId, "closed", admin.id);
+  const thread = await setThreadStatus(threadId, "closed", admin.id);
   if (thread) emitChatEvent({ kind: "thread.updated", thread });
   revalidatePath("/admin/chat");
 }
@@ -195,13 +198,13 @@ export async function reopenChatThread(formData: FormData): Promise<void> {
   const admin = await requireAdmin();
   const threadId = trim(formData.get("threadId"));
   if (!threadId) return;
-  const thread = setThreadStatus(threadId, "open", admin.id);
+  const thread = await setThreadStatus(threadId, "open", admin.id);
   if (thread) emitChatEvent({ kind: "thread.updated", thread });
   revalidatePath("/admin/chat");
 }
 
 export async function markAdminThreadRead(threadId: string): Promise<void> {
   await requireAdmin();
-  const thread = markAdminRead(threadId);
+  const thread = await markAdminRead(threadId);
   if (thread) emitChatEvent({ kind: "thread.updated", thread });
 }

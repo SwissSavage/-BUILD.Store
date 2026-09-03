@@ -13,7 +13,7 @@ import { cookies } from "next/headers";
 import {
   getThreadByVisitorToken,
   listMessages,
-} from "@/lib/mock-data/chat";
+} from "@/lib/writers/chat";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,10 +26,10 @@ export async function GET() {
   if (!token) {
     return NextResponse.json({ thread: null });
   }
-  const thread = getThreadByVisitorToken(token);
+  const thread = await getThreadByVisitorToken(token);
   if (!thread) {
     return NextResponse.json({ thread: null });
   }
-  const messages = listMessages(thread.id);
+  const messages = await listMessages(thread.id);
   return NextResponse.json({ thread, messages });
 }

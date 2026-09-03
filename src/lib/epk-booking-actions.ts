@@ -25,7 +25,7 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { MOCK_USERS } from "@/lib/mock-data/users";
 import { epkForUser } from "@/lib/mock-data/artist-epk";
 import { MOCK_MEETINGS, meetingById } from "@/lib/mock-data/calendar";
-import { MOCK_INBOUND_SUBMISSIONS } from "@/lib/mock-data/inbound-submissions";
+import { getStoredSubmission } from "@/lib/writers/inbound-submissions-update";
 import { insertInboundSubmission } from "@/lib/writers/inbound-submissions";
 import { notify } from "@/lib/writers/notifications";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
@@ -189,7 +189,11 @@ export async function createEpkBookingRequest(formData: FormData) {
 export async function approveBookingRequest(formData: FormData) {
   const admin = await requireAdmin();
   const submissionId = String(formData.get("submissionId") ?? "").trim();
-  const submission = MOCK_INBOUND_SUBMISSIONS.find((s) => s.id === submissionId);
+  // Reader swap 2026-09-03. Booking requests were moved to Postgres
+  // on 09-02 by createEpkBookingRequest, but these two actions kept
+  // looking them up in the fixture array, so approving or declining a
+  // real booking request answered "Submission not found".
+  const submission = await getStoredSubmission(submissionId);
   if (!submission) throw new Error("Submission not found");
   if (submission.kind !== "booking_request") {
     throw new Error("This action is for booking requests only.");
@@ -259,7 +263,11 @@ export async function declineBookingRequest(formData: FormData) {
   const admin = await requireAdmin();
   const submissionId = String(formData.get("submissionId") ?? "").trim();
   const reason = String(formData.get("reason") ?? "").trim();
-  const submission = MOCK_INBOUND_SUBMISSIONS.find((s) => s.id === submissionId);
+  // Reader swap 2026-09-03. Booking requests were moved to Postgres
+  // on 09-02 by createEpkBookingRequest, but these two actions kept
+  // looking them up in the fixture array, so approving or declining a
+  // real booking request answered "Submission not found".
+  const submission = await getStoredSubmission(submissionId);
   if (!submission) throw new Error("Submission not found");
   if (submission.kind !== "booking_request") {
     throw new Error("This action is for booking requests only.");

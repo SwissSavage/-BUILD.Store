@@ -37,7 +37,7 @@ const labelClass = "block text-xs text-ink-muted";
 const primaryButton =
   "rounded-full bg-brand-magenta px-4 py-2 text-xs font-medium text-white hover:opacity-90";
 const removeButton =
-  "rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] text-ink-muted hover:border-brand-magenta hover:text-brand-magenta";
+  "rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText";
 
 export default async function AdminPartnersPage() {
   await requireAdmin();
@@ -58,7 +58,7 @@ export default async function AdminPartnersPage() {
         Everything here is public. Service partners render on the
         homepage under &ldquo;orgs FM has signed letters of intent
         with&rdquo;; SaaS partners and affiliates render on{" "}
-        <Link href="/partners" className="text-brand-magenta hover:underline">
+        <Link href="/partners" className="text-brand-magentaText hover:underline">
           /partners
         </Link>
         . An entry is a claim the cooperative is making — add only what
@@ -308,7 +308,7 @@ export default async function AdminPartnersPage() {
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
           Referral relationships with a disclosed kickback. Links carry{" "}
-          <code className="text-brand-magenta">rel=&quot;sponsored&quot;</code>{" "}
+          <code className="text-brand-magentaText">rel=&quot;sponsored&quot;</code>{" "}
           on the public page.
         </p>
 
@@ -398,7 +398,7 @@ export default async function AdminPartnersPage() {
             Referral links also feed the attribution rail on{" "}
             <Link
               href="/admin/referrals"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               /admin/referrals
             </Link>

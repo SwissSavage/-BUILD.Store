@@ -101,7 +101,7 @@ export default async function ContractsPage() {
                     className="rounded-full px-2.5 py-0.5 text-xs font-medium"
                     style={{
                       backgroundColor: "rgba(80,112,240,0.15)",
-                      color: "#5070F0",
+                      color: "var(--fm-blue-text)",
                     }}
                   >
                     Contract

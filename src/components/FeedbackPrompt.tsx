@@ -88,7 +88,7 @@ export function FeedbackPrompt({
         {SENTIMENTS.map((s) => (
           <label
             key={s}
-            className="cursor-pointer rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs transition-colors hover:bg-[var(--surface-inset)] has-[:checked]:border-brand-magenta has-[:checked]:text-brand-magenta"
+            className="cursor-pointer rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs transition-colors hover:bg-[var(--surface-inset)] has-[:checked]:border-brand-magenta has-[:checked]:text-brand-magentaText"
           >
             <input
               type="radio"
@@ -125,7 +125,7 @@ export function FeedbackPrompt({
       <button
         type="submit"
         className={cn(
-          "rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-brand-white",
+          "rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-black",
           !isInline && "mt-3",
         )}
       >

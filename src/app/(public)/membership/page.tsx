@@ -144,7 +144,7 @@ export default async function MembershipPage() {
               </label>
               <button
                 type="submit"
-                className="rounded-full bg-ink px-6 py-2.5 text-sm font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+                className="rounded-full bg-ink px-6 py-2.5 text-sm font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
               >
                 Submit application
               </button>

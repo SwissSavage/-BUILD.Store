@@ -13,13 +13,13 @@ export default function ThanksPage() {
       <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Link
           href="/signin"
-          className="rounded-full bg-ink px-8 py-3 font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-brand-white"
+          className="rounded-full bg-ink px-8 py-3 font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-black"
         >
           Preview the app
         </Link>
         <Link
           href="/"
-          className="rounded-full border border-[var(--surface-border)] px-8 py-3 font-medium transition-colors hover:border-brand-magenta hover:text-brand-magenta"
+          className="rounded-full border border-[var(--surface-border)] px-8 py-3 font-medium transition-colors hover:border-brand-magenta hover:text-brand-magentaText"
         >
           Back to home
         </Link>

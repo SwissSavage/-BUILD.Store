@@ -159,7 +159,7 @@ export default function ArticlesPage() {
           href={PARAGRAPH_BASE}
           target="_blank"
           rel="noreferrer"
-          className="text-brand-magenta hover:underline"
+          className="text-brand-magentaText hover:underline"
         >
           paragraph.com/@future-modern
         </a>
@@ -187,7 +187,7 @@ export default function ArticlesPage() {
       </ol>
 
       <div className="mt-16 rounded-2xl border border-brand-magenta/30 bg-brand-magenta/5 px-6 py-6">
-        <h2 className="font-display text-xl font-semibold text-brand-magenta">
+        <h2 className="font-display text-xl font-semibold text-brand-magentaText">
           Read everything on Paragraph
         </h2>
         <p className="mt-2 text-sm text-ink-muted">

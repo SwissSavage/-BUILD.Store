@@ -142,7 +142,7 @@ export default async function AdminAgreementsPage() {
             {totalRows} row{totalRows === 1 ? "" : "s"} on file
           </p>
           {totalWarnings > 0 && (
-            <p className="text-brand-magenta">
+            <p className="text-brand-magentaText">
               {totalWarnings} row{totalWarnings === 1 ? "" : "s"} need
               attention
             </p>
@@ -217,7 +217,7 @@ export default async function AdminAgreementsPage() {
           </div>
           <div className="flex justify-end">
             <SubmitButton pendingLabel="Sending…"
-              className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+              className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
             >
               Send LOI for signature
             </SubmitButton>
@@ -300,7 +300,7 @@ export default async function AdminAgreementsPage() {
           </div>
           <div className="flex justify-end">
             <SubmitButton pendingLabel="Sending…"
-              className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+              className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
             >
               Send bilateral NCNDA
             </SubmitButton>
@@ -554,7 +554,7 @@ export default async function AdminAgreementsPage() {
 
           <div className="flex justify-end">
             <SubmitButton pendingLabel="Sending…"
-              className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+              className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
             >
               Log agreement
             </SubmitButton>
@@ -620,7 +620,7 @@ export default async function AdminAgreementsPage() {
                                   value={row.id}
                                 />
                                 <SubmitButton pendingLabel="Sending…"
-                                  className="text-xs text-ink-faint hover:text-brand-magenta"
+                                  className="text-xs text-ink-faint hover:text-brand-magentaText"
                                 >
                                   Remove
                                 </SubmitButton>
@@ -649,7 +649,7 @@ export default async function AdminAgreementsPage() {
                               </p>
                             )}
                             {warning && (
-                              <p className="mt-2 rounded-md border border-brand-magenta/30 bg-brand-magenta/5 px-2 py-1 text-[11px] text-brand-magenta">
+                              <p className="mt-2 rounded-md border border-brand-magenta/30 bg-brand-magenta/5 px-2 py-1 text-[11px] text-brand-magentaText">
                                 {warning}
                               </p>
                             )}
@@ -684,7 +684,7 @@ export default async function AdminAgreementsPage() {
             On-chain cross-reference not wired yet. See{" "}
             <Link
               href="/admin/audit-log"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               /admin/audit-log
             </Link>{" "}

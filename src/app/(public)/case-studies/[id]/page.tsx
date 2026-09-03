@@ -111,7 +111,7 @@ export default async function CaseStudyDetail({
             className="rounded-full px-2.5 py-0.5 text-xs font-medium"
             style={{
               backgroundColor: "rgba(0,112,72,0.15)",
-              color: "#007048",
+              color: "var(--fm-green-text)",
             }}
           >
             Completed
@@ -154,7 +154,7 @@ export default async function CaseStudyDetail({
                 <li key={c.id} className="text-sm">
                   <Link
                     href={`/u/${c.handle}`}
-                    className="font-medium hover:text-brand-magenta"
+                    className="font-medium hover:text-brand-magentaText"
                   >
                     {publicNameDisambiguated(c, roster)}
                   </Link>

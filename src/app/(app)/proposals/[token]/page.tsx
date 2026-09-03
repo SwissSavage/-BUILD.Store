@@ -107,7 +107,7 @@ export default async function ClientProposalPage({
       <header className="border-b border-[var(--surface-border)] pb-6">
         <div className="flex items-center justify-between">
           <Link href="/" className="font-display text-xl font-semibold">
-            $BUILD<span className="text-brand-magenta">.Store</span>
+            $BUILD<span className="text-brand-magentaText">.Store</span>
           </Link>
           <div className="text-right text-xs text-ink-muted">
             <div>Prepared for {clientLabel}</div>
@@ -116,7 +116,7 @@ export default async function ClientProposalPage({
         </div>
       </header>
 
-      <div className="mt-8 text-xs uppercase tracking-wider text-brand-magenta">
+      <div className="mt-8 text-xs uppercase tracking-wider text-brand-magentaText">
         Proposal
       </div>
       <h1 className="mt-2 font-display text-4xl font-semibold leading-tight">
@@ -186,7 +186,7 @@ export default async function ClientProposalPage({
                     href={s.url}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="text-sm font-medium text-brand-magenta hover:underline"
+                    className="text-sm font-medium text-brand-magentaText hover:underline"
                   >
                     {s.url.replace(/^https?:\/\//, "")}
                   </a>
@@ -221,8 +221,7 @@ export default async function ClientProposalPage({
           href={`mailto:contracts@afuturemodern.com?subject=${encodeURIComponent(
             `Re: ${project.title} — proposal ${proposal.id}`,
           )}`}
-          className="mt-4 inline-block rounded-full px-6 py-2.5 text-sm font-medium text-white"
-          style={{ backgroundColor: "#D828A0" }}
+          className="fm-btn-primary mt-4 inline-block rounded-full px-6 py-2.5 text-sm font-medium"
         >
           Reply to the cooperative
         </a>
@@ -248,7 +247,7 @@ function ExpiredView() {
           Magic-link proposals expire 30 days after they&apos;re sent. Email{" "}
           <a
             href="mailto:contracts@afuturemodern.com"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             contracts@afuturemodern.com
           </a>{" "}

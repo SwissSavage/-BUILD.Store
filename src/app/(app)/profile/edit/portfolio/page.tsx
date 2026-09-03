@@ -139,14 +139,13 @@ export default async function PortfolioEditPage() {
             <div className="flex shrink-0 flex-col gap-2">
               <Link
                 href="/profile/seller/orders"
-                className="rounded-full px-5 py-2.5 text-center text-sm font-medium text-white shadow-sm"
-                style={{ backgroundColor: "#D828A0" }}
+                className="fm-btn-primary rounded-full px-5 py-2.5 text-center text-sm font-medium shadow-sm"
               >
                 Open fulfillment dashboard →
               </Link>
               <Link
                 href="/profile/seller/products"
-                className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-center text-sm hover:border-brand-magenta hover:text-brand-magenta"
+                className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-center text-sm hover:border-brand-magenta hover:text-brand-magentaText"
               >
                 Your listings →
               </Link>
@@ -179,7 +178,7 @@ export default async function PortfolioEditPage() {
             />
           </div>
           {actionableOrders.length > 0 && (
-            <p className="mt-4 text-xs text-brand-magenta">
+            <p className="mt-4 text-xs text-brand-magentaText">
               {actionableOrders.length}{" "}
               {actionableOrders.length === 1 ? "order needs" : "orders need"}{" "}
               your attention.
@@ -199,7 +198,7 @@ export default async function PortfolioEditPage() {
             </div>
             <Link
               href="/profile/seller"
-              className="shrink-0 rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+              className="shrink-0 rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
             >
               {sellerApp
                 ? sellerApp.status === "pending"
@@ -229,7 +228,7 @@ export default async function PortfolioEditPage() {
                   className="rounded-full px-2 py-0.5 font-medium"
                   style={{
                     backgroundColor: "rgba(80,112,240,0.15)",
-                    color: "#5070F0",
+                    color: "var(--fm-blue-text)",
                   }}
                 >
                   {portfolioPending} pending
@@ -240,7 +239,7 @@ export default async function PortfolioEditPage() {
                   className="rounded-full px-2 py-0.5 font-medium"
                   style={{
                     backgroundColor: "rgba(229,62,62,0.15)",
-                    color: "#E53E3E",
+                    color: "var(--fm-red-text)",
                   }}
                 >
                   {portfolioRejected} needs revision
@@ -251,7 +250,7 @@ export default async function PortfolioEditPage() {
           <div className="flex shrink-0 flex-col gap-2">
             <Link
               href="/profile/portfolio"
-              className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+              className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
             >
               Manage portfolio →
             </Link>
@@ -282,7 +281,7 @@ export default async function PortfolioEditPage() {
                   className="rounded-full px-2 py-0.5 font-medium"
                   style={{
                     backgroundColor: "rgba(80,112,240,0.15)",
-                    color: "#5070F0",
+                    color: "var(--fm-blue-text)",
                   }}
                 >
                   {quotesPending} pending
@@ -293,7 +292,7 @@ export default async function PortfolioEditPage() {
                   className="rounded-full px-2 py-0.5 font-medium"
                   style={{
                     backgroundColor: "rgba(229,62,62,0.15)",
-                    color: "#E53E3E",
+                    color: "var(--fm-red-text)",
                   }}
                 >
                   {quotesRejected} needs revision
@@ -304,7 +303,7 @@ export default async function PortfolioEditPage() {
           <div className="flex shrink-0 flex-col gap-2">
             <Link
               href="/profile/quotes"
-              className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+              className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
             >
               Track quotes →
             </Link>

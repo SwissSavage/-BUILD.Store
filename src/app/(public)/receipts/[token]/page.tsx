@@ -127,7 +127,7 @@ export default async function CooperativeReceiptPage({
 
         <Card>
           <CardEyebrow>Milestones hit on schedule</CardEyebrow>
-          <p className="mt-2 font-display text-4xl font-semibold text-brand-magenta">
+          <p className="mt-2 font-display text-4xl font-semibold text-brand-magentaText">
             {receipt.milestonesHit}
             <span className="text-2xl">
               {" "}
@@ -201,7 +201,7 @@ export default async function CooperativeReceiptPage({
 
       {/* Follow-up CTA — hire again, browse the roster. */}
       <section className="mt-16 rounded-2xl border border-brand-magenta/30 bg-brand-magenta/5 px-6 py-6">
-        <h2 className="font-display text-2xl font-semibold text-brand-magenta">
+        <h2 className="font-display text-2xl font-semibold text-brand-magentaText">
           Build with us again.
         </h2>
         <p className="mt-2 text-sm text-ink-muted">
@@ -211,7 +211,7 @@ export default async function CooperativeReceiptPage({
         <div className="mt-4 flex flex-wrap gap-3">
           <Link
             href="/signup"
-            className="inline-flex items-center rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+            className="fm-btn-primary inline-flex items-center rounded-full px-5 py-2 text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
           >
             Start a new project →
           </Link>

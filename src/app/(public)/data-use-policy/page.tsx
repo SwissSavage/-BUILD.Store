@@ -27,7 +27,7 @@ export const metadata = {
 export default function DataUsePolicyPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
-      <div className="text-xs uppercase tracking-wider text-brand-magenta">
+      <div className="text-xs uppercase tracking-wider text-brand-magentaText">
         Future Modern Builderberg LLC
       </div>
       <h1 className="mt-2 font-display text-4xl font-semibold md:text-5xl">
@@ -134,7 +134,7 @@ export default function DataUsePolicyPage() {
       <Section eyebrow="Control" title="Opt out and portability">
         <p>
           You can opt in or out of Tier-2 participation at any time from
-          your <Link href="/profile" className="text-brand-magenta hover:underline">profile</Link>.
+          your <Link href="/profile" className="text-brand-magentaText hover:underline">profile</Link>.
           Opt-out stops new collection for Tier-2 purposes effective on the
           date of the toggle. Anonymized aggregates already published as of
           the opt-out date remain published, because anonymization makes
@@ -189,7 +189,7 @@ export default function DataUsePolicyPage() {
           record is held in our governance file as the Talent Data Agreement;
           this page is the public-facing presentation of the same scope.
           Direct your counsel to the cooperative through the channels on
-          our <Link href="/about" className="text-brand-magenta hover:underline">About</Link> page.
+          our <Link href="/about" className="text-brand-magentaText hover:underline">About</Link> page.
         </p>
       </Card>
     </div>
@@ -207,7 +207,7 @@ function Section({
 }) {
   return (
     <section className="mt-12">
-      <div className="text-xs uppercase tracking-wider text-brand-magenta">
+      <div className="text-xs uppercase tracking-wider text-brand-magentaText">
         {eyebrow}
       </div>
       <h2 className="mt-2 font-display text-2xl font-semibold">{title}</h2>

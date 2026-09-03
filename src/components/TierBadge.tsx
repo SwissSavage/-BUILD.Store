@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 const TIER_STYLES: Record<MembershipTier, string> = {
   viewer: "bg-[var(--surface)] text-ink-muted border-[var(--surface-border)]",
   partner: "bg-brand-green/15 text-brand-green border-brand-green/30",
-  member: "bg-brand-magenta/15 text-brand-magenta border-brand-magenta/30",
+  member: "bg-brand-magenta/15 text-brand-magentaText border-brand-magenta/30",
 };
 
 export function TierBadge({ tier }: { tier: MembershipTier }) {

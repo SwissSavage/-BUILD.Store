@@ -107,7 +107,7 @@ export function ProfileMenu({
             // model. Keeps the top nav row uncluttered.
             <span
               aria-hidden="true"
-              className="absolute -right-0.5 -top-0.5 inline-flex h-2.5 w-2.5 rounded-full border-2 border-[var(--surface)] bg-brand-magenta"
+              className="fm-btn-primary absolute -right-0.5 -top-0.5 inline-flex h-2.5 w-2.5 rounded-full border-2 border-[var(--surface)]"
             />
           )}
         </span>
@@ -142,7 +142,7 @@ export function ProfileMenu({
               {item.icon && <span aria-hidden="true">{item.icon}</span>}
               <span>{item.label}</span>
               {item.badge !== undefined && (
-                <span className="ml-auto inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-magenta px-1.5 text-[10px] font-medium leading-4 text-white">
+                <span className="fm-btn-primary ml-auto inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-[10px] font-medium leading-4">
                   {item.badge > 9 ? "9+" : item.badge}
                 </span>
               )}

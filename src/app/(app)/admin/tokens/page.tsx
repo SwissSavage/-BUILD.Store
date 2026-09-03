@@ -148,7 +148,7 @@ export default async function AdminTokensPage() {
 
             <button
               type="submit"
-              className="w-full rounded-full bg-ink py-2.5 text-sm font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+              className="w-full rounded-full bg-ink py-2.5 text-sm font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
             >
               Distribute
             </button>

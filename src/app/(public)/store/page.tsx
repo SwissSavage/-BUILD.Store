@@ -61,7 +61,7 @@ export default async function StorePage({
   return (
     <div className="mx-auto max-w-app px-6 py-12">
       <header>
-        <div className="text-xs uppercase tracking-wider text-brand-magenta">
+        <div className="text-xs uppercase tracking-wider text-brand-magentaText">
           $BUILD.Store marketplace
         </div>
         <h1 className="mt-2 font-display text-4xl font-semibold">
@@ -79,12 +79,9 @@ export default async function StorePage({
           href="/store"
           className={`rounded-full border px-3 py-1.5 text-xs ${
             activeCategory === null
-              ? "border-transparent text-white"
+              ? "fm-btn-primary border-transparent"
               : "border-[var(--surface-border)] hover:bg-[var(--surface-inset)]"
           }`}
-          style={
-            activeCategory === null ? { backgroundColor: "#D828A0" } : undefined
-          }
         >
           All
         </Link>
@@ -94,14 +91,9 @@ export default async function StorePage({
             href={`/store?category=${c.slug}`}
             className={`rounded-full border px-3 py-1.5 text-xs ${
               activeCategory?.id === c.id
-                ? "border-transparent text-white"
+                ? "fm-btn-primary border-transparent"
                 : "border-[var(--surface-border)] hover:bg-[var(--surface-inset)]"
             }`}
-            style={
-              activeCategory?.id === c.id
-                ? { backgroundColor: "#D828A0" }
-                : undefined
-            }
           >
             {c.name}
           </Link>
@@ -140,7 +132,7 @@ export default async function StorePage({
                     </div>
                     <div
                       className="shrink-0 font-display text-xl font-semibold"
-                      style={{ color: "#D828A0" }}
+                      style={{ color: "var(--fm-magenta-text)" }}
                     >
                       ${Number(p.price).toLocaleString()}
                     </div>
@@ -197,8 +189,7 @@ export default async function StorePage({
         </p>
         <Link
           href="/profile/seller"
-          className="mt-4 inline-block rounded-full px-5 py-2 text-sm font-medium text-white"
-          style={{ backgroundColor: "#D828A0" }}
+          className="fm-btn-primary mt-4 inline-block rounded-full px-5 py-2 text-sm font-medium"
         >
           Apply for marketplace access →
         </Link>

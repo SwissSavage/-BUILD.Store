@@ -175,7 +175,7 @@ export default async function ProfilePage({
           <p className="mt-3 text-xs text-ink-faint">
             <Link
               href={`/u/${user.handle}`}
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               View as others see it
             </Link>{" "}
@@ -348,7 +348,7 @@ export default async function ProfilePage({
                 >
                   {INDUSTRY_LABELS[p]}
                   {i === 0 && (
-                    <span className="text-brand-magenta"> · primary</span>
+                    <span className="text-brand-magentaText"> · primary</span>
                   )}
                 </span>
               ))}
@@ -420,7 +420,7 @@ export default async function ProfilePage({
               href={user.portfolioUrl}
               target="_blank"
               rel="noreferrer noopener"
-              className="break-all text-sm text-brand-magenta hover:underline"
+              className="break-all text-sm text-brand-magentaText hover:underline"
             >
               {user.portfolioUrl}
             </a>
@@ -444,7 +444,7 @@ export default async function ProfilePage({
           </div>
           <Link
             href="/profile/portfolio"
-            className="shrink-0 rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+            className="shrink-0 rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Add a piece
           </Link>
@@ -512,7 +512,7 @@ export default async function ProfilePage({
           <Link
             key={l.href}
             href={l.href}
-            className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
           >
             {l.label}
           </Link>

@@ -375,12 +375,12 @@ export default function GovernancePage() {
           Formal documents:{" "}
           <Link
             href="/policies"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             /policies
           </Link>
           . Security:{" "}
-          <Link href="/trust" className="text-brand-magenta hover:underline">
+          <Link href="/trust" className="text-brand-magentaText hover:underline">
             /trust
           </Link>
           .
@@ -478,7 +478,7 @@ function Section({
               <Link
                 key={l.href}
                 href={l.href}
-                className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+                className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
               >
                 {l.label}
               </Link>

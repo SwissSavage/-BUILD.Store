@@ -153,7 +153,7 @@ export default async function ProfileInvoicesPage() {
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="rounded-full bg-brand-magenta px-4 py-2 text-sm font-medium text-brand-white hover:bg-brand-magenta/90"
+                className="fm-btn-primary rounded-full px-4 py-2 text-sm font-medium"
               >
                 Submit invoice
               </button>

@@ -124,7 +124,7 @@ export function AdminAllocator({
                     {c && !c.stripePayoutsEnabled && (
                       <p
                         className="mt-0.5 text-xs"
-                        style={{ color: "#E53E3E" }}
+                        style={{ color: "var(--fm-red-text)" }}
                       >
                         Stripe payouts not enabled. Transfer will fail.
                       </p>

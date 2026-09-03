@@ -110,7 +110,7 @@ export default async function AdminPeerReviewsPage({
             className={
               active === f.key
                 ? "rounded-full bg-brand-magenta px-4 py-1.5 font-medium text-white"
-                : "rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+                : "rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
             }
           >
             {f.label} ({f.count})
@@ -168,7 +168,7 @@ export default async function AdminPeerReviewsPage({
                   <p className="text-sm">
                     <Link
                       href={`/admin/peer-reviews?show=${active}&reviewee=${r.revieweeId}`}
-                      className="font-medium hover:text-brand-magenta"
+                      className="font-medium hover:text-brand-magentaText"
                     >
                       {nameOf(r.revieweeId)}
                     </Link>{" "}
@@ -228,7 +228,7 @@ export default async function AdminPeerReviewsPage({
                       className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                     />
                     <SubmitButton
-                      className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+                      className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
                       pendingLabel="Reinstating…"
                     >
                       Reinstate and recompute
@@ -237,7 +237,7 @@ export default async function AdminPeerReviewsPage({
                 </div>
               ) : (
                 <details className="mt-4 border-t border-[var(--surface-border)] pt-4">
-                  <summary className="cursor-pointer text-sm text-ink-muted hover:text-brand-magenta">
+                  <summary className="cursor-pointer text-sm text-ink-muted hover:text-brand-magentaText">
                     Void this review
                   </summary>
                   <form action={voidPeerReview} className="mt-3 space-y-2">
@@ -259,7 +259,7 @@ export default async function AdminPeerReviewsPage({
                       leaves the engagement one review lighter.
                     </p>
                     <SubmitButton
-                      className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-white hover:opacity-90"
+                      className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
                       pendingLabel="Voiding…"
                     >
                       Void and recompute

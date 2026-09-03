@@ -48,14 +48,14 @@ export async function AdminObjectControls({
       </span>
       <Link
         href={editHref}
-        className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+        className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
       >
         Edit {label}
       </Link>
       {trashHref && (
         <Link
           href={trashHref}
-          className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+          className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
         >
           Move to trash
         </Link>

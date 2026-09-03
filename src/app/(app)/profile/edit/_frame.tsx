@@ -40,7 +40,7 @@ export function EditSectionFrame({
           Changes show on{" "}
           <Link
             href={`/u/${handle}`}
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             /u/{handle}
           </Link>
@@ -60,8 +60,8 @@ export function EditSectionFrame({
                 aria-current={s.slug === active ? "page" : undefined}
                 className={
                   s.slug === active
-                    ? "text-brand-magenta"
-                    : "text-ink-muted hover:text-brand-magenta"
+                    ? "text-brand-magentaText"
+                    : "text-ink-muted hover:text-brand-magentaText"
                 }
               >
                 {s.label}

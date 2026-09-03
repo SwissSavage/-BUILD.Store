@@ -108,7 +108,7 @@ export default async function AdminTrashPage() {
                   </form>
 
                   <details className="min-w-0 flex-1">
-                    <summary className="cursor-pointer text-xs text-ink-faint hover:text-brand-magenta">
+                    <summary className="cursor-pointer text-xs text-ink-faint hover:text-brand-magentaText">
                       Delete permanently
                     </summary>
                     <form
@@ -130,7 +130,7 @@ export default async function AdminTrashPage() {
                       />
                       <button
                         type="submit"
-                        className="rounded-full border border-brand-magenta px-4 py-1.5 text-xs text-brand-magenta hover:bg-brand-magenta hover:text-white"
+                        className="rounded-full border border-brand-magenta px-4 py-1.5 text-xs text-brand-magentaText hover:bg-brand-magenta hover:text-black"
                       >
                         Permanently delete
                       </button>

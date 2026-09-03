@@ -64,7 +64,7 @@ export default async function AdminProjectsPage() {
       <div className="mt-6 flex flex-wrap gap-3">
         <Link
           href="/admin/projects/applications"
-          className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+          className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
         >
           Member application queue →
         </Link>
@@ -135,7 +135,7 @@ export default async function AdminProjectsPage() {
                       for 30 days, and refuses outright if the
                       contract has dispatched payouts. */}
                   <details className="mt-2">
-                    <summary className="cursor-pointer text-[11px] text-ink-faint hover:text-brand-magenta">
+                    <summary className="cursor-pointer text-[11px] text-ink-faint hover:text-brand-magentaText">
                       Delete
                     </summary>
                     <form action={trashProject} className="mt-2 space-y-1.5">
@@ -147,7 +147,7 @@ export default async function AdminProjectsPage() {
                       />
                       <button
                         type="submit"
-                        className="rounded-md border border-brand-magenta/50 px-2 py-1 text-[11px] text-brand-magenta hover:border-brand-magenta"
+                        className="rounded-md border border-brand-magenta/50 px-2 py-1 text-[11px] text-brand-magentaText hover:border-brand-magenta"
                       >
                         Move to trash
                       </button>

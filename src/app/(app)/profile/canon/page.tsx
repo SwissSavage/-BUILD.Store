@@ -76,7 +76,7 @@ export default async function MemberCanonPage() {
         </p>
         <Link
           href="/profile"
-          className="mt-6 inline-block text-sm text-brand-magenta hover:underline"
+          className="mt-6 inline-block text-sm text-brand-magentaText hover:underline"
         >
           ← Back to profile
         </Link>
@@ -228,7 +228,7 @@ export default async function MemberCanonPage() {
                     : "Sandbox snapshot · mint cycle pending"}
                 </p>
                 <details className="mt-3 rounded-lg bg-[var(--surface)] p-2 text-xs">
-                  <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-brand-magenta">
+                  <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-brand-magentaText">
                     Request phygital print
                   </summary>
                   <p className="mt-2 text-[11px] text-ink-muted">

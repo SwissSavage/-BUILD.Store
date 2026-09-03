@@ -127,7 +127,7 @@ export default async function DataEditPage() {
           <div className="flex shrink-0 flex-col gap-2">
             <Link
               href="/profile/data-rights"
-              className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+              className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Manage →
             </Link>

@@ -83,22 +83,22 @@ function WhyWeBuiltThis() {
   const items = [
     {
       n: "1)",
-      color: "#D828A0",
+      color: "var(--fm-magenta-text)",
       text: "Real equity for the effort.",
     },
     {
       n: "2)",
-      color: "#5070F0",
+      color: "var(--fm-blue-text)",
       text: "Pay tied to what you deliver.",
     },
     {
       n: "3)",
-      color: "#007048",
+      color: "var(--fm-green-text)",
       text: "Hours structured around the work, not the office.",
     },
     {
       n: "4)",
-      color: "#D828A0",
+      color: "var(--fm-magenta-text)",
       text: "Recognition for what you shipped, not how you performed.",
     },
   ];
@@ -118,7 +118,7 @@ function WhyWeBuiltThis() {
       />
 
       <div className="relative mx-auto max-w-app px-6 py-24 md:py-32">
-        <div className="text-xs uppercase tracking-wider text-brand-magenta">
+        <div className="text-xs uppercase tracking-wider text-brand-magentaText">
           Why we built this
         </div>
         <h2 className="mt-3 max-w-3xl font-display text-3xl font-semibold leading-tight md:text-4xl">
@@ -154,9 +154,9 @@ function WhyWeBuiltThis() {
               Companies give you
             </p>
             <p className="mt-2 font-display text-3xl font-bold">
-              <span style={{ color: "#D828A0" }}>1</span>
+              <span style={{ color: "var(--fm-magenta-text)" }}>1</span>
               <span className="text-ink-muted"> &amp; </span>
-              <span style={{ color: "#5070F0" }}>2</span>
+              <span style={{ color: "var(--fm-blue-text)" }}>2</span>
             </p>
             <p className="mt-2 text-xs text-ink-faint">
               Equity + pay. Not the rest.
@@ -168,9 +168,9 @@ function WhyWeBuiltThis() {
               Gig platforms give you
             </p>
             <p className="mt-2 font-display text-3xl font-bold">
-              <span style={{ color: "#007048" }}>3</span>
+              <span style={{ color: "var(--fm-green-text)" }}>3</span>
               <span className="text-ink-muted"> &amp; </span>
-              <span style={{ color: "#D828A0" }}>4</span>
+              <span style={{ color: "var(--fm-magenta-text)" }}>4</span>
             </p>
             <p className="mt-2 text-xs text-ink-faint">
               Flexibility + results. Not the rest.
@@ -180,7 +180,7 @@ function WhyWeBuiltThis() {
           <div
             className="rounded-2xl border border-brand-magenta bg-gradient-to-br from-brand-magenta/15 via-brand-blue/10 to-brand-green/10 px-6 py-6 shadow-lg shadow-brand-magenta/10"
           >
-            <p className="text-[11px] uppercase tracking-wider text-brand-magenta">
+            <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
               We give you
             </p>
             <p className="mt-2 font-display text-3xl font-bold">
@@ -266,8 +266,8 @@ function Hero() {
         }}
       />
       <div className="relative mx-auto max-w-app px-6 py-20 md:py-28">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-3 py-1 text-xs font-medium text-brand-magenta">
-          <span className="h-1.5 w-1.5 rounded-full bg-brand-magenta" />
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-3 py-1 text-xs font-medium text-brand-magentaText">
+          <span className="fm-btn-primary h-1.5 w-1.5 rounded-full" />
           About Future Modern
         </div>
         <h1 className="font-display text-5xl font-bold leading-tight md:text-6xl">
@@ -290,7 +290,7 @@ function Hero() {
           care if anyone sees it.
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-3 text-xs">
-          <span className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-3 py-1 font-medium text-brand-magenta">
+          <span className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-3 py-1 font-medium text-brand-magentaText">
             For workers, not capitalists
           </span>
           <span className="rounded-full border border-brand-blue/40 bg-brand-blue/10 px-3 py-1 font-medium text-brand-blue">
@@ -405,7 +405,7 @@ function VentureLabor() {
       <div className="mx-auto max-w-app px-6 py-20">
         <div className="grid gap-10 md:grid-cols-[1fr,1.5fr]">
           <div>
-            <div className="text-xs uppercase tracking-wider text-brand-magenta">
+            <div className="text-xs uppercase tracking-wider text-brand-magentaText">
               The contract
             </div>
             <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
@@ -490,7 +490,7 @@ function WhatChanged() {
   ];
 
   const accentClass = {
-    magenta: "text-brand-magenta",
+    magenta: "text-brand-magentaText",
     blue: "text-brand-blue",
     green: "text-brand-green",
   } as const;
@@ -582,7 +582,7 @@ function WhatWeSayNoTo() {
         }}
       />
       <div className="relative mx-auto max-w-app px-6 py-20">
-        <p className="text-xs uppercase tracking-[0.18em] text-brand-magenta">
+        <p className="text-xs uppercase tracking-[0.18em] text-brand-magentaText">
           The discipline
         </p>
         <h2 className="mt-3 font-display text-3xl font-semibold md:text-4xl">
@@ -624,7 +624,7 @@ function CoreCompetencies() {
   }[] = [
     {
       label: "Technical",
-      color: "#5070F0",
+      color: "var(--fm-blue-text)",
       skills: [
         "Web Design",
         "Web Development",
@@ -640,7 +640,7 @@ function CoreCompetencies() {
     },
     {
       label: "Creative",
-      color: "#D828A0",
+      color: "var(--fm-magenta-text)",
       skills: [
         "Content Marketing",
         "Advertising",
@@ -655,7 +655,7 @@ function CoreCompetencies() {
     },
     {
       label: "Business & Professional",
-      color: "#007048",
+      color: "var(--fm-green-text)",
       skills: [
         "Managed Services",
         "Product Management",
@@ -765,7 +765,7 @@ function Provenance() {
     <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
       <div className="mx-auto max-w-app px-6 py-20">
         <div className="flex flex-wrap items-baseline gap-3">
-          <span className="text-xs uppercase tracking-wider text-brand-magenta">
+          <span className="text-xs uppercase tracking-wider text-brand-magentaText">
             Core values
           </span>
         </div>
@@ -803,7 +803,7 @@ function Credentials() {
   const groups: { label: string; items: string[]; color: string }[] = [
     {
       label: "Universities & research",
-      color: "#5070F0",
+      color: "var(--fm-blue-text)",
       items: [
         "Caltech",
         "UChicago",
@@ -816,7 +816,7 @@ function Credentials() {
     },
     {
       label: "Industry & engineering",
-      color: "#007048",
+      color: "var(--fm-green-text)",
       items: [
         "Microsoft",
         "Amazon",
@@ -830,7 +830,7 @@ function Credentials() {
     },
     {
       label: "Music, media & culture",
-      color: "#D828A0",
+      color: "var(--fm-magenta-text)",
       items: [
         "Columbia Records",
         "Bad Boy Records",
@@ -918,7 +918,7 @@ function Pillars() {
         </div>
 
         <div className="mt-12 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-8 md:p-10">
-          <p className="text-xs uppercase tracking-wider text-brand-magenta">
+          <p className="text-xs uppercase tracking-wider text-brand-magentaText">
             The Future Modernist
           </p>
           <h3 className="mt-3 font-display text-2xl font-semibold md:text-3xl">
@@ -1034,7 +1034,7 @@ function RoadmapPeek() {
       <div className="relative mx-auto max-w-app px-6 py-24">
         <div className="grid gap-14 md:grid-cols-[1fr,1.7fr]">
           <div>
-            <div className="text-xs uppercase tracking-wider text-brand-magenta">
+            <div className="text-xs uppercase tracking-wider text-brand-magentaText">
               Access, in phases
             </div>
             <h2 className="mt-2 font-display text-3xl font-semibold md:text-5xl">
@@ -1154,7 +1154,7 @@ function ConstellationSection() {
     <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
       <div className="mx-auto max-w-app px-6 py-20">
         <div className="max-w-2xl">
-          <div className="text-xs uppercase tracking-wider text-brand-magenta">
+          <div className="text-xs uppercase tracking-wider text-brand-magentaText">
             Venture Labor OS
           </div>
           <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
@@ -1169,19 +1169,19 @@ function ConstellationSection() {
         <div className="mt-8 flex flex-wrap gap-3 text-sm">
           <Link
             href="/governance"
-            className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-4 py-2 text-brand-magenta hover:bg-brand-magenta/20"
+            className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-4 py-2 text-brand-magentaText hover:bg-brand-magenta/20"
           >
             See how the network works →
           </Link>
           <Link
             href="/policies/covenant"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Cooperative Covenant →
           </Link>
           <Link
             href="/trust"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Trust &amp; security →
           </Link>
@@ -1205,7 +1205,7 @@ function CTA() {
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
             href="/signup"
-            className="inline-flex items-center justify-center rounded-full bg-brand-magenta px-8 py-3 font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+            className="fm-btn-primary inline-flex items-center justify-center rounded-full px-8 py-3 font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
           >
             Apply to join
           </Link>

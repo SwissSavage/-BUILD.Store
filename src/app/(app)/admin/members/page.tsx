@@ -118,19 +118,19 @@ export default async function AdminMembersPage({
           <div className="mt-2 flex flex-wrap gap-3 text-xs">
             <Link
               href="/admin/members/invite"
-              className="rounded-full bg-brand-magenta px-3 py-1 text-white hover:opacity-90"
+              className="fm-btn-primary rounded-full px-3 py-1"
             >
               + Invite new member
             </Link>
             <Link
               href="/admin/access-review"
-              className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Access review →
             </Link>
             <Link
               href="/admin/audit-log?resource=user"
-              className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
             >
               User audit log →
             </Link>
@@ -298,7 +298,7 @@ function FlatTable({
                       <input type="hidden" name="uid" value={u.id} />
                       <button
                         type="submit"
-                        className="text-xs text-brand-magenta hover:underline"
+                        className="text-xs text-brand-magentaText hover:underline"
                       >
                         {u.isAdmin ? "Revoke" : "Grant"}
                       </button>
@@ -332,12 +332,12 @@ function FlatTable({
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                     <Link
                       href={`/admin/members/${u.id}`}
-                      className="text-brand-magenta hover:underline"
+                      className="text-brand-magentaText hover:underline"
                     >
                       Manage →
                     </Link>
                     {u.suspendedAt && (
-                      <span className="rounded-full border border-brand-magenta/40 px-2 py-0.5 text-brand-magenta">
+                      <span className="rounded-full border border-brand-magenta/40 px-2 py-0.5 text-brand-magentaText">
                         Suspended
                       </span>
                     )}
@@ -369,7 +369,7 @@ function FlatTable({
 function DmCompose({ user }: { user: User }) {
   return (
     <details className="mt-2">
-      <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-brand-magenta hover:underline">
+      <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-brand-magentaText hover:underline">
         Send DM →
       </summary>
       <form
@@ -394,8 +394,7 @@ function DmCompose({ user }: { user: User }) {
         />
         <button
           type="submit"
-          className="rounded-full px-3 py-1 text-[11px] font-medium text-white"
-          style={{ backgroundColor: "#D828A0" }}
+          className="fm-btn-primary rounded-full px-3 py-1 text-[11px] font-medium"
         >
           Send
         </button>

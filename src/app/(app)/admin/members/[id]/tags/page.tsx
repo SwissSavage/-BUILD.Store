@@ -60,7 +60,7 @@ export default async function AdminMemberTagsPage({
               <span
                 key={p}
                 className="rounded-full px-3 py-1 text-xs"
-                style={{ backgroundColor: "rgba(80, 112, 240, 0.12)", color: "#5070F0" }}
+                style={{ backgroundColor: "rgba(80, 112, 240, 0.12)", color: "var(--fm-blue-text)" }}
               >
                 {INDUSTRY_LABELS[p]}
               </span>
@@ -89,7 +89,7 @@ export default async function AdminMemberTagsPage({
                   className="group rounded-full px-3 py-1 text-xs"
                   style={{
                     backgroundColor: "rgba(216, 40, 160, 0.10)",
-                    color: "#D828A0",
+                    color: "var(--fm-magenta-text)",
                   }}
                   title="Click to remove"
                 >
@@ -115,8 +115,7 @@ export default async function AdminMemberTagsPage({
           </label>
           <button
             type="submit"
-            className="rounded-full px-4 py-1.5 text-xs font-medium text-white"
-            style={{ backgroundColor: "#D828A0" }}
+            className="fm-btn-primary rounded-full px-4 py-1.5 text-xs font-medium"
           >
             Append
           </button>
@@ -126,7 +125,7 @@ export default async function AdminMemberTagsPage({
           <input type="hidden" name="userId" value={user.id} />
           <button
             type="submit"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Rescan from bio + skills + portfolio
           </button>
@@ -151,7 +150,7 @@ export default async function AdminMemberTagsPage({
               <span
                 key={t}
                 className="rounded-full px-3 py-1 text-xs"
-                style={{ backgroundColor: "rgba(0, 112, 72, 0.10)", color: "#007048" }}
+                style={{ backgroundColor: "rgba(0, 112, 72, 0.10)", color: "var(--fm-green-text)" }}
               >
                 #{t}
               </span>

@@ -391,7 +391,7 @@ export default async function CompliancePage() {
       <p className="mt-2 max-w-3xl text-sm text-ink-muted">
         Every tracked control, one row. Sandbox evidence + production
         remediation. Long-form audit at{" "}
-        <code className="text-brand-magenta">
+        <code className="text-brand-magentaText">
           deliverables/compliance/soc2-iso27001-readiness.md
         </code>
         .
@@ -486,7 +486,7 @@ function ControlRow({ control }: { control: ComplianceControl }) {
           {control.href && (
             <Link
               href={control.href}
-              className="mt-1 inline-block text-xs text-brand-magenta hover:underline"
+              className="mt-1 inline-block text-xs text-brand-magentaText hover:underline"
             >
               View evidence →
             </Link>

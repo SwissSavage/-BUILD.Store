@@ -31,7 +31,7 @@ export default function JoinAsTalentSignupPage() {
         <ContactFields />
 
         <section className="space-y-3">
-          <h2 className="text-xs uppercase tracking-wider text-brand-magenta">
+          <h2 className="text-xs uppercase tracking-wider text-brand-magentaText">
             Resume / portfolio
           </h2>
           <p className="text-xs text-ink-muted">
@@ -59,7 +59,7 @@ export default function JoinAsTalentSignupPage() {
           </p>
 
           <div className="mt-5">
-            <label htmlFor="skillTags" className="text-xs uppercase tracking-wider text-brand-magenta">
+            <label htmlFor="skillTags" className="text-xs uppercase tracking-wider text-brand-magentaText">
               Skill tags
             </label>
             <p className="mt-1 text-xs text-ink-muted">
@@ -79,7 +79,7 @@ export default function JoinAsTalentSignupPage() {
           </div>
 
           <div className="mt-5">
-            <label htmlFor="proposedSkillTags" className="text-xs uppercase tracking-wider text-brand-magenta">
+            <label htmlFor="proposedSkillTags" className="text-xs uppercase tracking-wider text-brand-magentaText">
               Other skills we should know about
             </label>
             <p className="mt-1 text-xs text-ink-muted">
@@ -101,7 +101,7 @@ export default function JoinAsTalentSignupPage() {
 
         <section className="space-y-4 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-5">
           <div>
-            <h2 className="text-xs uppercase tracking-wider text-brand-magenta">
+            <h2 className="text-xs uppercase tracking-wider text-brand-magentaText">
               Consent
             </h2>
             <p className="mt-1 text-xs text-ink-muted">
@@ -150,7 +150,7 @@ export default function JoinAsTalentSignupPage() {
                 opt out anytime from your profile. Read the{" "}
                 <Link
                   href="/data-use-policy"
-                  className="text-brand-magenta hover:underline"
+                  className="text-brand-magentaText hover:underline"
                   target="_blank"
                   rel="noreferrer"
                 >

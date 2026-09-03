@@ -160,7 +160,7 @@ export default async function ProjectDetailPage({
         </div>
         <span
           className="rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-          style={{ backgroundColor: "rgba(80,112,240,0.15)", color: "#5070F0" }}
+          style={{ backgroundColor: "rgba(80,112,240,0.15)", color: "var(--fm-blue-text)" }}
         >
           {project.status.replace("_", " ")}
         </span>
@@ -229,7 +229,7 @@ export default async function ProjectDetailPage({
               </p>
               <Link
                 href="/contracts"
-                className="mt-4 inline-block rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+                className="mt-4 inline-block rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
               >
                 Open the contracts queue →
               </Link>
@@ -279,14 +279,13 @@ export default async function ProjectDetailPage({
               </p>
               <Link
                 href="/admin/projects/applications"
-                className="mt-3 inline-block rounded-full px-3 py-1.5 text-xs font-medium text-white"
-                style={{ backgroundColor: "#D828A0" }}
+                className="fm-btn-primary mt-3 inline-block rounded-full px-3 py-1.5 text-xs font-medium"
               >
                 Open applications queue →
               </Link>
               <Link
                 href="/admin/projects/contributions"
-                className="mt-2 inline-block rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+                className="mt-2 inline-block rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
               >
                 Outside contributor queue →
               </Link>
@@ -350,7 +349,7 @@ function ApplySection({
           />
           <button
             type="submit"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Withdraw application
           </button>
@@ -533,7 +532,7 @@ function ProspectiveOfferSection({
       <p className="mt-2 text-xs text-ink-faint">
         Submitting an offer doesn&apos;t grant cooperative standing. If
         you want that, see the three earned paths on{" "}
-        <Link href="/whitelist" className="text-brand-magenta hover:underline">
+        <Link href="/whitelist" className="text-brand-magentaText hover:underline">
           /whitelist
         </Link>
         .
@@ -730,7 +729,7 @@ function ApplicationQueue({
       {isAdmin && (
         <Link
           href="/admin/projects/applications"
-          className="mt-4 inline-block text-xs text-brand-magenta hover:underline"
+          className="mt-4 inline-block text-xs text-brand-magentaText hover:underline"
         >
           Decide pending applications →
         </Link>
@@ -832,7 +831,7 @@ function ProjectMilestonesSection({
                   </label>
                   <button
                     type="submit"
-                    className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+                    className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
                   >
                     Save
                   </button>
@@ -844,7 +843,7 @@ function ProjectMilestonesSection({
           {isAdmin && (
             <Link
               href={`/admin/contracts/${project.id}/tracker`}
-              className="mt-4 inline-block text-xs text-brand-magenta hover:underline"
+              className="mt-4 inline-block text-xs text-brand-magentaText hover:underline"
             >
               Full admin tracker →
             </Link>

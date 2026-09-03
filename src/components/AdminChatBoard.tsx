@@ -177,7 +177,7 @@ export function AdminChatBoard({
                     {isUnread && (
                       <span
                         aria-label="Unread"
-                        className="h-2 w-2 shrink-0 rounded-full bg-brand-magenta"
+                        className="fm-btn-primary h-2 w-2 shrink-0 rounded-full"
                       />
                     )}
                   </div>
@@ -284,8 +284,7 @@ export function AdminChatBoard({
                 <button
                   type="submit"
                   disabled={pending}
-                  className="rounded-full px-3 py-2 text-xs font-medium text-white disabled:opacity-60"
-                  style={{ backgroundColor: "#D828A0" }}
+                  className="fm-btn-primary rounded-full px-3 py-2 text-xs font-medium disabled:opacity-60"
                 >
                   Send
                 </button>

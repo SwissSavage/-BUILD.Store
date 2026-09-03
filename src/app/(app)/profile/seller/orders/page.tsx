@@ -175,7 +175,7 @@ export default async function SellerOrdersPage() {
                             </div>
                             <Link
                               href={`/orders/${order.id}`}
-                              className="mt-2 inline-block text-[11px] text-brand-magenta hover:underline"
+                              className="mt-2 inline-block text-[11px] text-brand-magentaText hover:underline"
                             >
                               Open order →
                             </Link>
@@ -193,7 +193,7 @@ export default async function SellerOrdersPage() {
                                 <input type="hidden" name="status" value={target} />
                                 <button
                                   type="submit"
-                                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+                                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                                 >
                                   → {ORDER_STATUS_LABELS[target]}
                                 </button>
@@ -225,7 +225,7 @@ export default async function SellerOrdersPage() {
                             />
                             <button
                               type="submit"
-                              className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+                              className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
                             >
                               Save tracking
                             </button>

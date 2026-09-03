@@ -94,7 +94,7 @@ export default async function CaseStudiesIndex() {
               </div>
               <Link
                 href={`/case-studies/${p.id}`}
-                className="mt-2 block font-display text-2xl font-semibold hover:text-brand-magenta"
+                className="mt-2 block font-display text-2xl font-semibold hover:text-brand-magentaText"
               >
                 {p.title}
               </Link>

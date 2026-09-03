@@ -110,7 +110,7 @@ export default async function CohortIndexPage() {
           work, see the{" "}
           <Link
             href="/portfolio"
-            className="text-brand-magenta hover:underline"
+            className="text-brand-magentaText hover:underline"
           >
             Future Modernist rail
           </Link>
@@ -155,7 +155,7 @@ export default async function CohortIndexPage() {
                           {curated.narrative}
                         </p>
                       )}
-                      <span className="mt-2 inline-block text-sm text-brand-magenta">
+                      <span className="mt-2 inline-block text-sm text-brand-magentaText">
                         Read the spotlight →
                       </span>
                     </Card>

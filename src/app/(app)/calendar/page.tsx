@@ -83,7 +83,7 @@ export default async function CooperativeCalendarPage() {
         </p>
         <Link
           href="/profile"
-          className="mt-6 inline-block text-sm text-brand-magenta hover:underline"
+          className="mt-6 inline-block text-sm text-brand-magentaText hover:underline"
         >
           ← Back to profile
         </Link>
@@ -116,7 +116,7 @@ export default async function CooperativeCalendarPage() {
         </div>
         <Link
           href="/profile/calendar"
-          className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+          className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
         >
           Manage your calendar →
         </Link>
@@ -191,7 +191,7 @@ export default async function CooperativeCalendarPage() {
         ) : (
           Object.entries(meetingsByDay).map(([day, items]) => (
             <div key={day} className="mt-5">
-              <h3 className="font-display text-lg font-semibold text-brand-magenta">
+              <h3 className="font-display text-lg font-semibold text-brand-magentaText">
                 {day}
               </h3>
               <ul className="mt-2 space-y-2">
@@ -225,7 +225,7 @@ export default async function CooperativeCalendarPage() {
                           {isViewerAttendee && (
                             <>
                               {" "}
-                              <span className="text-brand-magenta">
+                              <span className="text-brand-magentaText">
                                 · you&apos;re on this
                               </span>
                             </>

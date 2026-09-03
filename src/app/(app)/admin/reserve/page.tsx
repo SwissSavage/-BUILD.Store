@@ -90,7 +90,7 @@ function RatingChip({
         </span>
         <span
           className={`font-mono text-sm ${
-            missing ? "text-brand-magenta" : "text-ink"
+            missing ? "text-brand-magentaText" : "text-ink"
           }`}
         >
           {missing ? "—" : `${value.toFixed(1)} / 5`}
@@ -145,7 +145,7 @@ export default async function AdminReservePage() {
         </div>
         <Link
           href="/admin/audit-log?resource=reserve_pool"
-          className="text-xs text-brand-magenta hover:underline"
+          className="text-xs text-brand-magentaText hover:underline"
         >
           Reserve audit trail →
         </Link>
@@ -255,7 +255,7 @@ async function ReserveCard({
                       className={
                         entry.direction === "credit"
                           ? "text-[#007048]"
-                          : "text-brand-magenta"
+                          : "text-brand-magentaText"
                       }
                     >
                       {USD_FMT.format(Number(entry.amount))}
@@ -362,7 +362,7 @@ async function ReserveCard({
             {/* Who to chase — with one-click reminder actions */}
             {chaseItems.length > 0 && (
               <div className="mt-3 rounded-md border border-brand-magenta/30 bg-brand-magenta/5 p-3">
-                <p className="text-[11px] uppercase tracking-wider text-brand-magenta">
+                <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
                   Chase list — missing ratings
                 </p>
                 <ul className="mt-2 space-y-2">
@@ -381,7 +381,7 @@ async function ReserveCard({
                           />
                           <button
                             type="submit"
-                            className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[10px] font-medium text-brand-magenta hover:bg-brand-magenta/10"
+                            className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[10px] font-medium text-brand-magentaText hover:bg-brand-magenta/10"
                           >
                             Nudge PM
                           </button>
@@ -401,7 +401,7 @@ async function ReserveCard({
                           />
                           <button
                             type="submit"
-                            className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[10px] font-medium text-brand-magenta hover:bg-brand-magenta/10"
+                            className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[10px] font-medium text-brand-magentaText hover:bg-brand-magenta/10"
                           >
                             Nudge peers
                           </button>
@@ -426,7 +426,7 @@ async function ReserveCard({
                           />
                           <button
                             type="submit"
-                            className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[10px] font-medium text-brand-magenta hover:bg-brand-magenta/10"
+                            className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[10px] font-medium text-brand-magentaText hover:bg-brand-magenta/10"
                           >
                             Send link
                           </button>
@@ -543,7 +543,7 @@ async function ReserveCard({
                   <div className="flex justify-end">
                     <button
                       type="submit"
-                      className="rounded-full bg-brand-magenta px-4 py-2 text-xs font-medium text-brand-white hover:bg-brand-magenta/90"
+                      className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
                     >
                       Capture + send confirmation link
                     </button>
@@ -607,7 +607,7 @@ async function ReserveCard({
             <div className="mt-4 flex justify-end">
               <button
                 type="submit"
-                className="rounded-full bg-brand-magenta px-4 py-2 text-xs font-medium text-brand-white hover:bg-brand-magenta/90"
+                className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
               >
                 Execute graduated release
               </button>
@@ -665,7 +665,7 @@ async function ReserveCard({
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="rounded-full bg-brand-magenta px-4 py-2 text-xs font-medium text-brand-white hover:bg-brand-magenta/90"
+                className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
               >
                 Issue rebate
               </button>

@@ -107,19 +107,19 @@ export default async function AdminTrackerPage({
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/admin/contracts/${id}/ledger`}
-            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Ledger
           </Link>
           <Link
             href={`/admin/contracts/${id}/attribution`}
-            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Attribution
           </Link>
           <Link
             href={`/contracts/${id}/tracker?token=demo`}
-            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Client preview
           </Link>
@@ -173,7 +173,7 @@ export default async function AdminTrackerPage({
                 <input type="hidden" name="projectId" value={id} />
                 <button
                   type="submit"
-                  className="rounded-full border border-brand-magenta px-4 py-1.5 text-xs font-medium text-brand-magenta hover:bg-brand-magenta hover:text-white"
+                  className="rounded-full border border-brand-magenta px-4 py-1.5 text-xs font-medium text-brand-magentaText hover:bg-brand-magenta hover:text-black"
                 >
                   Seed with standard template
                 </button>
@@ -257,8 +257,7 @@ export default async function AdminTrackerPage({
           <div className="md:col-span-2">
             <button
               type="submit"
-              className="rounded-full px-5 py-2 text-sm font-medium text-white"
-              style={{ backgroundColor: "#D828A0" }}
+              className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
             >
               Create milestone
             </button>
@@ -329,7 +328,7 @@ function MilestoneRow({
           className="mt-3 rounded-lg p-3 text-xs"
           style={{ backgroundColor: "rgba(216, 40, 160, 0.06)" }}
         >
-          <span className="text-[10px] uppercase tracking-wider text-brand-magenta">
+          <span className="text-[10px] uppercase tracking-wider text-brand-magentaText">
             Blocker
           </span>
           <p className="mt-1 text-ink">{milestone.blockerNote}</p>
@@ -355,7 +354,7 @@ function MilestoneRow({
           </label>
           <button
             type="submit"
-            className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+            className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
           >
             Update
           </button>
@@ -365,7 +364,7 @@ function MilestoneRow({
           <input type="hidden" name="id" value={milestone.id} />
           <button
             type="submit"
-            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Ping owner
           </button>
@@ -388,7 +387,7 @@ function MilestoneRow({
           <input type="hidden" name="id" value={milestone.id} />
           <button
             type="submit"
-            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] text-brand-magenta hover:bg-[var(--surface-inset)]"
+            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] text-brand-magentaText hover:bg-[var(--surface-inset)]"
           >
             Delete
           </button>

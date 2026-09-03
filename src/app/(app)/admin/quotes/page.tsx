@@ -202,7 +202,7 @@ export default async function AdminQuotesPage({
                                 target="_blank"
                                 rel="noreferrer"
                                 className="break-all hover:underline"
-                                style={{ color: "#D828A0" }}
+                                style={{ color: "var(--fm-magenta-text)" }}
                               >
                                 {s.url}
                               </a>
@@ -342,7 +342,7 @@ export default async function AdminQuotesPage({
                       <button
                         type="submit"
                         className="text-xs"
-                        style={{ color: "#E53E3E" }}
+                        style={{ color: "var(--fm-red-text)" }}
                       >
                         Reject
                       </button>
@@ -390,7 +390,7 @@ function StatusPill({
     return (
       <span
         className="rounded-full px-2 py-0.5 text-xs font-medium"
-        style={{ backgroundColor: "rgba(0,112,72,0.15)", color: "#007048" }}
+        style={{ backgroundColor: "rgba(0,112,72,0.15)", color: "var(--fm-green-text)" }}
       >
         Sent
       </span>
@@ -400,7 +400,7 @@ function StatusPill({
     return (
       <span
         className="rounded-full px-2 py-0.5 text-xs font-medium"
-        style={{ backgroundColor: "rgba(229,62,62,0.15)", color: "#E53E3E" }}
+        style={{ backgroundColor: "rgba(229,62,62,0.15)", color: "var(--fm-red-text)" }}
       >
         Rejected
       </span>
@@ -409,7 +409,7 @@ function StatusPill({
   return (
     <span
       className="rounded-full px-2 py-0.5 text-xs font-medium"
-      style={{ backgroundColor: "rgba(80,112,240,0.15)", color: "#5070F0" }}
+      style={{ backgroundColor: "rgba(80,112,240,0.15)", color: "var(--fm-blue-text)" }}
     >
       Pending
     </span>

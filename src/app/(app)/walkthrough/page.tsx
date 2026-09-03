@@ -153,7 +153,7 @@ export default async function WalkthroughPage() {
 
           <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--surface-inset)]">
             <div
-              className="h-full bg-brand-magenta transition-all"
+              className="fm-btn-primary h-full transition-all"
               style={{
                 width: `${
                   adminTotal === 0
@@ -216,7 +216,7 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
       </div>
       <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--surface-inset)]">
         <div
-          className="h-full bg-brand-magenta transition-all"
+          className="fm-btn-primary h-full transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -268,8 +268,7 @@ function StepCard({
         </div>
         {isActive && (
           <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand-white"
-            style={{ backgroundColor: "#D828A0" }}
+            className="fm-btn-primary rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
           >
             Active
           </span>
@@ -286,7 +285,7 @@ function StepCard({
           <ul className="mt-1 space-y-1 text-sm">
             {step.whatToTry.map((tip, i) => (
               <li key={i} className="flex gap-2">
-                <span className="text-brand-magenta">›</span>
+                <span className="text-brand-magentaText">›</span>
                 <span>{tip}</span>
               </li>
             ))}
@@ -297,7 +296,7 @@ function StepCard({
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <Link
           href={step.surface}
-          className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-brand-white"
+          className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-black"
         >
           {step.surfaceLabel} →
         </Link>

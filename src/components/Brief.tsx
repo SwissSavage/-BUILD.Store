@@ -309,7 +309,7 @@ function BriefBody({ blocks }: { blocks: BriefBlock[] }) {
                 >
                   <span
                     aria-hidden
-                    className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-brand-magenta"
+                    className="fm-btn-primary mt-[7px] h-1 w-1 shrink-0 rounded-full"
                   />
                   <span>{renderInline(item)}</span>
                 </li>
@@ -412,7 +412,7 @@ export function Brief({
             open={i <= 1}
             className="group border-t border-[var(--surface-border)] py-3"
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wider text-ink hover:text-brand-magenta">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wider text-ink hover:text-brand-magentaText">
               {renderInline(section.heading)}
               <span
                 aria-hidden

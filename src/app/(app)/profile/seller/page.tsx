@@ -159,8 +159,7 @@ export default async function SellerApplicationPage() {
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               href="/profile/seller/orders"
-              className="inline-block rounded-full px-5 py-2 text-sm font-medium text-white"
-              style={{ backgroundColor: "#D828A0" }}
+              className="fm-btn-primary inline-block rounded-full px-5 py-2 text-sm font-medium"
             >
               Open fulfillment dashboard →
             </Link>
@@ -169,7 +168,7 @@ export default async function SellerApplicationPage() {
                 it led to did not do the thing. */}
             <Link
               href="/profile/seller/products"
-              className="inline-block rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
+              className="inline-block rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Draft a new listing →
             </Link>
@@ -202,7 +201,7 @@ export default async function SellerApplicationPage() {
       {(!latest || latest.status === "rejected") && (
         <form action={submitApplication} className="mt-10 space-y-6">
           <fieldset>
-            <legend className="text-xs uppercase tracking-wider text-brand-magenta">
+            <legend className="text-xs uppercase tracking-wider text-brand-magentaText">
               Categories I want to sell in
             </legend>
             <div className="mt-3 grid gap-2 md:grid-cols-2">
@@ -223,7 +222,7 @@ export default async function SellerApplicationPage() {
           </fieldset>
 
           <label className="block">
-            <span className="text-xs uppercase tracking-wider text-brand-magenta">
+            <span className="text-xs uppercase tracking-wider text-brand-magentaText">
               Pitch
             </span>
             <textarea
@@ -242,7 +241,7 @@ export default async function SellerApplicationPage() {
 
           <button
             type="submit"
-            className="w-full rounded-full bg-ink py-3 font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-brand-white"
+            className="w-full rounded-full bg-ink py-3 font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-black"
           >
             Submit for review
           </button>

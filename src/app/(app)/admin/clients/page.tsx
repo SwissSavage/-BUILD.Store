@@ -58,7 +58,7 @@ export default async function AdminClientsPage() {
             client{patterns.length === 1 ? "" : "s"} on file
           </p>
           {flaggedCount > 0 && (
-            <p className="text-brand-magenta">
+            <p className="text-brand-magentaText">
               <span className="font-mono text-sm">{flaggedCount}</span>{" "}
               flagged
             </p>
@@ -117,7 +117,7 @@ function ClientPatternCard({ p }: { p: ClientPatternSummary }) {
           </p>
         </div>
         {p.flagged && (
-          <span className="rounded-full bg-brand-magenta/15 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-brand-magenta">
+          <span className="rounded-full bg-brand-magenta/15 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-brand-magentaText">
             Flagged for review
           </span>
         )}
@@ -144,7 +144,7 @@ function ClientPatternCard({ p }: { p: ClientPatternSummary }) {
 
       {p.flagReasons.length > 0 && (
         <div className="mt-4 rounded-md border border-brand-magenta/30 bg-brand-magenta/5 p-3">
-          <p className="text-[11px] uppercase tracking-wider text-brand-magenta">
+          <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
             Why flagged
           </p>
           <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[11px] text-ink-muted">
@@ -165,7 +165,7 @@ function ClientPatternCard({ p }: { p: ClientPatternSummary }) {
               <li key={pr.id}>
                 <Link
                   href={`/admin/contracts/${pr.id}/settle`}
-                  className="text-brand-magenta hover:underline"
+                  className="text-brand-magentaText hover:underline"
                 >
                   {pr.title}
                 </Link>{" "}

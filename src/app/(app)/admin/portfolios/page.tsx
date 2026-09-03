@@ -87,7 +87,7 @@ export default async function AdminPortfoliosPage() {
                             className="rounded-full px-2 py-0.5 font-medium"
                             style={{
                               backgroundColor: "rgba(80,112,240,0.15)",
-                              color: "#5070F0",
+                              color: "var(--fm-blue-text)",
                             }}
                           >
                             {row.pending} pending
@@ -101,7 +101,7 @@ export default async function AdminPortfoliosPage() {
                             className="rounded-full px-2 py-0.5"
                             style={{
                               backgroundColor: "rgba(216,40,160,0.15)",
-                              color: "#D828A0",
+                              color: "var(--fm-magenta-text)",
                             }}
                             title="Published items where admin overrode text or hid the project URL"
                           >

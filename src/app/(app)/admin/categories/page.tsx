@@ -231,7 +231,7 @@ function CategoryRow({ category }: { category: StoreCategory }) {
             <input type="hidden" name="id" value={category.id} />
             <button
               type="submit"
-              className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Archive
             </button>
@@ -241,7 +241,7 @@ function CategoryRow({ category }: { category: StoreCategory }) {
             <input type="hidden" name="id" value={category.id} />
             <button
               type="submit"
-              className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Unarchive
             </button>

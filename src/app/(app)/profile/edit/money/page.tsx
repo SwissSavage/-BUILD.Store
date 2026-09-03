@@ -130,7 +130,7 @@ export default async function MoneyEditPage() {
                   className="rounded-full px-2.5 py-0.5 font-medium"
                   style={{
                     backgroundColor: "rgba(0,112,72,0.15)",
-                    color: "#007048",
+                    color: "var(--fm-green-text)",
                   }}
                 >
                   Payouts enabled
@@ -140,7 +140,7 @@ export default async function MoneyEditPage() {
                   className="rounded-full px-2.5 py-0.5 font-medium"
                   style={{
                     backgroundColor: "rgba(80,112,240,0.15)",
-                    color: "#5070F0",
+                    color: "var(--fm-blue-text)",
                   }}
                 >
                   Onboarding incomplete
@@ -150,7 +150,7 @@ export default async function MoneyEditPage() {
                   className="rounded-full px-2.5 py-0.5 font-medium"
                   style={{
                     backgroundColor: "rgba(229,62,62,0.15)",
-                    color: "#E53E3E",
+                    color: "var(--fm-red-text)",
                   }}
                 >
                   Not connected
@@ -174,7 +174,7 @@ export default async function MoneyEditPage() {
           <div className="flex shrink-0 flex-col gap-2">
             <Link
               href="/profile/payouts"
-              className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+              className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
             >
               {user.stripeAccountId ? "Manage payouts →" : "Connect payouts →"}
             </Link>
@@ -205,7 +205,7 @@ export default async function MoneyEditPage() {
           <div className="flex shrink-0 flex-col gap-2">
             <Link
               href="/profile/attribution"
-              className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+              className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
             >
               View ledger →
             </Link>

@@ -244,7 +244,7 @@ function PendingRow({ row, ctx }: { row: CustomerFeedback; ctx: Ctx }) {
           <div
             className={
               "mt-0.5 " +
-              (publishingBlocked ? "text-brand-magenta" : "text-ink-muted")
+              (publishingBlocked ? "text-brand-magentaText" : "text-ink-muted")
             }
           >
             {consent
@@ -286,7 +286,7 @@ function PendingRow({ row, ctx }: { row: CustomerFeedback; ctx: Ctx }) {
               <input type="hidden" name="feedbackId" value={row.id} />
               <button
                 type="submit"
-                className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+                className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
               >
                 Decline follow-up
               </button>
@@ -302,7 +302,7 @@ function PendingRow({ row, ctx }: { row: CustomerFeedback; ctx: Ctx }) {
           published as a testimonial.
         </p>
       ) : targets.length === 0 ? (
-        <p className="mt-4 text-xs text-brand-magenta">
+        <p className="mt-4 text-xs text-brand-magentaText">
           No contributors associated with this context. Can&apos;t
           promote until the team list is populated.
         </p>
@@ -396,7 +396,7 @@ function PublishedRow({ row, ctx }: { row: CustomerFeedback; ctx: Ctx }) {
         {target && (
           <Link
             href={`/u/${target.handle}`}
-            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             View on profile ↗
           </Link>
@@ -405,7 +405,7 @@ function PublishedRow({ row, ctx }: { row: CustomerFeedback; ctx: Ctx }) {
           <input type="hidden" name="feedbackId" value={row.id} />
           <button
             type="submit"
-            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magenta"
+            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Unpublish
           </button>

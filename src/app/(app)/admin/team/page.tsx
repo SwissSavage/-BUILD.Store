@@ -144,7 +144,7 @@ export default async function AdminTeamPage() {
                     className="rounded-full px-2.5 py-0.5 text-[10px] font-medium"
                     style={{
                       backgroundColor: "rgba(0, 112, 72, 0.15)",
-                      color: "#007048",
+                      color: "var(--fm-green-text)",
                     }}
                   >
                     You
@@ -217,8 +217,7 @@ export default async function AdminTeamPage() {
                       <input type="hidden" name="userId" value={u.id} />
                       <button
                         type="submit"
-                        className="rounded-full px-3 py-1.5 text-xs font-medium text-white"
-                        style={{ backgroundColor: "#D828A0" }}
+                        className="fm-btn-primary rounded-full px-3 py-1.5 text-xs font-medium"
                       >
                         Grant admin
                       </button>

@@ -86,8 +86,7 @@ export default async function LockerPage({
         </div>
         <Link
           href="/locker/upload"
-          className="self-start rounded-full px-4 py-2 text-xs font-medium text-white"
-          style={{ backgroundColor: "#D828A0" }}
+          className="fm-btn-primary self-start rounded-full px-4 py-2 text-xs font-medium"
         >
           Upload to the locker
         </Link>
@@ -299,7 +298,7 @@ function AssetCard({
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs underline"
-          style={{ color: "#D828A0" }}
+          style={{ color: "var(--fm-magenta-text)" }}
         >
           Open source ↗
         </a>
@@ -314,7 +313,7 @@ function TierGateBadge({ gate }: { gate: MembershipTier }) {
       className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
       style={{
         backgroundColor: "rgba(216, 40, 160, 0.12)",
-        color: "#D828A0",
+        color: "var(--fm-magenta-text)",
       }}
     >
       {TIER_LABELS[gate]}+

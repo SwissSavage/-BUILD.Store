@@ -52,7 +52,7 @@ export function ContactFields({ showPillarSelect = true }: { showPillarSelect?: 
 
       {showPillarSelect && (
         <label className="block">
-          <span className="text-xs uppercase tracking-wider text-brand-magenta">
+          <span className="text-xs uppercase tracking-wider text-brand-magentaText">
             Pillar
           </span>
           <select
@@ -81,7 +81,7 @@ export function ContactFields({ showPillarSelect = true }: { showPillarSelect?: 
 export function PillarMultiSelect() {
   return (
     <fieldset className="space-y-3">
-      <legend className="text-xs uppercase tracking-wider text-brand-magenta">
+      <legend className="text-xs uppercase tracking-wider text-brand-magentaText">
         Pillars (select all that apply)
       </legend>
       <p className="text-xs text-ink-muted">
@@ -118,7 +118,7 @@ export function JdUploadField({
 } = {}) {
   return (
     <label className="block">
-      <span className="text-xs uppercase tracking-wider text-brand-magenta">
+      <span className="text-xs uppercase tracking-wider text-brand-magentaText">
         {label}
       </span>
       <p className="mt-1 text-xs text-ink-muted">{helper}</p>
@@ -146,11 +146,11 @@ export function SignupHeader({
     <>
       <Link
         href="/signup"
-        className="text-sm text-ink-muted hover:text-brand-magenta"
+        className="text-sm text-ink-muted hover:text-brand-magentaText"
       >
         ← Pick a different path
       </Link>
-      <p className="mt-6 text-xs uppercase tracking-wider text-brand-magenta">
+      <p className="mt-6 text-xs uppercase tracking-wider text-brand-magentaText">
         {eyebrow}
       </p>
       <h1 className="mt-2 font-display text-4xl font-semibold md:text-5xl">
@@ -166,7 +166,7 @@ export function SubmitRow() {
     <>
       <button
         type="submit"
-        className="w-full rounded-full bg-ink py-3 font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-brand-white"
+        className="w-full rounded-full bg-ink py-3 font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-black"
       >
         Submit
       </button>

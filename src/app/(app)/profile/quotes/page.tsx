@@ -175,7 +175,7 @@ function QuoteRow({
 
           {sheet.rejectionNote && (
             <div className="mt-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] p-3 text-xs">
-              <div className="font-medium" style={{ color: "#E53E3E" }}>
+              <div className="font-medium" style={{ color: "var(--fm-red-text)" }}>
                 Admin note
               </div>
               <div className="mt-1 text-ink-muted">{sheet.rejectionNote}</div>
@@ -191,7 +191,7 @@ function QuoteRow({
             <Link
               href={`/contracts/${project.id}/quote`}
               className="mt-2 block text-xs hover:underline"
-              style={{ color: "#D828A0" }}
+              style={{ color: "var(--fm-magenta-text)" }}
             >
               View RFP →
             </Link>

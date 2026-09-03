@@ -142,7 +142,7 @@ export default async function ContractDetailPage({
             className="rounded-full px-2.5 py-0.5 text-xs font-medium"
             style={{
               backgroundColor: "rgba(80,112,240,0.15)",
-              color: "#5070F0",
+              color: "var(--fm-blue-text)",
             }}
           >
             Contract
@@ -212,7 +212,7 @@ export default async function ContractDetailPage({
               <div className="mt-4 flex gap-3">
                 <Link
                   href={`/signin?next=/contracts/${project.id}`}
-                  className="rounded-full bg-brand-magenta px-5 py-2 text-sm text-white hover:opacity-90"
+                  className="fm-btn-primary rounded-full px-5 py-2 text-sm"
                 >
                   Sign in
                 </Link>

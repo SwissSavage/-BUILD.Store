@@ -226,8 +226,7 @@ export default async function DashboardPage() {
         </div>
         <Link
           href="/contracts/new"
-          className="self-start rounded-full px-6 py-2.5 text-sm font-medium text-white"
-          style={{ backgroundColor: "#D828A0" }}
+          className="fm-btn-primary self-start rounded-full px-6 py-2.5 text-sm font-medium"
         >
           Submit an RFP
         </Link>
@@ -242,7 +241,7 @@ export default async function DashboardPage() {
           }}
         >
           <div>
-            <p className="text-[11px] uppercase tracking-wider text-brand-magenta">
+            <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
               Beta walkthrough
             </p>
             <p className="mt-1 font-medium">
@@ -253,8 +252,7 @@ export default async function DashboardPage() {
           </div>
           <Link
             href="/walkthrough"
-            className="self-start rounded-full px-4 py-2 text-xs font-medium text-white md:self-auto"
-            style={{ backgroundColor: "#D828A0" }}
+            className="fm-btn-primary self-start rounded-full px-4 py-2 text-xs font-medium md:self-auto"
           >
             {walkthroughDoneCount === 0 ? "Start the tour" : "Resume the tour"}
           </Link>
@@ -272,7 +270,7 @@ export default async function DashboardPage() {
             }}
           >
             <div>
-              <p className="text-[11px] uppercase tracking-wider text-brand-magenta">
+              <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
                 Marketplace fulfillment
               </p>
               <p className="mt-1 font-display text-xl font-semibold">
@@ -286,14 +284,13 @@ export default async function DashboardPage() {
             </div>
             <Link
               href="/profile/seller/orders"
-              className="self-start rounded-full px-5 py-2.5 text-sm font-medium text-white md:self-auto"
-              style={{ backgroundColor: "#D828A0" }}
+              className="fm-btn-primary self-start rounded-full px-5 py-2.5 text-sm font-medium md:self-auto"
             >
               Open fulfillment dashboard →
             </Link>
             <Link
               href="/profile/seller/products"
-              className="self-start rounded-full border border-[var(--surface-border)] px-5 py-2.5 text-sm hover:border-brand-magenta hover:text-brand-magenta md:self-auto"
+              className="self-start rounded-full border border-[var(--surface-border)] px-5 py-2.5 text-sm hover:border-brand-magenta hover:text-brand-magentaText md:self-auto"
             >
               Your listings →
             </Link>
@@ -314,7 +311,7 @@ export default async function DashboardPage() {
               </div>
               <Link
                 href="/notifications"
-                className="text-xs text-brand-magenta hover:underline"
+                className="text-xs text-brand-magentaText hover:underline"
               >
                 Open inbox →
               </Link>
@@ -326,7 +323,7 @@ export default async function DashboardPage() {
                   className="flex items-start justify-between gap-3 border-t border-[var(--surface-border)] pt-2 first:border-t-0 first:pt-0"
                 >
                   <div className="min-w-0">
-                    <span className="text-[10px] uppercase tracking-wider text-brand-magenta mr-2">
+                    <span className="text-[10px] uppercase tracking-wider text-brand-magentaText mr-2">
                       {NOTIFICATION_KIND_LABELS[n.kind]}
                     </span>
                     <span className="text-ink">{n.title}</span>
@@ -350,7 +347,7 @@ export default async function DashboardPage() {
           <p className="mt-1 text-xs text-ink-faint">$BUILD tokens</p>
           <Link
             href="/wallet"
-            className="mt-4 inline-block text-sm text-brand-magenta hover:underline"
+            className="mt-4 inline-block text-sm text-brand-magentaText hover:underline"
           >
             Open wallet →
           </Link>
@@ -373,7 +370,7 @@ export default async function DashboardPage() {
           <Link
             href="/contracts"
             className="mt-4 inline-block text-sm hover:underline"
-            style={{ color: "#D828A0" }}
+            style={{ color: "var(--fm-magenta-text)" }}
           >
             Browse all contracts →
           </Link>
@@ -387,7 +384,7 @@ export default async function DashboardPage() {
           </p>
           <Link
             href="/membership"
-            className="mt-4 inline-block text-sm text-brand-magenta hover:underline"
+            className="mt-4 inline-block text-sm text-brand-magentaText hover:underline"
           >
             View tiers →
           </Link>
@@ -420,7 +417,7 @@ export default async function DashboardPage() {
                   <Link
                     href="/contracts"
                     className="hover:underline"
-                    style={{ color: "#D828A0" }}
+                    style={{ color: "var(--fm-magenta-text)" }}
                   >
                     Open contract →
                   </Link>
@@ -439,7 +436,7 @@ export default async function DashboardPage() {
             </h2>
             <Link
               href="/projects"
-              className="text-xs text-brand-magenta hover:underline"
+              className="text-xs text-brand-magentaText hover:underline"
             >
               Browse more →
             </Link>

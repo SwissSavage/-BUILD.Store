@@ -285,7 +285,7 @@ export default async function ActivityPage() {
         </h1>
         <p className="mt-3 text-sm text-ink-muted">
           The cooperative activity feed is Member-tier. See{" "}
-          <Link href="/portfolio" className="text-brand-magenta hover:underline">
+          <Link href="/portfolio" className="text-brand-magentaText hover:underline">
             /showcase
           </Link>{" "}
           for public work.
@@ -321,7 +321,7 @@ export default async function ActivityPage() {
       >
         <p
           className="text-[11px] uppercase tracking-wider"
-          style={{ color: "#5070F0" }}
+          style={{ color: "var(--fm-blue-text)" }}
         >
           Sandbox illustration
         </p>
@@ -344,7 +344,7 @@ export default async function ActivityPage() {
       ) : (
         Object.entries(groups).map(([day, dayEvents]) => (
           <section key={day} className="mt-10">
-            <h2 className="font-display text-lg font-semibold text-brand-magenta">
+            <h2 className="font-display text-lg font-semibold text-brand-magentaText">
               {day}
             </h2>
             <ol className="mt-3 space-y-3">
@@ -395,7 +395,7 @@ export default async function ActivityPage() {
                     {e.href && (
                       <Link
                         href={e.href}
-                        className="mt-2 inline-block text-xs text-brand-magenta hover:underline"
+                        className="mt-2 inline-block text-xs text-brand-magentaText hover:underline"
                       >
                         Open →
                       </Link>

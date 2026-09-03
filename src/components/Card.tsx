@@ -37,7 +37,7 @@ export function CardTitle({
 
 export function CardEyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-xs uppercase tracking-wider text-brand-magenta">
+    <div className="text-xs uppercase tracking-wider text-brand-magentaText">
       {children}
     </div>
   );

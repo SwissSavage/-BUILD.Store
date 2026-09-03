@@ -87,7 +87,7 @@ export default async function JobsPage() {
                     className="rounded-full px-2.5 py-0.5 text-xs font-medium"
                     style={{
                       backgroundColor: "rgba(0,112,72,0.15)",
-                      color: "#007048",
+                      color: "var(--fm-green-text)",
                     }}
                   >
                     {TYPE_LABEL[j.employmentType] ?? j.employmentType}

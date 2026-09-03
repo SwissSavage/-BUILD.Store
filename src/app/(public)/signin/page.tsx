@@ -118,7 +118,7 @@ export default async function SignInPage({
         </label>
         <button
           type="submit"
-          className="w-full rounded-full bg-brand-magenta py-3 text-base font-medium text-brand-white transition-colors hover:bg-brand-magenta/90"
+          className="fm-btn-primary w-full rounded-full py-3 text-base font-medium transition-colors"
         >
           Send magic link
         </button>

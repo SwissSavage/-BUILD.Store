@@ -75,7 +75,7 @@ export async function Nav() {
             className="h-9 w-9 object-contain"
           />
           <span>
-            $BUILD<span style={{ color: "#D828A0" }}>.</span>Store
+            $BUILD<span style={{ color: "var(--fm-magenta-text)" }}>.</span>Store
           </span>
         </Link>
 
@@ -136,7 +136,7 @@ export async function Nav() {
               </Link>
               <Link
                 href="/signup"
-                className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-brand-white"
+                className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-black"
               >
                 $BUILD a team
               </Link>
@@ -179,7 +179,7 @@ function AdminDropdown({ self }: { self: User }) {
       href="/admin"
       width="w-72"
       triggerClassName={cn(navLink, "hover:opacity-80")}
-      triggerStyle={{ color: "#D828A0" }}
+      triggerStyle={{ color: "var(--fm-magenta-text)" }}
     >
         {/* Personal — admins land here for their own profile.
             Pulled out of the main nav row so the row stays scannable. */}

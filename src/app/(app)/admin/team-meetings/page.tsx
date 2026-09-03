@@ -137,7 +137,7 @@ export default async function AdminTeamMeetingsPage() {
                           href={min.recordingUrl ?? "#"}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-3 inline-block text-sm text-brand-magenta underline"
+                          className="mt-3 inline-block text-sm text-brand-magentaText underline"
                         >
                           Recording ↗
                         </a>
@@ -156,7 +156,7 @@ export default async function AdminTeamMeetingsPage() {
                               href={min.uploadedFile.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="ml-2 text-brand-magenta underline"
+                              className="ml-2 text-brand-magentaText underline"
                             >
                               Open ↗
                             </a>

@@ -26,7 +26,7 @@ const labelClass = "block text-xs text-ink-muted";
 const primaryButton =
   "rounded-full bg-brand-magenta px-4 py-2 text-xs font-medium text-white hover:opacity-90";
 const ghostButton =
-  "rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] text-ink-muted hover:border-brand-magenta hover:text-brand-magenta";
+  "rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText";
 
 const STATUS_COLOR: Record<string, string> = {
   open: "#007048",
@@ -60,13 +60,13 @@ export default async function AdminJobsPage() {
           <h1 className="font-display text-4xl font-semibold">Jobs</h1>
           <p className="mt-2 max-w-2xl text-ink-muted">
             Postings on the public board at{" "}
-            <Link href="/jobs" className="text-brand-magenta hover:underline">
+            <Link href="/jobs" className="text-brand-magentaText hover:underline">
               /jobs
             </Link>
             . Applications land in{" "}
             <Link
               href="/admin/jobs/applications"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               the triage queue
             </Link>

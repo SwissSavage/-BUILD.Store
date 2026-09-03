@@ -167,6 +167,23 @@ matches the latest commit before assuming the code is wrong.
   was getting deleted. `<DepersonalizeNotice>` is the shared panel.
   Copy that promises "admins scrub PII" reads as someone else's job
   and produces exactly that behaviour.
+- **Colour never carries meaning alone.** Rob flagged magenta as hard
+  to see for colour blind people and he was right, but measuring found
+  something bigger: magenta, blue and red sat at luminance 0.19, 0.20
+  and 0.20, so all three were the same lightness and therefore
+  indistinguishable to the common forms of colour blindness. Anything
+  a person must READ uses the lifted tints (`brand-magentaText`,
+  `brand-blueText`, `brand-greenText`, `brand-redText`, or the
+  matching `--fm-*-text` vars), which are the same hues measured to
+  clear AA. Canonical `brand-magenta` and friends stay for borders,
+  hover, marks, card gradients and the rarity ladder, where nothing is
+  being read. Primary actions use `.fm-btn-primary`, the brand
+  magenta-to-blue sweep with a BLACK label; white on magenta was 4.44
+  and failed. Status uses `<StatusPill>`, which pairs the colour with
+  a glyph and a word so it survives greyscale. Do not darken a text
+  tint back toward the canonical value without re-measuring.
+  Jamar: "we still want our color schemes, not to move to bleak black
+  and white for the least common denominator, get creative."
 - **No em-dashes in any copy that ships.** It is the primary
   AI-generated tell. Use `**bold**` or `<strong>` when the dash was
   doing emphasis; use a period, comma, or semicolon when it was doing a

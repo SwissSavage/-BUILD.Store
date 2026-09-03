@@ -99,7 +99,7 @@ export default async function AdminLockerPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs underline"
-                    style={{ color: "#D828A0" }}
+                    style={{ color: "var(--fm-magenta-text)" }}
                   >
                     Open source ↗
                   </a>
@@ -139,7 +139,7 @@ export default async function AdminLockerPage() {
                 </label>
                 <button
                   type="submit"
-                  className="rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+                  className="rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
                 >
                   Save
                 </button>

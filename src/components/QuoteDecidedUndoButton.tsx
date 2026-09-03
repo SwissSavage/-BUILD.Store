@@ -70,7 +70,7 @@ export function QuoteDecidedUndoButton({
           type="button"
           onClick={() => setConfirming(true)}
           disabled={pending}
-          className="text-xs text-brand-magenta underline decoration-brand-magenta/40 underline-offset-4 transition-colors hover:decoration-brand-magenta disabled:opacity-60"
+          className="text-xs text-brand-magentaText underline decoration-brand-magenta/40 underline-offset-4 transition-colors hover:decoration-brand-magenta disabled:opacity-60"
         >
           {previousDecision === "approved"
             ? "Change my mind"
@@ -96,7 +96,7 @@ export function QuoteDecidedUndoButton({
           type="button"
           onClick={handleUndo}
           disabled={pending}
-          className="inline-flex items-center rounded-full bg-brand-magenta px-4 py-1.5 text-xs font-medium text-brand-white shadow-sm shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90 disabled:opacity-60"
+          className="fm-btn-primary inline-flex items-center rounded-full px-4 py-1.5 text-xs font-medium shadow-sm shadow-brand-magenta/20 transition-colors disabled:opacity-60"
         >
           {pending ? "Reopening…" : "Yes, reopen"}
         </button>
@@ -112,7 +112,7 @@ export function QuoteDecidedUndoButton({
       {error && (
         <p
           className="mt-3 text-xs"
-          style={{ color: "#E53E3E" }}
+          style={{ color: "var(--fm-red-text)" }}
           role="alert"
         >
           {error}

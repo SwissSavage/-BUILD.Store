@@ -141,7 +141,7 @@ export default async function IdentityEditPage() {
           </div>
           <button
             type="submit"
-            className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
           >
             Upload
           </button>
@@ -170,7 +170,7 @@ export default async function IdentityEditPage() {
           </div>
 
           <label className="block">
-            <span className="text-xs uppercase tracking-wider text-brand-magenta">
+            <span className="text-xs uppercase tracking-wider text-brand-magentaText">
               Display name
             </span>
             <input
@@ -268,7 +268,7 @@ export default async function IdentityEditPage() {
 
           <button
             type="submit"
-            className="rounded-full bg-ink px-6 py-2.5 text-sm font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-brand-white"
+            className="rounded-full bg-ink px-6 py-2.5 text-sm font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
           >
             Save profile
           </button>

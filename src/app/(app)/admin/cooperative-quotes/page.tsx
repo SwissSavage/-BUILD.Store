@@ -378,7 +378,7 @@ export default async function AdminCooperativeQuotesPage() {
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-brand-white shadow-lg shadow-brand-magenta/20 transition-colors hover:bg-brand-magenta/90"
+                className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
               >
                 Create quote
               </button>
@@ -489,7 +489,7 @@ export default async function AdminCooperativeQuotesPage() {
                             />
                             <button
                               type="submit"
-                              className="rounded-full border border-brand-magenta px-3 py-1 text-[10px] font-medium text-brand-magenta hover:bg-brand-magenta hover:text-white"
+                              className="rounded-full border border-brand-magenta px-3 py-1 text-[10px] font-medium text-brand-magentaText hover:bg-brand-magenta hover:text-black"
                             >
                               Retry SOW dispatch
                             </button>
@@ -501,7 +501,7 @@ export default async function AdminCooperativeQuotesPage() {
                     <div className="mt-4 flex items-center gap-3">
                       <Link
                         href={`/quotes/${quote.clientToken}`}
-                        className="text-xs text-brand-magenta hover:underline"
+                        className="text-xs text-brand-magentaText hover:underline"
                       >
                         Preview client view →
                       </Link>
@@ -513,7 +513,7 @@ export default async function AdminCooperativeQuotesPage() {
                         />
                         <button
                           type="submit"
-                          className="text-xs text-ink-faint hover:text-brand-magenta"
+                          className="text-xs text-ink-faint hover:text-brand-magentaText"
                         >
                           Remove
                         </button>

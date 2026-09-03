@@ -219,7 +219,7 @@ export default async function MyAttributionPage() {
                             Logged {new Date(e.loggedAt).toLocaleDateString()}
                           </p>
                         </div>
-                        <div className="text-sm font-medium" style={{ color: "#5070F0" }}>
+                        <div className="text-sm font-medium" style={{ color: "var(--fm-blue-text)" }}>
                           weight {e.weight.toFixed(2)}
                         </div>
                       </li>

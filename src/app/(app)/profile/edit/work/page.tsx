@@ -148,7 +148,7 @@ export default async function WorkEditPage() {
           <CardEyebrow>Your contracts</CardEyebrow>
           {myActiveContracts.length > 0 && (
             <div className="mt-4">
-              <p className="text-xs uppercase tracking-wider text-brand-magenta">
+              <p className="text-xs uppercase tracking-wider text-brand-magentaText">
                 Currently active
               </p>
               <ul className="mt-2 space-y-2">
@@ -159,7 +159,7 @@ export default async function WorkEditPage() {
                   >
                     <Link
                       href={`/projects/${p.id}`}
-                      className="text-sm font-medium hover:text-brand-magenta"
+                      className="text-sm font-medium hover:text-brand-magentaText"
                     >
                       {p.title}
                     </Link>
@@ -184,7 +184,7 @@ export default async function WorkEditPage() {
                   >
                     <Link
                       href={`/projects/${p.id}`}
-                      className="text-sm hover:text-brand-magenta"
+                      className="text-sm hover:text-brand-magentaText"
                     >
                       {p.title}
                     </Link>

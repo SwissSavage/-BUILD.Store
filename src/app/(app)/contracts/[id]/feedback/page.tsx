@@ -68,7 +68,7 @@ export default async function ContractFeedbackPage({
         </p>
         <Link
           href="/"
-          className="mt-6 inline-block text-sm text-brand-magenta hover:underline"
+          className="mt-6 inline-block text-sm text-brand-magentaText hover:underline"
         >
           ← $BUILD.Store home
         </Link>
@@ -84,7 +84,7 @@ export default async function ContractFeedbackPage({
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
-      <div className="text-xs uppercase tracking-wider text-brand-magenta">
+      <div className="text-xs uppercase tracking-wider text-brand-magentaText">
         $BUILD.Store · Project wrap-up
       </div>
       <h1 className="mt-2 font-display text-3xl font-semibold">
@@ -173,8 +173,7 @@ export default async function ContractFeedbackPage({
 
             <button
               type="submit"
-              className="rounded-full px-5 py-2 text-sm font-medium text-white"
-              style={{ backgroundColor: "#D828A0" }}
+              className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
             >
               Submit feedback
             </button>

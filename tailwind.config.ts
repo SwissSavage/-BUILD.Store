@@ -27,6 +27,32 @@ const config: Config = {
           mid: "#1A1A1A",
           white: "#FFFFFF",
           muted: "#666666",
+
+          // ── Readable tints (2026-09-03) ────────────────────────
+          //
+          // Rob: magenta may be hard to see for colour blind people.
+          // He was right, and measuring made it worse than it looked.
+          // The canonical magenta scores 3.92 against a card and 4.44
+          // behind white button text. Both fail WCAG AA.
+          //
+          // These are the SAME HUES, lifted in lightness until they
+          // pass. Use them anywhere the colour is carrying text a
+          // person has to read. The canonical values above stay for
+          // fills, borders, gradients and marks, where contrast is
+          // not being asked to do reading work.
+          //
+          // Do not darken these back toward the canonical values
+          // without re-measuring. The whole point is the numbers.
+          magentaText: "#E052B3", // 5.00 on card, 6.03 on black
+          blueText: "#5B79F1",    // 4.52 on card, 5.45 on black
+          greenText: "#2FD39B",   // lifted; canonical green is 2.83 on card
+          redText: "#EA6262",     // 5.32 on card
+
+          // Gradient stops for the primary button. Lightened to 65% so
+          // BLACK text clears AA at every point along the sweep: the
+          // worst point is the blue end at 5.45.
+          gradFrom: "#E468BC",
+          gradTo: "#5B79F1",
         },
         // Semantic tokens — dark-only; mirrored in globals.css `:root`.
         // Use these in components instead of raw brand.* so the layer

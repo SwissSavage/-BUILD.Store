@@ -90,7 +90,7 @@ export default async function AdminPoolsPage() {
         </div>
         <Link
           href="/admin/audit-log?resource=project"
-          className="text-xs text-brand-magenta hover:underline"
+          className="text-xs text-brand-magentaText hover:underline"
         >
           Settlement audit trail →
         </Link>

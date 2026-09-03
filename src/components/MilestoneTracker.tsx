@@ -116,7 +116,7 @@ export function MilestoneTracker({
                   className="mt-2 rounded-md px-2 py-1 text-[11px]"
                   style={{
                     backgroundColor: "rgba(216, 40, 160, 0.08)",
-                    color: "#D828A0",
+                    color: "var(--fm-magenta-text)",
                   }}
                 >
                   {m.blockerNote}
@@ -150,7 +150,7 @@ function DueLabel({ milestone }: { milestone: ProjectMilestone }) {
   if (days === 1) return <>Due tomorrow ({formatDate(milestone.dueAt)})</>;
   if (days === 0) return <>Due today</>;
   return (
-    <span style={{ color: "#D828A0" }}>
+    <span style={{ color: "var(--fm-magenta-text)" }}>
       Overdue by {Math.abs(days)} day{Math.abs(days) === 1 ? "" : "s"}{" "}
       ({formatDate(milestone.dueAt)})
     </span>

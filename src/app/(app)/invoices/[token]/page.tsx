@@ -86,7 +86,7 @@ export default async function ClientInvoicePage({
     <div className="mx-auto max-w-3xl px-6 py-12">
       {/* Letterhead */}
       <header className="border-b border-[var(--surface-border)] pb-6">
-        <div className="text-xs uppercase tracking-wider text-brand-magenta">
+        <div className="text-xs uppercase tracking-wider text-brand-magentaText">
           Future Modern Builderberg LLC
         </div>
         <h1 className="mt-2 font-display text-3xl font-semibold">
@@ -182,13 +182,13 @@ export default async function ClientInvoicePage({
                 <tr>
                   <td
                     className="pt-2 text-xs uppercase tracking-wider"
-                    style={{ color: "#007048" }}
+                    style={{ color: "var(--fm-green-text)" }}
                   >
                     Received to date
                   </td>
                   <td
                     className="pt-2 text-right font-mono text-sm"
-                    style={{ color: "#007048" }}
+                    style={{ color: "var(--fm-green-text)" }}
                   >
                     −${Number(invoice.paidAmount).toLocaleString()}
                   </td>
@@ -230,7 +230,7 @@ export default async function ClientInvoicePage({
                 Contact us at{" "}
                 <a
                   href="mailto:billing@futuremodern.example"
-                  className="underline hover:text-brand-magenta"
+                  className="underline hover:text-brand-magentaText"
                 >
                   billing@futuremodern.example
                 </a>{" "}
@@ -309,7 +309,7 @@ export default async function ClientInvoicePage({
           us at{" "}
           <a
             href="mailto:billing@futuremodern.example"
-            className="underline hover:text-brand-magenta"
+            className="underline hover:text-brand-magentaText"
           >
             billing@futuremodern.example
           </a>

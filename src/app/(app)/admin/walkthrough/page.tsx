@@ -347,7 +347,7 @@ export default async function WalkthroughPage() {
             <li key={s.id}>
               <a
                 href={`#${s.id}`}
-                className="text-brand-magenta hover:underline"
+                className="text-brand-magentaText hover:underline"
               >
                 {idx + 1}. {s.label}
               </a>
@@ -545,7 +545,7 @@ function TourSection({ section }: { section: TourSection }) {
             <input type="hidden" name="target" value={section.viewAsTarget} />
             <button
               type="submit"
-              className="rounded-full bg-brand-magenta px-5 py-2 text-sm text-white hover:opacity-90"
+              className="fm-btn-primary rounded-full px-5 py-2 text-sm"
             >
               {section.viewAsLabel} →
             </button>
@@ -565,7 +565,7 @@ function TourSection({ section }: { section: TourSection }) {
             className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-4 py-3"
           >
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-brand-magenta/40 text-[11px] font-medium text-brand-magenta">
+              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-brand-magenta/40 text-[11px] font-medium text-brand-magentaText">
                 {i + 1}
               </div>
               <div className="min-w-0 flex-1">
@@ -574,7 +574,7 @@ function TourSection({ section }: { section: TourSection }) {
                   {step.href && (
                     <Link
                       href={step.href}
-                      className="ml-2 text-xs text-brand-magenta hover:underline"
+                      className="ml-2 text-xs text-brand-magentaText hover:underline"
                     >
                       Open {step.href} →
                     </Link>

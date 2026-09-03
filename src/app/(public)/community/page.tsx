@@ -75,7 +75,7 @@ export default async function CommunityChatPage() {
   // Fallback nav for the join CTA to soft-nudge viewers into signup.
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
-      <div className="text-xs uppercase tracking-wider text-brand-magenta">
+      <div className="text-xs uppercase tracking-wider text-brand-magentaText">
         Community
       </div>
       <h1 className="mt-2 font-display text-4xl font-semibold">
@@ -107,7 +107,7 @@ export default async function CommunityChatPage() {
               </p>
               <button
                 type="submit"
-                className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-white hover:opacity-90"
+                className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
               >
                 Post
               </button>
@@ -127,14 +127,14 @@ export default async function CommunityChatPage() {
             Sign in to post.{" "}
             <Link
               href="/signin?next=/community"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               Sign in
             </Link>
             {" "}or{" "}
             <Link
               href="/whitelist"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               join the whitelist
             </Link>
@@ -176,7 +176,7 @@ export default async function CommunityChatPage() {
                     {r.scrubbedBody}
                   </p>
                   {hits.length > 0 && (
-                    <p className="mt-2 text-[10px] uppercase tracking-wider text-brand-magenta">
+                    <p className="mt-2 text-[10px] uppercase tracking-wider text-brand-magentaText">
                       Auto-scrubbed: {hits.join(", ")}
                     </p>
                   )}
@@ -193,7 +193,7 @@ export default async function CommunityChatPage() {
                       )}
                       <button
                         type="submit"
-                        className="text-[11px] text-ink-faint hover:text-brand-magenta"
+                        className="text-[11px] text-ink-faint hover:text-brand-magentaText"
                       >
                         {isAdmin && user?.id !== r.userId
                           ? "Moderate → remove"

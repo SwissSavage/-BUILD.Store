@@ -61,7 +61,7 @@ export default async function ClientFeedbackConfirmPage({
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
       <header>
-        <div className="text-xs uppercase tracking-wider text-brand-magenta">
+        <div className="text-xs uppercase tracking-wider text-brand-magentaText">
           $BUILD.Store · Feedback confirmation
         </div>
         <h1 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
@@ -176,7 +176,7 @@ export default async function ClientFeedbackConfirmPage({
               <input type="hidden" name="token" value={token} />
               <button
                 type="submit"
-                className="w-full rounded-full bg-brand-magenta py-2.5 text-sm font-medium text-brand-white hover:bg-brand-magenta/90"
+                className="fm-btn-primary w-full rounded-full py-2.5 text-sm font-medium"
               >
                 Confirm rating
               </button>
@@ -202,7 +202,7 @@ export default async function ClientFeedbackConfirmPage({
               />
               <button
                 type="submit"
-                className="w-full rounded-full border border-brand-magenta py-2.5 text-sm font-medium text-brand-magenta hover:bg-brand-magenta/5"
+                className="w-full rounded-full border border-brand-magenta py-2.5 text-sm font-medium text-brand-magentaText hover:bg-brand-magenta/5"
               >
                 Dispute
               </button>

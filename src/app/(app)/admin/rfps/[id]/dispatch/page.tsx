@@ -134,7 +134,7 @@ export default async function RfpDispatchPage({
       <div className="mt-4 flex gap-3 text-xs">
         <Link
           href={`/admin/rfps/${rfp.id}/bids`}
-          className="rounded-full border border-brand-magenta/40 px-3 py-1 text-brand-magenta hover:bg-brand-magenta/10"
+          className="rounded-full border border-brand-magenta/40 px-3 py-1 text-brand-magentaText hover:bg-brand-magenta/10"
         >
           View bids received → compile client quote
         </Link>
@@ -221,7 +221,7 @@ export default async function RfpDispatchPage({
 
             <button
               type="submit"
-              className="rounded-full bg-brand-magenta px-5 py-2 text-sm font-medium text-white hover:opacity-90"
+              className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
             >
               Dispatch quote requests to selected
             </button>
@@ -302,7 +302,7 @@ export default async function RfpDispatchPage({
 
           <button
             type="submit"
-            className="rounded-full border border-brand-magenta px-5 py-2 text-sm font-medium text-brand-magenta hover:bg-brand-magenta hover:text-white"
+            className="rounded-full border border-brand-magenta px-5 py-2 text-sm font-medium text-brand-magentaText hover:bg-brand-magenta hover:text-black"
           >
             Generate invite for external talent
           </button>
@@ -310,7 +310,7 @@ export default async function RfpDispatchPage({
             Grab the invite URL from{" "}
             <Link
               href="/admin/members/invite"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               /admin/members/invite
             </Link>

@@ -59,7 +59,7 @@ export default async function ProductDetailPage({
         </p>
         <Link
           href="/store"
-          className="mt-6 inline-block text-sm text-brand-magenta hover:underline"
+          className="mt-6 inline-block text-sm text-brand-magentaText hover:underline"
         >
           ← Back to the store
         </Link>
@@ -237,7 +237,7 @@ export default async function ProductDetailPage({
 
           <p className="mt-4 text-xs text-ink-faint">
             See your past orders under{" "}
-            <Link href="/orders" className="text-brand-magenta hover:underline">
+            <Link href="/orders" className="text-brand-magentaText hover:underline">
               /orders
             </Link>
             .

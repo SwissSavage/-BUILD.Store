@@ -389,7 +389,7 @@ export default async function SettlePage({
             <em>delivery lead</em> or <em>contributor</em> — start with{" "}
             <Link
               href={`/admin/contracts/${id}/attribution`}
-              className="underline hover:text-brand-magenta"
+              className="underline hover:text-brand-magentaText"
             >
               the attribution ledger
             </Link>
@@ -441,7 +441,7 @@ export default async function SettlePage({
                         {u && !u.stripePayoutsEnabled && (
                           <p
                             className="mt-0.5 text-xs"
-                            style={{ color: "#E53E3E" }}
+                            style={{ color: "var(--fm-red-text)" }}
                           >
                             Stripe payouts not enabled — transfer will fail.
                           </p>
@@ -561,8 +561,7 @@ export default async function SettlePage({
             </p>
             <button
               type="submit"
-              className="mt-4 rounded-full px-6 py-2.5 text-sm font-medium text-white"
-              style={{ backgroundColor: "#D828A0" }}
+              className="fm-btn-primary mt-4 rounded-full px-6 py-2.5 text-sm font-medium"
             >
               Settle and dispatch payouts
             </button>
@@ -891,7 +890,7 @@ async function BonusReleasePanel({
             </label>
             <button
               type="submit"
-              className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magenta"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Capture PM rating
             </button>

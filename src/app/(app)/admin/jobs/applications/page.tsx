@@ -130,7 +130,7 @@ export default async function AdminJobsApplicationsPage() {
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-ink-muted">
             Talent applying to open roles on{" "}
-            <Link href="/jobs" className="text-brand-magenta hover:underline">
+            <Link href="/jobs" className="text-brand-magentaText hover:underline">
               /jobs
             </Link>
             . Approve routes them to the client + fires an inbox ping;
@@ -139,7 +139,7 @@ export default async function AdminJobsApplicationsPage() {
         </div>
         <Link
           href="/admin/inbound"
-          className="text-xs text-brand-magenta hover:underline"
+          className="text-xs text-brand-magentaText hover:underline"
         >
           ← Unified inbound
         </Link>
@@ -247,7 +247,7 @@ function ApplicationCard({
               href={row.portfolioLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               Portfolio ↗
             </a>

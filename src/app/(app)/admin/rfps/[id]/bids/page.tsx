@@ -127,7 +127,7 @@ export default async function RfpBidCompilePage({
       <div className="mt-4 flex gap-3 text-xs">
         <Link
           href={`/admin/rfps/${id}/dispatch`}
-          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
         >
           ← Dispatch to more talent
         </Link>
@@ -135,7 +135,7 @@ export default async function RfpBidCompilePage({
           href={`/contracts/${id}`}
           target="_blank"
           rel="noreferrer"
-          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magenta"
+          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
         >
           Public contract page ↗
         </Link>
@@ -152,7 +152,7 @@ export default async function RfpBidCompilePage({
           <div className="mt-3 flex gap-3">
             <Link
               href="/admin/cooperative-quotes"
-              className="text-xs text-brand-magenta hover:underline"
+              className="text-xs text-brand-magentaText hover:underline"
             >
               → Manage existing quote
             </Link>
@@ -160,7 +160,7 @@ export default async function RfpBidCompilePage({
               href={`/quotes/${existingQuote.clientToken}`}
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-brand-magenta hover:underline"
+              className="text-xs text-brand-magentaText hover:underline"
             >
               → Client-facing view
             </Link>
@@ -174,7 +174,7 @@ export default async function RfpBidCompilePage({
             No bids yet. Dispatch quote requests to talent from the{" "}
             <Link
               href={`/admin/rfps/${id}/dispatch`}
-              className="text-brand-magenta hover:underline"
+              className="text-brand-magentaText hover:underline"
             >
               dispatch surface
             </Link>
@@ -244,7 +244,7 @@ export default async function RfpBidCompilePage({
                             · {b.proposedRole}
                           </span>
                           {scrub.hits.length > 0 && (
-                            <span className="rounded-full bg-brand-magenta/15 px-2 py-0.5 text-[10px] font-medium text-brand-magenta">
+                            <span className="rounded-full bg-brand-magenta/15 px-2 py-0.5 text-[10px] font-medium text-brand-magentaText">
                               PII flagged: {scrub.hits.join(", ")}
                             </span>
                           )}
@@ -333,7 +333,7 @@ export default async function RfpBidCompilePage({
 
           <button
             type="submit"
-            className="rounded-full bg-brand-magenta px-6 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="fm-btn-primary rounded-full px-6 py-2 text-sm font-medium"
           >
             Compile into client quote
           </button>

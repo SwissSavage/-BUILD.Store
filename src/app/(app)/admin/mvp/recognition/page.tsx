@@ -203,7 +203,7 @@ export default async function AdminFutureModernistPage() {
                     <input type="hidden" name="recognitionId" value={r.id} />
                     <button
                       type="submit"
-                      className="text-[11px] text-brand-magenta underline hover:opacity-80"
+                      className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                     >
                       Rescind
                     </button>
@@ -275,7 +275,7 @@ function SelectForm({
         className="rounded-lg p-3 text-xs"
         style={{ backgroundColor: "rgba(80, 112, 240, 0.08)" }}
       >
-        <span className="text-[11px] uppercase tracking-wider" style={{ color: "#5070F0" }}>
+        <span className="text-[11px] uppercase tracking-wider" style={{ color: "var(--fm-blue-text)" }}>
           Co-brand policy reminder
         </span>
         <p className="mt-1 text-ink">

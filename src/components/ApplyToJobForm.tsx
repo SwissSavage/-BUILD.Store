@@ -107,7 +107,7 @@ export function ApplyToJobForm({ jobId, jobTitle }: Props) {
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-full bg-brand-magenta px-5 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
+          className="fm-btn-primary rounded-full px-5 py-2 text-sm disabled:opacity-50"
         >
           {isPending ? "Submitting…" : "Submit application"}
         </button>

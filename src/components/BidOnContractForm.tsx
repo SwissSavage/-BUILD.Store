@@ -15,6 +15,7 @@ import { useActionState } from "react";
 import { submitContractBid } from "@/lib/application-actions";
 import type { ProposalResult } from "@/lib/application-actions";
 import { Card } from "@/components/Card";
+import { DepersonalizeNotice } from "@/components/DepersonalizeNotice";
 
 interface Props {
   contractId: string;
@@ -167,6 +168,12 @@ export function BidOnContractForm({
           </p>
         </div>
 
+        {/* Governs both the pitch and the attachments below it, which is
+            why it sits above the pair rather than beside either one. The
+            rule used to live only in the pitch placeholder, so it was
+            gone by the second keystroke. */}
+        <DepersonalizeNotice context="proposal" />
+
         <div>
           <label htmlFor="pitch" className="text-sm font-medium">
             Pitch <span className="text-ink-muted">(required)</span>
@@ -178,7 +185,7 @@ export function BidOnContractForm({
             minLength={20}
             rows={5}
             defaultValue={existing?.pitch ?? ""}
-            placeholder="Approach + relevant past work. Depersonalize any client names — Future Modern doesn't expose upstream clients."
+            placeholder="Your approach, and the relevant past work. Describe the client rather than naming them."
             className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
           />
         </div>

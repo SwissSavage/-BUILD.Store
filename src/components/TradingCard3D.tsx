@@ -12,9 +12,10 @@
  *
  * Layer stack, deepest → frontmost:
  *   1. Backdrop — tier-specific gradient. Sits deep. Moves least.
- *   2. FM watermark — mid-plane. Anchors the composition.
- *   3. Portrait — bg-removed character or Avatar fallback. Frontmost.
+ *   2. Portrait — bg-removed character or Avatar fallback.
  *      Breaks the card plane when tilted (the Marvel Snap magic).
+ *   3. FM watermark — above the portrait, so a full-bleed profile
+ *      photo cannot bury it.
  *   4. Mouse-following holo sheen — surface layer, radial gradient
  *      positioned at the cursor via CSS custom properties.
  *
@@ -189,15 +190,7 @@ export function TradingCard3D({
           aria-hidden
         />
 
-        {/* Layer 2 — FM watermark. Mid-plane anchor. */}
-        <div
-          className="fm-card-3d-layer-mid pointer-events-none absolute right-4 top-4 select-none text-[10px] font-bold uppercase tracking-[0.2em] text-white/40"
-          aria-hidden
-        >
-          Future Modern
-        </div>
-
-        {/* Layer 3 — Portrait. Frontmost. Breaks the plane.
+        {/* Layer 2 — Portrait. Breaks the plane.
         
             Same three states as TradingCard, kept in step deliberately:
             studio portrait, then profile photo filled and faded, then
@@ -251,6 +244,27 @@ export function TradingCard3D({
             </span>
           </div>
         )}
+
+        {/* Layer 3 — FM watermark.
+
+            PAINTED AFTER THE PORTRAIT, ON ITS OWN PLANE (2026-09-02).
+            It used to be layer 2 at translateZ(0), behind the portrait
+            layer at translateZ(40px). Bayu: "the future modern top
+            right overlay disappear when you upload a profile pic."
+            Exactly that: with no photo the initials are mostly
+            transparent so the mark showed through, and a full-bleed
+            photo painted straight over it. Two things had to change,
+            because the card composites two different ways: on hover
+            devices preserve-3d sorts by translateZ, and on touch
+            devices the media query strips every transform and paint
+            falls back to DOM order. So the mark needs BOTH a higher
+            plane and a later position in the markup. */}
+        <div
+          className="fm-card-3d-layer-mark pointer-events-none absolute right-4 top-4 select-none text-[10px] font-bold uppercase tracking-[0.2em] text-white/70 mix-blend-screen"
+          aria-hidden
+        >
+          Future Modern
+        </div>
 
         {/* Layer 4 — Mouse-following holo sheen. Surface plane. */}
         <div className="fm-card-3d-sheen pointer-events-none absolute inset-0" aria-hidden />

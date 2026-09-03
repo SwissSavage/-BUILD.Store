@@ -1,7 +1,6 @@
 {
-  "count": 52,
+  "count": 50,
   "files": [
-    "src/app/(app)/admin/categories/page.tsx",
     "src/app/(app)/admin/chat/page.tsx",
     "src/app/(app)/admin/cohort/page.tsx",
     "src/app/(app)/admin/contracts/[id]/ledger/page.tsx",
@@ -49,7 +48,6 @@
     "src/lib/pool-balances.ts",
     "src/lib/readers/inbound-submissions.ts",
     "src/lib/readers/project-applications.ts",
-    "src/lib/store-category-actions.ts",
     "src/lib/talent-match.ts",
     "src/lib/talent-tag-actions.ts",
     "src/lib/wallet-connect-actions.ts"

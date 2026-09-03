@@ -164,8 +164,11 @@ export default async function SellerApplicationPage() {
             >
               Open fulfillment dashboard →
             </Link>
+            {/* Pointed at /profile until 2026-09-03, which has never
+                had a listing form on it. The button existed, the page
+                it led to did not do the thing. */}
             <Link
-              href="/profile"
+              href="/profile/seller/products"
               className="inline-block rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magenta"
             >
               Draft a new listing →

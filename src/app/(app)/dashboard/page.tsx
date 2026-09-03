@@ -279,6 +279,12 @@ export default async function DashboardPage() {
             >
               Open fulfillment dashboard →
             </Link>
+            <Link
+              href="/profile/seller/products"
+              className="self-start rounded-full border border-[var(--surface-border)] px-5 py-2.5 text-sm hover:border-brand-magenta hover:text-brand-magenta md:self-auto"
+            >
+              Your listings →
+            </Link>
           </div>
         </section>
       )}

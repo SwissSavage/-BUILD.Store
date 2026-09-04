@@ -4152,6 +4152,12 @@ export type AuditLogAction =
   | "user.admin_flag_changed"
   | "user.suspended"
   | "user.reactivated"
+  /**
+   * Hard delete. The entry outlives the row it describes, which works
+   * because auditLogEntries.actorUserId and resourceId carry no foreign
+   * key to users.id. `before` holds the full snapshot for that reason.
+   */
+  | "user.deleted"
   | "user.invited"
   | "user.invite_revoked"
   | "user.invite_consumed"
@@ -4276,6 +4282,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "user.admin_flag_changed": "Admin flag changed",
   "user.suspended": "Account suspended",
   "user.reactivated": "Account reactivated",
+  "user.deleted": "Account permanently deleted",
   "user.invited": "Invite issued",
   "user.invite_revoked": "Invite revoked",
   "user.invite_consumed": "Invite consumed",

@@ -156,10 +156,37 @@ export async function executeBonusDecision(formData: FormData) {
     gate: project.bonusGate,
   });
 
+  // ────────────────────────────────────────────────────────────
+  // CLAIM BEFORE PAYING (2026-09-04)
+  //
+  // This used to sit inside the reclaim branch only. The release
+  // branch assigned `project.bonusDecision = "released"` to the row
+  // object in memory and nothing ever wrote it, which is the exact
+  // failure recordBonusDecision's own doc comment describes. The
+  // consequences on the release path:
+  //
+  //   - The re-decide guard above reads bonusDecision from the
+  //     database. After a release it was still null, so the guard
+  //     never tripped and executeBonusDecision could be run again on
+  //     the same contract. Every run fired
+  //     writeStandardSettlementSplits and issueBuildFromSettlement.
+  //     A double click paid the bonus twice and minted $BUILD twice.
+  //   - The audit entry recorded "released" while the row stayed
+  //     pending, so the log and the data disagreed about whether the
+  //     money had moved.
+  //
+  // It is now one guarded UPDATE for both outcomes, and it happens
+  // BEFORE any money moves. The update is the claim: whoever wins it
+  // is the request that gets to pay. A losing request throws here,
+  // having spent nothing. Recording a decision and then failing to
+  // pay is visible and recoverable; paying twice is neither.
+  // ────────────────────────────────────────────────────────────
+  const outcome = decision.outcome === "reclaim" ? "reclaimed" : "released";
+  await recordBonusDecision(projectId, outcome);
+  project.bonusDecision = outcome;
+
   if (decision.outcome === "reclaim") {
     await creditRecoveryPool(projectId, project.talentBonusAmount);
-    project.bonusDecision = "reclaimed";
-    await recordBonusDecision(projectId, "reclaimed");
   } else {
     // Release or release-by-default both pay talent. In sandbox
     // we also cascade a $BUILD distribution across the project's
@@ -178,8 +205,6 @@ export async function executeBonusDecision(formData: FormData) {
     // $BUILD side fires via the multisig propose flow. Both routes
     // still call this same cascade so voucher accounting stays
     // consistent.
-    project.bonusDecision = "released";
-
     const members = project.assignedMemberIds;
     const bonusAmount = Number(project.talentBonusAmount);
     if (members.length > 0 && bonusAmount > 0) {

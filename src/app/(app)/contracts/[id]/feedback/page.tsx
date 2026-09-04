@@ -16,7 +16,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProjectById } from "@/lib/readers/projects";
-import { hasFeedbackForContext } from "@/lib/mock-data/customer-feedback";
+import { customerFeedbackReader, eq, safely } from "@/lib/readers";
+import { customerFeedback as customerFeedbackTable } from "@/db/schema";
 import { submitCustomerFeedbackByLink } from "@/lib/customer-feedback-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import {
@@ -80,7 +81,19 @@ export default async function ContractFeedbackPage({
   if (!project) notFound();
 
   const clientLabel = CLIENT_LABELS[project.clientId] ?? project.clientId;
-  const already = hasFeedbackForContext(project.id);
+  // Reader swap 2026-09-03. This is the magic-link page a CLIENT
+  // lands on to rate an engagement, and "have they already left
+  // feedback" was answered from the fixture. A client who had just
+  // submitted could be asked again, and one who never had could be
+  // told their feedback was received.
+  const existingFeedback = await safely(
+    () =>
+      customerFeedbackReader.where(
+        eq(customerFeedbackTable.contextId, project.id),
+      ),
+    [],
+  );
+  const already = existingFeedback.length > 0;
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">

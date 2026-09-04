@@ -30,11 +30,12 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
 import { getAllUsers } from "@/lib/readers/users";
-import { mvpScoreReader, safely } from "@/lib/readers";
 import {
-  applicationsForProject,
-  latestApplication,
-} from "@/lib/mock-data/project-applications";
+  getMilestonesForProject,
+  mvpScoreReader,
+  safely,
+} from "@/lib/readers";
+import { getApplicationsForProject } from "@/lib/readers/project-applications";
 import {
   applyToProject,
   withdrawProjectApplication,
@@ -61,7 +62,6 @@ import {
 } from "@/components/TradingCard";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import type { MvpScore } from "@/lib/types";
-import { milestonesForProject } from "@/lib/mock-data/project-milestones";
 import { updateMilestoneStatus } from "@/lib/milestone-actions";
 
 const TALENT_MILESTONE_STATUSES: MilestoneStatus[] = [
@@ -135,9 +135,20 @@ export default async function ProjectDetailPage({
     isInternal &&
     (project.status === "open" || project.status === "in_progress");
 
-  const myLatest = user ? latestApplication(project.id, user.id) : null;
+  // Reader swap 2026-09-03. The proposal list on a project page, and
+  // "have I already applied", both read the fixture. So a member
+  // looking at a real internal project saw seed proposals from seed
+  // people, and the form did not know they had already applied.
+  const allApps = await safely(
+    () => getApplicationsForProject(project.id),
+    [],
+  );
+  const myLatest = user
+    ? allApps
+        .filter((a) => a.userId === user.id)
+        .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))[0] ?? null
+    : null;
   const myPending = myLatest && myLatest.status === "pending" ? myLatest : null;
-  const allApps = applicationsForProject(project.id);
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -738,7 +749,16 @@ function ApplicationQueue({
   );
 }
 
-function ProjectMilestonesSection({
+/**
+ * Reader swap 2026-09-03: read milestonesForProject off the fixture,
+ * so a member looking at a real project saw seed milestones with seed
+ * owners, and their own assigned work was nowhere.
+ *
+ * Async server component rather than a prop drilled from the page,
+ * because this section renders conditionally and loading its data
+ * only when it renders is the cheaper shape.
+ */
+async function ProjectMilestonesSection({
   project,
   user,
   onTeam,
@@ -747,7 +767,10 @@ function ProjectMilestonesSection({
   user: User;
   onTeam: boolean;
 }) {
-  const milestones = milestonesForProject(project.id);
+  const milestones = await safely(
+    () => getMilestonesForProject(project.id),
+    [],
+  );
   if (milestones.length === 0) return null;
 
   const mine = milestones.filter((m) => m.ownerUserId === user.id);

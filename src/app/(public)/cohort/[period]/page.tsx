@@ -8,10 +8,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import {
-  cohortSpotlightsByRecency,
-  findCohortSpotlight,
-} from "@/lib/mock-data/cohort-spotlights";
 import { eq } from "drizzle-orm";
 import { cohortSpotlights } from "@/db/schema";
 import { getAllUsers } from "@/lib/readers/users";
@@ -29,15 +25,19 @@ import { PARAGRAPH_BASE } from "@/lib/mock-data/articles";
 
 export const dynamic = "force-dynamic";
 
-/** Static-rendered — reads build-time arrays. */
-
-/**
- * Pre-generate the static params for every known period so Next
- * builds a page for each spotlight at build time.
+/*
+ * generateStaticParams was removed on 2026-09-03.
+ *
+ * It enumerated periods from the cohort spotlight FIXTURE, so Next
+ * pre-built a page for every seed period and none for the real ones.
+ * The page is force-dynamic anyway and looks the period up in
+ * Postgres below, so the pre-render list was doing nothing except
+ * announcing seed periods as real URLs.
+ *
+ * Pointing it at the database instead would not have helped: CI
+ * builds with a dummy DATABASE_URL, so it would enumerate nothing.
+ * Rendering on demand is the honest shape for this page.
  */
-export function generateStaticParams() {
-  return cohortSpotlightsByRecency().map((s) => ({ period: s.periodKey }));
-}
 
 interface PageProps {
   params: Promise<{ period: string }>;

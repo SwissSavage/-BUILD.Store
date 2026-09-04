@@ -16,12 +16,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getAllUsers } from "@/lib/readers/users";
-import { safely } from "@/lib/readers";
 import {
-  availabilityForUser,
-  blocksForUser,
-  upcomingMeetingsForUser,
-} from "@/lib/mock-data/calendar";
+  getAvailabilityForUser,
+  getBlocksForUser,
+  getUpcomingMeetingsForUser,
+  minutesReader,
+  safely,
+} from "@/lib/readers";
 import {
   addAvailability,
   addBlock,
@@ -32,7 +33,6 @@ import {
   removeAvailability,
   removeBlock,
 } from "@/lib/calendar-actions";
-import { minuteForMeeting } from "@/lib/mock-data/meeting-minutes";
 import {
   captureMeetingMinute,
   addMinuteCorrection,
@@ -101,11 +101,24 @@ export default async function ProfileCalendarPage() {
     );
   }
 
-  const availability = availabilityForUser(user.id);
-  const blocks = blocksForUser(user.id);
-  const meetings = upcomingMeetingsForUser(user.id, 14);
+  // Reader swap 2026-09-03. A member's own calendar showed seed
+  // availability, seed blocks and seed meetings, so anything they
+  // declared through the forms on this very page was invisible on it.
+  const [availability, blocks, meetings] = await Promise.all([
+    safely(() => getAvailabilityForUser(user.id), []),
+    safely(() => getBlocksForUser(user.id), []),
+    safely(() => getUpcomingMeetingsForUser(user.id, 14), []),
+  ]);
   // Reader swap 2026-08-29: was MOCK_USERS, so the peer picker listed
   // seed members instead of the real cooperative.
+  // Reader swap 2026-09-03. Minutes were looked up from the fixture
+  // inside the render loop, so a member saw seed minutes attached to
+  // their real meetings and anything they had actually captured was
+  // invisible. Loaded once and indexed rather than queried per meeting
+  // in the loop.
+  const allMinutes = await safely(() => minutesReader.all(), []);
+  const minuteByMeeting = new Map(allMinutes.map((m) => [m.meetingId, m]));
+
   const { users: roster } = await safely(() => getAllUsers(), {
     users: [],
     source: "postgres" as const,
@@ -247,7 +260,7 @@ export default async function ProfileCalendarPage() {
                       Internal Member-to-Member meetings require minutes;
                       external + governance can capture too. */}
                   {(() => {
-                    const minute = minuteForMeeting(m.id);
+                    const minute = minuteByMeeting.get(m.id) ?? null;
                     return (
                       <details className="mt-3 rounded-lg bg-[var(--surface)] p-3">
                         <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-brand-magentaText">

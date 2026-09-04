@@ -10,12 +10,27 @@
  *   - Hidden once feedback is already on file — switches to a thank-you stub.
  */
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
-import { hasFeedbackForContext } from "@/lib/mock-data/customer-feedback";
+import { customerFeedbackReader, eq, safely } from "@/lib/readers";
+import { customerFeedback as customerFeedbackTable } from "@/db/schema";
 import { submitBuyerFeedback } from "@/lib/customer-feedback-actions";
 import { StarPicker, ProseField, YesNoToggle } from "@/components/feedback-fields";
 
-export function BuyerFeedbackSection({ orderId }: { orderId: string }) {
-  const already = hasFeedbackForContext(orderId);
+/**
+ * Reader swap 2026-09-03. "Have they already left feedback?" was
+ * answered from the fixture, so a buyer who had just submitted was
+ * asked again, and one who had never been asked could be told their
+ * feedback was received because a seed row happened to share the id
+ * shape.
+ */
+export async function BuyerFeedbackSection({ orderId }: { orderId: string }) {
+  const existing = await safely(
+    () =>
+      customerFeedbackReader.where(
+        eq(customerFeedbackTable.contextId, orderId),
+      ),
+    [],
+  );
+  const already = existing.length > 0;
 
   if (already) {
     return (

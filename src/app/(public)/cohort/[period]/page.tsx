@@ -12,7 +12,7 @@ import { eq } from "drizzle-orm";
 import { cohortSpotlights } from "@/db/schema";
 import { getAllUsers } from "@/lib/readers/users";
 import { memberLabel } from "@/lib/member-label";
-import { spotlightReader } from "@/lib/readers";
+import { canonizationReader, safely, spotlightReader } from "@/lib/readers";
 import { publicName, type User } from "@/lib/types";
 import {
   activeRecognitionUserIds,
@@ -68,6 +68,19 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
 
   const { users: roster } = await getAllUsers();
   const recognizedIds = await activeRecognitionUserIds();
+
+  // Canonization counts for the on-chain badge. It takes a count now
+  // rather than fetching its own: it renders inside TalentHand, which
+  // is a client component, so a read inside the badge pulled `pg`
+  // into the client bundle and failed the production build.
+  const allCanonizations = await safely(
+    () => canonizationReader.all(),
+    [],
+  );
+  const canonCountByUser = new Map<string, number>();
+  for (const c of allCanonizations) {
+    canonCountByUser.set(c.userId, (canonCountByUser.get(c.userId) ?? 0) + 1);
+  }
   const spotlightUsers = spotlight.userIds
     .map((id) => roster.find((u) => u.id === id))
     .filter((u): u is User => !!u);
@@ -123,7 +136,7 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
                         <CardTitle className="text-lg">
                           {publicName(user)}
                         </CardTitle>
-                        <OnChainBadge userId={user.id} size="sm" />
+                        <OnChainBadge count={canonCountByUser.get(user.id) ?? 0} size="sm" />
                       </div>
                       {memberLabel(user) && (
                         <p className="mt-0.5 text-sm text-ink-muted">

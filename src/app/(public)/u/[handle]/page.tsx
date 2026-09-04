@@ -336,7 +336,7 @@ export default async function PublicProfilePage({
           )}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <TierBadge tier={user.membershipTier} />
-            <OnChainBadge userId={user.id} size="sm" />
+            <OnChainBadge count={myCanonizations.length} size="sm" />
             {memberLabel(user) && (
               <span
                 className="rounded-full px-2.5 py-0.5 text-xs"

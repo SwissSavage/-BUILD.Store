@@ -18,11 +18,11 @@
  * canonization cards themselves. The badge itself is neutral so it
  * doesn't compete with the tier color the card already carries.
  */
-import { getCanonizationsForUser } from "@/lib/readers/recognitions";
-import { safely } from "@/lib/readers";
+
 
 interface OnChainBadgeProps {
-  userId: string;
+  /** How many canonizations this member holds. 0 renders nothing. */
+  count: number;
   /** Whether the badge should render as a link. Defaults to false; the
    *  caller decides based on viewer context. */
   href?: string;
@@ -33,31 +33,34 @@ interface OnChainBadgeProps {
 }
 
 /**
- * Reader swap 2026-09-03.
+ * PRESENTATIONAL ONLY. Takes the count, does not fetch it.
  *
- * This decided whether someone shows as on-chain by looking them up in
- * MOCK_CANONIZATIONS, so the badge was awarded by seed data. It renders
- * on /u/[handle], the team page, the cohort pages and the talent hand,
- * which is every surface where the claim is public. A badge saying a
- * member holds an on-chain canonization is a factual claim about the
- * chain, and it was being made from a fixture.
+ * 2026-09-03, in two moves. This used to read MOCK_CANONIZATIONS, so
+ * the badge was awarded by seed data on /u/[handle], the team page,
+ * the cohort pages and the talent hand. A badge claiming a member
+ * holds an on-chain canonization is a factual claim about the chain,
+ * and it was being made from a fixture.
  *
- * Now async. The old synchronous `isCanonized` export is gone rather
- * than left behind as a fixture-backed trap for the next caller.
+ * The first fix made it async and had it query directly. That broke
+ * the production build: TalentHand is a "use client" component, so
+ * importing this pulled `pg` into the client bundle and webpack could
+ * not resolve fs, dns, net or tls. `tsc` cannot see that; only
+ * `next build` can, which is why it reached CI.
+ *
+ * So the component stays dumb and the caller supplies `count`. Server
+ * components fetch it; client components receive it as data from
+ * whatever server component rendered them. A presentational badge has
+ * no business opening a database connection anyway.
  */
-export async function OnChainBadge({
-  userId,
+export function OnChainBadge({
+  count,
   href,
   size = "sm",
   className = "",
 }: OnChainBadgeProps) {
-  const canonizations = await safely(
-    () => getCanonizationsForUser(userId),
-    [],
-  );
-  if (canonizations.length === 0) return null;
+  if (count <= 0) return null;
 
-  const canonCount = canonizations.length;
+  const canonCount = count;
 
   const sizeClass =
     size === "md"

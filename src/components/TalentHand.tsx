@@ -64,6 +64,13 @@ export interface TalentHandEntry {
   >;
   tier: TradingCardTier;
   /**
+   * Canonizations this member holds. Passed in rather than fetched:
+   * this is a "use client" component, so a database read here drags
+   * `pg` into the client bundle and the build fails on unresolvable
+   * node builtins. Defaults to 0, which renders no badge.
+   */
+  canonCount?: number;
+  /**
    * Per-card context — why this person for this hand. One line,
    * plain English, no jargon. Optional; when absent the card renders
    * without the sub-line.
@@ -235,7 +242,7 @@ export function TalentHand({
                   <p className="truncate font-display text-base font-semibold">
                     {publicName(entry.user)}
                   </p>
-                  <OnChainBadge userId={entry.user.id} size="sm" />
+                  <OnChainBadge count={entry.canonCount ?? 0} size="sm" />
                 </div>
                 {memberLabel(entry.user, engagement) && (
                   <p className="mt-0.5 text-xs text-ink-muted">

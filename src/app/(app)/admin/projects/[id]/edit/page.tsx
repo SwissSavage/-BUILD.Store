@@ -134,6 +134,11 @@ export default async function EditProjectPage({
         </p>
         <form action={trashProject} className="mt-4 space-y-3">
           <input type="hidden" name="id" value={project.id} />
+          {/* Deleting from here removes the subject of THIS page, so
+              the action has to navigate rather than re-render a route
+              whose project no longer resolves. Without this the admin
+              lands on a 404. */}
+          <input type="hidden" name="returnTo" value="/admin/projects" />
           <label className={labelClass}>
             Reason (optional)
             <input

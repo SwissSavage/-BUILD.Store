@@ -22,6 +22,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { and, eq, isNotNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
@@ -35,6 +36,37 @@ import { getProjectById } from "@/lib/readers/projects";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { RETENTION_DAYS } from "@/lib/trash-retention";
 
+
+/**
+ * Where to land after a destructive action.
+ *
+ * Jamar: "When I deleted the test initiative, it led me to an error
+ * message, when it should just route back to the initiatives page
+ * without the test one."
+ *
+ * He deleted from /admin/projects/<id>/edit. The action revalidated,
+ * the page re-rendered, getProjectById filters `deleted_at IS NULL`,
+ * so the project it exists to display was gone and notFound() fired.
+ * The 404 was the page he was standing on disappearing under him.
+ *
+ * Revalidation alone cannot fix that: the problem is not stale data,
+ * it is that the current route stopped being valid. Only a navigation
+ * fixes it.
+ *
+ * Deleting from a LIST page should stay put, though, so the target is
+ * passed in rather than hardcoded. Validated against a fixed set
+ * because an unchecked `returnTo` from a form is an open redirect.
+ */
+const SAFE_RETURNS = new Set([
+  "/admin/projects",
+  "/admin/contracts",
+  "/admin/trash",
+]);
+
+function safeReturnTo(formData: FormData): string | null {
+  const raw = String(formData.get("returnTo") ?? "").trim();
+  return SAFE_RETURNS.has(raw) ? raw : null;
+}
 
 function revalidateProjectSurfaces(): void {
   revalidatePath("/projects");
@@ -106,6 +138,11 @@ export async function trashProject(formData: FormData) {
   });
 
   revalidateProjectSurfaces();
+
+  // Navigate, do not just revalidate. If this was fired from the
+  // project's own page, that page no longer has a subject.
+  const back = safeReturnTo(formData);
+  if (back) redirect(back);
 }
 
 /** Pull a project back out of the trash. */

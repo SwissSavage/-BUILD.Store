@@ -36,12 +36,14 @@ import {
   getRecognitionsForUser,
 } from "@/lib/readers";
 import {
+  deleteMember,
   reactivateUser,
   setMembershipTier,
   suspendUser,
   toggleAdminFlag,
   toggleProfilePublic,
 } from "@/lib/member-management-actions";
+import { getMemberFootprint } from "@/lib/readers/member-footprint";
 import { inviteMemberToDocumenso } from "@/lib/documenso-member-actions";
 import { getAgreementsForUser } from "@/lib/readers/agreements";
 import {
@@ -147,6 +149,18 @@ export default async function MemberDrillDown({
   });
 
   const isSelf = admin.id === user.id;
+
+  // Only costs the fourteen counts on a suspended account, which is the
+  // only state where deletion is on the table. Wrapped in safely so a
+  // footprint that cannot be read renders as "not deletable" rather
+  // than breaking the whole drill-down: failing closed is the point.
+  const footprint =
+    user.suspendedAt && !isSelf && !user.isAdmin
+      ? await safely(
+          () => getMemberFootprint(user.id, user.buildTokenBalance),
+          null,
+        )
+      : null;
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -256,6 +270,110 @@ export default async function MemberDrillDown({
               Reactivate account
             </button>
           </form>
+        </div>
+      )}
+
+      {/*
+        Permanent deletion. Only ever appears under the suspension
+        banner, because deleting is the second half of that decision.
+        The word "Permanent" does the work here rather than the border
+        colour, per the rule that colour never carries meaning alone.
+
+        `footprint` is the same getMemberFootprint call the server
+        action re-runs before it honours the request, so this panel
+        cannot offer something the action would refuse, and cannot hide
+        something it would allow. A null footprint means the read
+        failed, and a guard that cannot see has to fail closed.
+      */}
+      {user.suspendedAt && !isSelf && !user.isAdmin && (
+        <div className="mt-4 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-inset)] px-5 py-4">
+          <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+            Permanent deletion
+          </p>
+
+          {footprint === null && (
+            <p className="mt-2 text-sm text-ink-muted">
+              Could not read what this account is carrying, so deletion is
+              unavailable. The account stays suspended, which is the safe
+              state. Try again once the database is reachable.
+            </p>
+          )}
+
+          {footprint && !footprint.deletable && (
+            <>
+              <p className="mt-2 text-sm text-ink">
+                This account cannot be deleted. It is carrying records
+                that would be destroyed along with it:
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-ink-muted">
+                {footprint.blockers.map((b) => (
+                  <li key={b.table}>
+                    {b.label}: {b.count}{" "}
+                    <code className="text-[11px] text-ink-faint">
+                      {b.table}
+                    </code>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-ink-faint">
+                Suspension is the correct answer for an account with
+                history. It blocks sign-in and hides the profile while
+                keeping the record.
+              </p>
+            </>
+          )}
+
+          {footprint?.deletable && (
+            <>
+              <p className="mt-2 text-sm text-ink">
+                This account holds no agreements, payouts, portfolio,
+                standing or compliance history. It can be removed from
+                the members table entirely. There is no undo.
+              </p>
+              {footprint.clears.length > 0 && (
+                <p className="mt-2 text-xs text-ink-muted">
+                  Deleted with it:{" "}
+                  {footprint.clears
+                    .map((c) => `${c.label.toLowerCase()} (${c.count})`)
+                    .join(", ")}
+                  .
+                </p>
+              )}
+              <p className="mt-2 text-xs text-ink-faint">
+                The audit entry survives the account and keeps the email,
+                handle, tier and join date on record.
+              </p>
+              <form action={deleteMember} className="mt-3 space-y-2">
+                <input type="hidden" name="uid" value={user.id} />
+                <label className="block text-xs text-ink-muted">
+                  Type <code className="text-ink">{user.email}</code> to
+                  confirm
+                  <input
+                    type="text"
+                    name="confirmEmail"
+                    required
+                    autoComplete="off"
+                    className="mt-1 block w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-2 py-1 text-xs text-ink"
+                    placeholder={user.email}
+                  />
+                </label>
+                <textarea
+                  name="reason"
+                  required
+                  minLength={10}
+                  rows={2}
+                  className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-2 py-1 text-xs text-ink"
+                  placeholder="Reason (≥ 10 chars, recorded on the audit log)"
+                />
+                <button
+                  type="submit"
+                  className="rounded-full border border-brand-magenta/40 px-4 py-1.5 text-xs text-brand-magentaText hover:border-brand-magenta"
+                >
+                  Delete permanently
+                </button>
+              </form>
+            </>
+          )}
         </div>
       )}
 

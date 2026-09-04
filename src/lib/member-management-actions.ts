@@ -17,11 +17,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-stub";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { sessions, users } from "@/db/schema";
 import { getUserById } from "@/lib/readers/users";
+import {
+  describeBlockers,
+  getMemberFootprint,
+} from "@/lib/readers/member-footprint";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { MembershipTier } from "@/lib/types";
 
@@ -246,4 +251,162 @@ export async function reactivateUser(formData: FormData) {
   });
 
   revalidateMemberPaths(user.handle);
+}
+
+/**
+ * Admin permanently deletes an account. No undo.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY THIS EXISTS AT ALL (2026-09-04)
+ *
+ * It deliberately did not until now. Suspension was the answer to
+ * every "remove this person" and mostly still is: it blocks sign-in,
+ * hides the profile, and keeps the record, which is what the
+ * business-records policy wants.
+ *
+ * What suspension does not do is remove the row. Jamar had a second
+ * viewer account for himself and it was inflating the onboarded count,
+ * so the record being retained was the problem rather than the point.
+ * Suspending a duplicate does not make it stop being counted.
+ *
+ * WHY IT IS THIS NARROW
+ *
+ * The delete has to be safe for the case it was not written for: an
+ * admin on the wrong row. So it only fires for an account carrying
+ * nothing worth keeping, and "nothing worth keeping" is decided by
+ * getMemberFootprint, the same function the page uses to decide whether
+ * to render the button. One definition, two callers, so the control and
+ * the guard cannot drift.
+ *
+ * THE PRECONDITIONS, AND WHY EACH ONE
+ *
+ *  - Not yourself. Same reason you cannot suspend yourself.
+ *  - Not an admin. Revoke the flag first, exactly like suspend, so
+ *    removing a peer admin takes two deliberate acts.
+ *  - Already suspended. This is the real ratchet. Deleting is the
+ *    second half of a decision, never the first thing you do to an
+ *    account, and a suspended account is already locked out so nobody
+ *    is mid-session when the row goes.
+ *  - Type the email. The uid is in a hidden field and every row on
+ *    /admin/members looks alike. Typing the address is the step that
+ *    makes the wrong row impossible rather than unlikely.
+ *  - A reason, recorded. The audit entry outlives the user row.
+ *
+ * WHAT POSTGRES STILL CATCHES
+ *
+ * Around forty foreign keys to users.id have no onDelete clause, so
+ * they refuse the delete rather than cascade. That is a better guard
+ * than this function because it cannot fall out of step with the
+ * schema. A violation here is not a bug, it is the schema saying the
+ * account was not empty after all, so it gets translated into that
+ * sentence instead of a 500.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function deleteMember(formData: FormData) {
+  const admin = await requireAdmin();
+  const uid = String(formData.get("uid") ?? "").trim();
+  const typed = String(formData.get("confirmEmail") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!uid) throw new Error("uid is required");
+  if (uid === admin.id) {
+    throw new Error("You cannot delete your own account.");
+  }
+
+  const user = await getUserById(uid);
+  if (!user) throw new Error("User not found");
+
+  if (user.isAdmin) {
+    throw new Error(
+      "Cannot delete an admin account. Revoke the admin flag first, then suspend, then delete.",
+    );
+  }
+  if (!user.suspendedAt) {
+    throw new Error(
+      "Suspend the account first. Deleting is the second half of that decision, not a shortcut past it.",
+    );
+  }
+  if (typed.toLowerCase() !== user.email.trim().toLowerCase()) {
+    throw new Error(
+      "The typed address does not match this account. Deletion cancelled.",
+    );
+  }
+  if (reason.length < 10) {
+    throw new Error(
+      "Deletion reason must be at least 10 characters. It is recorded on the audit log, which outlives the account.",
+    );
+  }
+
+  // The same check the page used to decide whether to show the button.
+  const footprint = await getMemberFootprint(user.id, user.buildTokenBalance);
+  if (!footprint.deletable) {
+    throw new Error(
+      `This account is not empty: ${describeBlockers(footprint)}. ` +
+        "Those records cascade off the user row and would be lost. " +
+        "Keep it suspended instead.",
+    );
+  }
+
+  // Snapshot before the row is gone. auditLogEntries.actorUserId and
+  // resourceId are plain text columns with no foreign key, so the entry
+  // survives the user it describes. That is not an accident.
+  const snapshot = {
+    id: user.id,
+    email: user.email,
+    handle: user.handle,
+    name:
+      `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
+      user.displayName ||
+      user.handle,
+    membershipTier: user.membershipTier,
+    createdAt: user.createdAt,
+    suspendedAt: user.suspendedAt,
+    suspensionReason: user.suspensionReason,
+    cascaded: footprint.clears.map((c) => `${c.table}: ${c.count}`),
+  };
+
+  let deleted: { id: string }[];
+  try {
+    deleted = await db
+      .delete(users)
+      .where(eq(users.id, uid))
+      .returning({ id: users.id });
+  } catch (err) {
+    // 23503 is foreign_key_violation. It means a table this function
+    // does not know about is holding a reference, which is the schema
+    // correctly refusing. Say so plainly rather than leaking the raw
+    // constraint name into a 500 page.
+    const code = (err as { code?: string })?.code;
+    const detail = (err as { constraint?: string })?.constraint;
+    if (code === "23503") {
+      throw new Error(
+        `This account still has records attached${
+          detail ? ` (${detail})` : ""
+        }, so the database refused the delete. That means it is not empty. Keep it suspended.`,
+      );
+    }
+    throw err;
+  }
+
+  if (deleted.length === 0) {
+    // Someone else deleted it between the read and the write. Nothing
+    // happened, so nothing is logged.
+    throw new Error("User not found. It was already deleted.");
+  }
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "user.deleted",
+    resourceKind: "user",
+    resourceId: uid,
+    before: snapshot,
+    after: null,
+    reason,
+  });
+
+  revalidateMemberPaths(user.handle);
+
+  // The page this was submitted from is now a 404. A destructive action
+  // has to leave you somewhere that exists.
+  redirect("/admin/members");
 }

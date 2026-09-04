@@ -155,6 +155,21 @@ matches the latest commit before assuming the code is wrong.
   looks identical to "nothing has happened yet."
 - **Money paths:** advisory locks for the $BUILD supply cap, guarded
   updates (`WHERE ... IS NULL` + `.returning()`) for idempotency.
+- **A destructive control and its guard are one function, called
+  twice.** `deleteMember` and the delete panel on
+  `/admin/members/[id]` both call `getMemberFootprint`. Not two lists
+  of tables that agree today. A visible button the action refuses is
+  annoying; a hidden button the action would have honoured is a hole,
+  and the second one is invisible until someone finds it.
+  **Cascades are the danger, not the delete.** Fourteen tables cascade
+  off `users.id` and Postgres will take all fourteen and report
+  success. Eight of them hold things nobody may erase by removing an
+  account (agreements, payout methods, portfolio, standing, compliance
+  penalties, fraud signals, EPK, community messages), so the footprint
+  blocks on those. The other ~40 references have no `onDelete` clause,
+  so the schema refuses the delete by itself, which is a better guard
+  than any list because it cannot drift. Translate the 23503, do not
+  reimplement it.
 - **Migrations are fail-closed.** A bad one means the container will not
   start and the old one keeps serving.
 

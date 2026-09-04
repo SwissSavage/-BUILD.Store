@@ -18,7 +18,8 @@
  * canonization cards themselves. The badge itself is neutral so it
  * doesn't compete with the tier color the card already carries.
  */
-import { MOCK_CANONIZATIONS } from "@/lib/mock-data/canonizations";
+import { getCanonizationsForUser } from "@/lib/readers/recognitions";
+import { safely } from "@/lib/readers";
 
 interface OnChainBadgeProps {
   userId: string;
@@ -32,24 +33,31 @@ interface OnChainBadgeProps {
 }
 
 /**
- * Server-side check: does this user have at least one canonization on
- * file? Pure data lookup, no cookie access — safe for static pages.
+ * Reader swap 2026-09-03.
+ *
+ * This decided whether someone shows as on-chain by looking them up in
+ * MOCK_CANONIZATIONS, so the badge was awarded by seed data. It renders
+ * on /u/[handle], the team page, the cohort pages and the talent hand,
+ * which is every surface where the claim is public. A badge saying a
+ * member holds an on-chain canonization is a factual claim about the
+ * chain, and it was being made from a fixture.
+ *
+ * Now async. The old synchronous `isCanonized` export is gone rather
+ * than left behind as a fixture-backed trap for the next caller.
  */
-export function isCanonized(userId: string): boolean {
-  return MOCK_CANONIZATIONS.some((c) => c.userId === userId);
-}
-
-export function OnChainBadge({
+export async function OnChainBadge({
   userId,
   href,
   size = "sm",
   className = "",
 }: OnChainBadgeProps) {
-  if (!isCanonized(userId)) return null;
+  const canonizations = await safely(
+    () => getCanonizationsForUser(userId),
+    [],
+  );
+  if (canonizations.length === 0) return null;
 
-  const canonCount = MOCK_CANONIZATIONS.filter(
-    (c) => c.userId === userId,
-  ).length;
+  const canonCount = canonizations.length;
 
   const sizeClass =
     size === "md"

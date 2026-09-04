@@ -18,7 +18,6 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
 import { getMilestonesForProject, safely } from "@/lib/readers";
 import { getAllUsers } from "@/lib/readers/users";
-import { projectProgress } from "@/lib/mock-data/project-milestones";
 import {
   createMilestone,
   deleteMilestone,
@@ -83,7 +82,17 @@ export default async function AdminTrackerPage({
   const ownerLabel = makeOwnerLabel(roster);
   const userById = new Map(roster.map((u) => [u.id, u]));
 
-  const progress = projectProgress(id);
+  // Reader swap 2026-09-03. `milestones` above is the live table and
+  // this line recomputed the same thing from the fixture, so the
+  // progress bar and the milestone list underneath it were describing
+  // two different projects. Derived from what is already loaded rather
+  // than queried again.
+  const completed = milestones.filter((m) => m.status === "completed").length;
+  const progress = {
+    completed,
+    total: milestones.length,
+    ratio: milestones.length === 0 ? 0 : completed / milestones.length,
+  };
   const teamCandidates = project.assignedMemberIds
     .concat(project.adminUserIds)
     .filter((v, i, arr) => arr.indexOf(v) === i)

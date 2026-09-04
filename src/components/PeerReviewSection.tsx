@@ -13,16 +13,28 @@
  * Anonymity posture: this surface is rendered to the REVIEWER only.
  * Reviewees see aggregate stars on /u/[handle], never reviewer identity.
  */
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import {
-  reviewsByUser,
-  hasReviewed,
-} from "@/lib/mock-data/peer-reviews";
+import { getAllUsers } from "@/lib/readers/users";
+import { getReviewsBy, safely } from "@/lib/readers";
 import { submitPeerReview } from "@/lib/peer-review-actions";
 import { publicName, type Project, type User } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
-export function PeerReviewSection({
+/**
+ * Reader swap 2026-09-03.
+ *
+ * Teammates were resolved with MOCK_USERS.find, which returns
+ * undefined for every real member, and the `.filter(Boolean)` below it
+ * then silently dropped them. So on a real completed engagement this
+ * section rendered "Review your 0 collaborators" and there was nothing
+ * to review. That is the entire input side of the peer review system:
+ * OVR, standing band, card tier and the bonus gate all read reviews
+ * that could never be written.
+ *
+ * This is the fourth instance of MOCK_USERS.find failing for real
+ * members. The others were the consent toggle, the recognition award
+ * and voucher issuance.
+ */
+export async function PeerReviewSection({
   project,
   user,
 }: {
@@ -33,14 +45,19 @@ export function PeerReviewSection({
   if (!project.assignedMemberIds.includes(user.id)) return null;
   if (project.assignedMemberIds.length < 2) return null;
 
+  const [{ users: roster }, myReviewsAll] = await Promise.all([
+    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => getReviewsBy(user.id), []),
+  ]);
+  const byId = new Map(roster.map((u) => [u.id, u]));
+
   const teammates = project.assignedMemberIds
     .filter((id) => id !== user.id)
-    .map((id) => MOCK_USERS.find((u) => u.id === id))
+    .map((id) => byId.get(id))
     .filter((u): u is User => Boolean(u));
 
-  const myReviews = reviewsByUser(user.id).filter(
-    (r) => r.contextId === project.id,
-  );
+  const myReviews = myReviewsAll.filter((r) => r.contextId === project.id);
+  const reviewed = new Set(myReviews.map((r) => r.revieweeId));
 
   return (
     <Card className="border-[#5070F0]/40">
@@ -57,7 +74,7 @@ export function PeerReviewSection({
 
       <div className="mt-5 space-y-4">
         {teammates.map((teammate) => {
-          const already = hasReviewed(project.id, user.id, teammate.id);
+          const already = reviewed.has(teammate.id);
           if (already) {
             const mine = myReviews.find((r) => r.revieweeId === teammate.id);
             return (
@@ -137,7 +154,7 @@ function ReviewForm({
       <p className="text-[10px] text-ink-faint">
         Professionalism: comms hygiene, boundary respect,
         client-facing conduct. Repeated low scores flag admin for
-        compliance review — separate from the peer sentiment above.
+        compliance review, separate from the peer sentiment above.
       </p>
 
       <div>

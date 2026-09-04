@@ -14,7 +14,6 @@ import { notFound } from "next/navigation";
 import { getProjectById } from "@/lib/readers/projects";
 import { getAllUsers } from "@/lib/readers/users";
 import { getMilestonesForProject, safely } from "@/lib/readers";
-import { projectProgress } from "@/lib/mock-data/project-milestones";
 import { publicName } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
@@ -83,7 +82,17 @@ export default async function ClientTrackerPage({
   }
 
   const milestones = await safely(() => getMilestonesForProject(id), []);
-  const progress = projectProgress(id);
+  // Reader swap 2026-09-03. `milestones` above is the live table and
+  // this line recomputed the same thing from the fixture, so the
+  // progress bar and the milestone list underneath it were describing
+  // two different projects. Derived from what is already loaded rather
+  // than queried again.
+  const completed = milestones.filter((m) => m.status === "completed").length;
+  const progress = {
+    completed,
+    total: milestones.length,
+    ratio: milestones.length === 0 ? 0 : completed / milestones.length,
+  };
   const clientLabel = CLIENT_LABELS[project.clientId] ?? project.clientId;
   // Freshness signal — latest milestone touch anywhere on the project.
   // Uses updatedAt since it's always populated on status changes; falls

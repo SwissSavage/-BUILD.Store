@@ -9,9 +9,9 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { db } from "@/db/client";
 import { projects as projectsTable } from "@/db/schema";
 import { getAllProjects } from "@/lib/readers/projects";
-import { newContributionCount } from "@/lib/mock-data/prospective-contributions";
 import { trashProject } from "@/lib/project-trash-actions";
 import { INDUSTRY_LABELS, type Project } from "@/lib/types";
+import { prospectiveContributionReader, safely } from "@/lib/readers";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +53,14 @@ const STATUSES: Project["status"][] = ["open", "in_progress", "completed", "canc
 
 export default async function AdminProjectsPage() {
   await requireAdmin();
-  const newOutsideOffers = newContributionCount();
+  // Reader swap 2026-09-03. This badge counts unreviewed outside
+  // offers and read the fixture, so it showed a constant seed number
+  // whether or not anybody had actually offered anything. A queue
+  // badge that never changes is worse than no badge: it trains an
+  // admin to ignore it.
+  const newOutsideOffers = (
+    await safely(() => prospectiveContributionReader.all(), [])
+  ).filter((c) => c.status === "new").length;
   const { projects: allProjects } = await getAllProjects();
 
   return (

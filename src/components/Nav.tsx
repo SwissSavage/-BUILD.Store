@@ -17,7 +17,8 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { viewAsUser } from "@/lib/auth-actions";
 import { cn } from "@/lib/cn";
 import { HoverDropdown } from "@/components/HoverDropdown";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getAllUsers } from "@/lib/readers/users";
+import { safely } from "@/lib/readers";
 import { unreadNotificationCount } from "@/lib/readers/notifications";
 import {
   TIER_LABELS,
@@ -36,15 +37,23 @@ const VIEW_AS_TIER_ORDER: MembershipTier[] = [
 ];
 
 /**
- * Pick one representative mock user per membership tier (skipping the
- * admin themselves). Sorted by id so the same user surfaces every time
- * the dropdown renders, even as MOCK_USERS grows.
+ * Pick one representative member per tier for the admin view-as menu.
+ *
+ * Reader swap 2026-09-03. This read MOCK_USERS, so "view as" offered
+ * seed accounts. Every one of them either fails to load (auth-stub is
+ * database-only since the impersonation security fix) or shows an
+ * admin a tour of fixture data and lets them believe it is the
+ * product. View-as is a debugging tool whose entire value is seeing
+ * what a real member sees.
+ *
+ * Sorted by id so the same person surfaces each render rather than
+ * the menu reshuffling as the roster grows.
  */
-function pickViewAsTargets(self: User): {
+function pickViewAsTargets(self: User, roster: User[]): {
   byTier: Array<{ tier: MembershipTier; user: User }>;
   otherAdmins: User[];
 } {
-  const sorted = [...MOCK_USERS].sort((a, b) => a.id.localeCompare(b.id));
+  const sorted = [...roster].sort((a, b) => a.id.localeCompare(b.id));
   const byTier = VIEW_AS_TIER_ORDER.flatMap((tier) => {
     const u = sorted.find(
       (x) => x.id !== self.id && x.membershipTier === tier && !x.isAdmin,
@@ -164,8 +173,12 @@ const navLink = "text-ink-muted hover:text-ink transition-colors";
  * and redirects to /. The persistent ViewingAsBanner (above this nav)
  * handles the flip-back affordance.
  */
-function AdminDropdown({ self }: { self: User }) {
-  const { byTier, otherAdmins } = pickViewAsTargets(self);
+async function AdminDropdown({ self }: { self: User }) {
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+  const { byTier, otherAdmins } = pickViewAsTargets(self, roster);
 
   return (
     <HoverDropdown

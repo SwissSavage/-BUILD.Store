@@ -25,6 +25,7 @@ import {
   artistEpks,
   buildVouchers,
   calendarAvailability,
+  calendarBlocks,
   calendarMeetings,
   chatMessages,
   chatThreads,
@@ -514,6 +515,43 @@ export async function getUpcomingMeetings(
   horizon.setUTCDate(horizon.getUTCDate() + windowDays);
   const rows = await meetingReader.where(
     and(
+      gt(calendarMeetings.startsAt, now),
+      lt(calendarMeetings.startsAt, horizon.toISOString()),
+    )!,
+  );
+  return rows.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+}
+
+type CalendarBlockRow = typeof calendarBlocks.$inferSelect;
+
+export const blockReader = makeReader<CalendarBlockRow>(calendarBlocks, {
+  orderBy: calendarBlocks.startsAt,
+  direction: "asc",
+  idColumn: calendarBlocks.id,
+});
+
+/** One member's declared unavailable windows. */
+export function getBlocksForUser(userId: string): Promise<CalendarBlockRow[]> {
+  return blockReader.where(eq(calendarBlocks.userId, userId));
+}
+
+/**
+ * Upcoming meetings a member is on.
+ *
+ * Organiser only for now, which matches what getMeetingsForUser
+ * already did. Attendee lists live in a jsonb column, so "meetings I
+ * am invited to" needs a containment query and is a separate change.
+ */
+export async function getUpcomingMeetingsForUser(
+  userId: string,
+  windowDays = 14,
+): Promise<CalendarMeetingRow[]> {
+  const now = new Date().toISOString();
+  const horizon = new Date();
+  horizon.setUTCDate(horizon.getUTCDate() + windowDays);
+  const rows = await meetingReader.where(
+    and(
+      eq(calendarMeetings.organizerId, userId),
       gt(calendarMeetings.startsAt, now),
       lt(calendarMeetings.startsAt, horizon.toISOString()),
     )!,

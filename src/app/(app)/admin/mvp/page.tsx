@@ -19,10 +19,6 @@ import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
 import { mvpScoreReader, safely } from "@/lib/readers";
 import {
-  MOCK_MVP_SCORES,
-  rankedSnapshots,
-} from "@/lib/mock-data/mvp-scores";
-import {
   championsCourtMembers,
   standingBand,
   standingLabel,
@@ -42,7 +38,11 @@ export default async function AdminMvpPage() {
   ]);
   const userById = new Map(roster.map((u) => [u.id, u]));
 
-  const ranked = rankedSnapshots();
+  // Reader swap 2026-09-03. allScores above is the live table, and
+  // then this line ranked the FIXTURE, so the board listed seed
+  // members while the champion calculation two lines down used real
+  // ones. The two halves of the same page disagreed about who exists.
+  const ranked = [...allScores].sort((a, b) => b.ovr - a.ovr);
   const championIds = new Set(championsCourtMembers(allScores, roster));
 
   // Band distribution for the header summary.

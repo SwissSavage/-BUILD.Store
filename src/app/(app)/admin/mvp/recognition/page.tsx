@@ -15,10 +15,8 @@ import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
 import { mvpScoreReader, recognitionReader, safely } from "@/lib/readers";
 import {
-  MOCK_FUTURE_MODERNIST_RECOGNITIONS,
+  // Pure date maths, not a fixture read. Stays.
   periodKeyFor,
-  recentRecognitions,
-  recognitionForPeriod,
 } from "@/lib/mock-data/future-modernist-recognitions";
 import {
   selectFutureModernist,
@@ -42,9 +40,16 @@ export default async function AdminFutureModernistPage() {
   // users so admin can recognize Partners by editorial judgment.
   // Reader swap 2026-08-29: shortlist and eligibility both read seed
   // data, so recognition would have been awarded to seed profiles.
-  const [{ users: roster }, allScores] = await Promise.all([
+  // Reader swap 2026-09-03 for the recognitions themselves. The
+  // shortlist and eligibility moved to live data on 08-29, but the
+  // page still read WHO HAD ALREADY BEEN RECOGNISED from the fixture.
+  // So an admin could award this month's recognition to a real member,
+  // and the page would keep showing a seed winner as the current
+  // holder, right next to the form that had just awarded it.
+  const [{ users: roster }, allScores, allRecognitions] = await Promise.all([
     safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
     safely(() => mvpScoreReader.all(), []),
+    safely(() => recognitionReader.all(), []),
   ]);
   const userById = new Map(roster.map((u) => [u.id, u]));
 
@@ -63,11 +68,17 @@ export default async function AdminFutureModernistPage() {
   const now = new Date();
   const monthKey = periodKeyFor(now, "month");
   const yearKey = periodKeyFor(now, "year");
-  const currentMonthWinner = recognitionForPeriod(monthKey.key, "month");
-  const currentYearWinner = recognitionForPeriod(yearKey.key, "year");
+  const forPeriod = (key: string, kind: "month" | "year") =>
+    allRecognitions.find(
+      (r) => r.periodKey === key && r.periodKind === kind,
+    ) ?? null;
 
-  const recent = recentRecognitions(12);
-  void MOCK_FUTURE_MODERNIST_RECOGNITIONS;
+  const currentMonthWinner = forPeriod(monthKey.key, "month");
+  const currentYearWinner = forPeriod(yearKey.key, "year");
+
+  const recent = [...allRecognitions]
+    .sort((a, b) => b.selectedAt.localeCompare(a.selectedAt))
+    .slice(0, 12);
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">

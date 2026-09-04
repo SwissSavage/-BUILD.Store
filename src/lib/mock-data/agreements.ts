@@ -29,6 +29,7 @@ export const MOCK_AGREEMENTS: Agreement[] = [
   {
     id: "agreement_rob_loi_20230427",
     userId: "u_rob",
+    counterpartyId: null,
     agreementType: "loi",
     version: "1.0",
     signedAt: "2023-04-27T00:00:00Z",
@@ -48,6 +49,7 @@ export const MOCK_AGREEMENTS: Agreement[] = [
   {
     id: "agreement_jamar_covenant_v1",
     userId: "u_jamar",
+    counterpartyId: null,
     agreementType: "membership_covenant",
     version: "1.0",
     signedAt: "2026-04-20T09:00:00Z",
@@ -65,6 +67,7 @@ export const MOCK_AGREEMENTS: Agreement[] = [
   {
     id: "agreement_bayu_talent_v1",
     userId: "u_bayu",
+    counterpartyId: null,
     agreementType: "talent_data",
     version: "1.0",
     signedAt: "2026-06-28T14:30:00Z",
@@ -82,6 +85,7 @@ export const MOCK_AGREEMENTS: Agreement[] = [
   {
     id: "agreement_bayu_covenant_v1",
     userId: "u_bayu",
+    counterpartyId: null,
     agreementType: "membership_covenant",
     version: "1.0",
     signedAt: "2026-07-01T09:00:00Z",
@@ -99,6 +103,7 @@ export const MOCK_AGREEMENTS: Agreement[] = [
   {
     id: "agreement_sunny_talent_v1",
     userId: "u_sunny",
+    counterpartyId: null,
     agreementType: "talent_data",
     version: "1.0",
     signedAt: "2026-06-03T11:00:00Z",
@@ -116,6 +121,7 @@ export const MOCK_AGREEMENTS: Agreement[] = [
   {
     id: "agreement_bbg_talent_v1",
     userId: "u_bbg",
+    counterpartyId: null,
     agreementType: "talent_data",
     version: "1.0",
     signedAt: "2026-05-12T16:00:00Z",
@@ -136,7 +142,7 @@ export const MOCK_AGREEMENTS: Agreement[] = [
 /** Return every agreement filed for a user, freshest first. */
 export function agreementsForUser(userId: string): Agreement[] {
   return MOCK_AGREEMENTS.filter((a) => a.userId === userId).sort((a, b) =>
-    b.signedAt.localeCompare(a.signedAt),
+    (b.signedAt ?? "").localeCompare(a.signedAt ?? ""),
   );
 }
 
@@ -153,7 +159,7 @@ export function latestAgreementOfType(
     (a) => a.userId === userId && a.agreementType === agreementType,
   );
   if (matches.length === 0) return null;
-  return matches.sort((a, b) => b.signedAt.localeCompare(a.signedAt))[0];
+  return matches.sort((a, b) => (b.signedAt ?? "").localeCompare(a.signedAt ?? ""))[0];
 }
 
 /**

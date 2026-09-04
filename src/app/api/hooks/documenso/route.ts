@@ -58,7 +58,8 @@ import {
 } from "@/lib/documenso";
 import { dispatchInviteEmail } from "@/lib/invite-email";
 import { logAuditEvent } from "@/lib/writers/audit-log";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import { notify } from "@/lib/writers/notifications";
+import { upsertCounterparty } from "@/lib/writers/counterparties";
 import type {
   Agreement,
   AgreementType,
@@ -100,19 +101,24 @@ async function fanoutSignatureCompletedNotifications(input: {
         ? "Retroactive Receipt"
         : "Agreement";
 
-  const push = (userId: string, title: string, body: string) => {
-    const ntf: Notification = {
-      id: `ntf_sig_${envelopeId}_${userId}_${Math.random().toString(36).slice(2, 5)}`,
+  // Writer swap 2026-09-03. This pushed onto MOCK_NOTIFICATIONS, an
+  // in-memory array, while the bell reads the notifications table. So
+  // a member signed their LOI through Documenso, the envelope
+  // completed, this fired, and neither they nor any admin was ever
+  // told. The signal existed for the lifetime of one server process
+  // and was read by nobody.
+  //
+  // notify() is fire-and-continue by design: a webhook that 500s
+  // because a notification failed makes Documenso retry a signature
+  // that was already filed correctly.
+  const push = (userId: string, title: string, body: string) =>
+    notify({
       userId,
       kind: "agreement_signature_completed",
       title,
       body,
       href: `/agreements`,
-      createdAt: now,
-      readAt: null,
-    };
-    MOCK_NOTIFICATIONS.push(ntf);
-  };
+    });
 
   // Signer notification. Skip the ncnda:<email> label case — those
   // aren't FM users and there's nothing to ping in-app.
@@ -751,13 +757,34 @@ export async function POST(request: Request) {
   // the identifying string in externalRef and leave userId null-ish.
   const isNcnda = agreementType === "ncnda";
   const persistedAgreementType: AgreementType = isNcnda ? "other" : agreementType;
-  const userIdOrLabel = isNcnda
-    ? `ncnda:${target?.recipients?.[0]?.email ?? "unknown"}`
-    : parts[2] ?? "unknown";
+
+  // ── The NCNDA foreign key bug (fixed 2026-09-03) ──────────────
+  //
+  // This used to put `ncnda:<email>` in userId. That column is a
+  // foreign key to users.id and an NCNDA counterparty is not a
+  // member, so the insert threw and no NCNDA was ever recorded.
+  // Jamar found it as "I just sent out another NCNDA to Aftab, but
+  // I'm not seeing it in my inbox."
+  //
+  // An outside party now gets a counterparties row and userId stays
+  // null, which is what migration 0025 made legal.
+  const counterpartyEmail = isNcnda
+    ? target?.recipients?.[0]?.email ?? null
+    : null;
+  const counterpartyId =
+    isNcnda && counterpartyEmail
+      ? await upsertCounterparty({
+          email: counterpartyEmail,
+          name: target?.recipients?.[0]?.name ?? counterpartyEmail,
+        })
+      : null;
+
+  const userIdOrLabel = isNcnda ? null : parts[2] ?? "unknown";
 
   const agreementRow: Agreement = {
     id: `agreement_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
     userId: userIdOrLabel,
+    counterpartyId,
     agreementType: persistedAgreementType,
     // Version defaults to the document's creation date so re-issuing
     // the template with a revised version bump doesn't collide.
@@ -767,7 +794,7 @@ export async function POST(request: Request) {
     externalRef: envelopeId,
     storageUrl: null,
     notes: isNcnda
-      ? `Auto-created NCNDA (variant ${parts[2] ?? "bilateral"}) from Documenso ${event} at ${now}. Recipient: ${target?.recipients?.[0]?.email ?? "unknown"}.`
+      ? `NCNDA (variant ${parts[2] ?? "bilateral"}) completed via Documenso ${event} at ${now}. Counterparty: ${counterpartyEmail ?? "unknown"}.`
       : `Auto-created from Documenso ${event} at ${now}.`,
     documensoEnvelopeId: envelopeId,
     signatureStatus: "completed",
@@ -776,7 +803,14 @@ export async function POST(request: Request) {
     createdAt: now,
     updatedAt: now,
   };
-  await db.insert(agreementsTable).values(agreementRow);
+  // Sends now create the row up front, so this is a fallback for
+  // envelopes that predate that or were raised outside FM. Guarded so
+  // a retried webhook delivery does not file the same agreement twice;
+  // migration 0025 added the matching unique index.
+  await db
+    .insert(agreementsTable)
+    .values(agreementRow)
+    .onConflictDoNothing();
 
   await logAuditEvent({
     actorUserId: null,

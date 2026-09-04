@@ -14,6 +14,7 @@
 import Link from "next/link";
 import { StoreDropdown } from "@/components/StoreDropdown";
 import { MobileMenu } from "@/components/MobileMenu";
+import { Marquee } from "@/components/Marquee";
 
 const navLink = "text-ink-muted hover:text-ink transition-colors";
 
@@ -38,14 +39,7 @@ export function PublicNav() {
           </span>
         </Link>
 
-        <div className="hidden flex-1 overflow-hidden md:block">
-          <div className="marquee whitespace-nowrap text-xs text-ink-muted">
-            <span className="px-8">world-$BUILDing people+products.</span>
-            <span className="px-8">world-$BUILDing people+products.</span>
-            <span className="px-8">world-$BUILDing people+products.</span>
-            <span className="px-8">world-$BUILDing people+products.</span>
-          </div>
-        </div>
+        <Marquee />
 
         {/* Desktop nav — horizontal row of links. Hidden on mobile so
             the row doesn't wrap into a wall of text. */}

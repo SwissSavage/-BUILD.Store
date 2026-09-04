@@ -13,7 +13,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { epkForUser } from "@/lib/mock-data/artist-epk";
+import { epkForUser, safely } from "@/lib/readers";
 import {
   saveEpkCore,
   addFeaturedWork,
@@ -39,11 +39,19 @@ import {
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
+// Reads artist_epks. Mandatory now that this is a database read.
+export const dynamic = "force-dynamic";
+
 export default async function ProfileEpkPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/signin?next=/profile/epk");
 
-  const epk = epkForUser(user.id);
+  // Reader swap 2026-09-03. This is a member's own EPK page and it
+  // read the fixture, so an artist opening it saw a seed press kit
+  // with somebody else's featured work, and anything they had actually
+  // submitted was nowhere. The live reader is a drop-in apart from
+  // being async.
+  const epk = await safely(() => epkForUser(user.id), null);
 
   // Tier-distinguished editor per the locked tier-access matrix:
   // Members get full self-managed EPK (all sections editable); Partner-

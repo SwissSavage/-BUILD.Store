@@ -104,9 +104,16 @@ function latestPerPair(): LatestAgreement[] {
   const bucket = new Map<string, LatestAgreement>();
   const counts = new Map<string, number>();
   // Iterate oldest-first so we can count renewals in order.
-  const sorted = [...MOCK_AGREEMENTS].sort((a, b) =>
-    a.signedAt.localeCompare(b.signedAt),
-  );
+  // Only signed agreements have a renewal clock. Since migration 0025
+  // a row can exist with signedAt null while the envelope is still
+  // out, and an unsigned agreement has not started counting toward
+  // anything. Same for one belonging to an outside counterparty
+  // rather than a member: renewals here are a member-tier concept.
+  const sorted = [...MOCK_AGREEMENTS]
+    .filter((a): a is typeof a & { signedAt: string; userId: string } =>
+      a.signedAt !== null && a.userId !== null,
+    )
+    .sort((a, b) => a.signedAt.localeCompare(b.signedAt));
   for (const a of sorted) {
     if (!RENEWABLE_TYPES.includes(a.agreementType)) continue;
     const key = `${a.userId}::${a.agreementType}`;

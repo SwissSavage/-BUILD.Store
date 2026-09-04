@@ -19,10 +19,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
-import { safely } from "@/lib/readers";
-import {
-  cohortSpotlightsByRecency,
-} from "@/lib/mock-data/cohort-spotlights";
+import { spotlightReader, safely } from "@/lib/readers";
 import { publicName, type User } from "@/lib/types";
 import {
   createCohortSpotlight,
@@ -74,7 +71,14 @@ export default async function AdminCohortPage() {
   });
   const userById = new Map(roster.map((u) => [u.id, u]));
 
-  const spotlights = cohortSpotlightsByRecency();
+  // Reader swap 2026-09-03. The spotlight WRITERS already went to
+  // Postgres (createCohortSpotlight / removeCohortSpotlight insert and
+  // delete real rows), and this page still listed the fixture. So an
+  // admin curated a spotlight, the public /cohort page picked it up,
+  // and the admin surface that created it never showed it.
+  const spotlights = [...(await safely(() => spotlightReader.all(), []))].sort(
+    (a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
+  );
   const candidates = spotlightCandidates(roster);
   const defaultPeriod = currentPeriodKey();
 

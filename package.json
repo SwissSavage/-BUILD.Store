@@ -15,7 +15,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "node scripts/check-use-server.mjs && node scripts/check-fixture-usage.mjs && tsc --noEmit",
+    "typecheck": "node scripts/check-use-server.mjs && node scripts/check-client-boundary.mjs && node scripts/check-fixture-usage.mjs && tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",

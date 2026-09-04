@@ -95,6 +95,24 @@ matches the latest commit before assuming the code is wrong.
 - **A `"use server"` file may only export async functions.** `tsc` does
   not catch violations; `next build` does. `npm run typecheck` runs
   `scripts/check-use-server.mjs` first to catch it locally.
+- **A `"use client"` file must never reach `src/db/client.ts`.** It
+  drags `pg` into the browser bundle and the build dies on unresolvable
+  `fs` / `dns` / `net` / `tls`. `tsc` cannot see it and it only surfaces
+  in CI. On 2026-09-03 I made `OnChainBadge` fetch its own data, which
+  broke the build through `TalentHand` four files away. Presentational
+  components take data as props; server components do the fetching.
+  `npm run typecheck` now runs `scripts/check-client-boundary.mjs`,
+  which walks the import graph from every client component and prints
+  the chain. Note it stops at `"use server"` modules, which are a
+  boundary rather than a dependency.
+- **A destructive action must navigate, not just revalidate.** If the
+  page you deleted from displayed the thing you deleted, revalidating
+  re-renders a route whose subject is gone and the reader's
+  `deleted_at IS NULL` filter turns it into a 404. Jamar: "When I
+  deleted the test initiative, it led me to an error message, when it
+  should just route back to the initiatives page." Pass a `returnTo`
+  and validate it against an allowlist; an unchecked one from a form
+  is an open redirect.
 - **`next build` cannot run in the sandbox.** `node_modules` carries
   Windows SWC and esbuild binaries. Typecheck locally, prove the build
   in CI.
@@ -124,6 +142,13 @@ matches the latest commit before assuming the code is wrong.
   ratchet on the number of files importing `@/lib/mock-data`. It can go
   down, never up. Vigilance did not work; a number that cannot rise
   does.
+  **A guard has to fail closed.** That ratchet shelled out with a
+  single-quoted glob, which cmd.exe does not treat as quoting, so on
+  Windows git matched nothing and it reported zero offenders and
+  passed. It had silently stopped checking on the only machine that
+  runs it before CI. Scripts here take no shell globs, and a script
+  that finds nothing to check must exit non-zero rather than report a
+  clean run.
 - **An empty state must be distinguishable from a broken one.** If a
   surface can render nothing, it needs an admin-visible reason counted
   from the data, not inferred. A section that silently returns `null`

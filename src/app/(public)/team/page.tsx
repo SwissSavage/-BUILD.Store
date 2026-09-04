@@ -18,7 +18,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { memberLabel } from "@/lib/member-label";
 import { getPublicUsers } from "@/lib/readers/users";
-import { mvpScoreReader, safely } from "@/lib/readers";
+import { canonizationReader, mvpScoreReader, safely } from "@/lib/readers";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import {
   activeRecognitionUserIds,
@@ -96,11 +96,22 @@ export default async function TeamPage({
 
   // Reader swap 2026-08-28: was MOCK_USERS + MOCK_MVP_SCORES, so the
   // public roster showed 13 seed profiles and never a real member.
-  const [{ users }, scores, recognizedIds] = await Promise.all([
+  // Canonization counts for the on-chain badge, loaded once and
+  // grouped. The badge is presentational and takes a count: it used to
+  // fetch its own, which pulled `pg` into a client bundle via
+  // TalentHand and broke the production build.
+  const [{ users }, scores, recognizedIds, allCanonizations] =
+    await Promise.all([
     safely(() => getPublicUsers(), { users: [], source: "postgres" as const }),
     safely(() => mvpScoreReader.all(), []),
     safely(() => activeRecognitionUserIds(), new Set<string>()),
+    safely(() => canonizationReader.all(), []),
   ]);
+
+  const canonCountByUser = new Map<string, number>();
+  for (const c of allCanonizations) {
+    canonCountByUser.set(c.userId, (canonCountByUser.get(c.userId) ?? 0) + 1);
+  }
   const scoreById = new Map(scores.map((sc) => [sc.userId, sc]));
 
   const courtIds = new Set(championsCourtMembers(scores, users));
@@ -205,7 +216,7 @@ export default async function TeamPage({
                   <CardTitle className="text-base">
                     {publicName(user)}
                   </CardTitle>
-                  <OnChainBadge userId={user.id} size="sm" />
+                  <OnChainBadge count={canonCountByUser.get(user.id) ?? 0} size="sm" />
                 </div>
                 {memberLabel(user) && (
                   <p className="mt-0.5 text-[11px] text-ink-muted">

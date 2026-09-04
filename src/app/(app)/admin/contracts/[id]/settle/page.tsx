@@ -67,6 +67,11 @@ import {
 import { dispatchTransfer } from "@/lib/payouts-stub";
 import { customerFeedback as customerFeedbackTable } from "@/db/schema";
 import { customerFeedbackReader } from "@/lib/readers";
+import {
+  feedbackLinkUrl,
+  getLiveFeedbackToken,
+} from "@/lib/feedback-link-tokens";
+import { issueFeedbackLink } from "@/lib/feedback-link-actions";
 import { poolForProject } from "@/lib/readers/reserve-pool";
 import { evaluateBonusGate } from "@/lib/bonus-gate";
 import {
@@ -769,6 +774,10 @@ async function BonusReleasePanel({
         eq(customerFeedbackTable.contextId, project.id),
       )
     )[0] ?? null;
+  const liveLink = await safely(() => getLiveFeedbackToken(project.id), null);
+  const origin = (
+    process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? ""
+  ).replace(/\/$/, "");
   const peerReviews = allPeerReviews.filter(
     (r) => r.contextId === project.id,
   );
@@ -817,6 +826,66 @@ async function BonusReleasePanel({
               : "Pending decision"}
         </span>
       </div>
+
+      {/*
+        The questionnaire link. This sits next to the client rating on
+        purpose: this card is where an admin discovers the gate has no
+        client signal, and until now there was nothing to do about it.
+        The page gated on three seed tokens written into the file, so no
+        real client could be sent a working link. See
+        drizzle/0026_customer_feedback_tokens.sql.
+      */}
+      {!feedback && (
+        <div className="mt-4 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] p-3">
+          <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+            Client questionnaire
+          </p>
+          {liveLink ? (
+            <>
+              <p className="mt-1 text-xs text-ink-muted">
+                A link is out, good until{" "}
+                {new Date(liveLink.expiresAt).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+                . Send this to the client:
+              </p>
+              <code className="mt-2 block overflow-x-auto rounded-md bg-[var(--surface-inset)] px-2 py-1 text-[11px] text-ink">
+                {feedbackLinkUrl(origin, project.id, liveLink.token)}
+              </code>
+            </>
+          ) : (
+            <p className="mt-1 text-xs text-ink-muted">
+              No live link for this contract. Issue one to let the client
+              answer the questionnaire themselves. If the report came in
+              by email or on a call instead, capture it on{" "}
+              <Link
+                href="/admin/reserve"
+                className="text-brand-magentaText hover:underline"
+              >
+                /admin/reserve
+              </Link>
+              , which requires a linked meeting minute.
+            </p>
+          )}
+          <form action={issueFeedbackLink} className="mt-2">
+            <input type="hidden" name="projectId" value={project.id} />
+            <button
+              type="submit"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs text-ink hover:border-brand-magenta"
+            >
+              {liveLink ? "Issue a fresh link" : "Issue questionnaire link"}
+            </button>
+          </form>
+          {liveLink && (
+            <p className="mt-2 text-[11px] text-ink-faint">
+              Issuing a fresh link revokes the one above, so only one is
+              ever live per contract.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-4 grid gap-3 md:grid-cols-3 text-xs">
         <GateInputStat

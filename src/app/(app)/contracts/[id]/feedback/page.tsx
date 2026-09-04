@@ -1,17 +1,29 @@
 /**
  * External client feedback questionnaire (Phase 2.7 magic-link rail).
  *
- * Reached via /contracts/[id]/feedback?token=<token>. Sandbox keeps a
- * tiny in-file token map keyed by contract id. Production will issue
- * signed JWTs from the same service that powers /proposals/[token].
+ * Reached via /contracts/[id]/feedback?token=<token>.
  *
  * The route is auth-free by design. Clients never had a $BUILD.Store
  * login. Submit fans out a `customer_feedback_received` notification
  * to every admin (handled in the server action).
  *
- * REPLACE WITH: signed token verification, single-use audit log entry,
- * Drizzle insert into `customer_feedback`, Postmark webhook to mark the
- * outbound questionnaire email "responded".
+ * ─────────────────────────────────────────────────────────────
+ * TOKEN RAIL (2026-09-04)
+ *
+ * This page used to gate on a three-entry map written into the file,
+ * pointing at seed contracts p_003, p_004 and p_006. Nothing anywhere
+ * added to it, so no real client could be sent a working link and none
+ * ever was. The page looked finished and could not be used.
+ *
+ * Tokens now come from `customer_feedback_tokens`, minted by an admin
+ * on /admin/contracts/[id]/settle. resolveFeedbackToken is the single
+ * definition of a valid link and the submit action calls the same one,
+ * so the page and the write cannot disagree about what it accepts.
+ *
+ * The rejection is rendered with its reason. An expired link and a
+ * mistyped one are different problems for the client and they should
+ * not read the same.
+ * ─────────────────────────────────────────────────────────────
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -19,6 +31,7 @@ import { getProjectById } from "@/lib/readers/projects";
 import { customerFeedbackReader, eq, safely } from "@/lib/readers";
 import { customerFeedback as customerFeedbackTable } from "@/db/schema";
 import { submitCustomerFeedbackByLink } from "@/lib/customer-feedback-actions";
+import { resolveFeedbackToken } from "@/lib/feedback-link-tokens";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import {
   StarPicker,
@@ -28,14 +41,6 @@ import {
   ShortTextField,
   RadioChoice,
 } from "@/components/feedback-fields";
-
-// Sandbox magic-link tokens. Each token gates a single contract.
-// In production: `customer_feedback_tokens` table, single-use, expires.
-const FEEDBACK_TOKENS: Record<string, string> = {
-  "tok_p_003_marisa": "p_003",
-  "tok_p_004_devon": "p_004",
-  "tok_p_006_janelle": "p_006",
-};
 
 // Friendly client labels. Keep in sync with the invoice / proposal pages.
 const CLIENT_LABELS: Record<string, string> = {
@@ -56,17 +61,33 @@ export default async function ContractFeedbackPage({
   const { id } = await params;
   const { token } = await searchParams;
 
-  if (!token || FEEDBACK_TOKENS[token] !== id) {
+  // safely() so an unreachable database refuses the link rather than
+  // throwing a blank error page at a client. A gate that cannot check
+  // has to say no.
+  const resolution = await safely(() => resolveFeedbackToken(token, id), {
+    ok: false,
+    reason: "unknown" as const,
+    tokenId: null,
+    contextId: null,
+  });
+
+  if (!resolution.ok) {
+    const headline =
+      resolution.reason === "already_used"
+        ? "This link has already been used"
+        : resolution.reason === "expired"
+          ? "This link has expired"
+          : "This link isn't valid";
+    const detail =
+      resolution.reason === "already_used"
+        ? "We have your answers for this engagement. If you need to add or correct something, reply to the wrap-up email and an admin will sort it."
+        : resolution.reason === "expired"
+          ? "Questionnaire links stay open for a limited window. Reply to your wrap-up email and we'll send a fresh one."
+          : "The questionnaire link from your project wrap-up email may have been mistyped or superseded by a newer one. Reply to that email and we'll send another.";
     return (
       <div className="mx-auto max-w-xl px-6 py-16">
-        <h1 className="font-display text-3xl font-semibold">
-          This link isn&apos;t valid
-        </h1>
-        <p className="mt-3 text-sm text-ink-muted">
-          The questionnaire link from your project wrap-up email may have
-          expired or been mistyped. Reply to that email and we&apos;ll
-          send a fresh one.
-        </p>
+        <h1 className="font-display text-3xl font-semibold">{headline}</h1>
+        <p className="mt-3 text-sm text-ink-muted">{detail}</p>
         <Link
           href="/"
           className="mt-6 inline-block text-sm text-brand-magentaText hover:underline"
@@ -131,6 +152,12 @@ export default async function ContractFeedbackPage({
             className="mt-5 space-y-5"
           >
             <input type="hidden" name="contextId" value={project.id} />
+            {/*
+              The token rides along so the submit can spend it. Without
+              this the link stays live after use and the same client, or
+              anyone they forwarded the mail to, can answer again.
+            */}
+            <input type="hidden" name="token" value={token ?? ""} />
 
             <NameEmailFields />
 

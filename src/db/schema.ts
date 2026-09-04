@@ -980,6 +980,39 @@ export const peerReviews = pgTable("peer_reviews", {
   ),
 }));
 
+/**
+ * Questionnaire links issued for a real contract.
+ *
+ * /contracts/[id]/feedback gated on a hardcoded three-entry map of seed
+ * tokens, so no real client could ever be sent a working link. See
+ * drizzle/0026_customer_feedback_tokens.sql for the full account.
+ *
+ * Single use is `usedAt`, not deletion: a spent link stops working but
+ * stays as evidence that one was issued, to whom, and whether it was
+ * ever opened.
+ */
+export const customerFeedbackTokens = pgTable("customer_feedback_tokens", {
+  id: text("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  contextKind: text("context_kind", { enum: ["contract", "order"] })
+    .notNull()
+    .default("contract"),
+  // Deliberately not a foreign key: the same rail serves order feedback,
+  // whose context lives in a different table. contextKind carries which.
+  contextId: text("context_id").notNull(),
+  // set null rather than cascade. Deleting an admin must not erase the
+  // record of who handed a client a credential.
+  issuedByUserId: text("issued_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  issuedAt: timestamp("issued_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  expiresAt: timestamp("expires_at", { mode: "string", withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { mode: "string", withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { mode: "string", withTimezone: true }),
+});
+
 export const customerFeedback = pgTable("customer_feedback", {
   id: text("id").primaryKey(),
   contextKind: text("context_kind", {
@@ -1668,6 +1701,7 @@ export const schema = {
   artistEpks,
   peerReviews,
   customerFeedback,
+  customerFeedbackTokens,
   calendarAvailability,
   calendarBlocks,
   calendarMeetings,

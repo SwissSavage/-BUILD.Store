@@ -4202,6 +4202,7 @@ export type AuditLogAction =
   | "rfp.approved"
   | "rfp.rejected"
   | "contract.base_released"
+  | "contract.feedback_link_issued"
   | "contract.bonus_released"
   | "contract.bonus_reclaimed"
   | "contract.revenue_split_recorded"
@@ -4315,6 +4316,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "rfp.approved": "RFP approved",
   "rfp.rejected": "RFP rejected",
   "contract.base_released": "Base pay released",
+  "contract.feedback_link_issued": "Client questionnaire link issued",
   "contract.bonus_released": "Bonus released",
   "contract.bonus_reclaimed": "Bonus reclaimed",
   "contract.revenue_split_recorded": "Revenue split recorded",

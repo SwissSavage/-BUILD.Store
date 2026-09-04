@@ -142,6 +142,13 @@ matches the latest commit before assuming the code is wrong.
   ratchet on the number of files importing `@/lib/mock-data`. It can go
   down, never up. Vigilance did not work; a number that cannot rise
   does.
+  **A guard has to fail closed.** That ratchet shelled out with a
+  single-quoted glob, which cmd.exe does not treat as quoting, so on
+  Windows git matched nothing and it reported zero offenders and
+  passed. It had silently stopped checking on the only machine that
+  runs it before CI. Scripts here take no shell globs, and a script
+  that finds nothing to check must exit non-zero rather than report a
+  clean run.
 - **An empty state must be distinguishable from a broken one.** If a
   surface can render nothing, it needs an admin-visible reason counted
   from the data, not inferred. A section that silently returns `null`

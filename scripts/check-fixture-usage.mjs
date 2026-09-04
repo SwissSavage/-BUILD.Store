@@ -40,12 +40,40 @@ const BASELINE_FILE = "scripts/fixture-usage-baseline.json";
 const IMPORT_RE = /from\s+["']@\/lib\/mock-data\//;
 
 function offenders() {
-  const files = execSync(
-    "git ls-files 'src/**/*.ts' 'src/**/*.tsx'",
-    { encoding: "utf8" },
-  )
+  // No shell globs, no quotes.
+  //
+  // This used to run `git ls-files 'src/**/*.ts' 'src/**/*.tsx'`. On
+  // Windows, execSync runs through cmd.exe, where single quotes are
+  // NOT quote characters. git received the literal string including
+  // the quotes, matched nothing, and the ratchet reported ZERO
+  // offenders. Jamar saw "fixture usage DOWN: 22 -> 0" on a merge that
+  // touched fifteen objects.
+  //
+  // It failed OPEN, which is the worst way for a guard to break: zero
+  // offenders always passes, so on Windows this had quietly stopped
+  // checking anything. Worse, a `--record` run there would have
+  // written a baseline of 0 and made every future run on Linux fail.
+  //
+  // `git ls-files src` takes no glob, needs no quoting, and behaves
+  // identically on both platforms. Filtering happens in JS where the
+  // semantics are ours.
+  const listed = execSync("git ls-files src", { encoding: "utf8" })
     .split("\n")
-    .filter(Boolean)
+    .map((f) => f.trim())
+    .filter(Boolean);
+
+  // An empty list means the command did not do what we think it did.
+  // Silence here is exactly the failure mode above.
+  if (listed.length === 0) {
+    console.error(
+      "✗ `git ls-files src` returned nothing. The ratchet cannot check\n" +
+        "  anything, so it is failing rather than reporting a clean zero.",
+    );
+    process.exit(1);
+  }
+
+  const files = listed
+    .filter((f) => /\.tsx?$/.test(f))
     .filter((f) => !f.startsWith("src/lib/mock-data/"))
     .filter((f) => f !== "src/db/seed.ts");
 

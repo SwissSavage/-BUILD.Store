@@ -32,6 +32,10 @@ import { customerFeedback as customerFeedbackTable } from "@/db/schema";
 import { getProjectById } from "@/lib/readers/projects";
 import { getUserById } from "@/lib/readers/users";
 import { customerFeedbackReader, orderReader } from "@/lib/readers";
+import {
+  consumeFeedbackToken,
+  resolveFeedbackToken,
+} from "@/lib/feedback-link-tokens";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type {
   AttributionConsent,
@@ -210,13 +214,33 @@ function parseSubmissionFields(formData: FormData) {
 }
 
 /**
- * Magic-link path. Customer hits /contracts/[id]/feedback?token=…;
- * the token-to-context check happens at the route level. Here we only
- * trust `contextId` from form payload because the route already
- * authenticated the link.
+ * Magic-link path. Customer hits /contracts/[id]/feedback?token=…
+ *
+ * This used to say the token check happened at the route level and that
+ * `contextId` could therefore be trusted from the form payload. That was
+ * wrong in a way worth spelling out: a server action is its own public
+ * endpoint. Rendering the page is not a gate on what can be POSTed to
+ * the action, so anyone able to construct the request could file
+ * feedback against any contract id without holding a link at all, and
+ * the bonus gate reads exactly this row.
+ *
+ * The token is now verified here too, against the same
+ * resolveFeedbackToken the page uses, and spent before the row is
+ * written.
  */
 export async function submitCustomerFeedbackByLink(formData: FormData) {
   const contextId = String(formData.get("contextId") ?? "");
+  // The token is the only credential on this route, so it is checked
+  // here as well as on the page. A server action is a public endpoint:
+  // the page render is not a gate on what can be POSTed to it, and
+  // before this the action accepted a submission with no token at all.
+  const token = String(formData.get("token") ?? "");
+  const resolution = await resolveFeedbackToken(token, contextId);
+  if (!resolution.ok) {
+    throw new Error(
+      "This questionnaire link is no longer valid. Reply to your wrap-up email and we will send a fresh one.",
+    );
+  }
   const project = await getProjectById(contextId);
   if (!project) throw new Error("Engagement not found");
   if (project.kind !== "contract") {
@@ -249,6 +273,16 @@ export async function submitCustomerFeedbackByLink(formData: FormData) {
     createdAt: new Date().toISOString(),
     ...parsed,
   };
+
+  // Spend the link before writing the row. The guarded UPDATE is the
+  // claim: two submits racing the same token produce one accepted
+  // questionnaire, and the loser is refused having written nothing.
+  const claimed = await consumeFeedbackToken(token);
+  if (!claimed) {
+    throw new Error(
+      "This questionnaire link has already been used. Reply to your wrap-up email if you need to change an answer.",
+    );
+  }
   await insertFeedback(row);
 
   await fanOutToAdmins(

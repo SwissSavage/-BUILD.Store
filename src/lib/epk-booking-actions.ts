@@ -17,48 +17,77 @@
  * Sandbox: this action is public — any visitor can request a booking
  * since EPKs are public artifacts. Anti-spam and rate-limiting layer at
  * production via Cloudflare + the inbound queue.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-09-07)
+ *
+ * Everything in this file except the inbound submission ran against
+ * fixtures. The artist lookup and the admin fan-out scanned the seed
+ * array, the EPK status check read the seed EPK list, and the meeting
+ * was pushed onto an in-memory array that calendar-actions.ts stopped
+ * reading when the calendar moved to Postgres. So: a real artist could
+ * not be booked at all (the lookup threw), a seed artist could be
+ * "booked" into a meeting that appeared on nobody's calendar, and the
+ * approve and decline paths mutated reader output that was discarded on
+ * return.
+ *
+ * Meetings now go through calendarMeetings and the submission through
+ * updateInboundSubmission, which is the same rail calendar-actions.ts
+ * and the inbound triage actions already use. That matters more than
+ * the individual fixes: there is now one writer per table, so these
+ * actions and the calendar cannot disagree about the state of a
+ * meeting.
+ * ─────────────────────────────────────────────────────────────
  */
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { epkForUser } from "@/lib/mock-data/artist-epk";
-import { MOCK_MEETINGS, meetingById } from "@/lib/mock-data/calendar";
-import { getStoredSubmission } from "@/lib/writers/inbound-submissions-update";
+import { randomUUID } from "crypto";
+import { and, eq, ne } from "drizzle-orm";
+import { db } from "@/db/client";
+import { calendarMeetings } from "@/db/schema";
+import { requireAdmin, getCurrentUser } from "@/lib/auth-stub";
+import { getUserById, getAdminUsers } from "@/lib/readers/users";
+import { getEpk, meetingReader } from "@/lib/readers";
+import { confirmMeeting } from "@/lib/calendar-actions";
+import {
+  getStoredSubmission,
+  updateInboundSubmission,
+} from "@/lib/writers/inbound-submissions-update";
 import { insertInboundSubmission } from "@/lib/writers/inbound-submissions";
-import { notify } from "@/lib/writers/notifications";
+import { notifyMany } from "@/lib/writers/notifications";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
-import type { CalendarMeeting, Notification, NotificationKind } from "@/lib/types";
+import type { CalendarMeeting } from "@/lib/types";
 
 function newId(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 5)}`;
-}
-
-async function pushNotification(
-  kind: NotificationKind,
-  userId: string,
-  title: string,
-  body: string,
-  href: string,
-): Promise<void> {
-  // Shared writer — booking notifications were pushed to the
-  // in-memory array, so an artist never heard that a booking had been
-  // requested, confirmed or declined.
-  await notify({ userId, kind, title, body, href });
+  return `${prefix}_${randomUUID()}`;
 }
 
 /**
- * Pick the FM agent for an EPK booking. In production, this comes from
- * the artist's `accountOwnerId` (admin-assigned) or falls back to a
- * round-robin among active admins. Sandbox: the first admin that exists.
+ * Every admin, for the "tell the admin pool" fan-outs below.
+ *
+ * These used to filter the seed array, which is the quiet half of this
+ * bug: the fan-out succeeded and notified accounts that do not exist,
+ * so a booking request landed in the queue and nobody was told.
  */
-function pickAgent(): string {
-  const admin = MOCK_USERS.find((u) => u.isAdmin);
-  if (!admin) throw new Error("No admin available to route booking");
-  return admin.id;
+async function adminIds(): Promise<string[]> {
+  const { users } = await getAdminUsers();
+  return users.map((u) => u.id);
+}
+
+/**
+ * Pick the FM agent for an EPK booking. In production this comes from
+ * the artist's `accountOwnerId` (admin-assigned) or falls back to a
+ * round-robin among active admins. Today: the longest-standing admin,
+ * sorted rather than taken off the top of the reader, because the
+ * reader returns newest-first and the newest admin should not silently
+ * become the default PM on every booking the moment they are promoted.
+ */
+async function pickAgent(): Promise<string> {
+  const { users } = await getAdminUsers();
+  const [agent] = [...users].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  if (!agent) throw new Error("No admin available to route booking");
+  return agent.id;
 }
 
 export async function createEpkBookingRequest(formData: FormData) {
@@ -85,16 +114,16 @@ export async function createEpkBookingRequest(formData: FormData) {
     throw new Error("Pick a start and end time (end must be after start).");
   }
 
-  const artist = MOCK_USERS.find((u) => u.id === artistId);
+  const artist = await getUserById(artistId);
   if (!artist) throw new Error("Artist not found");
-  const epk = epkForUser(artistId);
+  const epk = await getEpk(artistId);
   if (!epk || epk.status !== "published") {
     throw new Error(
       "This artist doesn't have a published EPK and isn't accepting bookings through the cooperative.",
     );
   }
 
-  const agentId = pickAgent();
+  const agentId = await pickAgent();
 
   // Tentative external_client meeting on FM agent's calendar — artist
   // included as attendee. Status stays pending; admin approval routes it
@@ -119,39 +148,64 @@ export async function createEpkBookingRequest(formData: FormData) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  MOCK_MEETINGS.push(meeting);
+  await db.insert(calendarMeetings).values({
+    id: meeting.id,
+    title: meeting.title,
+    description: meeting.description,
+    startsAt: meeting.startsAt,
+    endsAt: meeting.endsAt,
+    kind: meeting.kind,
+    organizerId: meeting.organizerId,
+    attendeeIds: meeting.attendeeIds,
+    confirmedByAttendeeIds: meeting.confirmedByAttendeeIds,
+    status: meeting.status,
+    externalClientName: meeting.externalClientName,
+    externalClientEmail: meeting.externalClientEmail,
+    projectId: meeting.projectId,
+    pmUserId: meeting.pmUserId,
+    notesPreview: meeting.notesPreview,
+    recordingUrl: meeting.recordingUrl,
+    createdAt: meeting.createdAt,
+    updatedAt: meeting.updatedAt,
+  });
 
   // Inbound submission so admin triages the brief alongside other
   // inbound. Status starts "new"; admin moves it through in_triage →
   // converted as they handle.
-  await insertInboundSubmission({
-    kind: "booking_request",
-    status: "new",
-    title: `Booking request for ${artist.firstName ?? artist.handle} from ${requesterName}`,
-    submitter: requesterName,
-    submitterEmail: requesterEmail || null,
-    submitterCompany: requesterCompany || null,
-    pillarTags: artist.primaryIndustry ? [artist.primaryIndustry] : [],
-    keywordTags: artist.skills ?? [],
-    body: brief + `\n\nProposed slot: ${startsAt} → ${endsAt}`,
-    attachments: [],
-    assignedAdminId: agentId,
-    triageNote: `Tentative meeting created. Approve to forward to ${artist.firstName ?? artist.handle} for confirmation; decline to reject the brief.`,
-    deepLinkHref: "/admin/team-meetings",
-    linkedResourceId: meeting.id,
-    derived: false,
-  });
+  try {
+    await insertInboundSubmission({
+      kind: "booking_request",
+      status: "new",
+      title: `Booking request for ${artist.firstName ?? artist.handle} from ${requesterName}`,
+      submitter: requesterName,
+      submitterEmail: requesterEmail || null,
+      submitterCompany: requesterCompany || null,
+      pillarTags: artist.primaryIndustry ? [artist.primaryIndustry] : [],
+      keywordTags: artist.skills ?? [],
+      body: brief + `\n\nProposed slot: ${startsAt} → ${endsAt}`,
+      attachments: [],
+      assignedAdminId: agentId,
+      triageNote: `Tentative meeting created. Approve to forward to ${artist.firstName ?? artist.handle} for confirmation; decline to reject the brief.`,
+      deepLinkHref: "/admin/team-meetings",
+      linkedResourceId: meeting.id,
+      derived: false,
+    });
+  } catch (err) {
+    // The triage row is what makes this meeting reviewable. Without it
+    // the meeting is an orphan on an admin calendar that no one can
+    // approve or decline, so undo it and fail loudly rather than leave
+    // a pending booking nobody can act on.
+    await db.delete(calendarMeetings).where(eq(calendarMeetings.id, meeting.id));
+    throw err;
+  }
 
   // Notify all admins that a booking request landed.
-  for (const admin of MOCK_USERS.filter((u) => u.isAdmin)) {
-    await pushNotification(
-      "booking_request_received",
-      admin.id,
-      `Booking request for ${artist.firstName ?? artist.handle}`,
-      `${requesterName}${requesterCompany ? ` (${requesterCompany})` : ""} submitted a booking request. Brief: ${brief.slice(0, 140)}${brief.length > 140 ? "…" : ""}`,
-      "/admin/inbound",
-    );
-  }
+  await notifyMany(await adminIds(), {
+    kind: "booking_request_received",
+    title: `Booking request for ${artist.firstName ?? artist.handle}`,
+    body: `${requesterName}${requesterCompany ? ` (${requesterCompany})` : ""} submitted a booking request. Brief: ${brief.slice(0, 140)}${brief.length > 140 ? "…" : ""}`,
+    href: "/admin/inbound",
+  });
 
   // Audit — booking requests come from unauthenticated visitors, so
   // actor is null/system. External requester identity is captured in
@@ -203,35 +257,39 @@ export async function approveBookingRequest(formData: FormData) {
       "Booking submission has no linked meeting — cannot route forward.",
     );
   }
-  const meeting = meetingById(submission.linkedResourceId);
+  const meeting = await meetingReader.byId(submission.linkedResourceId);
   if (!meeting) throw new Error("Linked meeting not found");
 
   // FM agent (the pmUserId) confirms; artist attendee still pending.
-  if (meeting.pmUserId && !meeting.confirmedByAttendeeIds.includes(meeting.pmUserId)) {
-    meeting.confirmedByAttendeeIds = [
-      ...meeting.confirmedByAttendeeIds,
-      meeting.pmUserId,
-    ];
-  }
-  meeting.updatedAt = new Date().toISOString();
+  const confirmedBy =
+    meeting.pmUserId && !meeting.confirmedByAttendeeIds.includes(meeting.pmUserId)
+      ? [...meeting.confirmedByAttendeeIds, meeting.pmUserId]
+      : meeting.confirmedByAttendeeIds;
+  await db
+    .update(calendarMeetings)
+    .set({
+      confirmedByAttendeeIds: confirmedBy,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(calendarMeetings.id, meeting.id));
 
-  submission.status = "converted";
-  submission.updatedAt = new Date().toISOString();
-  submission.triageNote =
-    (submission.triageNote ?? "") +
-    ` [Approved by admin ${admin.id} — forwarded to attendee for confirmation.]`;
+  await updateInboundSubmission(submission.id, {
+    status: "converted",
+    triageNote:
+      (submission.triageNote ?? "") +
+      ` [Approved by admin ${admin.id} — forwarded to attendee for confirmation.]`,
+  });
 
   // Notify the artist attendee(s) — anyone in the meeting except the PM.
-  for (const attendeeId of meeting.attendeeIds) {
-    if (attendeeId === meeting.pmUserId) continue;
-    await pushNotification(
-      "booking_request_approved",
-      attendeeId,
-      `Booking request forwarded to you`,
-      `${meeting.externalClientName ?? "A client"} wants to meet. Admin reviewed the brief and forwarded for your confirmation. Confirm or decline from your calendar.`,
-      "/profile/calendar",
-    );
-  }
+  await notifyMany(
+    meeting.attendeeIds.filter((id) => id !== meeting.pmUserId),
+    {
+      kind: "booking_request_approved",
+      title: `Booking request forwarded to you`,
+      body: `${meeting.externalClientName ?? "A client"} wants to meet. Admin reviewed the brief and forwarded for your confirmation. Confirm or decline from your calendar.`,
+      href: "/profile/calendar",
+    },
+  );
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -274,30 +332,34 @@ export async function declineBookingRequest(formData: FormData) {
   }
 
   if (submission.linkedResourceId) {
-    const meeting = meetingById(submission.linkedResourceId);
-    if (meeting && meeting.status !== "cancelled") {
-      meeting.status = "cancelled";
-      meeting.updatedAt = new Date().toISOString();
-    }
+    // Guarded on the meeting not already being cancelled so a double
+    // decline does not rewrite updatedAt on a settled row.
+    await db
+      .update(calendarMeetings)
+      .set({ status: "cancelled", updatedAt: new Date().toISOString() })
+      .where(
+        and(
+          eq(calendarMeetings.id, submission.linkedResourceId),
+          ne(calendarMeetings.status, "cancelled"),
+        )!,
+      );
   }
-  submission.status = "closed_no_action";
-  submission.triageNote =
-    (submission.triageNote ?? "") +
-    ` [Declined by admin ${admin.id}${reason ? `: ${reason}` : ""}]`;
-  submission.updatedAt = new Date().toISOString();
+  await updateInboundSubmission(submission.id, {
+    status: "closed_no_action",
+    triageNote:
+      (submission.triageNote ?? "") +
+      ` [Declined by admin ${admin.id}${reason ? `: ${reason}` : ""}]`,
+  });
 
   // Sandbox stub: notify admin pool as the audit trail. Production
   // dispatches a decline email to submission.submitterEmail with the
   // reason (or a generic decline copy if no reason provided).
-  for (const a of MOCK_USERS.filter((u) => u.isAdmin)) {
-    await pushNotification(
-      "booking_request_declined",
-      a.id,
-      `Booking declined: ${submission.submitter}`,
-      `Booking request declined${reason ? `. Reason: ${reason}` : ""}. Production sends the decline email to ${submission.submitterEmail ?? "(no email on file)"}.`,
-      "/admin/inbound",
-    );
-  }
+  await notifyMany(await adminIds(), {
+    kind: "booking_request_declined",
+    title: `Booking declined: ${submission.submitter}`,
+    body: `Booking request declined${reason ? `. Reason: ${reason}` : ""}. Production sends the decline email to ${submission.submitterEmail ?? "(no email on file)"}.`,
+    href: "/admin/inbound",
+  });
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -325,35 +387,32 @@ export async function declineBookingRequest(formData: FormData) {
  * `confirmMeeting` directly.
  */
 export async function confirmBookingMeeting(formData: FormData) {
-  const me = (await import("@/lib/auth-stub").then((m) => m.getCurrentUser()));
+  const me = await getCurrentUser();
   if (!me) throw new Error("Sign in required");
   const meetingId = String(formData.get("id") ?? "").trim();
-  const meeting = meetingById(meetingId);
+
+  // Actually delegate now. This used to re-implement confirmMeeting
+  // against the fixture array, which is how the two drifted: the
+  // calendar wrote to Postgres and the booking flow wrote to memory, so
+  // an artist who confirmed from the booking surface stayed pending on
+  // the calendar. The attendee guard and the all-confirmed transition
+  // live in confirmMeeting; this function is the notification wrapper
+  // its own docstring says it is.
+  await confirmMeeting(formData);
+
+  const meeting = await meetingReader.byId(meetingId);
   if (!meeting) throw new Error("Meeting not found");
-  if (!meeting.attendeeIds.includes(me.id)) {
-    throw new Error("You're not an attendee on this meeting.");
-  }
-  if (!meeting.confirmedByAttendeeIds.includes(me.id)) {
-    meeting.confirmedByAttendeeIds = [...meeting.confirmedByAttendeeIds, me.id];
-  }
-  const allConfirmed = meeting.attendeeIds.every((a) =>
-    meeting.confirmedByAttendeeIds.includes(a),
-  );
-  if (allConfirmed) meeting.status = "confirmed";
-  meeting.updatedAt = new Date().toISOString();
+  const allConfirmed = meeting.status === "confirmed";
 
   // Notify admin pool + queue external email stub only when this is a
   // booking-shape meeting (external_client with a linked inbound row).
   if (meeting.kind === "external_client" && meeting.externalClientEmail) {
-    for (const a of MOCK_USERS.filter((u) => u.isAdmin)) {
-      await pushNotification(
-        "booking_confirmed",
-        a.id,
-        `Booking confirmed with ${meeting.externalClientName ?? "client"}`,
-        `${meeting.title} — production dispatches confirmation email to ${meeting.externalClientEmail}.`,
-        "/admin/inbound",
-      );
-    }
+    await notifyMany(await adminIds(), {
+      kind: "booking_confirmed",
+      title: `Booking confirmed with ${meeting.externalClientName ?? "client"}`,
+      body: `${meeting.title} — production dispatches confirmation email to ${meeting.externalClientEmail}.`,
+      href: "/admin/inbound",
+    });
   }
 
   await logAuditEvent({
@@ -374,6 +433,3 @@ export async function confirmBookingMeeting(formData: FormData) {
   revalidatePath("/calendar");
   revalidatePath("/notifications");
 }
-
-void MOCK_MEETINGS;
-void MOCK_USERS;

@@ -45,6 +45,9 @@ import {
   type WhitelistPurchaseStatus,
 } from "@/lib/types";
 import { previewDonationSplit } from "@/lib/whitelist-splits";
+// The split itself lives in the writer layer. This page used to carry
+// its own copy that flipped the status and wrote no Treasury or LP row.
+import { distributeDonationSplit } from "@/lib/donation-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 async function markPurchasePaid(formData: FormData) {
@@ -73,24 +76,6 @@ async function markPurchasePaid(formData: FormData) {
         .set({ seatsClaimed: sql`${whitelistTiersTable.seatsClaimed} + 1` })
         .where(eq(whitelistTiersTable.id, purchase.tierId));
     });
-  }
-  revalidatePath("/admin/whitelist");
-}
-
-async function distributeSplit(formData: FormData) {
-  "use server";
-  await requireAdmin();
-  const id = String(formData.get("id"));
-  const purchase = await whitelistPurchaseReader.byId(id);
-  if (!purchase) return;
-  if (purchase.status === "paid") {
-    await db
-      .update(whitelistPurchasesTable)
-      .set({
-        status: "split_distributed",
-        splitDistributedAt: new Date().toISOString(),
-      })
-      .where(eq(whitelistPurchasesTable.id, id));
   }
   revalidatePath("/admin/whitelist");
 }
@@ -368,7 +353,7 @@ export default async function AdminWhitelistPage() {
                                 </form>
                               )}
                               {p.status === "paid" && (
-                                <form action={distributeSplit}>
+                                <form action={distributeDonationSplit}>
                                   <input type="hidden" name="id" value={p.id} />
                                   <button
                                     type="submit"

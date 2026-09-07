@@ -13,13 +13,33 @@
  * captures the ledger and audit log; wiring the actual split fire
  * into the settlement engine is a follow-on (calls
  * writeStandardSettlementSplits from settlement-splits.ts).
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-09-07)
+ *
+ * The ledger is the record of what a member is owed when their
+ * referral converts. All three actions wrote it to an in-memory array:
+ * logReferral pushed onto the fixture, and both admin actions assigned
+ * to the object the fixture lookup returned. /admin/referrals reads
+ * partner_referrals from Postgres, so the page showed seed rows and
+ * nothing a member had actually logged. A referral logged on Tuesday
+ * did not exist on Wednesday, and the member has no other record that
+ * they made the introduction.
+ *
+ * The partner registries stay as constants on purpose. They are a
+ * static catalogue of who we have deals with, not member data.
+ * ─────────────────────────────────────────────────────────────
  */
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { partnerReferrals } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
-import { MOCK_PARTNER_REFERRALS } from "@/lib/mock-data/partner-referrals";
-import { MOCK_USERS } from "@/lib/mock-data/users";
+import { getUserById } from "@/lib/readers/users";
+import { partnerReferralReader } from "@/lib/readers";
 import { ECOSYSTEM_PARTNERS, PRODUCT_AFFILIATES } from "@/lib/mock-data/partners";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type { PartnerReferral, PartnerReferralKind } from "@/lib/types";
@@ -34,9 +54,7 @@ function isKind(raw: string): raw is PartnerReferralKind {
 }
 
 function nextReferralId(): string {
-  return `pref_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 5)}`;
+  return `pref_${randomUUID()}`;
 }
 
 /**
@@ -80,7 +98,7 @@ export async function logReferral(formData: FormData): Promise<void> {
   if (!leadContactName) throw new Error("Lead contact name required.");
   if (!leadContactEmail) throw new Error("Lead contact email required.");
 
-  const referrer = MOCK_USERS.find((u) => u.id === referrerUserId);
+  const referrer = await getUserById(referrerUserId);
   if (!referrer) throw new Error(`Referrer ${referrerUserId} not found.`);
 
   const now = new Date().toISOString();
@@ -102,7 +120,7 @@ export async function logReferral(formData: FormData): Promise<void> {
     createdAt: now,
     updatedAt: now,
   };
-  MOCK_PARTNER_REFERRALS.push(row);
+  await db.insert(partnerReferrals).values(row);
 
   await logAuditEvent({
     actorUserId: user.id,
@@ -142,7 +160,7 @@ export async function markReferralConverted(
   const revshareRaw = String(formData.get("revshareEarnedUsd") ?? "").trim();
   if (!id) throw new Error("Referral id required.");
 
-  const row = MOCK_PARTNER_REFERRALS.find((r) => r.id === id);
+  const row = await partnerReferralReader.byId(id);
   if (!row) throw new Error("Referral not found.");
   if (row.status !== "pending") {
     throw new Error(
@@ -170,11 +188,27 @@ export async function markReferralConverted(
     convertedAmountUsd: row.convertedAmountUsd,
     revshareEarnedUsd: row.revshareEarnedUsd,
   };
-  row.status = "converted";
-  row.convertedAmountUsd = convertedAmount.toFixed(2);
-  row.revshareEarnedUsd = revshare.toFixed(2);
-  row.convertedAt = now;
-  row.updatedAt = now;
+  // Guarded on still being pending. Two admins on the referral queue
+  // at once would otherwise both pass the check above and the second
+  // would overwrite the first one's dollar figures.
+  const converted = await db
+    .update(partnerReferrals)
+    .set({
+      status: "converted",
+      convertedAmountUsd: convertedAmount.toFixed(2),
+      revshareEarnedUsd: revshare.toFixed(2),
+      convertedAt: now,
+      updatedAt: now,
+    })
+    .where(
+      and(eq(partnerReferrals.id, id), eq(partnerReferrals.status, "pending"))!,
+    )
+    .returning({ id: partnerReferrals.id });
+  if (converted.length === 0) {
+    throw new Error(
+      "This referral was just settled by someone else. Reload the queue.",
+    );
+  }
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -184,9 +218,9 @@ export async function markReferralConverted(
     resourceId: row.id,
     before,
     after: {
-      status: row.status,
-      convertedAmountUsd: row.convertedAmountUsd,
-      revshareEarnedUsd: row.revshareEarnedUsd,
+      status: "converted",
+      convertedAmountUsd: convertedAmount.toFixed(2),
+      revshareEarnedUsd: revshare.toFixed(2),
     },
     reason: `Converted — ${convertedAmount.toFixed(2)} total, ${revshare.toFixed(2)} revshare due. Referrer ${row.referrerUserId} earns their kick on next settlement.`,
   });
@@ -208,7 +242,7 @@ export async function markReferralDeclined(
     );
   }
 
-  const row = MOCK_PARTNER_REFERRALS.find((r) => r.id === id);
+  const row = await partnerReferralReader.byId(id);
   if (!row) throw new Error("Referral not found.");
   if (row.status !== "pending") {
     throw new Error(
@@ -218,10 +252,23 @@ export async function markReferralDeclined(
 
   const now = new Date().toISOString();
   const before = { status: row.status };
-  row.status = "declined";
-  row.declineReason = reason;
-  row.declinedAt = now;
-  row.updatedAt = now;
+  const declined = await db
+    .update(partnerReferrals)
+    .set({
+      status: "declined",
+      declineReason: reason,
+      declinedAt: now,
+      updatedAt: now,
+    })
+    .where(
+      and(eq(partnerReferrals.id, id), eq(partnerReferrals.status, "pending"))!,
+    )
+    .returning({ id: partnerReferrals.id });
+  if (declined.length === 0) {
+    throw new Error(
+      "This referral was just settled by someone else. Reload the queue.",
+    );
+  }
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -230,7 +277,7 @@ export async function markReferralDeclined(
     resourceKind: "partner_referral",
     resourceId: row.id,
     before,
-    after: { status: row.status, declineReason: reason },
+    after: { status: "declined", declineReason: reason },
     reason,
   });
 

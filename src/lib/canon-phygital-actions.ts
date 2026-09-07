@@ -16,16 +16,9 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_CANONIZATIONS } from "@/lib/mock-data/canonizations";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
-import type { Notification } from "@/lib/types";
-
-function newId(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 5)}`;
-}
+import { getAdminUsers } from "@/lib/readers/users";
+import { getCanonizationsForUser } from "@/lib/readers/recognitions";
+import { notifyMany } from "@/lib/writers/notifications";
 
 export async function requestPhygitalCanonCard(formData: FormData) {
   const me = await getCurrentUser();
@@ -33,29 +26,33 @@ export async function requestPhygitalCanonCard(formData: FormData) {
   const canonId = String(formData.get("canonId") ?? "").trim();
   const shippingNote = String(formData.get("shippingNote") ?? "").trim();
 
-  const canon = MOCK_CANONIZATIONS.find((c) => c.id === canonId);
-  if (!canon) throw new Error("Canonization not found");
-  if (canon.userId !== me.id) {
+  // Scoped to the member's own canonizations, which doubles as the
+  // ownership check: a canon id belonging to someone else is simply
+  // not in this list.
+  const mine = await getCanonizationsForUser(me.id);
+  const canon = mine.find((c) => c.id === canonId);
+  if (!canon) {
     throw new Error(
-      "Members can request phygital prints of their own cards. Outsider purchases route through the public marketplace (v1.1+).",
+      "Canonization not found. Members can request phygital prints of their own cards; outsider purchases route through the public marketplace (v1.1+).",
     );
   }
 
   // Sandbox stub: notify admin pool that a phygital request is in queue.
   // Production swap: dispatches Stripe payment intent + print-partner job.
-  for (const admin of MOCK_USERS.filter((u) => u.isAdmin)) {
-    const ntf: Notification = {
-      id: newId("ntf_phygital"),
-      userId: admin.id,
+  //
+  // Was a push onto the in-memory notifications array addressed to seed
+  // admins, so the request reached nobody and left no trace. The member
+  // saw the form succeed.
+  const { users: admins } = await getAdminUsers();
+  await notifyMany(
+    admins.map((a) => a.id),
+    {
       kind: "direct_message",
       title: `Phygital request: ${me.firstName ?? me.handle}, ${canon.year} card`,
       body: `${me.firstName ?? me.handle} requested a phygital print of their ${canon.year} canonization (tier: ${canon.tier}). ${shippingNote ? `Notes: ${shippingNote}` : "No additional notes."} Production swap dispatches to print partner.`,
       href: "/admin",
-      createdAt: new Date().toISOString(),
-      readAt: null,
-    };
-    MOCK_NOTIFICATIONS.push(ntf);
-  }
+    },
+  );
 
   revalidatePath("/profile/canon");
   revalidatePath("/notifications");

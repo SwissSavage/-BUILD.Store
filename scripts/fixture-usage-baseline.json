@@ -10,7 +10,6 @@
     "src/app/(public)/cohort/[period]/page.tsx",
     "src/lib/agreement-renewal-actions.ts",
     "src/lib/application-actions.ts",
-    "src/lib/artist-epk-actions.ts",
     "src/lib/canon-phygital-actions.ts",
     "src/lib/client-patterns.ts",
     "src/lib/crm-stub.ts",

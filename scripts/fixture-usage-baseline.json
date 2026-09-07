@@ -1,5 +1,5 @@
 {
-  "count": 22,
+  "count": 19,
   "files": [
     "src/app/(app)/admin/contracts/[id]/ledger/page.tsx",
     "src/app/(app)/admin/contracts/[id]/settle/page.tsx",
@@ -15,13 +15,10 @@
     "src/lib/client-patterns.ts",
     "src/lib/crm-stub.ts",
     "src/lib/donation-actions.ts",
-    "src/lib/epk-booking-actions.ts",
     "src/lib/invite-actions.ts",
     "src/lib/partner-referral-actions.ts",
     "src/lib/pool-balances.ts",
     "src/lib/readers/project-applications.ts",
-    "src/lib/talent-match.ts",
-    "src/lib/talent-tag-actions.ts",
-    "src/lib/wallet-connect-actions.ts"
+    "src/lib/talent-match.ts"
   ]
 }

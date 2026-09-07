@@ -26,8 +26,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { MOCK_USERS } from "@/lib/mock-data/users";
 
 const EVM_ADDRESS = /^0x[a-fA-F0-9]{40}$/;
 
@@ -59,13 +61,29 @@ export async function connectWallet(formData: FormData) {
     );
   }
 
-  const target = MOCK_USERS.find((u) => u.id === user.id);
-  if (!target) throw new Error("User not found");
-
-  target.connectedWalletAddress = address;
-  target.connectedWalletProvider = normalizeProvider(formData.get("provider"));
-  target.walletConnectedAt = new Date().toISOString();
-  target.updatedAt = new Date().toISOString();
+  // Was MOCK_USERS.find, which returns undefined for anyone who signed
+  // up through Auth.js, so this threw "User not found" for every real
+  // member before it reached the assignments below. The assignments then
+  // wrote to a fixture object nothing reads. Connecting a wallet has
+  // never worked outside seed accounts.
+  //
+  // getCurrentUser already carries the id, so the lookup was redundant
+  // as well as wrong: update by id and let the row count report whether
+  // the member exists.
+  const now = new Date().toISOString();
+  const connected = await db
+    .update(users)
+    .set({
+      connectedWalletAddress: address,
+      connectedWalletProvider: normalizeProvider(formData.get("provider")),
+      walletConnectedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(users.id, user.id))
+    .returning({ id: users.id });
+  if (connected.length === 0) {
+    throw new Error("Could not save the wallet. The account was not found.");
+  }
 
   revalidatePath("/wallet");
   revalidatePath("/profile");
@@ -75,13 +93,22 @@ export async function disconnectWallet() {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
 
-  const target = MOCK_USERS.find((u) => u.id === user.id);
-  if (!target) throw new Error("User not found");
-
-  target.connectedWalletAddress = null;
-  target.connectedWalletProvider = null;
-  target.walletConnectedAt = null;
-  target.updatedAt = new Date().toISOString();
+  // Disconnect is not guarded on a wallet being present: clearing an
+  // already-clear row is the same end state, and a member who clicks
+  // twice should not see an error.
+  const cleared = await db
+    .update(users)
+    .set({
+      connectedWalletAddress: null,
+      connectedWalletProvider: null,
+      walletConnectedAt: null,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(users.id, user.id))
+    .returning({ id: users.id });
+  if (cleared.length === 0) {
+    throw new Error("Could not disconnect the wallet. The account was not found.");
+  }
 
   revalidatePath("/wallet");
   revalidatePath("/profile");

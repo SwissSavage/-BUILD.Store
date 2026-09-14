@@ -2,7 +2,7 @@
  * /contracts/[id] — public contract detail with JobPosting JSON-LD
  * (employmentType=CONTRACTOR).
  *
- * Skeleton (title, industry, budget, skill tags, kind) is indexable.
+ * Skeleton (title, industry, skill tags, kind) is indexable.
  * Full brief + bid form require sign-in — that's where the actual
  * deliverables spec, timeline, and client details live.
  *
@@ -110,8 +110,10 @@ export default async function ContractDetailPage({
     ? computeRateBounds(currentUser)
     : null;
 
-  // Contracts don't have a compensation string; budget is a numeric.
-  // Compose a display range that Google can parse into MonetaryAmount.
+  // Budgets are private negotiation data: only the contract's submitting
+  // client and administrators may see them.
+  const canSeeBudget =
+    currentUser?.isAdmin === true || currentUser?.id === project.clientId;
   const budgetNum = Number(project.budget);
   const compText = Number.isFinite(budgetNum)
     ? `$${budgetNum.toLocaleString()}`
@@ -127,7 +129,7 @@ export default async function ContractDetailPage({
         hiringOrganizationUrl={SITE_URL}
         locationText="Remote"
         isRemote={true}
-        compensationText={compText}
+        compensationText={canSeeBudget ? compText : undefined}
         employmentType="CONTRACTOR"
         url={`${SITE_URL}/contracts/${project.id}`}
       />
@@ -161,8 +163,10 @@ export default async function ContractDetailPage({
           label="contract"
         />
 
-        <div className="mt-8 grid grid-cols-2 gap-6 md:grid-cols-3">
-          <Field label="Budget" value={compText ?? "—"} />
+        <div
+          className={`mt-8 grid grid-cols-2 gap-6${canSeeBudget ? " md:grid-cols-3" : ""}`}
+        >
+          {canSeeBudget && <Field label="Budget" value={compText ?? "—"} />}
           <Field label="Status" value="Open for bids" />
           <Field
             label="Posted"

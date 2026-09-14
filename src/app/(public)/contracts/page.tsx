@@ -12,8 +12,8 @@
  * portfolio client. Removes client-poaching risk that would normally
  * block public contract listings.
  *
- * Public visibility: skeleton (title, industry, comp/budget range,
- * skill tags, kind) renders for everyone. Full brief + bid form live
+ * Public visibility: skeleton (title, industry, skill tags, kind) renders
+ * for everyone. Full brief + bid form live
  * at /contracts/[id] and require sign-in.
  */
 import Link from "next/link";
@@ -121,17 +121,6 @@ export default async function ContractsPage() {
                       {s}
                     </span>
                   ))}
-                </div>
-
-                <div className="mt-5 space-y-1.5 text-sm">
-                  <div>
-                    <span className="text-xs uppercase tracking-wider text-ink-faint">
-                      Budget
-                    </span>
-                    <div className="font-medium">
-                      ${Number(p.budget).toLocaleString()}
-                    </div>
-                  </div>
                 </div>
               </Card>
             </Link>

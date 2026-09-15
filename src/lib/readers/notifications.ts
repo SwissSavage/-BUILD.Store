@@ -23,9 +23,10 @@ export async function getNotificationsForUser(
       .orderBy(desc(notificationsTable.createdAt))
       .limit(limit);
     return rows as unknown as Notification[];
-  } catch {
+  } catch (err) {
     // No seed fallback — an unreachable database shows an empty
     // inbox, not somebody else's fixtures.
+    console.error(`NOTIFICATION_READ_FAILED user=${userId}`, err);
     return [];
   }
 }
@@ -47,7 +48,8 @@ export async function getUnreadCount(userId: string): Promise<number> {
         ),
       );
     return rows.length;
-  } catch {
+  } catch (err) {
+    console.error(`NOTIFICATION_UNREAD_COUNT_FAILED user=${userId}`, err);
     return 0;
   }
 }

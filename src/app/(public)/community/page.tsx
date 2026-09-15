@@ -17,6 +17,7 @@ import { db } from "@/db/client";
 import { communityMessages, users as usersTable } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { publicName } from "@/lib/types";
+import { Avatar } from "@/components/Avatar";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import {
   postCommunityMessage,
@@ -166,41 +167,55 @@ export default async function CommunityChatPage() {
                 : [];
               return (
                 <Card key={r.id}>
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <CardTitle className="text-sm">{displayName}</CardTitle>
-                    <span className="text-[11px] text-ink-faint">
-                      {relativeTime(r.createdAt)}
-                    </span>
-                  </div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-ink">
-                    {r.scrubbedBody}
-                  </p>
-                  {hits.length > 0 && (
-                    <p className="mt-2 text-[10px] uppercase tracking-wider text-brand-magentaText">
-                      Auto-scrubbed: {hits.join(", ")}
-                    </p>
-                  )}
-                  {canDelete && (
-                    <form action={deleteCommunityMessage} className="mt-3">
-                      <input type="hidden" name="id" value={r.id} />
-                      {isAdmin && user?.id !== r.userId && (
-                        <input
-                          type="text"
-                          name="reason"
-                          placeholder="Reason (optional, recorded)"
-                          className="mr-2 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-2 py-1 text-[11px] md:w-auto"
-                        />
+                  <div className="flex gap-3">
+                    <Avatar
+                      user={{
+                        id: r.userId,
+                        firstName: r.firstName,
+                        lastName: null,
+                        profileImageUrl: r.profileImageUrl,
+                      }}
+                      size="sm"
+                      className="shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <CardTitle className="text-sm">{displayName}</CardTitle>
+                        <span className="text-[11px] text-ink-faint">
+                          {relativeTime(r.createdAt)}
+                        </span>
+                      </div>
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-ink">
+                        {r.scrubbedBody}
+                      </p>
+                      {hits.length > 0 && (
+                        <p className="mt-2 text-[10px] uppercase tracking-wider text-brand-magentaText">
+                          Auto-scrubbed: {hits.join(", ")}
+                        </p>
                       )}
-                      <button
-                        type="submit"
-                        className="text-[11px] text-ink-faint hover:text-brand-magentaText"
-                      >
-                        {isAdmin && user?.id !== r.userId
-                          ? "Moderate → remove"
-                          : "Delete"}
-                      </button>
-                    </form>
-                  )}
+                      {canDelete && (
+                        <form action={deleteCommunityMessage} className="mt-3">
+                          <input type="hidden" name="id" value={r.id} />
+                          {isAdmin && user?.id !== r.userId && (
+                            <input
+                              type="text"
+                              name="reason"
+                              placeholder="Reason (optional, recorded)"
+                              className="mr-2 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-2 py-1 text-[11px] md:w-auto"
+                            />
+                          )}
+                          <button
+                            type="submit"
+                            className="text-[11px] text-ink-faint hover:text-brand-magentaText"
+                          >
+                            {isAdmin && user?.id !== r.userId
+                              ? "Moderate → remove"
+                              : "Delete"}
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </div>
                 </Card>
               );
             })}

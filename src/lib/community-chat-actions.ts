@@ -19,12 +19,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, or } from "drizzle-orm";
 import { db } from "@/db/client";
-import { communityMessages } from "@/db/schema";
+import { communityMessages, users } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { scrubForClient } from "@/lib/pii-scrub";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { notifyMany } from "@/lib/writers/notifications";
 
 const MAX_BODY_CHARS = 1000;
 const POST_COOLDOWN_MS = 30 * 1000;
@@ -93,6 +94,33 @@ export async function postCommunityMessage(formData: FormData) {
     deletionReason: null,
     createdAt: now,
   });
+
+  // Members and partners can participate in the board; admins are
+  // included even if their membership tier is viewer. The author does
+  // not receive a notification for their own post.
+  const recipients = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(
+      and(
+        ne(users.id, user.id),
+        or(
+          eq(users.membershipTier, "partner"),
+          eq(users.membershipTier, "member"),
+          eq(users.isAdmin, true),
+        ),
+      ),
+    );
+  const poster = user.firstName?.trim() || user.handle;
+  await notifyMany(
+    recipients.map((recipient) => recipient.id),
+    {
+      kind: "community_message",
+      title: "New community message",
+      body: `${poster} posted in Cooperative chat.`,
+      href: "/community",
+    },
+  );
 
   revalidatePath("/community");
 }

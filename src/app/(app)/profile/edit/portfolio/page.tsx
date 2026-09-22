@@ -112,8 +112,16 @@ export default async function PortfolioEditPage() {
   void saveProfile; void ALL_INDUSTRIES;
   void coopProfitsFromMe; void sellerLifetime;
 
+  // Artists get the press kit tab and the alias field.
+  const isArtist = user.profileMode === "epk";
+
   return (
-    <EditSectionFrame active="portfolio" title="Portfolio" handle={user.handle}>
+    <EditSectionFrame
+      active="portfolio"
+      title="Portfolio"
+      handle={user.handle}
+      isArtist={isArtist}
+    >
       <section id="portfolio" className="scroll-mt-24">
       {isApprovedSeller ? (
         <section

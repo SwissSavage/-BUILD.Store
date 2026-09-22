@@ -38,6 +38,7 @@ import {
 import {
   deleteMember,
   reactivateUser,
+  setArtistMode,
   setMembershipTier,
   suspendUser,
   toggleAdminFlag,
@@ -485,6 +486,40 @@ export default async function MemberDrillDown({
                 {user.profilePublic
                   ? "Hide from discovery"
                   : "Restore to discovery"}
+              </button>
+            </form>
+          </Card>
+
+          {/* Artist status */}
+          <Card>
+            <CardEyebrow>Artist status</CardEyebrow>
+            <CardTitle className="mt-1 text-lg">
+              {user.profileMode === "epk" ? "Artist" : "Contributor"}
+            </CardTitle>
+            <p className="mt-2 text-xs text-ink-muted">
+              Recognising someone as an artist opens the press kit
+              editor under their Profile and lets their alias stand in
+              for their name on every public surface. Publishing the EPK
+              itself is still a separate review in{" "}
+              <Link
+                href="/admin/epk"
+                className="text-brand-magentaText hover:underline"
+              >
+                EPK review
+              </Link>
+              . Turning it off returns them to the first-name convention
+              and pulls a published kit off their public profile without
+              deleting it.
+            </p>
+            <form action={setArtistMode} className="mt-3">
+              <input type="hidden" name="uid" value={user.id} />
+              <button
+                type="submit"
+                className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta"
+              >
+                {user.profileMode === "epk"
+                  ? "Return to contributor"
+                  : "Recognise as artist"}
               </button>
             </form>
           </Card>

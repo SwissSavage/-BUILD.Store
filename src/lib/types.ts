@@ -30,23 +30,35 @@ export const TIER_LABELS: Record<MembershipTier, string> = {
  * — the cooperative policy is to prevent circumvention (direct contact that
  * bypasses the platform). Full names are retained on the User record for
  * admin/legal/internal purposes only.
+ *
+ * Artists are the exception: an artist's alias replaces the name outright
+ * on every public surface. See the note on the alias branch below.
  */
 export function publicName(
   u:
     | (Pick<User, "firstName" | "lastName"> & {
         displayName?: string | null;
         handle?: string | null;
+        profileMode?: string | null;
       })
     | null
     | undefined,
 ): string {
-  // A member's own choice wins. The first-name-plus-initial convention
-  // is a sensible default, not a rule about what someone is called,
-  // and the name it starts from is whatever an admin typed on the
-  // invite. People work under one name, a stage name, or a spelling
-  // the invite got wrong, and none of that is ours to overrule.
+  // The alias, for artists only.
+  //
+  // An artist works under a name that is not their legal one, and on
+  // every public surface that name IS the name: the EPK, the card, the
+  // credit. For everyone else the first-name-plus-initial convention
+  // holds, because a contributor choosing their own free-text label is
+  // a different thing with different consequences, and Jamar scoped
+  // the alias to artists deliberately.
+  //
+  // Stored in displayName, which is where it already lived. Honouring
+  // it only in EPK mode is what makes it an alias rather than a
+  // nickname field. A value set by a non-artist stays on the row and
+  // starts counting again if they are ever flipped to artist.
   const chosen = u?.displayName?.trim();
-  if (chosen) return chosen;
+  if (chosen && u?.profileMode === "epk") return chosen;
 
   const first = u?.firstName?.trim();
   if (first) {
@@ -4148,6 +4160,7 @@ export type AuditLogAction =
   | "user.created"
   | "user.membership_tier_changed"
   | "user.profile_public_toggled"
+  | "user.artist_mode_changed"
   | "user.data_participation_changed"
   | "user.admin_flag_changed"
   | "user.suspended"
@@ -4280,6 +4293,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "user.data_participation_changed":
     "Tier-2 data participation opt-in changed",
   "user.profile_public_toggled": "Profile visibility toggled",
+  "user.artist_mode_changed": "Artist status changed",
   "user.admin_flag_changed": "Admin flag changed",
   "user.suspended": "Account suspended",
   "user.reactivated": "Account reactivated",

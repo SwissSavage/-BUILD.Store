@@ -11,3 +11,7 @@ dist/
 .DS_Store
 .vscode/
 .idea/
+
+# Handoff docs
+agent-handoff.md
+build-store-dev-handoff.md

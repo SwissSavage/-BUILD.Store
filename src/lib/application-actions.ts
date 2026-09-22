@@ -131,6 +131,13 @@ async function submitJobApplicationInner(
       body: `${publicName(user)} applied. Review in the applications queue.`,
       href: "/admin/jobs/applications",
     });
+    await notify({
+      userId: user.id,
+      kind: "project_application",
+      title: "Application received",
+      body: `Your application for ${job?.title ?? "this role"} is in the review queue.`,
+      href: `/jobs/${jobId}`,
+    });
 
     revalidatePath(`/jobs/${jobId}`);
     revalidatePath("/admin/jobs/applications");
@@ -443,6 +450,13 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
         body: `${publicName(user)} revised their proposal. Review it in the proposals queue.`,
         href: "/admin/projects/applications",
       });
+      await notify({
+        userId: user.id,
+        kind: "project_application",
+        title: "Proposal updated",
+        body: `Your proposal for ${contract.title} has been updated in the review queue.`,
+        href: `/contracts/${contractId}`,
+      });
 
       revalidatePath(`/contracts/${contractId}`);
       revalidatePath("/admin/projects/applications");
@@ -490,6 +504,13 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
       title: `New proposal — ${contract.title}`,
       body: `${publicName(user)} submitted a proposal. Review it in the proposals queue.`,
       href: "/admin/projects/applications",
+    });
+    await notify({
+      userId: user.id,
+      kind: "project_application",
+      title: "Proposal received",
+      body: `Your proposal for ${contract.title} is in the review queue.`,
+      href: `/contracts/${contractId}`,
     });
 
     revalidatePath(`/contracts/${contractId}`);

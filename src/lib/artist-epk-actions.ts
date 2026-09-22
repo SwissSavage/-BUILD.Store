@@ -27,12 +27,9 @@ import { db } from "@/db/client";
 import { artistEpks } from "@/db/schema";
 import { getEpk } from "@/lib/readers";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
-import {
-  MOCK_ARTIST_EPKS,
-  epkForUser,
-} from "@/lib/mock-data/artist-epk";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
+import { getAllUsers, getUserById } from "@/lib/readers/users";
+import { users } from "@/db/schema";
+import { notifyMany } from "@/lib/writers/notifications";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import type {
   ArtistEpk,
@@ -194,7 +191,7 @@ export async function addFeaturedWork(formData: FormData) {
 export async function removeFeaturedWork(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
-  const epk = epkForUser(user.id);
+  const epk = await getEpk(user.id);
   if (!epk) return;
   const id = String(formData.get("id") ?? "");
   epk.featuredWork = epk.featuredWork.filter((e) => e.id !== id);
@@ -225,7 +222,7 @@ export async function addPressClip(formData: FormData) {
 export async function removePressClip(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
-  const epk = epkForUser(user.id);
+  const epk = await getEpk(user.id);
   if (!epk) return;
   const id = String(formData.get("id") ?? "");
   epk.press = epk.press.filter((p) => p.id !== id);
@@ -320,7 +317,7 @@ export async function addSocialHandle(formData: FormData) {
 export async function removeSocialHandle(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
-  const epk = epkForUser(user.id);
+  const epk = await getEpk(user.id);
   if (!epk) return;
   const index = Number(formData.get("index") ?? -1);
   if (Number.isInteger(index) && index >= 0 && index < epk.socialHandles.length) {
@@ -350,7 +347,7 @@ export async function addWeb3Profile(formData: FormData) {
 export async function removeWeb3Profile(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
-  const epk = epkForUser(user.id);
+  const epk = await getEpk(user.id);
   if (!epk) return;
   const index = Number(formData.get("index") ?? -1);
   if (Number.isInteger(index) && index >= 0 && index < epk.web3Profiles.length) {
@@ -382,7 +379,7 @@ export async function addMetric(formData: FormData) {
 export async function removeMetric(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
-  const epk = epkForUser(user.id);
+  const epk = await getEpk(user.id);
   if (!epk) return;
   const index = Number(formData.get("index") ?? -1);
   if (Number.isInteger(index) && index >= 0 && index < epk.metrics.length) {
@@ -400,7 +397,7 @@ export async function removeMetric(formData: FormData) {
 export async function submitEpkForReview() {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
-  const epk = epkForUser(user.id);
+  const epk = await getEpk(user.id);
   if (!epk) throw new Error("No EPK to submit — save a draft first");
   if (epk.bioShort.trim().length < 20) {
     throw new Error("Short bio is required (≥ 20 chars) before submission");
@@ -412,16 +409,19 @@ export async function submitEpkForReview() {
   epk.adminRevisionNote = null;
   await bumpUpdated(epk);
 
-  for (const u of MOCK_USERS) {
-    if (!u.isAdmin) continue;
-    await pushNotification({
-      userId: u.id,
+  // Was iterating MOCK_USERS, so on production this notified the seed
+  // admins and no real one. The submission landed in the table and
+  // nobody was told it had.
+  const { users: allUsers } = await getAllUsers();
+  await notifyMany(
+    allUsers.filter((u) => u.isAdmin).map((u) => u.id),
+    {
       kind: "epk_submitted",
       title: `EPK submitted — ${user.firstName ?? user.handle}`,
       body: `${user.firstName ?? user.handle} submitted their Electronic Press Kit for review. Open the queue to approve or send back with notes.`,
       href: "/admin/epk",
-    });
-  }
+    },
+  );
 
   revalidatePath("/profile/epk");
   revalidatePath("/admin/epk");
@@ -439,13 +439,13 @@ export async function submitEpkForReview() {
 export async function approveEpk(formData: FormData) {
   const admin = await requireAdmin();
   const userId = String(formData.get("userId") ?? "");
-  const epk = epkForUser(userId);
+  const epk = await getEpk(userId);
   if (!epk) throw new Error("EPK not found");
   if (epk.status !== "submitted") {
     throw new Error("EPK must be submitted before it can be approved");
   }
 
-  const target = MOCK_USERS.find((u) => u.id === userId);
+  const target = await getUserById(userId);
   if (!target) throw new Error("Target user not found");
 
   const now = new Date().toISOString();
@@ -454,8 +454,26 @@ export async function approveEpk(formData: FormData) {
   epk.adminRevisionNote = null;
   await bumpUpdated(epk);
 
+  // The flip that makes the EPK visible at all.
+  //
+  // This used to assign to the row object returned by the reader and
+  // nothing wrote it, so profileMode stayed "contributor" forever. The
+  // public profile gates the EPK render on
+  // `user.profileMode === "epk" && epk.status === "published"`, so an
+  // approved EPK never appeared, and Nav only shows the EPK editor on
+  // the same flag, so the artist never got the editor either. Approving
+  // did nothing observable to anyone.
   if (target.profileMode !== "epk") {
-    target.profileMode = "epk";
+    const flipped = await db
+      .update(users)
+      .set({ profileMode: "epk", updatedAt: now })
+      .where(eq(users.id, target.id))
+      .returning({ id: users.id });
+    if (flipped.length === 0) {
+      throw new Error(
+        "Could not switch the member to EPK mode. The EPK was not published.",
+      );
+    }
   }
 
   await logAuditEvent({
@@ -496,7 +514,7 @@ export async function requestEpkRevision(formData: FormData) {
       "Revision note must be at least 10 characters — be specific.",
     );
   }
-  const epk = epkForUser(userId);
+  const epk = await getEpk(userId);
   if (!epk) throw new Error("EPK not found");
   if (epk.status !== "submitted") {
     throw new Error(
@@ -504,7 +522,7 @@ export async function requestEpkRevision(formData: FormData) {
     );
   }
 
-  const target = MOCK_USERS.find((u) => u.id === userId);
+  const target = await getUserById(userId);
   if (!target) throw new Error("Target user not found");
 
   epk.status = "needs_revision";

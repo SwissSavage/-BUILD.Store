@@ -58,6 +58,7 @@ import {
   SellerStat,
 } from "../_shared";
 import { EditSectionFrame } from "../_frame";
+import { IdentityForm } from "@/components/IdentityForm";
 
 export const dynamic = "force-dynamic";
 
@@ -158,143 +159,23 @@ export default async function IdentityEditPage() {
 
       <Card className="mt-6">
         <CardEyebrow>Edit</CardEyebrow>
-        <form action={saveProfile} className="mt-4 space-y-5">
-          <input type="hidden" name="uid" value={user.id} />
-
-          {/* Avatar preview + upload lives in its own Card above.
-              Keep the current URL as a hidden field so saveProfile
-              doesn't clobber it back to empty on the next save.
-              uploadProfileAvatar writes the fresh URL directly to
-              the DB on upload success. */}
-          <input
-            type="hidden"
-            name="profileImageUrl"
-            value={user.profileImageUrl ?? ""}
-          />
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field name="firstName" label="First name" defaultValue={user.firstName ?? ""} />
-            <Field name="lastName" label="Last name" defaultValue={user.lastName ?? ""} />
-          </div>
-
-          {isArtist ? (
-            <label className="block">
-              <span className="text-xs uppercase tracking-wider text-brand-magentaText">
-                Alias
-              </span>
-              <input
-                name="displayName"
-                defaultValue={user.displayName ?? ""}
-                placeholder="e.g. Sahtyre"
-                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink"
-              />
-              <span className="mt-1 block text-[11px] text-ink-faint">
-                The name you work under. It replaces your name
-                everywhere public: your profile, your press kit, the
-                portfolio, credits on work you ship. Leave it empty to
-                use{" "}
-                &ldquo;{[user.firstName, user.lastName?.[0] ? `${user.lastName[0]}.` : null].filter(Boolean).join(" ") || "your first name"}&rdquo;
-                instead.
-              </span>
-            </label>
-          ) : (
-            <p className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-[11px] text-ink-faint">
-              You appear publicly as{" "}
-              <span className="text-ink">
-                &ldquo;{[user.firstName, user.lastName?.[0] ? `${user.lastName[0]}.` : null].filter(Boolean).join(" ") || "your first name"}&rdquo;
-              </span>
-              . Aliases are for artists. If you work under a different
-              name, ask an admin to recognise you as one and the field
-              appears here.
-            </p>
-          )}
-
-          <label className="block">
-            <span className="text-xs uppercase tracking-wider text-ink-muted">
-              Tagline
-            </span>
-            <input
-              name="tagline"
-              defaultValue={user.tagline ?? ""}
-              maxLength={120}
-              placeholder="e.g. RevOps strategist for B2B services orgs"
-              className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
-            />
-            <p className="mt-1.5 text-xs text-ink-faint">
-              One line, in the words you&apos;d use with a client. Shows
-              on your card, the roster, client-facing bid cards, and
-              anywhere you&apos;re listed. Up to 120 characters.
-            </p>
-          </label>
-
-          <label className="block">
-            <span className="text-xs uppercase tracking-wider text-ink-muted">
-              Primary pillar
-            </span>
-            <select
-              name="primaryIndustry"
-              defaultValue={user.primaryIndustry ?? "creative-media"}
-              className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
-            >
-              {ALL_INDUSTRIES.map((i) => (
-                <option key={i} value={i}>
-                  {INDUSTRY_LABELS[i]}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1.5 text-xs text-ink-faint">
-              Where you spend most of your time. Drives default RFP and job matching.
-            </p>
-          </label>
-
-          <fieldset className="rounded-lg border border-[var(--surface-border)] p-4">
-            <legend className="px-2 text-xs uppercase tracking-wider text-ink-muted">
-              Secondary pillars
-            </legend>
-            <p className="text-xs text-ink-faint">
-              Additional areas you contribute to. Expands matching beyond your primary.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-4">
-              {ALL_INDUSTRIES.map((i) => (
-                <label key={i} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name="secondaryIndustries"
-                    value={i}
-                    defaultChecked={user.secondaryIndustries.includes(i)}
-                    className="h-4 w-4 rounded border-[var(--surface-border)]"
-                  />
-                  {INDUSTRY_LABELS[i]}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <Field
-            name="skills"
-            label="Skills (comma separated)"
-            defaultValue={user.skills.join(", ")}
-          />
-
-          <Field name="portfolioUrl" label="Portfolio URL" defaultValue={user.portfolioUrl ?? ""} />
-
-          <label className="block">
-            <span className="text-xs uppercase tracking-wider text-ink-muted">Bio</span>
-            <textarea
-              name="bio"
-              rows={4}
-              defaultValue={user.bio ?? ""}
-              className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
-            />
-          </label>
-
-          <button
-            type="submit"
-            className="rounded-full bg-ink px-6 py-2.5 text-sm font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
-          >
-            Save profile
-          </button>
-        </form>
+        <IdentityForm
+          user={{
+            id: user.id,
+            handle: user.handle,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            displayName: user.displayName ?? null,
+            tagline: user.tagline ?? null,
+            bio: user.bio ?? null,
+            portfolioUrl: user.portfolioUrl ?? null,
+            profileImageUrl: user.profileImageUrl ?? null,
+            primaryIndustry: user.primaryIndustry ?? null,
+            secondaryIndustries: user.secondaryIndustries,
+            skills: user.skills,
+            isArtist,
+          }}
+        />
       </Card>
       </section>
     </EditSectionFrame>

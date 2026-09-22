@@ -89,9 +89,18 @@ export async function saveProfile(formData: FormData) {
     String(formData.get("firstName") ?? "").trim() || currentUser.firstName;
   const lastName =
     String(formData.get("lastName") ?? "").trim() || currentUser.lastName;
-  // Empty clears it and falls back to the first-name convention, so
-  // someone can undo an alias without an admin.
-  const displayName = String(formData.get("displayName") ?? "").trim() || null;
+  // The alias is artist-only, and the rule lives here rather than only
+  // in the markup: a contributor has no alias field on the form, and a
+  // hand-posted one is ignored. Their stored value is preserved rather
+  // than cleared, so it comes back intact if they are recognised as an
+  // artist later.
+  //
+  // For an artist, empty clears it and falls back to the first-name
+  // convention, so someone can undo an alias without an admin.
+  const displayName =
+    currentUser.profileMode === "epk"
+      ? String(formData.get("displayName") ?? "").trim() || null
+      : (currentUser.displayName ?? null);
   const bio = String(formData.get("bio") ?? "").trim() || null;
   const rawTagline = String(formData.get("tagline") ?? "").trim();
   const tagline = rawTagline ? rawTagline.slice(0, 120) : null;

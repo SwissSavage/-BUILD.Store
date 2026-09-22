@@ -112,8 +112,16 @@ export default async function IdentityEditPage() {
   void saveProfile; void ALL_INDUSTRIES;
   void coopProfitsFromMe; void sellerLifetime;
 
+  // Artists get the press kit tab and the alias field.
+  const isArtist = user.profileMode === "epk";
+
   return (
-    <EditSectionFrame active="identity" title="Identity" handle={user.handle}>
+    <EditSectionFrame
+      active="identity"
+      title="Identity"
+      handle={user.handle}
+      isArtist={isArtist}
+    >
       <section id="identity" className="scroll-mt-24">
       {/* Avatar upload — separate form so file uploads don't get
           entangled with the main text-field save action. Task #58. */}
@@ -169,23 +177,37 @@ export default async function IdentityEditPage() {
             <Field name="lastName" label="Last name" defaultValue={user.lastName ?? ""} />
           </div>
 
-          <label className="block">
-            <span className="text-xs uppercase tracking-wider text-brand-magentaText">
-              Display name
-            </span>
-            <input
-              name="displayName"
-              defaultValue={user.displayName ?? ""}
-              placeholder="e.g. Sahtyre"
-              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink"
-            />
-            <span className="mt-1 block text-[11px] text-ink-faint">
-              How your name appears publicly. Leave it empty to use{" "}
-              &ldquo;{[user.firstName, user.lastName?.[0] ? `${user.lastName[0]}.` : null].filter(Boolean).join(" ") || "your first name"}&rdquo;.
-              Set it if you go by one name, a stage name, or the invite
-              spelled yours wrong.
-            </span>
-          </label>
+          {isArtist ? (
+            <label className="block">
+              <span className="text-xs uppercase tracking-wider text-brand-magentaText">
+                Alias
+              </span>
+              <input
+                name="displayName"
+                defaultValue={user.displayName ?? ""}
+                placeholder="e.g. Sahtyre"
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink"
+              />
+              <span className="mt-1 block text-[11px] text-ink-faint">
+                The name you work under. It replaces your name
+                everywhere public: your profile, your press kit, the
+                portfolio, credits on work you ship. Leave it empty to
+                use{" "}
+                &ldquo;{[user.firstName, user.lastName?.[0] ? `${user.lastName[0]}.` : null].filter(Boolean).join(" ") || "your first name"}&rdquo;
+                instead.
+              </span>
+            </label>
+          ) : (
+            <p className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-[11px] text-ink-faint">
+              You appear publicly as{" "}
+              <span className="text-ink">
+                &ldquo;{[user.firstName, user.lastName?.[0] ? `${user.lastName[0]}.` : null].filter(Boolean).join(" ") || "your first name"}&rdquo;
+              </span>
+              . Aliases are for artists. If you work under a different
+              name, ask an admin to recognise you as one and the field
+              appears here.
+            </p>
+          )}
 
           <label className="block">
             <span className="text-xs uppercase tracking-wider text-ink-muted">

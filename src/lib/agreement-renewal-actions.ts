@@ -21,27 +21,64 @@
  * links to the invite flow so admin can regenerate the signed
  * agreement for another year.
  *
- * Debounce: encoded in a synthetic notification href suffix
- * `?bucket=<bucket>` so we don't need a new schema column. When a
- * bucket ping is already in the last 20h with a matching suffix,
- * skip. Real Drizzle swap adds a proper last_renewal_notice_bucket
- * column on agreements.
+ * Debounce: encoded in the notification href rather than a schema
+ * column. A ping is a duplicate when the same recipient already has a
+ * renewal notification with the same href inside the window. Real
+ * Drizzle swap adds a proper last_renewal_notice_bucket column on
+ * agreements.
  *
  * Only handles agreementType="loi" today (Talent Partner Agreement).
  * Extend to other renewable types (contributor_agreement,
  * membership_covenant) when their terms are locked in.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-09-07)
+ *
+ * This sweep is wired to /api/cron/sweep-milestones, so it has been
+ * running on a schedule. It was reading seed data end to end: seed
+ * agreements, seed MVP scores, seed admins. Three consequences, in
+ * order of how much they cost.
+ *
+ * 1. **Real agreements were never swept.** The renewal clock exists so
+ *    the annual written approval in Section 4 does not lapse. It was
+ *    ticking against fixtures, which means the live Talent Partner
+ *    agreements have had no 60, 30, 7 or day-of ping and would have
+ *    had no overdue escalation either.
+ *
+ * 2. **The debounce could never fire.** It scanned the in-memory
+ *    notifications array while notify() writes to Postgres, so every
+ *    check returned false. Nothing repeated only because nothing real
+ *    was ever pinged. The moment finding 1 was fixed on its own, every
+ *    member with a renewal in range would have been notified again on
+ *    every daily run.
+ *
+ * 3. **Admin pings were addressed to seed admins**, whose ids may not
+ *    exist in the users table. notify() inserts against a foreign key,
+ *    so this could have been throwing inside the cron on every run.
+ *
+ * The debounce also had a keying bug that only shows up once real data
+ * flows through it. It matched on the href *suffix*, `?bucket=X&type=Y`,
+ * which is identical for every member. Admin hrefs carry the member id,
+ * so an admin pinged about one member would have been skipped for every
+ * other member in the same bucket that day. It now matches the whole
+ * href, which is per-member by construction.
+ *
+ * One query loads the window's renewal notifications up front instead
+ * of one lookup per recipient per member. This runs in a cron with no
+ * user waiting on it, but the old shape was O(members x admins)
+ * queries and there is no reason to pay that.
+ * ─────────────────────────────────────────────────────────────
  */
+import { and, gt, isNotNull, like } from "drizzle-orm";
+import { db } from "@/db/client";
+import { agreements, notifications } from "@/db/schema";
 import type {
   AgreementType,
   Notification,
   NotificationKind,
 } from "@/lib/types";
-import { MOCK_AGREEMENTS } from "@/lib/mock-data/agreements";
-import { MOCK_USERS } from "@/lib/mock-data/users";
-import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
-import {
-  mvpScoreForUser,
-} from "@/lib/mock-data/mvp-scores";
+import { getAdminUsers } from "@/lib/readers/users";
+import { getMvpScore } from "@/lib/readers";
 import { computeOvr, standingBand } from "@/lib/mvp-score";
 import { notify } from "@/lib/writers/notifications";
 
@@ -100,21 +137,39 @@ interface LatestAgreement {
   renewalIndex: number;
 }
 
-function latestPerPair(): LatestAgreement[] {
+async function latestPerPair(): Promise<LatestAgreement[]> {
   const bucket = new Map<string, LatestAgreement>();
   const counts = new Map<string, number>();
-  // Iterate oldest-first so we can count renewals in order.
+  // Oldest-first so renewals can be counted in order.
+  //
   // Only signed agreements have a renewal clock. Since migration 0025
   // a row can exist with signedAt null while the envelope is still
   // out, and an unsigned agreement has not started counting toward
   // anything. Same for one belonging to an outside counterparty
-  // rather than a member: renewals here are a member-tier concept.
-  const sorted = [...MOCK_AGREEMENTS]
-    .filter((a): a is typeof a & { signedAt: string; userId: string } =>
-      a.signedAt !== null && a.userId !== null,
+  // rather than a member: renewals here are a member-tier concept, and
+  // a null userId is exactly how a counterparty row is stored.
+  //
+  // Both filters are in SQL rather than in a .filter() below, so the
+  // sweep does not load every agreement in the system to discard most
+  // of them.
+  const sorted = await db
+    .select({
+      userId: agreements.userId,
+      agreementType: agreements.agreementType,
+      signedAt: agreements.signedAt,
+      version: agreements.version,
+    })
+    .from(agreements)
+    .where(
+      and(isNotNull(agreements.signedAt), isNotNull(agreements.userId))!,
     )
-    .sort((a, b) => a.signedAt.localeCompare(b.signedAt));
-  for (const a of sorted) {
+    .orderBy(agreements.signedAt);
+
+  for (const row of sorted) {
+    // Narrowing only. The isNotNull filters above already guarantee
+    // both, but the column types stay nullable.
+    if (!row.signedAt || !row.userId) continue;
+    const a = { ...row, signedAt: row.signedAt, userId: row.userId };
     if (!RENEWABLE_TYPES.includes(a.agreementType)) continue;
     const key = `${a.userId}::${a.agreementType}`;
     const prior = counts.get(key) ?? 0;
@@ -149,11 +204,11 @@ function currentBucket(renewalMs: number, now: number): RenewalBucket | null {
   return null;
 }
 
-function standingSuggestion(userId: string): {
+async function standingSuggestion(userId: string): Promise<{
   band: string;
   suggestion: "renew" | "review" | "unknown";
-} {
-  const snap = mvpScoreForUser(userId);
+}> {
+  const snap = await getMvpScore(userId);
   if (!snap || snap.isProvisional) {
     return { band: "provisional", suggestion: "review" };
   }
@@ -168,23 +223,32 @@ function standingSuggestion(userId: string): {
   return { band, suggestion };
 }
 
-function findAdminIds(): string[] {
-  return MOCK_USERS.filter((u) => u.isAdmin).map((u) => u.id);
+async function findAdminIds(): Promise<string[]> {
+  const { users } = await getAdminUsers();
+  return users.map((u) => u.id);
 }
 
-function alreadyPingedInBucket(
-  userId: string,
-  agreementType: AgreementType,
-  bucket: RenewalBucket,
-  windowMs: number,
-): boolean {
-  const suffix = `?bucket=${bucket}&type=${agreementType}`;
-  const now = Date.now();
-  return MOCK_NOTIFICATIONS.some((n) => {
-    if (n.userId !== userId) return false;
-    if (!n.href.endsWith(suffix)) return false;
-    return now - new Date(n.createdAt).getTime() < windowMs;
-  });
+/**
+ * Every renewal ping sent inside the debounce window, as a set of
+ * `recipient|href` keys.
+ *
+ * Loaded once per sweep. The href is the whole debounce key: for an
+ * artist ping it is their own profile anchor, and for an admin ping it
+ * carries the member id, so one admin can be pinged about ten members
+ * in the same bucket on the same day without suppressing nine of them.
+ */
+async function recentRenewalPings(windowMs: number): Promise<Set<string>> {
+  const cutoff = new Date(Date.now() - windowMs).toISOString();
+  const rows = await db
+    .select({ userId: notifications.userId, href: notifications.href })
+    .from(notifications)
+    .where(
+      and(
+        gt(notifications.createdAt, cutoff),
+        like(notifications.kind, "agreement_renewal%"),
+      )!,
+    );
+  return new Set(rows.map((r) => `${r.userId}|${r.href}`));
 }
 
 async function pushNotification(
@@ -215,38 +279,52 @@ export async function runAgreementRenewalSweep(): Promise<{
   let bucketPings = 0;
   let overduePings = 0;
 
-  const adminIds = findAdminIds();
-  const latest = latestPerPair();
+  const adminIds = await findAdminIds();
+  const latest = await latestPerPair();
+  // Widest window wins: both paths are on the same daily cadence, so
+  // one load covers both checks.
+  const pinged = await recentRenewalPings(
+    Math.max(debounceMs, overdueDebounceMs),
+  );
+
+  /** Send unless this exact ping already went out inside the window. */
+  const sendOnce = async (
+    n: Omit<Notification, "id" | "createdAt" | "readAt">,
+  ): Promise<boolean> => {
+    const key = `${n.userId}|${n.href}`;
+    if (pinged.has(key)) return false;
+    await pushNotification(n);
+    // Guard within this run too. A member with two renewable
+    // agreements of the same type should not produce two identical
+    // admin pings before the next sweep reloads the set.
+    pinged.add(key);
+    return true;
+  };
 
   for (const l of latest) {
     scanned += 1;
     const renewalMs = nextRenewalAtMs(l);
-    const artistHref = `/profile#agreements?bucket=day_of&type=${l.agreementType}`; // placeholder; overwritten below
-    const standing = standingSuggestion(l.userId);
+    const standing = await standingSuggestion(l.userId);
+    const renewalDate = new Date(renewalMs).toISOString().slice(0, 10);
 
     // Overdue path — admin-only, daily until acted on.
     if (renewalMs < now) {
       const overdueKey: RenewalBucket = "day_of";
-      const alreadyToday = adminIds.some((aid) =>
-        alreadyPingedInBucket(
-          aid,
-          l.agreementType,
-          overdueKey,
-          overdueDebounceMs,
-        ),
-      );
-      if (alreadyToday) continue;
       const daysOver = Math.ceil((now - renewalMs) / 86_400_000);
+      let sent = false;
       for (const aid of adminIds) {
-        await pushNotification({
+        const did = await sendOnce({
           userId: aid,
           kind: "agreement_renewal_overdue",
           title: `Overdue renewal: ${labelForType(l.agreementType)}`,
           body: `${daysOver} day${daysOver === 1 ? "" : "s"} past renewal. Artist ${l.userId}. Standing: ${standing.band}. Suggested action: ${standing.suggestion}.`,
           href: `/admin/members/${l.userId}?bucket=${overdueKey}&type=${l.agreementType}`,
         });
+        sent = sent || did;
       }
-      overduePings += 1;
+      // Counted per agreement, not per admin, so the number still
+      // reads as "renewals escalated today".
+      if (sent) overduePings += 1;
       continue;
     }
 
@@ -255,40 +333,31 @@ export async function runAgreementRenewalSweep(): Promise<{
     const bucket = currentBucket(renewalMs, now);
     if (!bucket) continue;
 
-    // Artist-facing ping. Skip if the artist has been pinged in this
-    // bucket already.
+    // Artist-facing ping.
     if (
-      !alreadyPingedInBucket(l.userId, l.agreementType, bucket, debounceMs)
-    ) {
-      await pushNotification({
+      await sendOnce({
         userId: l.userId,
         kind: `agreement_renewal_${bucket}` as NotificationKind,
         title: BUCKET_TITLES[bucket].artist,
-        body: `Your ${labelForType(l.agreementType)} renews on ${new Date(renewalMs).toISOString().slice(0, 10)}. Continue as-is, opt out, or reach out to your account owner.`,
+        body: `Your ${labelForType(l.agreementType)} renews on ${renewalDate}. Continue as-is, opt out, or reach out to your account owner.`,
         href: `/profile#agreements?bucket=${bucket}&type=${l.agreementType}`,
-      });
+      })
+    ) {
       bucketPings += 1;
     }
 
     // Admin-facing ping. Includes MVP-score band + suggestion so
     // admin can triage the renewal batch quickly.
     for (const aid of adminIds) {
-      if (
-        alreadyPingedInBucket(aid, l.agreementType, bucket, debounceMs)
-      )
-        continue;
-      await pushNotification({
+      const did = await sendOnce({
         userId: aid,
         kind: `agreement_renewal_${bucket}` as NotificationKind,
         title: `${BUCKET_TITLES[bucket].admin}: ${labelForType(l.agreementType)}`,
-        body: `Artist ${l.userId}. Standing: ${standing.band}. Suggested action: ${standing.suggestion}. Renews ${new Date(renewalMs).toISOString().slice(0, 10)}.`,
+        body: `Artist ${l.userId}. Standing: ${standing.band}. Suggested action: ${standing.suggestion}. Renews ${renewalDate}.`,
         href: `/admin/members/${l.userId}?bucket=${bucket}&type=${l.agreementType}`,
       });
-      bucketPings += 1;
+      if (did) bucketPings += 1;
     }
-
-    // silence unused
-    void artistHref;
   }
 
   return { scanned, bucketPings, overduePings };

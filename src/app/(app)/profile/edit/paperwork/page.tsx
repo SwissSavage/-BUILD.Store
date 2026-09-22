@@ -112,8 +112,16 @@ export default async function PaperworkEditPage() {
   void saveProfile; void ALL_INDUSTRIES;
   void coopProfitsFromMe; void sellerLifetime;
 
+  // Artists get the press kit tab and the alias field.
+  const isArtist = user.profileMode === "epk";
+
   return (
-    <EditSectionFrame active="paperwork" title="Paperwork" handle={user.handle}>
+    <EditSectionFrame
+      active="paperwork"
+      title="Paperwork"
+      handle={user.handle}
+      isArtist={isArtist}
+    >
       <section id="paperwork" className="scroll-mt-24">
       <Card className="mt-6 border-[#5070F0]/40">
         <CardEyebrow>Data participation</CardEyebrow>

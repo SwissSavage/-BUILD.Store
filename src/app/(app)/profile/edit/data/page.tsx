@@ -112,8 +112,16 @@ export default async function DataEditPage() {
   void saveProfile; void ALL_INDUSTRIES;
   void coopProfitsFromMe; void sellerLifetime;
 
+  // Artists get the press kit tab and the alias field.
+  const isArtist = user.profileMode === "epk";
+
   return (
-    <EditSectionFrame active="data" title="Data" handle={user.handle}>
+    <EditSectionFrame
+      active="data"
+      title="Data"
+      handle={user.handle}
+      isArtist={isArtist}
+    >
       <section id="data" className="scroll-mt-24">
       <Card className="mt-6">
         <div className="flex flex-wrap items-start justify-between gap-3">

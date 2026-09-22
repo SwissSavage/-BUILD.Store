@@ -128,9 +128,65 @@ async function seedTable<T>(name: string, table: any, rows: T[]) {
   }
 }
 
+/**
+ * Refuse to seed a database that already has real members.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-09-22)
+ *
+ * This was run against production. onConflictDoNothing meant it did
+ * not damage anything, it just quietly inserted thirteen fixture
+ * members who then showed up on the live site next to the real ones,
+ * and four of the fixture ids are real people, which makes the cleanup
+ * a per-row decision rather than a delete.
+ *
+ * A seed is for an empty database. If there are users here who are not
+ * in the fixtures, this is not an empty database, and the operator has
+ * to say out loud that they meant it.
+ *
+ * ALLOW_SEED=1 overrides. Deliberately an env var rather than a flag:
+ * it will not be in anybody's shell history from the last time they
+ * ran this.
+ * ─────────────────────────────────────────────────────────────
+ */
+async function refuseIfPopulated() {
+  const fixtureIds = new Set(MOCK_USERS.map((u) => u.id));
+  const existing = await db.select({ id: schema.users.id }).from(schema.users);
+  const real = existing.filter((r) => !fixtureIds.has(r.id));
+  if (real.length === 0) return;
+
+  if (process.env.ALLOW_SEED === "1") {
+    console.log(
+      `\n! ${real.length} non-fixture user(s) already here. ALLOW_SEED=1 is set, continuing.\n`,
+    );
+    return;
+  }
+
+  console.error(
+    [
+      "",
+      "REFUSING TO SEED.",
+      "",
+      `This database has ${real.length} user(s) that are not in the fixtures,`,
+      "which means it is a real environment, not a fresh one.",
+      "",
+      "Seeding here adds fixture members to a live site. It happened on",
+      "2026-09-22 and the cleanup is not a simple delete, because four of",
+      "the fixture ids are real people.",
+      "",
+      "If you are certain, re-run with ALLOW_SEED=1.",
+      "To see what a previous seed run left behind: node scripts/seed-audit.mjs",
+      "",
+    ].join("\n"),
+  );
+  process.exit(1);
+}
+
 async function main() {
   console.log("=== $BUILD.Store seed run ===");
   console.log("Target:", process.env.DATABASE_URL?.replace(/:[^:@]*@/, ":****@"));
+
+  await refuseIfPopulated();
 
   // Wave 1 — no domain FK dependencies
   console.log("\nWave 1 — root tables");

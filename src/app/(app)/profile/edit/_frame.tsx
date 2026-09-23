@@ -22,13 +22,24 @@ export function EditSectionFrame({
   active,
   title,
   handle,
+  isArtist = false,
   children,
 }: {
   active: string;
   title: string;
   handle: string | null | undefined;
+  /**
+   * Artists get a Press kit tab. The EPK editor has always existed at
+   * /profile/epk and nothing linked to it except a nav item that only
+   * appeared once an admin had already published a kit, so the rail
+   * was unreachable from a standing start.
+   */
+  isArtist?: boolean;
   children: React.ReactNode;
 }) {
+  const sections = isArtist
+    ? [...SECTIONS, { slug: "../epk", label: "Press kit" } as const]
+    : SECTIONS;
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
       <Link href="/profile" className="text-sm text-ink-muted hover:text-ink">
@@ -53,10 +64,14 @@ export function EditSectionFrame({
         className="mt-6 border-y border-[var(--surface-border)] py-2"
       >
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <li key={s.slug}>
               <Link
-                href={`/profile/edit/${s.slug}`}
+                href={
+                  s.slug === "../epk"
+                    ? "/profile/epk"
+                    : `/profile/edit/${s.slug}`
+                }
                 aria-current={s.slug === active ? "page" : undefined}
                 className={
                   s.slug === active

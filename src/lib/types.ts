@@ -2198,6 +2198,8 @@ export interface ProjectApplication {
   pitch: string;
   /** Estimated weekly availability the applicant can commit. */
   hoursPerWeek: number;
+  /** Proposed hourly rate for contract bids; internal applications omit it. */
+  hourlyRate?: string | null;
   /** Optional URL to relevant past work (overrides their Profile portfolio link). */
   portfolioLink: string | null;
   /**
@@ -2218,6 +2220,8 @@ export interface ProjectApplication {
   adminNote: string | null;
   /** When the applicant withdrew. Null unless status="withdrawn". */
   withdrawnAt: string | null;
+  /** When this proposal was included in a client-facing quote. */
+  clientPresentedAt?: string | null;
   createdAt: string;
 }
 
@@ -4198,6 +4202,7 @@ export type AuditLogAction =
   // "purged" and "trashed" are not the same event to anyone reading
   // it later.
   | "project.edited"
+  | "proposal.edited_by_admin"
   | "proposal.removed_from_queue"
   | "proposal.restored_to_queue"
   | "project.trashed"
@@ -4316,6 +4321,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "canonization.caption_updated": "Canonization caption updated",
   "canonization.phygital_requested": "Phygital canon card requested",
   "project.edited": "Listing edited",
+  "proposal.edited_by_admin": "Proposal edited by admin",
   "proposal.removed_from_queue": "Proposal removed from the queue",
   "proposal.restored_to_queue": "Proposal restored to the queue",
   "project.trashed": "Project moved to trash",

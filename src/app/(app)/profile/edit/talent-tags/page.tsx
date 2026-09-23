@@ -112,8 +112,16 @@ export default async function TalentTagsEditPage() {
   void saveProfile; void ALL_INDUSTRIES;
   void coopProfitsFromMe; void sellerLifetime;
 
+  // Artists get the press kit tab and the alias field.
+  const isArtist = user.profileMode === "epk";
+
   return (
-    <EditSectionFrame active="talent-tags" title="Talent tags" handle={user.handle}>
+    <EditSectionFrame
+      active="talent-tags"
+      title="Talent tags"
+      handle={user.handle}
+      isArtist={isArtist}
+    >
       <section id="tags" className="scroll-mt-24">
       <Card className="mt-6 border-[#D828A0]/40">
         <CardEyebrow>Talent match tags</CardEyebrow>

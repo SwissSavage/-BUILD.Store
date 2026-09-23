@@ -28,6 +28,8 @@ import {
   getMemberFootprint,
 } from "@/lib/readers/member-footprint";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { notify } from "@/lib/writers/notifications";
+import { getEpk } from "@/lib/readers";
 import type { MembershipTier } from "@/lib/types";
 
 const VALID_TIERS: MembershipTier[] = [
@@ -147,6 +149,88 @@ export async function toggleProfilePublic(formData: FormData) {
   });
 
   revalidateMemberPaths(user.handle);
+}
+
+/**
+ * Admin recognises a member as an artist, or takes it back.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-09-22)
+ *
+ * There was no way to do this. `profileMode` only ever moved inside
+ * `publishEpk`, and the nav only shows the EPK editor once
+ * `profileMode === "epk"`, so the entry point appeared only after an
+ * admin published an EPK the member had no way to reach the editor to
+ * build. Nobody could become an artist, which is why nobody in the
+ * beta had an EPK.
+ *
+ * Artist status is admin-granted on purpose. It is recognition, not a
+ * checkbox: it changes how the member is named in public and opens the
+ * press-kit rail. Members ask; you decide.
+ *
+ * TWO THINGS MOVE TOGETHER
+ *
+ * Artist status controls the alias (publicName honours displayName only
+ * in EPK mode) and the EPK rail. Turning it off returns the member to
+ * the first-name convention immediately and pulls a published EPK off
+ * /u/[handle], because that page requires both EPK mode and a
+ * published kit. The EPK row itself is untouched, so flipping the
+ * status back restores it as it was.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function setArtistMode(formData: FormData) {
+  const admin = await requireAdmin();
+  const uid = String(formData.get("uid") ?? "").trim();
+  if (!uid) throw new Error("uid is required");
+
+  const user = await getUserById(uid);
+  if (!user) throw new Error("User not found");
+
+  const previous = user.profileMode;
+  const next = previous === "epk" ? "contributor" : "epk";
+
+  const flipped = await db
+    .update(users)
+    .set({ profileMode: next, updatedAt: new Date().toISOString() })
+    .where(eq(users.id, uid))
+    .returning({ id: users.id });
+  if (flipped.length === 0) {
+    throw new Error("Could not change artist status. The account was not found.");
+  }
+
+  // Say plainly what happened to their public profile. A member who
+  // was pulled out of EPK mode will otherwise just find their press
+  // kit gone from their profile with no explanation.
+  const published = (await getEpk(uid))?.status === "published";
+  await notify({
+    userId: uid,
+    kind: "direct_message",
+    title:
+      next === "epk"
+        ? "You have been recognised as an artist"
+        : "Your profile is back in contributor mode",
+    body:
+      next === "epk"
+        ? "Your press kit editor is open under Profile. Set the alias you work under in Identity; it becomes your name everywhere public once your EPK is published."
+        : published
+          ? "Your published press kit is no longer showing on your public profile, and your name has returned to the first-name convention. Nothing was deleted. Ask an admin if this was not expected."
+          : "Your name has returned to the first-name convention. Nothing was deleted.",
+    href: next === "epk" ? "/profile/epk" : "/profile",
+  });
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "user.artist_mode_changed",
+    resourceKind: "user",
+    resourceId: user.id,
+    before: { profileMode: previous },
+    after: { profileMode: next, epkPublished: published },
+  });
+
+  revalidateMemberPaths(user.handle);
+  revalidatePath("/profile");
+  revalidatePath("/profile/epk");
 }
 
 /**

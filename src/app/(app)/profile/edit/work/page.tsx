@@ -112,8 +112,16 @@ export default async function WorkEditPage() {
   void saveProfile; void ALL_INDUSTRIES;
   void coopProfitsFromMe; void sellerLifetime;
 
+  // Artists get the press kit tab and the alias field.
+  const isArtist = user.profileMode === "epk";
+
   return (
-    <EditSectionFrame active="work" title="Work" handle={user.handle}>
+    <EditSectionFrame
+      active="work"
+      title="Work"
+      handle={user.handle}
+      isArtist={isArtist}
+    >
       <section id="work" className="scroll-mt-24">
       {/* Personal cockpit — metrics + contracts. Uncluttered snapshot
           of what you've done, what's live, and what's earned. Every

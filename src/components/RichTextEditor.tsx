@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type MouseEvent, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -12,6 +12,8 @@ import {
 
 const buttonClass =
   "rounded-md border border-[var(--surface-border)] px-2 py-1 text-xs text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText disabled:opacity-40";
+const preserveSelection = (event: MouseEvent<HTMLButtonElement>) =>
+  event.preventDefault();
 
 export function RichTextEditor({
   name,
@@ -50,20 +52,30 @@ export function RichTextEditor({
     editor?.chain().focus().extendMarkRange("link").setLink({ href }).run();
   };
 
+  const toggleBold = () => {
+    if (!editor) return;
+    const { empty, to } = editor.state.selection;
+    const chain = editor.chain().focus().toggleBold();
+
+    // Applying bold to a selection should not make the next typed text bold.
+    if (!empty) chain.setTextSelection(to).unsetAllMarks();
+    chain.run();
+  };
+
   return (
     <div className="mt-1 overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)]">
       <input type="hidden" name={name} value={value} />
       <div className="flex flex-wrap gap-1 border-b border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2">
-        <button type="button" className={buttonClass} onClick={() => editor?.chain().focus().toggleBold().run()} disabled={!editor} aria-label="Bold"><strong>B</strong></button>
-        <button type="button" className={buttonClass} onClick={() => editor?.chain().focus().toggleItalic().run()} disabled={!editor} aria-label="Italic"><em>I</em></button>
-        <button type="button" className={buttonClass} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} disabled={!editor}>H2</button>
-        <button type="button" className={buttonClass} onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} disabled={!editor}>H3</button>
-        <button type="button" className={buttonClass} onClick={() => editor?.chain().focus().toggleBulletList().run()} disabled={!editor}>• List</button>
-        <button type="button" className={buttonClass} onClick={() => editor?.chain().focus().toggleOrderedList().run()} disabled={!editor}>1. List</button>
-        <button type="button" className={buttonClass} onClick={() => editor?.chain().focus().toggleBlockquote().run()} disabled={!editor}>Quote</button>
-        <button type="button" className={buttonClass} onClick={addLink} disabled={!editor}>Link</button>
-        <button type="button" className={buttonClass} onClick={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()}>Undo</button>
-        <button type="button" className={buttonClass} onClick={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()}>Redo</button>
+        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={toggleBold} disabled={!editor} aria-label="Bold"><strong>B</strong></button>
+        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleItalic().run()} disabled={!editor} aria-label="Italic"><em>I</em></button>
+        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} disabled={!editor}>H2</button>
+        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} disabled={!editor}>H3</button>
+        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleBulletList().run()} disabled={!editor}>• List</button>
+        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleOrderedList().run()} disabled={!editor}>1. List</button>
+        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleBlockquote().run()} disabled={!editor}>Quote</button>
+        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={addLink} disabled={!editor}>Link</button>
+        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()}>Undo</button>
+        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()}>Redo</button>
       </div>
       <EditorContent editor={editor} />
     </div>

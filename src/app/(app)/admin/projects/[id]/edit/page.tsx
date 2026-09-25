@@ -63,13 +63,13 @@ export default async function EditProjectPage({
             />
           </label>
 
-          <label className={labelClass}>
-            Brief
+          <div className={labelClass}>
+            <span>Brief</span>
             <RichTextEditor
               name="description"
               initialValue={project.description ?? ""}
             />
-          </label>
+          </div>
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className={labelClass}>

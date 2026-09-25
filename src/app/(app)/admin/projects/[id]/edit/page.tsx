@@ -39,7 +39,7 @@ export default async function EditProjectPage({
     project.kind === "contract" ? `/contracts/${id}` : `/projects/${id}`;
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-12">
+    <div className="mx-auto max-w-3xl px-6 py-12">
       <Link href={backHref} className="text-sm text-ink-muted hover:text-ink">
         ← Back to the listing
       </Link>

@@ -27,6 +27,7 @@ import { projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { parseRichText, richTextPlainText } from "@/lib/rich-text";
 import type { Industry } from "@/lib/types";
 
 const INDUSTRIES: Industry[] = [
@@ -57,6 +58,10 @@ export async function editProject(formData: FormData) {
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const richDescription = parseRichText(description);
+  const descriptionText = richDescription
+    ? richTextPlainText(richDescription)
+    : description;
   const industryRaw = String(formData.get("industry") ?? "").trim();
   const statusRaw = String(formData.get("status") ?? "").trim();
   const skillsRequired = String(formData.get("skillsRequired") ?? "")
@@ -65,7 +70,7 @@ export async function editProject(formData: FormData) {
     .filter(Boolean);
 
   if (!title) throw new Error("Title is required.");
-  if (description.length < 30) {
+  if (descriptionText.trim().length < 30) {
     throw new Error(
       "Description must be at least 30 characters. This is what people decide to bid on.",
     );

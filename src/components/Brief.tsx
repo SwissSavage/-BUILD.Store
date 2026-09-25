@@ -29,9 +29,13 @@
  * markdown out of habit gets a sensible result; someone who writes
  * plain prose is not punished for it.
  *
- * No dependency, no HTML parsing, nothing rendered as raw markup — so
- * an admin cannot inject markup into a public page through a brief.
+ * Plain-text briefs stay dependency-free. Rich briefs are stored as a
+ * structured Tiptap document and rendered as React elements, never raw HTML.
  */
+import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
+import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
+import { parseRichText, richTextPlainText } from "@/lib/rich-text";
 
 interface BriefBlock {
   kind: "heading" | "list" | "paragraph";
@@ -382,6 +386,19 @@ export function Brief({
   className?: string;
 }) {
   if (!text?.trim()) return null;
+  const richText = parseRichText(text);
+  if (richText) {
+    return (
+      <div
+        className={`${className ?? ""} text-sm leading-relaxed text-ink-muted [&_h2]:mt-8 [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-ink [&_h3]:mt-6 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-wider [&_h3]:text-ink [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:space-y-1.5 [&_ol]:pl-5 [&_blockquote]:my-5 [&_blockquote]:border-l-2 [&_blockquote]:border-brand-magenta [&_blockquote]:pl-4 [&_blockquote]:italic [&_a]:text-brand-magentaText [&_a]:underline`}
+      >
+        {renderToReactElement({
+          content: richText,
+          extensions: [StarterKit, Link.configure({ protocols: ["http", "https", "mailto"] })],
+        })}
+      </div>
+    );
+  }
   const blocks = dropEchoedTitle(parseBrief(text), title);
   const sections = sectionize(blocks);
   const hasHeadings = sections.some((sec) => sec.heading);
@@ -445,10 +462,16 @@ export function briefSummary(
 ): string {
   const { maxLength = 180, skipTitle } = options;
   if (!text?.trim()) return "";
-  const firstProse = dropEchoedTitle(parseBrief(text), skipTitle).find(
+  const sourceText = parseRichText(text);
+  const firstProse = dropEchoedTitle(
+    parseBrief(sourceText ? richTextPlainText(sourceText) : text),
+    skipTitle,
+  ).find(
     (b) => b.kind === "paragraph" && b.text,
   );
-  const source = stripInline(firstProse?.text ?? text.trim());
+  const source = stripInline(
+    firstProse?.text ?? (sourceText ? richTextPlainText(sourceText) : text.trim()),
+  );
   if (source.length <= maxLength) return source;
   const cut = source.slice(0, maxLength);
   const lastStop = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf(" "));

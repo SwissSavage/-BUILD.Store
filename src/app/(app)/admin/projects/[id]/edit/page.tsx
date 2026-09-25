@@ -17,6 +17,7 @@ import { getProjectById } from "@/lib/readers/projects";
 import { editProject } from "@/lib/project-edit-actions";
 import { trashProject } from "@/lib/project-trash-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { RichTextEditor } from "@/components/RichTextEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -63,13 +64,10 @@ export default async function EditProjectPage({
           </label>
 
           <label className={labelClass}>
-            Description
-            <textarea
+            Brief
+            <RichTextEditor
               name="description"
-              rows={10}
-              required
-              defaultValue={project.description ?? ""}
-              className={inputClass}
+              initialValue={project.description ?? ""}
             />
           </label>
 

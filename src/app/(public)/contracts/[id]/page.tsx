@@ -16,7 +16,7 @@ import { getProjectById } from "@/lib/readers/projects";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
-import { Brief, briefPlainText } from "@/components/Brief";
+import { Brief, briefHeadings, briefPlainText } from "@/components/Brief";
 import { BriefTableOfContents } from "@/components/BriefTableOfContents";
 import { Card, CardTitle } from "@/components/Card";
 import { OpportunityHeader } from "@/components/OpportunityHeader";
@@ -147,7 +147,10 @@ export default async function ContractDetailPage({
           postedAt={project.rfpApprovedAt}
         />
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
-          <BriefTableOfContents targetId="contract-brief" />
+          <BriefTableOfContents
+            targetId="contract-brief"
+            headings={briefHeadings(project.description)}
+          />
           <div className="space-y-6">
             <section id="contract-brief">
               <Card>

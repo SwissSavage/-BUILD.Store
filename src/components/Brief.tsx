@@ -43,6 +43,20 @@ interface BriefBlock {
   items?: string[];
 }
 
+export type BriefHeading = {
+  id: string;
+  label: string;
+  level: 2 | 3;
+};
+
+function briefHeadingId(label: string, index: number) {
+  const base = label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return base ? `brief-${base}-${index + 1}` : `brief-section-${index + 1}`;
+}
+
 /**
  * Inline emphasis, rendered as elements rather than markup.
  *
@@ -287,6 +301,40 @@ function sectionize(blocks: BriefBlock[]): {
   }
   if (current.blocks.length > 0 || current.heading) sections.push(current);
   return sections;
+}
+
+/** Headings available to the reading navigation for both rich and legacy briefs. */
+export function briefHeadings(text: string | null | undefined): BriefHeading[] {
+  if (!text?.trim()) return [];
+  const richText = parseRichText(text);
+  const headings: { label: string; level: 2 | 3 }[] = [];
+
+  if (richText) {
+    const visit = (node: unknown) => {
+      if (!node || typeof node !== "object") return;
+      const record = node as {
+        type?: unknown;
+        attrs?: { level?: unknown };
+        content?: unknown[];
+      };
+      const level = record.attrs?.level;
+      if (record.type === "heading" && (level === 2 || level === 3)) {
+        const label = richTextPlainText(node as typeof richText).trim();
+        if (label) headings.push({ label, level });
+      }
+      record.content?.forEach(visit);
+    };
+    richText.content?.forEach(visit);
+  } else {
+    for (const section of sectionize(parseBrief(text))) {
+      if (section.heading) headings.push({ label: stripInline(section.heading), level: 2 });
+    }
+  }
+
+  return headings.map((heading, index) => ({
+    ...heading,
+    id: briefHeadingId(heading.label, index),
+  }));
 }
 
 function BriefBody({ blocks }: { blocks: BriefBlock[] }) {

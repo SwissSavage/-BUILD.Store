@@ -52,7 +52,7 @@ import {
   type ProjectApplication,
   type User,
 } from "@/lib/types";
-import { Brief } from "@/components/Brief";
+import { Brief, briefHeadings } from "@/components/Brief";
 import { BriefTableOfContents } from "@/components/BriefTableOfContents";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { OpportunityHeader } from "@/components/OpportunityHeader";
@@ -172,7 +172,10 @@ export default async function ProjectDetailPage({
       />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
-        <BriefTableOfContents targetId="project-brief" />
+        <BriefTableOfContents
+          targetId="project-brief"
+          headings={briefHeadings(project.description)}
+        />
         <div className="space-y-6">
           <section id="project-brief">
             <Card>

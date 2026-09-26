@@ -1,38 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { BriefHeading } from "@/components/Brief";
 
-type Entry = { id: string; label: string; level: 2 | 3 };
-
-function slug(value: string, index: number) {
-  const base = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-  return base ? `brief-${base}` : `brief-section-${index + 1}`;
-}
-
-export function BriefTableOfContents({ targetId }: { targetId: string }) {
-  const [entries, setEntries] = useState<Entry[]>([]);
+export function BriefTableOfContents({
+  targetId,
+  headings,
+}: {
+  targetId: string;
+  headings: BriefHeading[];
+}) {
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const root = document.getElementById(targetId);
     if (!root) return;
-    const seen = new Map<string, number>();
-    const headings = Array.from(root.querySelectorAll("h2, h3, [data-brief-heading]"));
-    const next = headings.flatMap((node, index) => {
-      const label = node.textContent?.trim() ?? "";
-      if (!label) return [];
-      const count = seen.get(label) ?? 0;
-      seen.set(label, count + 1);
-      const id = node.id || `${slug(label, index)}${count ? `-${count + 1}` : ""}`;
-      node.id = id;
-      return [{ id, label, level: node.tagName === "H3" ? 3 : 2 } as Entry];
+    const nodes = Array.from(root.querySelectorAll("h2, h3, [data-brief-heading]"));
+    nodes.forEach((node, index) => {
+      const heading = headings[index];
+      if (!heading) return;
+      node.id = heading.id;
+      node.classList.add("scroll-mt-6");
     });
-    setEntries(next);
-  }, [targetId]);
+    setReady(true);
+  }, [headings, targetId]);
 
-  if (entries.length === 0) return null;
+  if (!ready || headings.length === 0) return null;
 
   return (
     <nav aria-label="On this page" className="lg:sticky lg:top-6 lg:self-start">
@@ -40,7 +33,7 @@ export function BriefTableOfContents({ targetId }: { targetId: string }) {
         On this page
       </p>
       <ol className="mt-3 space-y-2 border-l border-[var(--surface-border)] text-sm">
-        {entries.map((entry) => (
+        {headings.map((entry) => (
           <li key={entry.id} className={entry.level === 3 ? "pl-5" : "pl-3"}>
             <a
               href={`#${entry.id}`}

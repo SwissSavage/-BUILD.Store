@@ -158,7 +158,7 @@ export default async function ContractDetailPage({
           {project.title}
         </h1>
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div>
+          <div className="space-y-6">
             <Card>
               <CardTitle>About this work</CardTitle>
               <Brief text={project.description} title={project.title} className="mt-3" />
@@ -167,6 +167,40 @@ export default async function ContractDetailPage({
                 label="contract"
               />
             </Card>
+
+            {isSignedIn && rateBounds ? (
+              <BidOnContractForm
+                contractId={project.id}
+                contractTitle={project.title}
+                rateBounds={rateBounds}
+                existing={existingProposal}
+              />
+            ) : (
+              <Card>
+                <p className="text-lg font-medium">
+                  Sign in to see the full brief and bid.
+                </p>
+                <p className="mt-2 text-sm text-ink-muted">
+                  Deliverables spec, timeline, and bid form live behind the
+                  member surface. If you&apos;re not a member yet, request
+                  an invite.
+                </p>
+                <div className="mt-4 flex gap-3">
+                  <Link
+                    href={`/signin?next=/contracts/${project.id}`}
+                    className="fm-btn-primary rounded-full px-5 py-2 text-sm"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup/join"
+                    className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink hover:border-brand-magenta"
+                  >
+                    Request invite
+                  </Link>
+                </div>
+              </Card>
+            )}
           </div>
           <aside>
             <Card>
@@ -198,41 +232,6 @@ export default async function ContractDetailPage({
           </aside>
         </div>
 
-        <div className="mt-8">
-          {isSignedIn && rateBounds ? (
-            <BidOnContractForm
-              contractId={project.id}
-              contractTitle={project.title}
-              rateBounds={rateBounds}
-              existing={existingProposal}
-            />
-          ) : (
-            <Card>
-              <p className="text-lg font-medium">
-                Sign in to see the full brief and bid.
-              </p>
-              <p className="mt-2 text-sm text-ink-muted">
-                Deliverables spec, timeline, and bid form live behind the
-                member surface. If you&apos;re not a member yet, request
-                an invite.
-              </p>
-              <div className="mt-4 flex gap-3">
-                <Link
-                  href={`/signin?next=/contracts/${project.id}`}
-                  className="fm-btn-primary rounded-full px-5 py-2 text-sm"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/signup/join"
-                  className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink hover:border-brand-magenta"
-                >
-                  Request invite
-                </Link>
-              </div>
-            </Card>
-          )}
-        </div>
       </div>
     </>
   );

@@ -13,6 +13,15 @@ export function BriefTableOfContents({
   const [ready, setReady] = useState(false);
   const [progress, setProgress] = useState(0);
   const [copied, setCopied] = useState(false);
+  const groups: { heading: BriefHeading; children: BriefHeading[] }[] = [];
+
+  for (const entry of headings) {
+    if (entry.level === 2 || groups.length === 0) {
+      groups.push({ heading: entry, children: [] });
+    } else {
+      groups[groups.length - 1].children.push(entry);
+    }
+  }
 
   useEffect(() => {
     const root = document.getElementById(targetId);
@@ -70,22 +79,43 @@ export function BriefTableOfContents({
           <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
             Table of contents
           </p>
-          <ol className="mt-3 list-outside list-decimal space-y-2 pl-5 text-sm marker:text-ink-faint">
-            {headings.map((entry) => (
-              <li key={entry.id} className={entry.level === 3 ? "ml-3" : ""}>
+          <ol className="mt-3 list-outside list-decimal space-y-3 pl-5 text-sm marker:text-ink-faint">
+            {groups.map((group) => (
+              <li key={group.heading.id}>
                 <a
-                  href={`#${entry.id}`}
+                  href={`#${group.heading.id}`}
                   className="block text-ink-muted hover:text-brand-magentaText"
                   onClick={(event) => {
                     event.preventDefault();
-                    const target = document.getElementById(entry.id);
+                    const target = document.getElementById(group.heading.id);
                     target?.closest("details")?.setAttribute("open", "");
                     target?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    window.history.replaceState(null, "", `#${entry.id}`);
+                    window.history.replaceState(null, "", `#${group.heading.id}`);
                   }}
                 >
-                  {entry.label}
+                  {group.heading.label}
                 </a>
+                {group.children.length > 0 && (
+                  <ol className="mt-2 list-outside list-[lower-alpha] space-y-2 pl-5 marker:text-ink-faint">
+                    {group.children.map((entry) => (
+                      <li key={entry.id}>
+                        <a
+                          href={`#${entry.id}`}
+                          className="block text-ink-muted hover:text-brand-magentaText"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            const target = document.getElementById(entry.id);
+                            target?.closest("details")?.setAttribute("open", "");
+                            target?.scrollIntoView({ behavior: "smooth", block: "start" });
+                            window.history.replaceState(null, "", `#${entry.id}`);
+                          }}
+                        >
+                          {entry.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                )}
               </li>
             ))}
           </ol>

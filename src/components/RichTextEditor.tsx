@@ -5,6 +5,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import type { JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
+import Underline from "@tiptap/extension-underline";
 import {
   richTextInitialValue,
   serializeRichText,
@@ -97,6 +98,7 @@ export function RichTextEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({ heading: { levels: [2, 3] } }),
+      Underline,
       Link.configure({
         openOnClick: false,
         autolink: true,
@@ -147,9 +149,12 @@ export function RichTextEditor({
   return (
     <div className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)]">
       <input type="hidden" name={name} value={value} />
-      <div className="sticky top-20 z-20 flex flex-wrap gap-1 border-b border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2">
+      <EditorContent editor={editor} />
+      <div className="sticky bottom-4 z-20 flex flex-wrap gap-1 border-t border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2">
         <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={toggleBold} disabled={!editor} aria-label="Bold"><strong>B</strong></button>
         <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleItalic().run()} disabled={!editor} aria-label="Italic"><em>I</em></button>
+        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleUnderline().run()} disabled={!editor} aria-label="Underline"><u>U</u></button>
+        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleStrike().run()} disabled={!editor} aria-label="Strikethrough"><s>S</s></button>
         <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} disabled={!editor}>H2</button>
         <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} disabled={!editor}>H3</button>
         <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleBulletList().run()} disabled={!editor}>• List</button>
@@ -159,7 +164,6 @@ export function RichTextEditor({
         <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()}>Undo</button>
         <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()}>Redo</button>
       </div>
-      <EditorContent editor={editor} />
     </div>
   );
 }

@@ -59,6 +59,7 @@ export async function editProject(formData: FormData) {
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const featuredImageUrl = String(formData.get("featuredImageUrl") ?? "").trim();
   const richDescription = parseRichText(description);
   const descriptionText = richDescription
     ? richTextPlainText(richDescription)
@@ -82,12 +83,23 @@ export async function editProject(formData: FormData) {
   if (!STATUSES.includes(statusRaw as ProjectStatus)) {
     throw new Error("Unknown status.");
   }
+  if (featuredImageUrl) {
+    try {
+      const url = new URL(featuredImageUrl);
+      if (url.protocol !== "https:" && url.protocol !== "http:") {
+        throw new Error();
+      }
+    } catch {
+      throw new Error("Featured image must be a valid http(s) URL.");
+    }
+  }
 
   await db
     .update(projects)
     .set({
       title,
       description,
+      featuredImageUrl: featuredImageUrl || null,
       industry: industryRaw as Industry,
       status: statusRaw as ProjectStatus,
       skillsRequired,
@@ -106,8 +118,9 @@ export async function editProject(formData: FormData) {
       status: before.status,
       industry: before.industry,
       skillsRequired: before.skillsRequired,
+      featuredImageUrl: before.featuredImageUrl ?? null,
     },
-    after: { title, status: statusRaw, industry: industryRaw, skillsRequired },
+    after: { title, status: statusRaw, industry: industryRaw, skillsRequired, featuredImageUrl: featuredImageUrl || null },
     reason: "Listing edited by admin.",
   });
 

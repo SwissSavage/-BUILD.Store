@@ -72,6 +72,20 @@ export default async function EditProjectPage({
             />
           </div>
 
+          <label className={labelClass}>
+            Featured image URL <span className="text-ink-faint">(optional)</span>
+            <input
+              name="featuredImageUrl"
+              type="url"
+              defaultValue={project.featuredImageUrl ?? ""}
+              placeholder="https://…"
+              className={inputClass}
+            />
+            <span className="mt-1 block text-xs text-ink-faint">
+              Shows an editorial image above the listing. Leave blank to keep the standard header.
+            </span>
+          </label>
+
           <div className="grid gap-3 md:grid-cols-2">
             <label className={labelClass}>
               Pillar

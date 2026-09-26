@@ -17,7 +17,9 @@ import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
 import { Brief, briefPlainText } from "@/components/Brief";
+import { BriefTableOfContents } from "@/components/BriefTableOfContents";
 import { Card, CardTitle } from "@/components/Card";
+import { OpportunityHeader } from "@/components/OpportunityHeader";
 import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { BidOnContractForm } from "@/components/BidOnContractForm";
 import { computeRateBounds } from "@/lib/rate-bounds";
@@ -135,38 +137,28 @@ export default async function ContractDetailPage({
       />
 
       <div className="mx-auto max-w-app px-6 py-12">
-        <Link href="/contracts" className="text-sm text-ink-muted hover:text-ink">
-          ← All open contracts
-        </Link>
-
-        <div className="mt-4 flex items-center gap-3">
-          <span
-            className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-            style={{
-              backgroundColor: "rgba(80,112,240,0.15)",
-              color: "var(--fm-blue-text)",
-            }}
-          >
-            Contract
-          </span>
-          <span className="text-xs uppercase tracking-wider text-ink-muted">
-            {INDUSTRY_LABELS[project.industry]}
-          </span>
-        </div>
-
-        <h1 className="mt-2 font-display text-4xl font-semibold">
-          {project.title}
-        </h1>
-        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <OpportunityHeader
+          backHref="/contracts"
+          backLabel="All open contracts"
+          imageUrl={project.featuredImageUrl}
+          kind="Contract"
+          industry={INDUSTRY_LABELS[project.industry]}
+          title={project.title}
+          postedAt={project.rfpApprovedAt}
+        />
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+          <BriefTableOfContents targetId="contract-brief" />
           <div className="space-y-6">
-            <Card>
-              <CardTitle>About this work</CardTitle>
-              <Brief text={project.description} title={project.title} className="mt-3" />
-              <AdminObjectControls
-                editHref={`/admin/projects/${project.id}/edit`}
-                label="contract"
-              />
-            </Card>
+            <section id="contract-brief">
+              <Card>
+                <CardTitle>About this work</CardTitle>
+                <Brief text={project.description} title={project.title} className="mt-3" />
+                <AdminObjectControls
+                  editHref={`/admin/projects/${project.id}/edit`}
+                  label="contract"
+                />
+              </Card>
+            </section>
 
             {isSignedIn && rateBounds ? (
               <BidOnContractForm

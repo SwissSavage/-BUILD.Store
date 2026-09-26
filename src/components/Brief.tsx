@@ -429,7 +429,7 @@ export function Brief({
             open={i <= 1}
             className="group border-t border-[var(--surface-border)] py-3"
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wider text-ink hover:text-brand-magentaText">
+            <summary data-brief-heading className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wider text-ink hover:text-brand-magentaText">
               {renderInline(section.heading)}
               <span
                 aria-hidden

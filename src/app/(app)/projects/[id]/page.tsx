@@ -53,7 +53,9 @@ import {
   type User,
 } from "@/lib/types";
 import { Brief } from "@/components/Brief";
+import { BriefTableOfContents } from "@/components/BriefTableOfContents";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { OpportunityHeader } from "@/components/OpportunityHeader";
 import { PeerReviewSection } from "@/components/PeerReviewSection";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
 import { TalentHand, type TalentHandEntry } from "@/components/TalentHand";
@@ -152,51 +154,46 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
-      <Link
-        href="/projects"
-        className="text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
-      >
-        ← All projects
-      </Link>
+      <OpportunityHeader
+        backHref="/projects"
+        backLabel="All projects"
+        imageUrl={project.featuredImageUrl}
+        kind="Project"
+        industry={INDUSTRY_LABELS[project.industry]}
+        title={project.title}
+        postedAt={project.createdAt}
+        trailing={
+          <span
+            className="rounded-full bg-[rgba(80,112,240,0.18)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--fm-blue-text)]"
+          >
+            {project.status.replace("_", " ")}
+          </span>
+        }
+      />
 
-      <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <CardEyebrow>
-            {isInternal ? "Internal initiative" : "External contract"} ·{" "}
-            {INDUSTRY_LABELS[project.industry]}
-          </CardEyebrow>
-          <h1 className="mt-2 font-display text-4xl font-semibold">
-            {project.title}
-          </h1>
-        </div>
-        <span
-          className="rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-          style={{ backgroundColor: "rgba(80,112,240,0.15)", color: "var(--fm-blue-text)" }}
-        >
-          {project.status.replace("_", " ")}
-        </span>
-      </div>
-
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+        <BriefTableOfContents targetId="project-brief" />
         <div className="space-y-6">
-          <Card>
-            <CardTitle>About this work</CardTitle>
-            <Brief text={project.description} title={project.title} className="mt-3" />
-            <AdminObjectControls
-              editHref={`/admin/projects/${project.id}/edit`}
-              label="initiative"
-            />
-            <div className="mt-5 flex flex-wrap gap-1.5">
-              {project.skillsRequired.map((s) => (
-                <span
-                  key={s}
-                  className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
-          </Card>
+          <section id="project-brief">
+            <Card>
+              <CardTitle>About this work</CardTitle>
+              <Brief text={project.description} title={project.title} className="mt-3" />
+              <AdminObjectControls
+                editHref={`/admin/projects/${project.id}/edit`}
+                label="initiative"
+              />
+              <div className="mt-5 flex flex-wrap gap-1.5">
+                {project.skillsRequired.map((s) => (
+                  <span
+                    key={s}
+                    className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </Card>
+          </section>
 
           {/* ── Milestone tracker (Domino's-style) ───── */}
           {user && (

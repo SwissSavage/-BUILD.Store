@@ -21,6 +21,7 @@ import { quoteSheetReader, safely } from "@/lib/readers";
 import { INDUSTRY_LABELS, type QuoteSheetSample } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
 import { DepersonalizeNotice } from "@/components/DepersonalizeNotice";
+import { formatBudget } from "@/lib/budget";
 
 async function submitQuote(formData: FormData) {
   "use server";
@@ -91,6 +92,7 @@ export default async function QuoteSubmitPage({
   const { id } = await params;
   const project = await getProjectById(id);
   if (!project || project.kind !== "contract") notFound();
+  const budgetText = formatBudget(project.budget);
 
   const allQuotes = await safely(() => quoteSheetReader.all(), []);
   const myQuotes = allQuotes.filter(
@@ -115,7 +117,7 @@ export default async function QuoteSubmitPage({
         <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
           <span className="text-ink-faint">Budget:</span>
           <span className="font-medium">
-            ${Number(project.budget).toLocaleString()}
+            {budgetText}
           </span>
           <span className="text-ink-faint">·</span>
           <div className="flex flex-wrap gap-1.5">

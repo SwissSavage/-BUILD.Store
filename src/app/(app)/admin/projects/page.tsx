@@ -12,6 +12,7 @@ import { getAllProjects } from "@/lib/readers/projects";
 import { trashProject } from "@/lib/project-trash-actions";
 import { INDUSTRY_LABELS, type Project } from "@/lib/types";
 import { prospectiveContributionReader, safely } from "@/lib/readers";
+import { formatBudget } from "@/lib/budget";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +115,7 @@ export default async function AdminProjectsPage() {
                 <td className="p-4 text-ink-muted">
                   {INDUSTRY_LABELS[p.industry]}
                 </td>
-                <td className="p-4">${Number(p.budget).toLocaleString()}</td>
+                <td className="p-4">{formatBudget(p.budget)}</td>
                 <td className="p-4 capitalize">{p.status.replace("_", " ")}</td>
                 <td className="p-4">
                   <form action={advance} className="flex items-center gap-2">

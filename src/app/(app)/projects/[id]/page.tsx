@@ -25,6 +25,7 @@
  * targets stay the same shape.
  */
 import Link from "next/link";
+import { ShieldCheck, Tags, Users } from "lucide-react";
 import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
@@ -56,6 +57,7 @@ import { Brief, briefHeadings } from "@/components/Brief";
 import { BriefTableOfContents } from "@/components/BriefTableOfContents";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { OpportunityHeader } from "@/components/OpportunityHeader";
+import { ExpandableSkillTags } from "@/components/ExpandableSkillTags";
 import { PeerReviewSection } from "@/components/PeerReviewSection";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
 import { TalentHand, type TalentHandEntry } from "@/components/TalentHand";
@@ -185,16 +187,6 @@ export default async function ProjectDetailPage({
                 editHref={`/admin/projects/${project.id}/edit`}
                 label="initiative"
               />
-              <div className="mt-5 flex flex-wrap gap-1.5">
-                {project.skillsRequired.map((s) => (
-                  <span
-                    key={s}
-                    className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted"
-                  >
-                    {s}
-                  </span>
-                ))}
-              </div>
             </Card>
           </section>
 
@@ -259,9 +251,14 @@ export default async function ProjectDetailPage({
         </div>
 
         {/* Desktop rail: project controls remain reachable alongside the brief. */}
-        <aside className="h-fit space-y-6 lg:sticky lg:top-24 lg:self-start">
+        <aside className="h-fit space-y-4 lg:sticky lg:top-24 lg:self-start">
           <Card>
-            <CardEyebrow>Team</CardEyebrow>
+            <CardTitle>
+              <span className="flex items-center gap-2">
+                <Users aria-hidden="true" size={18} strokeWidth={1.75} />
+                Team
+              </span>
+            </CardTitle>
             {project.assignedMemberIds.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">
                 Open seat — looking for the right contributor.
@@ -278,9 +275,26 @@ export default async function ProjectDetailPage({
             )}
           </Card>
 
+          {project.skillsRequired.length > 0 && (
+            <Card>
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <Tags aria-hidden="true" size={18} strokeWidth={1.75} />
+                  Skills
+                </span>
+              </CardTitle>
+              <ExpandableSkillTags skills={project.skillsRequired} />
+            </Card>
+          )}
+
           {user && isAdmin && isInternal && (
             <Card>
-              <CardEyebrow>Admin</CardEyebrow>
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <ShieldCheck aria-hidden="true" size={18} strokeWidth={1.75} />
+                  Admin
+                </span>
+              </CardTitle>
               <p className="mt-2 text-sm text-ink-muted">
                 {allApps.filter((a) => a.status === "pending").length} pending
                 application

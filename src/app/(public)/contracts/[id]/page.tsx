@@ -154,9 +154,8 @@ export default async function ContractDetailPage({
           <div className="space-y-6">
             <section id="contract-brief">
               {/* Editorial reading surface, deliberately quieter than the action cards in the right rail. */}
-              <Card className="rounded-none border-0 bg-[var(--surface-reading)] p-8">
-                <CardTitle>About this work</CardTitle>
-                <Brief text={project.description} title={project.title} className="mt-4 [&_h2]:border-t [&_h2]:border-[var(--surface-border)] [&_h2]:pt-8" />
+              <Card className="bg-[var(--surface-reading)] p-8">
+                <Brief text={project.description} title={project.title} />
                 <AdminObjectControls
                   editHref={`/admin/projects/${project.id}/edit`}
                   label="contract"

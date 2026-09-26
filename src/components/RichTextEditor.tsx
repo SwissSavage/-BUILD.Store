@@ -145,9 +145,9 @@ export function RichTextEditor({
   };
 
   return (
-    <div className="mt-1 overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)]">
+    <div className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)]">
       <input type="hidden" name={name} value={value} />
-      <div className="flex flex-wrap gap-1 border-b border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2">
+      <div className="sticky top-20 z-20 flex flex-wrap gap-1 border-b border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2">
         <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={toggleBold} disabled={!editor} aria-label="Bold"><strong>B</strong></button>
         <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleItalic().run()} disabled={!editor} aria-label="Italic"><em>I</em></button>
         <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} disabled={!editor}>H2</button>

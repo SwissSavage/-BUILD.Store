@@ -11,6 +11,8 @@ export function BriefTableOfContents({
   headings: BriefHeading[];
 }) {
   const [ready, setReady] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const root = document.getElementById(targetId);
@@ -25,22 +27,55 @@ export function BriefTableOfContents({
     setReady(true);
   }, [headings, targetId]);
 
+  useEffect(() => {
+    const updateProgress = () => {
+      const root = document.getElementById(targetId);
+      if (!root) return;
+      const start = root.getBoundingClientRect().top + window.scrollY;
+      const distance = Math.max(root.offsetHeight - window.innerHeight, 1);
+      setProgress(Math.min(100, Math.max(0, Math.round(((window.scrollY - start) / distance) * 100))));
+    };
+
+    updateProgress();
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    window.addEventListener("resize", updateProgress);
+    return () => {
+      window.removeEventListener("scroll", updateProgress);
+      window.removeEventListener("resize", updateProgress);
+    };
+  }, [targetId]);
+
+  const share = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: document.title, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2000);
+      }
+    } catch {
+      // A dismissed native share dialog is not an error the reader needs to see.
+    }
+  };
+
   // This grid cell always exists on desktop. Without it, a brief with no
   // headings would slide into the table-of-contents column.
   return (
     <div className={ready && headings.length > 0 ? "" : "hidden lg:block"}>
       {ready && headings.length > 0 && (
         // Desktop rail: keep navigation in view while the brief scrolls.
-        <nav aria-label="On this page" className="lg:sticky lg:top-24 lg:self-start">
+        <nav aria-label="Table of contents" className="lg:sticky lg:top-24 lg:self-start">
           <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-            On this page
+            Table of contents
           </p>
-          <ol className="mt-3 space-y-2 border-l border-[var(--surface-border)] text-sm">
+          <ol className="mt-3 list-outside list-decimal space-y-2 pl-5 text-sm marker:text-ink-faint">
             {headings.map((entry) => (
-              <li key={entry.id} className={entry.level === 3 ? "pl-5" : "pl-3"}>
+              <li key={entry.id} className={entry.level === 3 ? "ml-3" : ""}>
                 <a
                   href={`#${entry.id}`}
-                  className="text-ink-muted hover:text-brand-magentaText"
+                  className="block text-ink-muted hover:text-brand-magentaText"
                   onClick={(event) => {
                     event.preventDefault();
                     const target = document.getElementById(entry.id);
@@ -54,6 +89,36 @@ export function BriefTableOfContents({
               </li>
             ))}
           </ol>
+          <div className="mt-8 space-y-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                Share this post
+              </p>
+              <button
+                type="button"
+                onClick={share}
+                className="mt-2 text-sm text-ink-muted hover:text-brand-magentaText"
+              >
+                {copied ? "Link copied" : "Share link"}
+              </button>
+            </div>
+            <div>
+              <p className="text-sm font-semibold tabular-nums text-ink">{progress}% read</p>
+              <div className="mt-2 h-px bg-[var(--surface-border)]" aria-hidden="true">
+                <div
+                  className="h-px bg-brand-magenta transition-[width] duration-200"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="text-xs font-semibold uppercase tracking-wider text-ink-muted hover:text-brand-magentaText"
+            >
+              Back to top
+            </button>
+          </div>
         </nav>
       )}
     </div>

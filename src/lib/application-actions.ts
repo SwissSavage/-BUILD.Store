@@ -31,6 +31,7 @@ import {
   computeRateBounds,
   validateRateAgainstBounds,
 } from "@/lib/rate-bounds";
+import { richTextValuePlainText } from "@/lib/rich-text";
 
 function newApplicationId(prefix: "app" | "bid"): string {
   return `${prefix}_${randomBytes(6).toString("hex")}`;
@@ -64,6 +65,7 @@ async function submitJobApplicationInner(
 
   const jobId = String(formData.get("jobId") ?? "").trim();
   const pitch = String(formData.get("pitch") ?? "").trim();
+  const pitchText = richTextValuePlainText(pitch);
   const portfolioLink = String(formData.get("portfolioLink") ?? "").trim();
   const desiredCompensation = String(
     formData.get("desiredCompensation") ?? "",
@@ -72,7 +74,7 @@ async function submitJobApplicationInner(
   if (!jobId) {
     return { ok: false, message: "Missing role reference. Reload the page and try again." };
   }
-  if (pitch.length < 20) {
+  if (pitchText.length < 20) {
     return {
       ok: false,
       message:
@@ -331,6 +333,7 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
 
   const contractId = String(formData.get("contractId") ?? "").trim();
   const pitch = String(formData.get("pitch") ?? "").trim();
+  const pitchText = richTextValuePlainText(pitch);
   const proposedRole = String(formData.get("proposedRole") ?? "").trim();
   const hoursPerWeekRaw = String(formData.get("hoursPerWeek") ?? "").trim();
   const hourlyRateRaw = String(formData.get("hourlyRate") ?? "").trim();
@@ -339,7 +342,7 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
   if (!contractId) {
     return { ok: false, message: "Missing contract reference. Reload the page and try again." };
   }
-  if (pitch.length < 20) {
+  if (pitchText.length < 20) {
     return {
       ok: false,
       message:

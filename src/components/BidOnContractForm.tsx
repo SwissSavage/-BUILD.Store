@@ -16,6 +16,7 @@ import { submitContractBid } from "@/lib/application-actions";
 import type { ProposalResult } from "@/lib/application-actions";
 import { Card } from "@/components/Card";
 import { DepersonalizeNotice } from "@/components/DepersonalizeNotice";
+import { RichTextEditor } from "@/components/RichTextEditor";
 
 interface Props {
   contractId: string;
@@ -175,19 +176,18 @@ export function BidOnContractForm({
         <DepersonalizeNotice context="proposal" />
 
         <div>
-          <label htmlFor="pitch" className="text-sm font-medium">
+          <p className="text-sm font-medium">
             Pitch <span className="text-ink-muted">(required)</span>
-          </label>
-          <textarea
-            id="pitch"
+          </p>
+          <RichTextEditor
             name="pitch"
+            initialValue={existing?.pitch ?? ""}
             required
             minLength={20}
-            rows={5}
-            defaultValue={existing?.pitch ?? ""}
-            placeholder="Your approach, and the relevant past work. Describe the client rather than naming them."
-            className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
           />
+          <p className="mt-2 text-xs text-ink-faint">
+            Your approach and relevant past work. Describe the client rather than naming them.
+          </p>
         </div>
 
         <div>

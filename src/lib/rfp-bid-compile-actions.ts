@@ -35,6 +35,7 @@ import {
 } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { richTextValuePlainText } from "@/lib/rich-text";
 import type {
   CooperativeQuote,
   ProposedBuilder,
@@ -183,7 +184,7 @@ export async function compileBidsIntoQuote(formData: FormData) {
     const relevance =
       perBidRelevance.length >= 10
         ? perBidRelevance
-        : p.pitch.split(".")[0]?.slice(0, 200) ?? "Strong fit for this scope.";
+        : richTextValuePlainText(p.pitch).split(".")[0]?.slice(0, 200) ?? "Strong fit for this scope.";
     const rate = p.hourlyRate ? Number.parseFloat(p.hourlyRate) : 0;
     const hoursLine = p.hoursPerWeek
       ? `${p.hoursPerWeek} hrs/week across the engagement`
@@ -249,4 +250,3 @@ export async function compileBidsIntoQuote(formData: FormData) {
   // magic link out to the client email.
   redirect(`/admin/cooperative-quotes`);
 }
-

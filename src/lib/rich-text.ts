@@ -43,3 +43,10 @@ export function richTextPlainText(value: RichTextDocument): string {
   visit(value);
   return chunks.join(" ");
 }
+
+/** Readable content for validation, previews, and systems that store text. */
+export function richTextValuePlainText(value: string | null | undefined): string {
+  if (!value?.trim()) return "";
+  const document = parseRichText(value);
+  return document ? richTextPlainText(document).trim() : value.trim();
+}

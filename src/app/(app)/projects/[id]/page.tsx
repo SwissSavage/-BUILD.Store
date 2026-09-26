@@ -54,10 +54,12 @@ import {
   type User,
 } from "@/lib/types";
 import { Brief, briefHeadings } from "@/components/Brief";
+import { richTextValuePlainText } from "@/lib/rich-text";
 import { BriefTableOfContents } from "@/components/BriefTableOfContents";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { OpportunityHeader } from "@/components/OpportunityHeader";
 import { ExpandableSkillTags } from "@/components/ExpandableSkillTags";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import { PeerReviewSection } from "@/components/PeerReviewSection";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
 import { TalentHand, type TalentHandEntry } from "@/components/TalentHand";
@@ -364,7 +366,7 @@ function ApplySection({
           Pending admin review.
         </p>
         <p className="mt-3 text-xs italic text-ink-muted">
-          "{myPending.pitch}"
+          "{richTextValuePlainText(myPending.pitch)}"
         </p>
         <form action={withdrawProjectApplication} className="mt-4">
           <input type="hidden" name="id" value={myPending.id} />
@@ -452,20 +454,17 @@ function ApplySection({
         </div>
 
         <div>
-          <label
-            htmlFor="pitch"
-            className="block text-xs uppercase tracking-wider text-ink-muted"
-          >
+          <p className="block text-xs uppercase tracking-wider text-ink-muted">
             Why you, why now?
-          </label>
-          <textarea
-            id="pitch"
+          </p>
+          <RichTextEditor
             name="pitch"
+            initialValue=""
             required
-            rows={4}
-            placeholder="Speak to the work — what you'd contribute, relevant past projects, anything we should know."
-            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
           />
+          <p className="mt-2 text-xs text-ink-faint">
+            Speak to the work — what you&apos;d contribute, relevant past projects, and anything we should know.
+          </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -739,7 +738,7 @@ function ApplicationQueue({
               <p className="mt-1 text-xs text-ink-muted">
                 {a.hoursPerWeek}h/wk · {formatDate(a.createdAt)}
               </p>
-              <p className="mt-1 text-xs italic text-ink-muted">"{a.pitch}"</p>
+              <p className="mt-1 text-xs italic text-ink-muted">"{richTextValuePlainText(a.pitch)}"</p>
               {a.adminNote && (
                 <p
                   className="mt-1 text-xs"

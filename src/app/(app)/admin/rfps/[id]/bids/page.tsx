@@ -30,6 +30,7 @@ import {
 } from "@/db/schema";
 import { compileBidsIntoQuote } from "@/lib/rfp-bid-compile-actions";
 import { scrubForClient } from "@/lib/pii-scrub";
+import { richTextValuePlainText } from "@/lib/rich-text";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 interface Params {
@@ -204,7 +205,7 @@ export default async function RfpBidCompilePage({
                 // Scrub the pitch preview before showing it to admin
                 // so admin catches PII the talent may have leaked and
                 // can note it back to them privately.
-                const scrub = scrubForClient(b.pitch);
+                const scrub = scrubForClient(richTextValuePlainText(b.pitch));
                 return (
                   <li
                     key={b.id}

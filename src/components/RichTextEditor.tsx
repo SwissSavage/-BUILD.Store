@@ -8,6 +8,7 @@ import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import {
   richTextInitialValue,
+  richTextPlainText,
   serializeRichText,
   type RichTextDocument,
 } from "@/lib/rich-text";
@@ -88,12 +89,17 @@ function structuredPaste(text: string): JSONContent[] | null {
 export function RichTextEditor({
   name,
   initialValue,
+  required = false,
+  minLength,
 }: {
   name: string;
   initialValue: string;
+  required?: boolean;
+  minLength?: number;
 }) {
   const initial = richTextInitialValue(initialValue);
   const [value, setValue] = useState(() => serializeRichText(initial));
+  const [plainText, setPlainText] = useState(() => richTextPlainText(initial).trim());
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -126,8 +132,11 @@ export function RichTextEditor({
           "min-h-64 px-4 py-3 text-sm leading-relaxed text-ink outline-none [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-display [&_h2]:font-semibold [&_h3]:mt-5 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-wider [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:my-4 [&_blockquote]:border-l-2 [&_blockquote]:border-brand-magenta [&_blockquote]:pl-4 [&_a]:text-brand-magentaText [&_a]:underline",
       },
     },
-    onUpdate: ({ editor: nextEditor }) =>
-      setValue(serializeRichText(nextEditor.getJSON() as RichTextDocument)),
+    onUpdate: ({ editor: nextEditor }) => {
+      const document = nextEditor.getJSON() as RichTextDocument;
+      setValue(serializeRichText(document));
+      setPlainText(richTextPlainText(document).trim());
+    },
   });
 
   const addLink = () => {
@@ -149,6 +158,17 @@ export function RichTextEditor({
   return (
     <div className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)]">
       <input type="hidden" name={name} value={value} />
+      {(required || minLength) && (
+        <textarea
+          aria-hidden="true"
+          tabIndex={-1}
+          className="sr-only"
+          value={plainText}
+          required={required}
+          minLength={minLength}
+          onChange={() => {}}
+        />
+      )}
       <EditorContent editor={editor} />
       <div className="sticky bottom-4 z-20 flex flex-wrap gap-1 border-t border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2">
         <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={toggleBold} disabled={!editor} aria-label="Bold"><strong>B</strong></button>

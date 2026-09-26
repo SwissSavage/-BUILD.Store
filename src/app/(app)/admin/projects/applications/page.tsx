@@ -31,6 +31,7 @@ import {
   type User,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { richTextValuePlainText } from "@/lib/rich-text";
 
 const STATUS_ACCENT: Record<ProjectApplication["status"], string> = {
   pending: "#5070F0",
@@ -189,7 +190,7 @@ function PendingRow({
             Pitch
           </p>
           <p className="mt-1 text-sm italic text-ink-muted">
-            "{application.pitch}"
+            "{richTextValuePlainText(application.pitch)}"
           </p>
 
           {(application.attachments ?? []).length > 0 && (

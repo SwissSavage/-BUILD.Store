@@ -54,12 +54,12 @@ import {
   type User,
 } from "@/lib/types";
 import { Brief, briefHeadings } from "@/components/Brief";
-import { richTextValuePlainText } from "@/lib/rich-text";
 import { BriefTableOfContents } from "@/components/BriefTableOfContents";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { OpportunityHeader } from "@/components/OpportunityHeader";
 import { ExpandableSkillTags } from "@/components/ExpandableSkillTags";
 import { RichTextEditor } from "@/components/RichTextEditor";
+import { StructuredText } from "@/components/StructuredText";
 import { PeerReviewSection } from "@/components/PeerReviewSection";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
 import { TalentHand, type TalentHandEntry } from "@/components/TalentHand";
@@ -365,9 +365,7 @@ function ApplySection({
           <span className="text-ink">"{myPending.proposedRole}"</span>.
           Pending admin review.
         </p>
-        <p className="mt-3 text-xs italic text-ink-muted">
-          "{richTextValuePlainText(myPending.pitch)}"
-        </p>
+        <StructuredText text={myPending.pitch} />
         <form action={withdrawProjectApplication} className="mt-4">
           <input type="hidden" name="id" value={myPending.id} />
           <input
@@ -738,7 +736,7 @@ function ApplicationQueue({
               <p className="mt-1 text-xs text-ink-muted">
                 {a.hoursPerWeek}h/wk · {formatDate(a.createdAt)}
               </p>
-              <p className="mt-1 text-xs italic text-ink-muted">"{richTextValuePlainText(a.pitch)}"</p>
+              <StructuredText text={a.pitch} />
               {a.adminNote && (
                 <p
                   className="mt-1 text-xs"

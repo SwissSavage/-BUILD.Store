@@ -49,6 +49,7 @@ import { Card, CardEyebrow } from "@/components/Card";
 import { TierBadge } from "@/components/TierBadge";
 import { Avatar } from "@/components/Avatar";
 import { MvpCard } from "@/components/MvpCard";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import {
   loadProfileEditData,
   saveProfile,
@@ -278,15 +279,13 @@ export default async function IdentityEditPage() {
 
           <Field name="portfolioUrl" label="Portfolio URL" defaultValue={user.portfolioUrl ?? ""} />
 
-          <label className="block">
+          <div className="block">
             <span className="text-xs uppercase tracking-wider text-ink-muted">Bio</span>
-            <textarea
+            <RichTextEditor
               name="bio"
-              rows={4}
-              defaultValue={user.bio ?? ""}
-              className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
+              initialValue={user.bio ?? ""}
             />
-          </label>
+          </div>
 
           <button
             type="submit"

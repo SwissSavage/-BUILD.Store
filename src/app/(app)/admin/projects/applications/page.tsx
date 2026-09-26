@@ -31,7 +31,7 @@ import {
   type User,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
-import { richTextValuePlainText } from "@/lib/rich-text";
+import { StructuredText } from "@/components/StructuredText";
 
 const STATUS_ACCENT: Record<ProjectApplication["status"], string> = {
   pending: "#5070F0",
@@ -189,9 +189,7 @@ function PendingRow({
           <p className="mt-4 text-xs uppercase tracking-wider text-ink-muted">
             Pitch
           </p>
-          <p className="mt-1 text-sm italic text-ink-muted">
-            "{richTextValuePlainText(application.pitch)}"
-          </p>
+          <StructuredText text={application.pitch} />
 
           {(application.attachments ?? []).length > 0 && (
             <div className="mt-4">

@@ -55,6 +55,8 @@ import {
 } from "@/components/TradingCard";
 import { TradingCard3D } from "@/components/TradingCard3D";
 import { ProfileShareButton } from "@/components/ProfileShareButton";
+import { StructuredText } from "@/components/StructuredText";
+import { richTextValuePlainText } from "@/lib/rich-text";
 
 /** Canonical site URL for JSON-LD graph references. */
 const SITE_URL =
@@ -207,6 +209,7 @@ export default async function PublicProfilePage({
   // another Sarah exists. Full name never leaks into structured data
   // or display copy per public-privacy policy.
   const displayName = publicNameDisambiguated(user, allUsers);
+  const bioText = richTextValuePlainText(user.bio);
 
   // knowsAbout composes pillar labels + declared skills so long-tail
   // skill searches (e.g. "Solidity contract auditor") can surface
@@ -226,8 +229,8 @@ export default async function PublicProfilePage({
     // Prefer tagline (short one-liner, purpose-built for the "at a
     // glance" surface) over bio (long-form). Falls through to bio if
     // tagline hasn't been set yet.
-    ...(user.tagline || user.bio
-      ? { description: user.tagline ?? user.bio }
+    ...(user.tagline || bioText
+      ? { description: user.tagline ?? bioText }
       : {}),
     ...(user.discipline ? { jobTitle: user.discipline } : {}),
     ...(knowsAbout.length > 0 ? { knowsAbout } : {}),
@@ -362,7 +365,7 @@ export default async function PublicProfilePage({
             ))}
           </div>
           {user.bio && (
-            <p className="mt-4 max-w-prose text-ink-muted">{user.bio}</p>
+            <StructuredText text={user.bio} className="text-ink-muted" />
           )}
           {user.skills.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-1.5">

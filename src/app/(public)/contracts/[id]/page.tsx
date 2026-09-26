@@ -25,6 +25,7 @@ import { ExpandableSkillTags } from "@/components/ExpandableSkillTags";
 import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { BidOnContractForm } from "@/components/BidOnContractForm";
 import { computeRateBounds } from "@/lib/rate-bounds";
+import { formatBudget } from "@/lib/budget";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projectApplications } from "@/db/schema";
@@ -119,10 +120,8 @@ export default async function ContractDetailPage({
   // client and administrators may see them.
   const canSeeBudget =
     currentUser?.isAdmin === true || currentUser?.id === project.clientId;
-  const budgetNum = Number(project.budget);
-  const compText = Number.isFinite(budgetNum)
-    ? `$${budgetNum.toLocaleString()}`
-    : undefined;
+  const hasDisclosedBudget = Number(project.budget) > 0;
+  const compText = formatBudget(project.budget);
 
   return (
     <>
@@ -134,7 +133,7 @@ export default async function ContractDetailPage({
         hiringOrganizationUrl={SITE_URL}
         locationText="Remote"
         isRemote={true}
-        compensationText={canSeeBudget ? compText : undefined}
+        compensationText={canSeeBudget && hasDisclosedBudget ? compText : undefined}
         employmentType="CONTRACTOR"
         url={`${SITE_URL}/contracts/${project.id}`}
       />
@@ -202,7 +201,7 @@ export default async function ContractDetailPage({
                 </span>
               </CardTitle>
               <div className="mt-4 space-y-4">
-                {canSeeBudget && <Field label="Budget" value={compText ?? "—"} />}
+                {canSeeBudget && <Field label="Budget" value={compText} />}
                 <Field
                   label="Posted"
                   value={new Date(project.rfpApprovedAt).toLocaleDateString(

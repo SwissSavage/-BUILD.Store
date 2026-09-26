@@ -19,6 +19,12 @@ export function OpportunityHeader({
   postedAt?: string | null;
   trailing?: React.ReactNode;
 }) {
+  // A deployment-level image keeps otherwise complete opportunities visually
+  // consistent without overwriting an image chosen for a specific record.
+  const effectiveImageUrl =
+    imageUrl?.trim() ||
+    process.env.NEXT_PUBLIC_FALLBACK_FEATURED_IMAGE_URL?.trim() ||
+    null;
   const tags = (
     <div className="flex flex-wrap items-center gap-2">
       <span className="rounded-full bg-[rgba(80,112,240,0.18)] px-2.5 py-0.5 text-xs font-medium text-[var(--fm-blue-text)]">
@@ -44,11 +50,11 @@ export function OpportunityHeader({
       <Link href={backHref} className="text-sm text-ink-muted hover:text-ink">
         ← {backLabel}
       </Link>
-      {imageUrl ? (
+      {effectiveImageUrl ? (
         <div className="relative mt-4 min-h-[22rem] overflow-hidden rounded-2xl bg-[var(--surface-elevated)]">
           {/* A remote image stays optional; pages without one retain the normal header. */}
           <img
-            src={imageUrl}
+            src={effectiveImageUrl}
             alt=""
             className="absolute inset-0 h-full w-full object-cover"
           />

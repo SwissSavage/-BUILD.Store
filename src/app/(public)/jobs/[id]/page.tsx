@@ -18,8 +18,8 @@ import { jobReader } from "@/lib/readers";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
-import { Brief } from "@/components/Brief";
-import { Card } from "@/components/Card";
+import { Brief, briefPlainText } from "@/components/Brief";
+import { Card, CardTitle } from "@/components/Card";
 import { ApplyToJobForm } from "@/components/ApplyToJobForm";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
   if (!job) return { title: "Role not found — Future Modern" };
   return {
     title: `${job.title} — Future Modern`,
-    description: job.description.slice(0, 155),
+    description: briefPlainText(job.description).slice(0, 155),
     alternates: { canonical: `${SITE_URL}/jobs/${job.id}` },
   };
 }
@@ -75,7 +75,7 @@ export default async function JobDetailPage({
     <>
       <JobPostingJsonLd
         title={job.title}
-        description={job.description}
+        description={briefPlainText(job.description)}
         datePosted={job.createdAt}
         hiringOrganizationName="Future Modern"
         hiringOrganizationUrl={SITE_URL}
@@ -86,7 +86,7 @@ export default async function JobDetailPage({
         url={`${SITE_URL}/jobs/${job.id}`}
       />
 
-      <div className="mx-auto max-w-3xl px-6 py-12">
+      <div className="mx-auto max-w-app px-6 py-12">
         <Link href="/jobs" className="text-sm text-ink-muted hover:text-ink">
           ← All open roles
         </Link>
@@ -110,37 +110,42 @@ export default async function JobDetailPage({
         <h1 className="mt-2 font-display text-4xl font-semibold">
           {job.title}
         </h1>
-        <Brief text={job.description} title={job.title} className="mt-6" />
-        <AdminObjectControls editHref="/admin/jobs" label="role" />
-
-        <div className="mt-8 grid grid-cols-2 gap-6 md:grid-cols-4">
-          <Field label="Comp" value={job.compensation} />
-          <Field label="Location" value={job.location} />
-          <Field label="Type" value={TYPE_LABEL[job.employmentType] ?? job.employmentType} />
-          <Field label="Posted" value={new Date(job.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })} />
-        </div>
-
-        {job.skillsRequired.length > 0 && (
-          <div className="mt-8">
-            <p className="text-xs uppercase tracking-wider text-ink-muted">
-              Skills
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {job.skillsRequired.map((s) => (
-                <span
-                  key={s}
-                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-sm text-ink-muted"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div>
+            <Card>
+              <CardTitle>About this role</CardTitle>
+              <Brief text={job.description} title={job.title} className="mt-3" />
+              <AdminObjectControls editHref="/admin/jobs" label="role" />
+            </Card>
           </div>
-        )}
+          <aside>
+            <Card>
+              <CardTitle>Role at a glance</CardTitle>
+              <div className="mt-4 space-y-4">
+                <Field label="Compensation" value={job.compensation} />
+                <Field label="Location" value={job.location} />
+                <Field label="Type" value={TYPE_LABEL[job.employmentType] ?? job.employmentType} />
+                <Field label="Posted" value={new Date(job.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })} />
+              </div>
+              {job.skillsRequired.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-xs uppercase tracking-wider text-ink-muted">Skills</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {job.skillsRequired.map((s) => (
+                      <span key={s} className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          </aside>
+        </div>
 
         {/* Auth-gated section — the actual apply form. Members submit
             a real application here; admin sees it in the queue. */}
-        <div className="mt-12">
+        <div className="mt-8">
           {isSignedIn ? (
             <ApplyToJobForm jobId={job.id} jobTitle={job.title} />
           ) : (

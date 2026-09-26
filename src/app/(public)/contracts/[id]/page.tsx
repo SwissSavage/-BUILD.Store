@@ -16,8 +16,8 @@ import { getProjectById } from "@/lib/readers/projects";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
-import { Brief } from "@/components/Brief";
-import { Card } from "@/components/Card";
+import { Brief, briefPlainText } from "@/components/Brief";
+import { Card, CardTitle } from "@/components/Card";
 import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { BidOnContractForm } from "@/components/BidOnContractForm";
 import { computeRateBounds } from "@/lib/rate-bounds";
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
   }
   return {
     title: `${p.title} — Contract at Future Modern`,
-    description: p.description.slice(0, 155),
+    description: briefPlainText(p.description).slice(0, 155),
     alternates: { canonical: `${SITE_URL}/contracts/${p.id}` },
   };
 }
@@ -123,7 +123,7 @@ export default async function ContractDetailPage({
     <>
       <JobPostingJsonLd
         title={project.title}
-        description={project.description}
+        description={briefPlainText(project.description)}
         datePosted={project.rfpApprovedAt}
         hiringOrganizationName="Future Modern"
         hiringOrganizationUrl={SITE_URL}
@@ -134,7 +134,7 @@ export default async function ContractDetailPage({
         url={`${SITE_URL}/contracts/${project.id}`}
       />
 
-      <div className="mx-auto max-w-3xl px-6 py-12">
+      <div className="mx-auto max-w-app px-6 py-12">
         <Link href="/contracts" className="text-sm text-ink-muted hover:text-ink">
           ← All open contracts
         </Link>
@@ -157,45 +157,48 @@ export default async function ContractDetailPage({
         <h1 className="mt-2 font-display text-4xl font-semibold">
           {project.title}
         </h1>
-        <Brief text={project.description} title={project.title} className="mt-6" />
-        <AdminObjectControls
-          editHref={`/admin/projects/${project.id}/edit`}
-          label="contract"
-        />
-
-        <div
-          className={`mt-8 grid grid-cols-2 gap-6${canSeeBudget ? " md:grid-cols-3" : ""}`}
-        >
-          {canSeeBudget && <Field label="Budget" value={compText ?? "—"} />}
-          <Field label="Status" value="Open for bids" />
-          <Field
-            label="Posted"
-            value={new Date(project.rfpApprovedAt).toLocaleDateString(
-              undefined,
-              { year: "numeric", month: "short", day: "numeric" },
-            )}
-          />
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div>
+            <Card>
+              <CardTitle>About this work</CardTitle>
+              <Brief text={project.description} title={project.title} className="mt-3" />
+              <AdminObjectControls
+                editHref={`/admin/projects/${project.id}/edit`}
+                label="contract"
+              />
+            </Card>
+          </div>
+          <aside>
+            <Card>
+              <CardTitle>Opportunity at a glance</CardTitle>
+              <div className="mt-4 space-y-4">
+                {canSeeBudget && <Field label="Budget" value={compText ?? "—"} />}
+                <Field label="Status" value="Open for bids" />
+                <Field
+                  label="Posted"
+                  value={new Date(project.rfpApprovedAt).toLocaleDateString(
+                    undefined,
+                    { year: "numeric", month: "short", day: "numeric" },
+                  )}
+                />
+              </div>
+              {project.skillsRequired.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-xs uppercase tracking-wider text-ink-muted">Skills</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {project.skillsRequired.map((s) => (
+                      <span key={s} className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          </aside>
         </div>
 
-        {project.skillsRequired.length > 0 && (
-          <div className="mt-8">
-            <p className="text-xs uppercase tracking-wider text-ink-muted">
-              Skills
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {project.skillsRequired.map((s) => (
-                <span
-                  key={s}
-                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-sm text-ink-muted"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="mt-12">
+        <div className="mt-8">
           {isSignedIn && rateBounds ? (
             <BidOnContractForm
               contractId={project.id}

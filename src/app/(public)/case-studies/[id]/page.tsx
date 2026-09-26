@@ -17,7 +17,8 @@ import {
   INDUSTRY_LABELS,
   publicNameDisambiguated,
 } from "@/lib/types";
-import { Card, CardEyebrow } from "@/components/Card";
+import { Brief, briefPlainText } from "@/components/Brief";
+import { Card, CardTitle } from "@/components/Card";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export async function generateMetadata({
   }
   return {
     title: `${p.title} — Case study at Future Modern`,
-    description: p.description.slice(0, 155),
+    description: briefPlainText(p.description).slice(0, 155),
     alternates: { canonical: `${SITE_URL}/case-studies/${p.id}` },
   };
 }
@@ -70,7 +71,7 @@ export default async function CaseStudyDetail({
     "@context": "https://schema.org",
     "@type": "CreativeWork",
     name: project.title,
-    description: project.description,
+    description: briefPlainText(project.description),
     url: `${SITE_URL}/case-studies/${project.id}`,
     creator: {
       "@id": `${SITE_URL}#organization`,
@@ -98,7 +99,7 @@ export default async function CaseStudyDetail({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(creativeWork) }}
       />
-      <div className="mx-auto max-w-3xl px-6 py-12">
+      <div className="mx-auto max-w-app px-6 py-12">
         <Link
           href="/case-studies"
           className="text-sm text-ink-muted hover:text-ink"
@@ -124,50 +125,46 @@ export default async function CaseStudyDetail({
         <h1 className="mt-2 font-display text-4xl font-semibold">
           {project.title}
         </h1>
-        <p className="mt-4 text-lg text-ink-muted">
-          {project.description}
-        </p>
-
-        {project.skillsRequired.length > 0 && (
-          <div className="mt-8">
-            <p className="text-xs uppercase tracking-wider text-ink-muted">
-              Skills applied
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {project.skillsRequired.map((s) => (
-                <span
-                  key={s}
-                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-sm text-ink-muted"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {contributors.length > 0 && (
-          <Card className="mt-8">
-            <CardEyebrow>Contributors</CardEyebrow>
-            <ul className="mt-3 space-y-2">
-              {contributors.map((c) => (
-                <li key={c.id} className="text-sm">
-                  <Link
-                    href={`/u/${c.handle}`}
-                    className="font-medium hover:text-brand-magentaText"
-                  >
-                    {publicNameDisambiguated(c, roster)}
-                  </Link>
-                  {memberLabel(c) && (
-                    <span className="ml-2 text-xs text-ink-muted">
-                      · {memberLabel(c)}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <Card>
+            <CardTitle>About this work</CardTitle>
+            <Brief text={project.description} title={project.title} className="mt-3" />
           </Card>
-        )}
+          <aside>
+            <Card>
+              {project.skillsRequired.length > 0 && (
+                <div>
+                  <CardTitle>Skills applied</CardTitle>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {project.skillsRequired.map((s) => (
+                      <span key={s} className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {contributors.length > 0 && (
+                <div className={project.skillsRequired.length > 0 ? "mt-6" : ""}>
+                  <CardTitle>Contributors</CardTitle>
+                  <ul className="mt-3 space-y-2">
+                    {contributors.map((c) => (
+                      <li key={c.id} className="text-sm">
+                        <Link href={`/u/${c.handle}`} className="font-medium hover:text-brand-magentaText">
+                          {publicNameDisambiguated(c, roster)}
+                        </Link>
+                        {memberLabel(c) && (
+                          <span className="ml-2 text-xs text-ink-muted">· {memberLabel(c)}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </Card>
+          </aside>
+        </div>
       </div>
     </>
   );

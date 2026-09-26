@@ -477,3 +477,12 @@ export function briefSummary(
   const lastStop = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf(" "));
   return `${cut.slice(0, lastStop > 80 ? lastStop : maxLength).trim()}…`;
 }
+
+/** Plain text for metadata and other non-visual consumers of a brief. */
+export function briefPlainText(text: string | null | undefined): string {
+  if (!text?.trim()) return "";
+  const richText = parseRichText(text);
+  return stripInline(richText ? richTextPlainText(richText) : text)
+    .replace(/\s+/g, " ")
+    .trim();
+}

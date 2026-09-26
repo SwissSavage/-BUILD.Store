@@ -33,13 +33,9 @@ function pastedHeading(line: string): { level: 2 | 3; text: string; body?: strin
     }
     const text = words.slice(0, cut).join(" ");
     const body = words.slice(cut).join(" ");
-    if (text && body.length >= 20) {
+    if (text && (body.length >= 20 || body.length === 0)) {
       return { level: /^\d/.test(marker[1]) ? 2 : 3, text: `${marker[1]} ${text}`, body };
     }
-  }
-
-  if (line.length <= 80 && line.split(/\s+/).every((word) => titleWord(word))) {
-    return { level: 2, text: line };
   }
   return null;
 }
@@ -52,10 +48,29 @@ function structuredPaste(text: string): JSONContent[] | null {
     .split("\n");
   const content: JSONContent[] = [];
   let recognised = false;
+  let listItems: JSONContent[] = [];
+  const flushList = () => {
+    if (listItems.length > 0) {
+      content.push({ type: "bulletList", content: listItems });
+      listItems = [];
+    }
+  };
 
   for (const raw of lines) {
     const line = raw.trim();
-    if (!line) continue;
+    if (!line) {
+      flushList();
+      continue;
+    }
+    const bullet = line.match(/^[-*•]\s+(.+)$/);
+    if (bullet) {
+      listItems.push({
+        type: "listItem",
+        content: [{ type: "paragraph", content: [{ type: "text", text: bullet[1] }] }],
+      });
+      continue;
+    }
+    flushList();
     const heading = pastedHeading(line);
     if (heading) {
       recognised = true;
@@ -65,7 +80,7 @@ function structuredPaste(text: string): JSONContent[] | null {
     }
     content.push({ type: "paragraph", content: [{ type: "text", text: line }] });
   }
-
+  flushList();
   return recognised ? content : null;
 }
 
@@ -92,6 +107,8 @@ export function RichTextEditor({
     content: initial,
     editorProps: {
       handlePaste: (_view, event) => {
+        // Let Tiptap preserve real Word/browser headings, lists and emphasis.
+        if (event.clipboardData?.getData("text/html")) return false;
         const content = structuredPaste(event.clipboardData?.getData("text/plain") ?? "");
         if (!content) return false;
         event.preventDefault();

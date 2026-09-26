@@ -394,7 +394,11 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
 
   // An existing proposal is an EDIT TARGET, not a collision.
   const [existing] = await db
-    .select({ id: projectApplications.id, status: projectApplications.status })
+    .select({
+      id: projectApplications.id,
+      status: projectApplications.status,
+      clientPresentedAt: projectApplications.clientPresentedAt,
+    })
     .from(projectApplications)
     .where(
       and(
@@ -415,6 +419,14 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
       ok: false,
       message:
         "You have already been selected for this contract, so the terms are locked. Message admin if something needs to change.",
+    };
+  }
+
+  if (existing?.clientPresentedAt) {
+    return {
+      ok: false,
+      message:
+        "This proposal has already been sent to the client, so it is locked. Message admin if it needs to change.",
     };
   }
 

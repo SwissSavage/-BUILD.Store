@@ -24,7 +24,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { projects } from "@/db/schema";
+import { projectApplications, projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
@@ -149,8 +149,6 @@ export async function withdrawProposalAsAdmin(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("id is required");
 
-  const { projectApplications } = await import("@/db/schema");
-
   const [existing] = await db
     .select({
       id: projectApplications.id,
@@ -200,8 +198,6 @@ export async function restoreProposalAsAdmin(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("id is required");
 
-  const { projectApplications } = await import("@/db/schema");
-
   const restored = await db
     .update(projectApplications)
     .set({ status: "pending", withdrawnAt: null })
@@ -222,4 +218,82 @@ export async function restoreProposalAsAdmin(formData: FormData) {
   });
 
   revalidatePath("/admin/projects/applications");
+}
+
+/** Edit a pending proposal during admin review, before client presentation. */
+export async function editProposalAsAdmin(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  const proposedRole = String(formData.get("proposedRole") ?? "").trim();
+  const pitch = String(formData.get("pitch") ?? "").trim();
+  const portfolioLink = String(formData.get("portfolioLink") ?? "").trim();
+  const hoursPerWeek = Math.max(
+    0,
+    Math.min(60, Number.parseInt(String(formData.get("hoursPerWeek") ?? ""), 10) || 0),
+  );
+  const rateRaw = String(formData.get("hourlyRate") ?? "").trim();
+  const rate = rateRaw ? Number.parseFloat(rateRaw) : null;
+
+  if (!id) throw new Error("Proposal id is required.");
+  if (!proposedRole) throw new Error("Proposed role is required.");
+  if (pitch.length < 20) {
+    throw new Error("Pitch must be at least 20 characters.");
+  }
+  if (rateRaw && (!Number.isFinite(rate) || rate! < 0)) {
+    throw new Error("Hourly rate must be a non-negative number.");
+  }
+
+  const [before] = await db
+    .select()
+    .from(projectApplications)
+    .where(eq(projectApplications.id, id))
+    .limit(1);
+  if (!before) throw new Error("Proposal not found.");
+  if (before.status !== "pending") {
+    throw new Error("Only proposals awaiting admin review can be edited.");
+  }
+  if (before.clientPresentedAt) {
+    throw new Error("This proposal has already been sent to the client and is locked.");
+  }
+
+  await db
+    .update(projectApplications)
+    .set({
+      proposedRole,
+      pitch,
+      hoursPerWeek,
+      hourlyRate: rate === null ? null : rate.toFixed(2),
+      portfolioLink: portfolioLink || null,
+    })
+    .where(eq(projectApplications.id, id));
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "proposal.edited_by_admin",
+    resourceKind: "project",
+    resourceId: before.projectId,
+    before: {
+      proposalId: id,
+      proposedRole: before.proposedRole,
+      pitch: before.pitch,
+      hoursPerWeek: before.hoursPerWeek,
+      hourlyRate: before.hourlyRate,
+      portfolioLink: before.portfolioLink,
+    },
+    after: {
+      proposalId: id,
+      proposedRole,
+      pitch,
+      hoursPerWeek,
+      hourlyRate: rate === null ? null : rate.toFixed(2),
+      portfolioLink: portfolioLink || null,
+    },
+    reason: "Proposal edited by admin during review before client presentation.",
+  });
+
+  revalidatePath("/admin/projects/applications");
+  revalidatePath(`/admin/rfps/${before.projectId}/bids`);
+  revalidatePath(`/contracts/${before.projectId}`);
+  revalidatePath(`/projects/${before.projectId}`);
 }

@@ -90,6 +90,7 @@ export default async function ContractDetailPage({
                 hourlyRate: projectApplications.hourlyRate,
                 portfolioLink: projectApplications.portfolioLink,
                 status: projectApplications.status,
+                clientPresentedAt: projectApplications.clientPresentedAt,
                 createdAt: projectApplications.createdAt,
               })
               .from(projectApplications)
@@ -229,7 +230,15 @@ export default async function ContractDetailPage({
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
           <div className="hidden lg:block" aria-hidden="true" />
           <section id="your-proposal" className="scroll-mt-24">
-            {isSignedIn && rateBounds ? (
+            {existingProposal?.clientPresentedAt ? (
+              <Card>
+                <p className="text-lg font-medium">Proposal sent to client</p>
+                <p className="mt-2 text-sm text-ink-muted">
+                  This proposal is now read-only so it remains the same version
+                  the client received. Contact admin if a change is needed.
+                </p>
+              </Card>
+            ) : isSignedIn && rateBounds ? (
               <BidOnContractForm
                 contractId={project.id}
                 contractTitle={project.title}

@@ -19,6 +19,7 @@ import { getAllProjects } from "@/lib/readers/projects";
 import { safely } from "@/lib/readers";
 import { decideProjectApplication } from "@/lib/project-application-actions";
 import {
+  editProposalAsAdmin,
   withdrawProposalAsAdmin,
   restoreProposalAsAdmin,
 } from "@/lib/project-edit-actions";
@@ -239,6 +240,52 @@ function PendingRow({
           )}
         </div>
       </div>
+
+      {application.clientPresentedAt ? (
+        <p className="mt-5 border-t border-[var(--surface-border)] pt-4 text-sm text-ink-muted">
+          Client quote sent {formatDate(application.clientPresentedAt)}. This proposal is locked to preserve the version the client received.
+        </p>
+      ) : (
+        <form
+          action={editProposalAsAdmin}
+          className="mt-5 space-y-3 border-t border-[var(--surface-border)] pt-4"
+        >
+          <input type="hidden" name="id" value={application.id} />
+          <p className="text-xs uppercase tracking-wider text-ink-muted">
+            Admin review edit
+          </p>
+          <p className="text-xs text-ink-faint">
+            Updates the pending proposal before it is presented to a client. Attachments remain unchanged.
+          </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="block text-xs text-ink-muted">
+              Proposed role
+              <input name="proposedRole" defaultValue={application.proposedRole} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+            </label>
+            <label className="block text-xs text-ink-muted">
+              Hours per week
+              <input name="hoursPerWeek" type="number" min="0" max="60" defaultValue={application.hoursPerWeek} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+            </label>
+            {project?.kind === "contract" && (
+              <label className="block text-xs text-ink-muted">
+                Hourly rate (USD)
+                <input name="hourlyRate" type="number" min="0" step="0.01" defaultValue={application.hourlyRate ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+              </label>
+            )}
+            <label className="block text-xs text-ink-muted">
+              Portfolio link
+              <input name="portfolioLink" type="url" defaultValue={application.portfolioLink ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+            </label>
+          </div>
+          <label className="block text-xs text-ink-muted">
+            Pitch
+            <textarea name="pitch" rows={4} defaultValue={application.pitch} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+          </label>
+          <SubmitButton pendingLabel="Saving…" className="rounded-full border border-brand-magenta/40 px-4 py-2 text-sm text-brand-magentaText hover:bg-brand-magenta/10">
+            Save admin edit
+          </SubmitButton>
+        </form>
+      )}
 
       <form
         action={decideProjectApplication}

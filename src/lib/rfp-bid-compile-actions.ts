@@ -222,7 +222,16 @@ export async function compileBidsIntoQuote(formData: FormData) {
     createdByUserId: admin.id,
     selectedLeadUserId: null,
   };
-  await db.insert(cooperativeQuotes).values(row);
+  // Sending the quote freezes exactly the proposals the client saw.
+  // A later quote removal cannot reopen them, because the client may
+  // already have reviewed the original magic link.
+  await db.transaction(async (tx) => {
+    await tx.insert(cooperativeQuotes).values(row);
+    await tx
+      .update(projectApplications)
+      .set({ clientPresentedAt: now })
+      .where(inArray(projectApplications.id, applicationIds));
+  });
 
   await logAuditEvent({
     actorUserId: admin.id,

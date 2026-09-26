@@ -1227,6 +1227,8 @@ export const projectApplications = pgTable("project_applications", {
   reviewedAt: timestamp("reviewed_at", { mode: "string", withTimezone: true }),
   adminNote: text("admin_note"),
   withdrawnAt: timestamp("withdrawn_at", { mode: "string", withTimezone: true }),
+  /** Set when this proposal is included in a quote sent to a client. */
+  clientPresentedAt: timestamp("client_presented_at", { mode: "string", withTimezone: true }),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
 });
 

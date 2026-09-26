@@ -107,8 +107,12 @@ export function RichTextEditor({
     content: initial,
     editorProps: {
       handlePaste: (_view, event) => {
-        // Let Tiptap preserve real Word/browser headings, lists and emphasis.
-        if (event.clipboardData?.getData("text/html")) return false;
+        const html = event.clipboardData?.getData("text/html") ?? "";
+
+        // Preserve actual rich text from Word/browsers. Markdown copied from a
+        // code block is exposed as HTML too, but its plain-text payload is what
+        // we need to turn into headings and bullet lists.
+        if (html && !/<(?:pre|code)\b/i.test(html)) return false;
         const content = structuredPaste(event.clipboardData?.getData("text/plain") ?? "");
         if (!content) return false;
         event.preventDefault();

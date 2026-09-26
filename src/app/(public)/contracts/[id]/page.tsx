@@ -12,6 +12,7 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FileText, Send, Tags } from "lucide-react";
 import { getProjectById } from "@/lib/readers/projects";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
@@ -151,10 +152,10 @@ export default async function ContractDetailPage({
             targetId="contract-brief"
             headings={briefHeadings(project.description)}
           />
-          <div className="space-y-6">
+          <div>
             <section id="contract-brief">
               {/* Editorial reading surface, deliberately quieter than the action cards in the right rail. */}
-              <Card className="bg-[var(--surface-reading)] p-8">
+              <Card className="p-8">
                 <Brief text={project.description} title={project.title} />
                 <AdminObjectControls
                   editHref={`/admin/projects/${project.id}/edit`}
@@ -163,46 +164,16 @@ export default async function ContractDetailPage({
               </Card>
             </section>
 
-            <section id="your-proposal" className="scroll-mt-24">
-              {isSignedIn && rateBounds ? (
-                <BidOnContractForm
-                  contractId={project.id}
-                  contractTitle={project.title}
-                  rateBounds={rateBounds}
-                  existing={existingProposal}
-                />
-              ) : (
-                <Card>
-                  <p className="text-lg font-medium">
-                    Sign in to see the full brief and bid.
-                  </p>
-                  <p className="mt-2 text-sm text-ink-muted">
-                    Deliverables spec, timeline, and bid form live behind the
-                    member surface. If you&apos;re not a member yet, request
-                    an invite.
-                  </p>
-                  <div className="mt-4 flex gap-3">
-                    <Link
-                      href={`/signin?next=/contracts/${project.id}`}
-                      className="fm-btn-primary rounded-full px-5 py-2 text-sm"
-                    >
-                      Sign in
-                    </Link>
-                    <Link
-                      href="/signup/join"
-                      className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink hover:border-brand-magenta"
-                    >
-                      Request invite
-                    </Link>
-                  </div>
-                </Card>
-              )}
-            </section>
           </div>
           {/* Desktop rail: opportunity details stay visible while a long RFP is read. */}
           <aside className="h-fit space-y-4 lg:sticky lg:top-24 lg:self-start">
             <Card className="flex min-h-56 flex-col">
-              <CardTitle>Open for bids</CardTitle>
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <Send aria-hidden="true" size={18} strokeWidth={1.75} />
+                  Open for bids
+                </span>
+              </CardTitle>
               <p className="mt-3 text-sm leading-relaxed text-ink-muted">
                 Submit a proposal for this contract. The cooperative reviews
                 each response before sharing selected candidates with the client.
@@ -222,7 +193,12 @@ export default async function ContractDetailPage({
             </Card>
 
             <Card>
-              <CardTitle>Contract details</CardTitle>
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <FileText aria-hidden="true" size={18} strokeWidth={1.75} />
+                  Contract details
+                </span>
+              </CardTitle>
               <div className="mt-4 space-y-4">
                 {canSeeBudget && <Field label="Budget" value={compText ?? "—"} />}
                 <Field
@@ -237,11 +213,56 @@ export default async function ContractDetailPage({
 
             {project.skillsRequired.length > 0 && (
               <Card>
-                <CardTitle>Skills</CardTitle>
+                <CardTitle>
+                  <span className="flex items-center gap-2">
+                    <Tags aria-hidden="true" size={18} strokeWidth={1.75} />
+                    Skills
+                  </span>
+                </CardTitle>
                 <SkillTags skills={project.skillsRequired} />
               </Card>
             )}
           </aside>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+          <div className="hidden lg:block" aria-hidden="true" />
+          <section id="your-proposal" className="scroll-mt-24">
+            {isSignedIn && rateBounds ? (
+              <BidOnContractForm
+                contractId={project.id}
+                contractTitle={project.title}
+                rateBounds={rateBounds}
+                existing={existingProposal}
+              />
+            ) : (
+              <Card>
+                <p className="text-lg font-medium">
+                  Sign in to see the full brief and bid.
+                </p>
+                <p className="mt-2 text-sm text-ink-muted">
+                  Deliverables spec, timeline, and bid form live behind the
+                  member surface. If you&apos;re not a member yet, request
+                  an invite.
+                </p>
+                <div className="mt-4 flex gap-3">
+                  <Link
+                    href={`/signin?next=/contracts/${project.id}`}
+                    className="fm-btn-primary rounded-full px-5 py-2 text-sm"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup/join"
+                    className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink hover:border-brand-magenta"
+                  >
+                    Request invite
+                  </Link>
+                </div>
+              </Card>
+            )}
+          </section>
+          <div className="hidden lg:block" aria-hidden="true" />
         </div>
 
       </div>
@@ -266,11 +287,13 @@ function SkillTags({ skills }: { skills: string[] }) {
   const tagClass = "rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted";
 
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
-      {visible.map((skill) => <span key={skill} className={tagClass}>{skill}</span>)}
+    <div className="mt-3 space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {visible.map((skill) => <span key={skill} className={tagClass}>{skill}</span>)}
+      </div>
       {hidden.length > 0 && (
         <details className="group">
-          <summary className="cursor-pointer list-none rounded-full bg-brand-magenta px-2 py-0.5 text-xs text-black [&::-webkit-details-marker]:hidden">
+          <summary className="inline-flex cursor-pointer list-none rounded-full border border-brand-magenta px-2 py-0.5 text-xs font-medium text-brand-magentaText hover:bg-[rgba(216,40,160,0.18)] [&::-webkit-details-marker]:hidden">
             +{hidden.length} more
           </summary>
           <div className="mt-2 flex flex-wrap gap-2">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ArrowUp } from "lucide-react";
 import type { BriefHeading } from "@/components/Brief";
 
 export function BriefTableOfContents({
@@ -144,8 +145,9 @@ export function BriefTableOfContents({
             <button
               type="button"
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="text-xs font-semibold uppercase tracking-wider text-ink-muted hover:text-brand-magentaText"
+              className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-ink-muted hover:text-brand-magentaText"
             >
+              <ArrowUp aria-hidden="true" size={14} strokeWidth={1.75} />
               Back to top
             </button>
           </div>

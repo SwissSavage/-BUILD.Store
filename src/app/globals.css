@@ -13,8 +13,6 @@
 
 :root {
   --surface: #000000;
-  /* Long-form briefs sit on this charcoal rather than pure black. */
-  --surface-reading: #141518;
   --surface-elevated: #1A1A1A;
   --surface-inset: #0A0A0A;
   --surface-border: #2A2A2A;

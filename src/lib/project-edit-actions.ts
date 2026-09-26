@@ -21,6 +21,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projects } from "@/db/schema";
@@ -115,6 +116,7 @@ export async function editProject(formData: FormData) {
   revalidatePath("/projects");
   revalidatePath("/contracts");
   revalidatePath("/admin/projects");
+  redirect(before.kind === "contract" ? `/contracts/${id}` : `/projects/${id}`);
 }
 
 /**

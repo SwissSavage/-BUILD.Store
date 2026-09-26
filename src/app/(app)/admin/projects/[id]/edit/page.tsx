@@ -18,6 +18,7 @@ import { editProject } from "@/lib/project-edit-actions";
 import { trashProject } from "@/lib/project-trash-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { RichTextEditor } from "@/components/RichTextEditor";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -112,12 +113,12 @@ export default async function EditProjectPage({
             />
           </label>
 
-          <button
-            type="submit"
+          <SubmitButton
+            pendingLabel="Saving…"
             className="fm-btn-primary rounded-full px-5 py-2.5 text-sm font-medium"
           >
             Save changes
-          </button>
+          </SubmitButton>
         </form>
       </Card>
 

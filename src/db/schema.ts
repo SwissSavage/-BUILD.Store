@@ -166,6 +166,7 @@ export const projects = pgTable("projects", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull(),
+  featuredImageUrl: text("featured_image_url"),
   industry: text("industry", {
     enum: ["stem", "creative-media", "professional-services"],
   }).notNull(),

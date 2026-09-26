@@ -25,6 +25,7 @@
  * targets stay the same shape.
  */
 import Link from "next/link";
+import { ShieldCheck, Tags, Users } from "lucide-react";
 import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
@@ -52,8 +53,13 @@ import {
   type ProjectApplication,
   type User,
 } from "@/lib/types";
-import { Brief } from "@/components/Brief";
+import { Brief, briefHeadings } from "@/components/Brief";
+import { BriefTableOfContents } from "@/components/BriefTableOfContents";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { OpportunityHeader } from "@/components/OpportunityHeader";
+import { ExpandableSkillTags } from "@/components/ExpandableSkillTags";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { StructuredText } from "@/components/StructuredText";
 import { PeerReviewSection } from "@/components/PeerReviewSection";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
 import { TalentHand, type TalentHandEntry } from "@/components/TalentHand";
@@ -152,51 +158,39 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
-      <Link
-        href="/projects"
-        className="text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
-      >
-        ← All projects
-      </Link>
+      <OpportunityHeader
+        backHref="/projects"
+        backLabel="All projects"
+        imageUrl={project.featuredImageUrl}
+        kind="Project"
+        industry={INDUSTRY_LABELS[project.industry]}
+        title={project.title}
+        postedAt={project.createdAt}
+        trailing={
+          <span
+            className="rounded-full bg-[rgba(80,112,240,0.18)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--fm-blue-text)]"
+          >
+            {project.status.replace("_", " ")}
+          </span>
+        }
+      />
 
-      <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <CardEyebrow>
-            {isInternal ? "Internal initiative" : "External contract"} ·{" "}
-            {INDUSTRY_LABELS[project.industry]}
-          </CardEyebrow>
-          <h1 className="mt-2 font-display text-4xl font-semibold">
-            {project.title}
-          </h1>
-        </div>
-        <span
-          className="rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-          style={{ backgroundColor: "rgba(80,112,240,0.15)", color: "var(--fm-blue-text)" }}
-        >
-          {project.status.replace("_", " ")}
-        </span>
-      </div>
-
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+        <BriefTableOfContents
+          targetId="project-brief"
+          headings={briefHeadings(project.description)}
+        />
         <div className="space-y-6">
-          <Card>
-            <CardTitle>About this work</CardTitle>
-            <Brief text={project.description} title={project.title} className="mt-3" />
-            <AdminObjectControls
-              editHref={`/admin/projects/${project.id}/edit`}
-              label="initiative"
-            />
-            <div className="mt-5 flex flex-wrap gap-1.5">
-              {project.skillsRequired.map((s) => (
-                <span
-                  key={s}
-                  className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
-          </Card>
+          <section id="project-brief">
+            {/* Editorial reading surface, deliberately quieter than the action cards in the right rail. */}
+            <Card className="p-8">
+              <Brief text={project.description} title={project.title} />
+              <AdminObjectControls
+                editHref={`/admin/projects/${project.id}/edit`}
+                label="initiative"
+              />
+            </Card>
+          </section>
 
           {/* ── Milestone tracker (Domino's-style) ───── */}
           {user && (
@@ -258,9 +252,15 @@ export default async function ProjectDetailPage({
           )}
         </div>
 
-        <aside className="space-y-6">
+        {/* Desktop rail: project controls remain reachable alongside the brief. */}
+        <aside className="h-fit space-y-4 lg:sticky lg:top-24 lg:self-start">
           <Card>
-            <CardEyebrow>Team</CardEyebrow>
+            <CardTitle>
+              <span className="flex items-center gap-2">
+                <Users aria-hidden="true" size={18} strokeWidth={1.75} />
+                Team
+              </span>
+            </CardTitle>
             {project.assignedMemberIds.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">
                 Open seat — looking for the right contributor.
@@ -277,9 +277,26 @@ export default async function ProjectDetailPage({
             )}
           </Card>
 
+          {project.skillsRequired.length > 0 && (
+            <Card>
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <Tags aria-hidden="true" size={18} strokeWidth={1.75} />
+                  Skills
+                </span>
+              </CardTitle>
+              <ExpandableSkillTags skills={project.skillsRequired} />
+            </Card>
+          )}
+
           {user && isAdmin && isInternal && (
             <Card>
-              <CardEyebrow>Admin</CardEyebrow>
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <ShieldCheck aria-hidden="true" size={18} strokeWidth={1.75} />
+                  Admin
+                </span>
+              </CardTitle>
               <p className="mt-2 text-sm text-ink-muted">
                 {allApps.filter((a) => a.status === "pending").length} pending
                 application
@@ -348,9 +365,7 @@ function ApplySection({
           <span className="text-ink">"{myPending.proposedRole}"</span>.
           Pending admin review.
         </p>
-        <p className="mt-3 text-xs italic text-ink-muted">
-          "{myPending.pitch}"
-        </p>
+        <StructuredText text={myPending.pitch} />
         <form action={withdrawProjectApplication} className="mt-4">
           <input type="hidden" name="id" value={myPending.id} />
           <input
@@ -437,20 +452,17 @@ function ApplySection({
         </div>
 
         <div>
-          <label
-            htmlFor="pitch"
-            className="block text-xs uppercase tracking-wider text-ink-muted"
-          >
+          <p className="block text-xs uppercase tracking-wider text-ink-muted">
             Why you, why now?
-          </label>
-          <textarea
-            id="pitch"
+          </p>
+          <RichTextEditor
             name="pitch"
+            initialValue=""
             required
-            rows={4}
-            placeholder="Speak to the work — what you'd contribute, relevant past projects, anything we should know."
-            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
           />
+          <p className="mt-2 text-xs text-ink-faint">
+            Speak to the work — what you&apos;d contribute, relevant past projects, and anything we should know.
+          </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -724,7 +736,7 @@ function ApplicationQueue({
               <p className="mt-1 text-xs text-ink-muted">
                 {a.hoursPerWeek}h/wk · {formatDate(a.createdAt)}
               </p>
-              <p className="mt-1 text-xs italic text-ink-muted">"{a.pitch}"</p>
+              <StructuredText text={a.pitch} />
               {a.adminNote && (
                 <p
                   className="mt-1 text-xs"

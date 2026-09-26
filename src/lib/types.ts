@@ -359,6 +359,8 @@ export interface Project {
   id: string;
   title: string;
   description: string;
+  /** Optional editorial image shown above the project or contract brief. */
+  featuredImageUrl?: string | null;
   industry: Industry;
   skillsRequired: string[];
   budget: string; // numeric(12,2)

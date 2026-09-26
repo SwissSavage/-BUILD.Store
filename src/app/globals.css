@@ -29,6 +29,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 /* Marquee-style scroll for the header banner.
  *
  * The track is exactly two identical halves and the animation runs

@@ -14,13 +14,17 @@
 import Link from "next/link";
 import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { notFound } from "next/navigation";
+import { BriefcaseBusiness, Send, Tags } from "lucide-react";
 import { jobReader } from "@/lib/readers";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
-import { Brief } from "@/components/Brief";
-import { Card } from "@/components/Card";
+import { Brief, briefHeadings, briefPlainText } from "@/components/Brief";
+import { BriefTableOfContents } from "@/components/BriefTableOfContents";
+import { Card, CardTitle } from "@/components/Card";
 import { ApplyToJobForm } from "@/components/ApplyToJobForm";
+import { OpportunityHeader } from "@/components/OpportunityHeader";
+import { ExpandableSkillTags } from "@/components/ExpandableSkillTags";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +58,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
   if (!job) return { title: "Role not found — Future Modern" };
   return {
     title: `${job.title} — Future Modern`,
-    description: job.description.slice(0, 155),
+    description: briefPlainText(job.description).slice(0, 155),
     alternates: { canonical: `${SITE_URL}/jobs/${job.id}` },
   };
 }
@@ -75,7 +79,7 @@ export default async function JobDetailPage({
     <>
       <JobPostingJsonLd
         title={job.title}
-        description={job.description}
+        description={briefPlainText(job.description)}
         datePosted={job.createdAt}
         hiringOrganizationName="Future Modern"
         hiringOrganizationUrl={SITE_URL}
@@ -86,89 +90,114 @@ export default async function JobDetailPage({
         url={`${SITE_URL}/jobs/${job.id}`}
       />
 
-      <div className="mx-auto max-w-3xl px-6 py-12">
-        <Link href="/jobs" className="text-sm text-ink-muted hover:text-ink">
-          ← All open roles
-        </Link>
-
-        {/* Public skeleton — indexable */}
-        <div className="mt-4 flex items-center gap-3">
-          <span
-            className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-            style={{
-              backgroundColor: "rgba(0,112,72,0.15)",
-              color: "var(--fm-green-text)",
-            }}
-          >
-            {TYPE_LABEL[job.employmentType] ?? job.employmentType}
-          </span>
-          <span className="text-xs uppercase tracking-wider text-ink-muted">
-            {INDUSTRY_LABELS[job.industry]}
-          </span>
-        </div>
-
-        <h1 className="mt-2 font-display text-4xl font-semibold">
-          {job.title}
-        </h1>
-        <Brief text={job.description} title={job.title} className="mt-6" />
-        <AdminObjectControls editHref="/admin/jobs" label="role" />
-
-        <div className="mt-8 grid grid-cols-2 gap-6 md:grid-cols-4">
-          <Field label="Comp" value={job.compensation} />
-          <Field label="Location" value={job.location} />
-          <Field label="Type" value={TYPE_LABEL[job.employmentType] ?? job.employmentType} />
-          <Field label="Posted" value={new Date(job.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })} />
-        </div>
-
-        {job.skillsRequired.length > 0 && (
-          <div className="mt-8">
-            <p className="text-xs uppercase tracking-wider text-ink-muted">
-              Skills
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {job.skillsRequired.map((s) => (
-                <span
-                  key={s}
-                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-sm text-ink-muted"
-                >
-                  {s}
+      <div className="mx-auto max-w-app px-6 py-12">
+        <OpportunityHeader
+          backHref="/jobs"
+          backLabel="All open roles"
+          kind={TYPE_LABEL[job.employmentType] ?? job.employmentType}
+          industry={INDUSTRY_LABELS[job.industry]}
+          title={job.title}
+          postedAt={job.createdAt}
+        />
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+          <BriefTableOfContents
+            targetId="job-brief"
+            headings={briefHeadings(job.description)}
+          />
+          <section id="job-brief">
+            <Card className="p-8">
+              <Brief text={job.description} title={job.title} />
+              <AdminObjectControls editHref="/admin/jobs" label="role" />
+            </Card>
+          </section>
+          <aside className="h-fit space-y-4 lg:sticky lg:top-24 lg:self-start">
+            <Card className="flex min-h-56 flex-col">
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <Send aria-hidden="true" size={18} strokeWidth={1.75} />
+                  Apply to this role
                 </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Auth-gated section — the actual apply form. Members submit
-            a real application here; admin sees it in the queue. */}
-        <div className="mt-12">
-          {isSignedIn ? (
-            <ApplyToJobForm jobId={job.id} jobTitle={job.title} />
-          ) : (
-            <Card>
-              <p className="text-lg font-medium">
-                Sign in to see the full brief and apply.
+              </CardTitle>
+              <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+                Send an application with your pitch and relevant work. The
+                cooperative routes suitable candidates to the client lead.
               </p>
-              <p className="mt-2 text-sm text-ink-muted">
-                Full-brief details (deliverables, timeline, contact) live
-                behind the member surface. If you&apos;re not a member yet,
-                you can request an invite.
-              </p>
-              <div className="mt-4 flex gap-3">
+              {isSignedIn ? (
+                <a href="#job-application" className="fm-btn-primary mt-auto rounded-full px-4 py-2 text-center text-sm">
+                  Apply to this role
+                </a>
+              ) : (
                 <Link
                   href={`/signin?next=/jobs/${job.id}`}
-                  className="fm-btn-primary rounded-full px-5 py-2 text-sm"
+                  className="fm-btn-primary mt-auto rounded-full px-4 py-2 text-center text-sm"
                 >
-                  Sign in
+                  Sign in to apply
                 </Link>
-                <Link
-                  href="/signup/join"
-                  className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink hover:border-brand-magenta"
-                >
-                  Request invite
-                </Link>
+              )}
+            </Card>
+
+            <Card>
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <BriefcaseBusiness aria-hidden="true" size={18} strokeWidth={1.75} />
+                  Role details
+                </span>
+              </CardTitle>
+              <div className="mt-4 space-y-4">
+                <Field label="Compensation" value={job.compensation} />
+                <Field label="Location" value={job.location} />
+                <Field label="Type" value={TYPE_LABEL[job.employmentType] ?? job.employmentType} />
+                <Field label="Posted" value={new Date(job.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })} />
               </div>
             </Card>
-          )}
+
+            {job.skillsRequired.length > 0 && (
+              <Card>
+                <CardTitle>
+                  <span className="flex items-center gap-2">
+                    <Tags aria-hidden="true" size={18} strokeWidth={1.75} />
+                    Skills
+                  </span>
+                </CardTitle>
+                <ExpandableSkillTags skills={job.skillsRequired} />
+              </Card>
+            )}
+          </aside>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+          <div className="hidden lg:block" aria-hidden="true" />
+          <section id="job-application" className="scroll-mt-24">
+            {isSignedIn ? (
+              <ApplyToJobForm jobId={job.id} jobTitle={job.title} />
+            ) : (
+              <Card>
+                <p className="text-lg font-medium">
+                  Sign in to see the full brief and apply.
+                </p>
+                <p className="mt-2 text-sm text-ink-muted">
+                  Full-brief details (deliverables, timeline, contact) live
+                  behind the member surface. If you&apos;re not a member yet,
+                  you can request an invite.
+                </p>
+                <div className="mt-4 flex gap-3">
+                  <Link
+                    href={`/signin?next=/jobs/${job.id}`}
+                    className="fm-btn-primary rounded-full px-5 py-2 text-sm"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup/join"
+                    className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink hover:border-brand-magenta"
+                  >
+                    Request invite
+                  </Link>
+                </div>
+              </Card>
+            )}
+          </section>
+          <div className="hidden lg:block" aria-hidden="true" />
         </div>
       </div>
     </>

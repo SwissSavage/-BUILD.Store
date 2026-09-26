@@ -21,12 +21,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projectApplications, projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { parseRichText, richTextPlainText } from "@/lib/rich-text";
 import type { Industry } from "@/lib/types";
 
 const INDUSTRIES: Industry[] = [
@@ -57,6 +59,11 @@ export async function editProject(formData: FormData) {
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const featuredImageUrl = String(formData.get("featuredImageUrl") ?? "").trim();
+  const richDescription = parseRichText(description);
+  const descriptionText = richDescription
+    ? richTextPlainText(richDescription)
+    : description;
   const industryRaw = String(formData.get("industry") ?? "").trim();
   const statusRaw = String(formData.get("status") ?? "").trim();
   const skillsRequired = String(formData.get("skillsRequired") ?? "")
@@ -65,7 +72,7 @@ export async function editProject(formData: FormData) {
     .filter(Boolean);
 
   if (!title) throw new Error("Title is required.");
-  if (description.length < 30) {
+  if (descriptionText.trim().length < 30) {
     throw new Error(
       "Description must be at least 30 characters. This is what people decide to bid on.",
     );
@@ -76,12 +83,23 @@ export async function editProject(formData: FormData) {
   if (!STATUSES.includes(statusRaw as ProjectStatus)) {
     throw new Error("Unknown status.");
   }
+  if (featuredImageUrl) {
+    try {
+      const url = new URL(featuredImageUrl);
+      if (url.protocol !== "https:" && url.protocol !== "http:") {
+        throw new Error();
+      }
+    } catch {
+      throw new Error("Featured image must be a valid http(s) URL.");
+    }
+  }
 
   await db
     .update(projects)
     .set({
       title,
       description,
+      featuredImageUrl: featuredImageUrl || null,
       industry: industryRaw as Industry,
       status: statusRaw as ProjectStatus,
       skillsRequired,
@@ -100,8 +118,9 @@ export async function editProject(formData: FormData) {
       status: before.status,
       industry: before.industry,
       skillsRequired: before.skillsRequired,
+      featuredImageUrl: before.featuredImageUrl ?? null,
     },
-    after: { title, status: statusRaw, industry: industryRaw, skillsRequired },
+    after: { title, status: statusRaw, industry: industryRaw, skillsRequired, featuredImageUrl: featuredImageUrl || null },
     reason: "Listing edited by admin.",
   });
 
@@ -110,6 +129,7 @@ export async function editProject(formData: FormData) {
   revalidatePath("/projects");
   revalidatePath("/contracts");
   revalidatePath("/admin/projects");
+  redirect(before.kind === "contract" ? `/contracts/${id}` : `/projects/${id}`);
 }
 
 /**

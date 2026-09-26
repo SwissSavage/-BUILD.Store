@@ -12,12 +12,16 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FileText, Send, Tags } from "lucide-react";
 import { getProjectById } from "@/lib/readers/projects";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { JobPostingJsonLd } from "@/components/JobPostingJsonLd";
-import { Brief } from "@/components/Brief";
-import { Card } from "@/components/Card";
+import { Brief, briefHeadings, briefPlainText } from "@/components/Brief";
+import { BriefTableOfContents } from "@/components/BriefTableOfContents";
+import { Card, CardTitle } from "@/components/Card";
+import { OpportunityHeader } from "@/components/OpportunityHeader";
+import { ExpandableSkillTags } from "@/components/ExpandableSkillTags";
 import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { BidOnContractForm } from "@/components/BidOnContractForm";
 import { computeRateBounds } from "@/lib/rate-bounds";
@@ -43,7 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
   }
   return {
     title: `${p.title} — Contract at Future Modern`,
-    description: p.description.slice(0, 155),
+    description: briefPlainText(p.description).slice(0, 155),
     alternates: { canonical: `${SITE_URL}/contracts/${p.id}` },
   };
 }
@@ -124,7 +128,7 @@ export default async function ContractDetailPage({
     <>
       <JobPostingJsonLd
         title={project.title}
-        description={project.description}
+        description={briefPlainText(project.description)}
         datePosted={project.rfpApprovedAt}
         hiringOrganizationName="Future Modern"
         hiringOrganizationUrl={SITE_URL}
@@ -135,109 +139,142 @@ export default async function ContractDetailPage({
         url={`${SITE_URL}/contracts/${project.id}`}
       />
 
-      <div className="mx-auto max-w-3xl px-6 py-12">
-        <Link href="/contracts" className="text-sm text-ink-muted hover:text-ink">
-          ← All open contracts
-        </Link>
-
-        <div className="mt-4 flex items-center gap-3">
-          <span
-            className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-            style={{
-              backgroundColor: "rgba(80,112,240,0.15)",
-              color: "var(--fm-blue-text)",
-            }}
-          >
-            Contract
-          </span>
-          <span className="text-xs uppercase tracking-wider text-ink-muted">
-            {INDUSTRY_LABELS[project.industry]}
-          </span>
-        </div>
-
-        <h1 className="mt-2 font-display text-4xl font-semibold">
-          {project.title}
-        </h1>
-        <Brief text={project.description} title={project.title} className="mt-6" />
-        <AdminObjectControls
-          editHref={`/admin/projects/${project.id}/edit`}
-          label="contract"
+      <div className="mx-auto max-w-app px-6 py-12">
+        <OpportunityHeader
+          backHref="/contracts"
+          backLabel="All open contracts"
+          imageUrl={project.featuredImageUrl}
+          kind="Contract"
+          industry={INDUSTRY_LABELS[project.industry]}
+          title={project.title}
+          postedAt={project.rfpApprovedAt}
         />
-
-        <div
-          className={`mt-8 grid grid-cols-2 gap-6${canSeeBudget ? " md:grid-cols-3" : ""}`}
-        >
-          {canSeeBudget && <Field label="Budget" value={compText ?? "—"} />}
-          <Field label="Status" value="Open for bids" />
-          <Field
-            label="Posted"
-            value={new Date(project.rfpApprovedAt).toLocaleDateString(
-              undefined,
-              { year: "numeric", month: "short", day: "numeric" },
-            )}
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+          <BriefTableOfContents
+            targetId="contract-brief"
+            headings={briefHeadings(project.description)}
           />
-        </div>
+          <div>
+            <section id="contract-brief">
+              {/* Editorial reading surface, deliberately quieter than the action cards in the right rail. */}
+              <Card className="p-8">
+                <Brief text={project.description} title={project.title} />
+                <AdminObjectControls
+                  editHref={`/admin/projects/${project.id}/edit`}
+                  label="contract"
+                />
+              </Card>
+            </section>
 
-        {project.skillsRequired.length > 0 && (
-          <div className="mt-8">
-            <p className="text-xs uppercase tracking-wider text-ink-muted">
-              Skills
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {project.skillsRequired.map((s) => (
-                <span
-                  key={s}
-                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-sm text-ink-muted"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
           </div>
-        )}
-
-        <div className="mt-12">
-          {existingProposal?.clientPresentedAt ? (
-            <Card>
-              <p className="text-lg font-medium">Proposal sent to client</p>
-              <p className="mt-2 text-sm text-ink-muted">
-                This proposal is now read-only so it remains the same version the client received. Contact admin if a change is needed.
+          {/* Desktop rail: opportunity details stay visible while a long RFP is read. */}
+          <aside className="h-fit space-y-4 lg:sticky lg:top-24 lg:self-start">
+            <Card className="flex min-h-56 flex-col">
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <Send aria-hidden="true" size={18} strokeWidth={1.75} />
+                  Open for bids
+                </span>
+              </CardTitle>
+              <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+                Submit a proposal for this contract. The cooperative reviews
+                each response before sharing selected candidates with the client.
               </p>
-            </Card>
-          ) : isSignedIn && rateBounds ? (
-            <BidOnContractForm
-              contractId={project.id}
-              contractTitle={project.title}
-              rateBounds={rateBounds}
-              existing={existingProposal}
-            />
-          ) : (
-            <Card>
-              <p className="text-lg font-medium">
-                Sign in to see the full brief and bid.
-              </p>
-              <p className="mt-2 text-sm text-ink-muted">
-                Deliverables spec, timeline, and bid form live behind the
-                member surface. If you&apos;re not a member yet, request
-                an invite.
-              </p>
-              <div className="mt-4 flex gap-3">
+              {isSignedIn ? (
+                <a href="#your-proposal" className="fm-btn-primary mt-auto rounded-full px-4 py-2 text-center text-sm">
+                  Bid on this contract
+                </a>
+              ) : (
                 <Link
                   href={`/signin?next=/contracts/${project.id}`}
-                  className="fm-btn-primary rounded-full px-5 py-2 text-sm"
+                  className="fm-btn-primary mt-auto rounded-full px-4 py-2 text-center text-sm"
                 >
-                  Sign in
+                  Sign in to bid
                 </Link>
-                <Link
-                  href="/signup/join"
-                  className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink hover:border-brand-magenta"
-                >
-                  Request invite
-                </Link>
+              )}
+            </Card>
+
+            <Card>
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <FileText aria-hidden="true" size={18} strokeWidth={1.75} />
+                  Contract details
+                </span>
+              </CardTitle>
+              <div className="mt-4 space-y-4">
+                {canSeeBudget && <Field label="Budget" value={compText ?? "—"} />}
+                <Field
+                  label="Posted"
+                  value={new Date(project.rfpApprovedAt).toLocaleDateString(
+                    undefined,
+                    { year: "numeric", month: "short", day: "numeric" },
+                  )}
+                />
               </div>
             </Card>
-          )}
+
+            {project.skillsRequired.length > 0 && (
+              <Card>
+                <CardTitle>
+                  <span className="flex items-center gap-2">
+                    <Tags aria-hidden="true" size={18} strokeWidth={1.75} />
+                    Skills
+                  </span>
+                </CardTitle>
+                <ExpandableSkillTags skills={project.skillsRequired} />
+              </Card>
+            )}
+          </aside>
         </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+          <div className="hidden lg:block" aria-hidden="true" />
+          <section id="your-proposal" className="scroll-mt-24">
+            {existingProposal?.clientPresentedAt ? (
+              <Card>
+                <p className="text-lg font-medium">Proposal sent to client</p>
+                <p className="mt-2 text-sm text-ink-muted">
+                  This proposal is now read-only so it remains the same version
+                  the client received. Contact admin if a change is needed.
+                </p>
+              </Card>
+            ) : isSignedIn && rateBounds ? (
+              <BidOnContractForm
+                contractId={project.id}
+                contractTitle={project.title}
+                rateBounds={rateBounds}
+                existing={existingProposal}
+              />
+            ) : (
+              <Card>
+                <p className="text-lg font-medium">
+                  Sign in to see the full brief and bid.
+                </p>
+                <p className="mt-2 text-sm text-ink-muted">
+                  Deliverables spec, timeline, and bid form live behind the
+                  member surface. If you&apos;re not a member yet, request
+                  an invite.
+                </p>
+                <div className="mt-4 flex gap-3">
+                  <Link
+                    href={`/signin?next=/contracts/${project.id}`}
+                    className="fm-btn-primary rounded-full px-5 py-2 text-sm"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup/join"
+                    className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink hover:border-brand-magenta"
+                  >
+                    Request invite
+                  </Link>
+                </div>
+              </Card>
+            )}
+          </section>
+          <div className="hidden lg:block" aria-hidden="true" />
+        </div>
+
       </div>
     </>
   );

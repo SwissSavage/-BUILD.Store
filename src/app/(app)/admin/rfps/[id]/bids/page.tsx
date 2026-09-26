@@ -30,6 +30,8 @@ import {
 } from "@/db/schema";
 import { compileBidsIntoQuote } from "@/lib/rfp-bid-compile-actions";
 import { scrubForClient } from "@/lib/pii-scrub";
+import { StructuredText } from "@/components/StructuredText";
+import { richTextValuePlainText } from "@/lib/rich-text";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 interface Params {
@@ -204,7 +206,7 @@ export default async function RfpBidCompilePage({
                 // Scrub the pitch preview before showing it to admin
                 // so admin catches PII the talent may have leaked and
                 // can note it back to them privately.
-                const scrub = scrubForClient(b.pitch);
+                const scrub = scrubForClient(richTextValuePlainText(b.pitch));
                 return (
                   <li
                     key={b.id}
@@ -249,10 +251,13 @@ export default async function RfpBidCompilePage({
                             </span>
                           )}
                         </div>
-                        <p className="mt-2 whitespace-pre-wrap text-xs text-ink-muted">
-                          {scrub.scrubbed.slice(0, 400)}
-                          {scrub.scrubbed.length > 400 ? "…" : ""}
-                        </p>
+                        <StructuredText
+                          text={
+                            scrub.hits.length > 0
+                              ? scrub.scrubbed.slice(0, 400) + (scrub.scrubbed.length > 400 ? "…" : "")
+                              : b.pitch
+                          }
+                        />
                         <label className="mt-3 block">
                           <span className="text-[10px] uppercase tracking-wider text-ink-muted">
                             Relevance line (shown on client card)

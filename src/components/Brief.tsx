@@ -29,14 +29,32 @@
  * markdown out of habit gets a sensible result; someone who writes
  * plain prose is not punished for it.
  *
- * No dependency, no HTML parsing, nothing rendered as raw markup — so
- * an admin cannot inject markup into a public page through a brief.
+ * Plain-text briefs stay dependency-free. Rich briefs are stored as a
+ * structured Tiptap document and rendered as React elements, never raw HTML.
  */
+import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
+import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
+import { parseRichText, richTextPlainText } from "@/lib/rich-text";
 
 interface BriefBlock {
   kind: "heading" | "list" | "paragraph";
   text?: string;
   items?: string[];
+}
+
+export type BriefHeading = {
+  id: string;
+  label: string;
+  level: 2 | 3;
+};
+
+function briefHeadingId(label: string, index: number) {
+  const base = label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return base ? `brief-${base}-${index + 1}` : `brief-section-${index + 1}`;
 }
 
 /**
@@ -285,6 +303,40 @@ function sectionize(blocks: BriefBlock[]): {
   return sections;
 }
 
+/** Headings available to the reading navigation for both rich and legacy briefs. */
+export function briefHeadings(text: string | null | undefined): BriefHeading[] {
+  if (!text?.trim()) return [];
+  const richText = parseRichText(text);
+  const headings: { label: string; level: 2 | 3 }[] = [];
+
+  if (richText) {
+    const visit = (node: unknown) => {
+      if (!node || typeof node !== "object") return;
+      const record = node as {
+        type?: unknown;
+        attrs?: { level?: unknown };
+        content?: unknown[];
+      };
+      const level = record.attrs?.level;
+      if (record.type === "heading" && (level === 2 || level === 3)) {
+        const label = richTextPlainText(node as typeof richText).trim();
+        if (label) headings.push({ label, level });
+      }
+      record.content?.forEach(visit);
+    };
+    richText.content?.forEach(visit);
+  } else {
+    for (const section of sectionize(parseBrief(text))) {
+      if (section.heading) headings.push({ label: stripInline(section.heading), level: 2 });
+    }
+  }
+
+  return headings.map((heading, index) => ({
+    ...heading,
+    id: briefHeadingId(heading.label, index),
+  }));
+}
+
 function BriefBody({ blocks }: { blocks: BriefBlock[] }) {
   return (
     <>
@@ -382,6 +434,19 @@ export function Brief({
   className?: string;
 }) {
   if (!text?.trim()) return null;
+  const richText = parseRichText(text);
+  if (richText) {
+    return (
+      <div
+        className={`${className ?? ""} text-sm leading-relaxed text-ink-muted [&_h2]:mt-8 [&_h2:first-child]:mt-0 [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-ink [&_h3]:mt-6 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-wider [&_h3]:text-ink [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:space-y-1.5 [&_ol]:pl-5 [&_blockquote]:my-5 [&_blockquote]:border-l-2 [&_blockquote]:border-brand-magenta [&_blockquote]:pl-4 [&_blockquote]:italic [&_a]:text-brand-magentaText [&_a]:underline`}
+      >
+        {renderToReactElement({
+          content: richText,
+          extensions: [StarterKit, Link.configure({ protocols: ["http", "https", "mailto"] })],
+        })}
+      </div>
+    );
+  }
   const blocks = dropEchoedTitle(parseBrief(text), title);
   const sections = sectionize(blocks);
   const hasHeadings = sections.some((sec) => sec.heading);
@@ -412,7 +477,7 @@ export function Brief({
             open={i <= 1}
             className="group border-t border-[var(--surface-border)] py-3"
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wider text-ink hover:text-brand-magentaText">
+            <summary data-brief-heading className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wider text-ink hover:text-brand-magentaText">
               {renderInline(section.heading)}
               <span
                 aria-hidden
@@ -445,12 +510,27 @@ export function briefSummary(
 ): string {
   const { maxLength = 180, skipTitle } = options;
   if (!text?.trim()) return "";
-  const firstProse = dropEchoedTitle(parseBrief(text), skipTitle).find(
+  const sourceText = parseRichText(text);
+  const firstProse = dropEchoedTitle(
+    parseBrief(sourceText ? richTextPlainText(sourceText) : text),
+    skipTitle,
+  ).find(
     (b) => b.kind === "paragraph" && b.text,
   );
-  const source = stripInline(firstProse?.text ?? text.trim());
+  const source = stripInline(
+    firstProse?.text ?? (sourceText ? richTextPlainText(sourceText) : text.trim()),
+  );
   if (source.length <= maxLength) return source;
   const cut = source.slice(0, maxLength);
   const lastStop = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf(" "));
   return `${cut.slice(0, lastStop > 80 ? lastStop : maxLength).trim()}…`;
+}
+
+/** Plain text for metadata and other non-visual consumers of a brief. */
+export function briefPlainText(text: string | null | undefined): string {
+  if (!text?.trim()) return "";
+  const richText = parseRichText(text);
+  return stripInline(richText ? richTextPlainText(richText) : text)
+    .replace(/\s+/g, " ")
+    .trim();
 }

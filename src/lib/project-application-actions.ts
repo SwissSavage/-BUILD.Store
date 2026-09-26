@@ -37,6 +37,7 @@ import {
 import { getAdminUsers } from "@/lib/readers/users";
 import { publicName } from "@/lib/types";
 import type { Notification, ProjectApplication } from "@/lib/types";
+import { richTextValuePlainText } from "@/lib/rich-text";
 
 /**
  * Create a notification. Writes to Postgres via the shared writer.
@@ -65,6 +66,7 @@ export async function applyToProject(formData: FormData) {
   const projectId = String(formData.get("projectId") ?? "");
   const proposedRole = String(formData.get("proposedRole") ?? "").trim();
   const pitch = String(formData.get("pitch") ?? "").trim();
+  const pitchText = richTextValuePlainText(pitch);
   const hoursRaw = String(formData.get("hoursPerWeek") ?? "0");
   const portfolioRaw = String(formData.get("portfolioLink") ?? "").trim();
 
@@ -89,7 +91,7 @@ export async function applyToProject(formData: FormData) {
     throw new Error("You already have a pending application on this project");
   }
 
-  if (proposedRole.length === 0 || pitch.length === 0) {
+  if (proposedRole.length === 0 || pitchText.length === 0) {
     throw new Error("Role and pitch are required");
   }
 

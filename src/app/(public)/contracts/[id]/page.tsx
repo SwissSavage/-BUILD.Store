@@ -197,7 +197,8 @@ export default async function ContractDetailPage({
               </Card>
             )}
           </div>
-          <aside>
+          {/* Desktop rail: opportunity details stay visible while a long RFP is read. */}
+          <aside className="h-fit lg:sticky lg:top-24 lg:self-start">
             <Card>
               <CardTitle>Opportunity at a glance</CardTitle>
               <div className="mt-4 space-y-4">

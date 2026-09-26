@@ -25,32 +25,37 @@ export function BriefTableOfContents({
     setReady(true);
   }, [headings, targetId]);
 
-  if (!ready || headings.length === 0) return null;
-
+  // This grid cell always exists on desktop. Without it, a brief with no
+  // headings would slide into the table-of-contents column.
   return (
-    <nav aria-label="On this page" className="lg:sticky lg:top-6 lg:self-start">
-      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-        On this page
-      </p>
-      <ol className="mt-3 space-y-2 border-l border-[var(--surface-border)] text-sm">
-        {headings.map((entry) => (
-          <li key={entry.id} className={entry.level === 3 ? "pl-5" : "pl-3"}>
-            <a
-              href={`#${entry.id}`}
-              className="text-ink-muted hover:text-brand-magentaText"
-              onClick={(event) => {
-                event.preventDefault();
-                const target = document.getElementById(entry.id);
-                target?.closest("details")?.setAttribute("open", "");
-                target?.scrollIntoView({ behavior: "smooth", block: "start" });
-                window.history.replaceState(null, "", `#${entry.id}`);
-              }}
-            >
-              {entry.label}
-            </a>
-          </li>
-        ))}
-      </ol>
-    </nav>
+    <div className={ready && headings.length > 0 ? "" : "hidden lg:block"}>
+      {ready && headings.length > 0 && (
+        // Desktop rail: keep navigation in view while the brief scrolls.
+        <nav aria-label="On this page" className="lg:sticky lg:top-24 lg:self-start">
+          <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            On this page
+          </p>
+          <ol className="mt-3 space-y-2 border-l border-[var(--surface-border)] text-sm">
+            {headings.map((entry) => (
+              <li key={entry.id} className={entry.level === 3 ? "pl-5" : "pl-3"}>
+                <a
+                  href={`#${entry.id}`}
+                  className="text-ink-muted hover:text-brand-magentaText"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    const target = document.getElementById(entry.id);
+                    target?.closest("details")?.setAttribute("open", "");
+                    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    window.history.replaceState(null, "", `#${entry.id}`);
+                  }}
+                >
+                  {entry.label}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )}
+    </div>
   );
 }

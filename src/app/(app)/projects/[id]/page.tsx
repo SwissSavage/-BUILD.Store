@@ -258,7 +258,8 @@ export default async function ProjectDetailPage({
           )}
         </div>
 
-        <aside className="space-y-6">
+        {/* Desktop rail: project controls remain reachable alongside the brief. */}
+        <aside className="h-fit space-y-6 lg:sticky lg:top-24 lg:self-start">
           <Card>
             <CardEyebrow>Team</CardEyebrow>
             {project.assignedMemberIds.length === 0 ? (

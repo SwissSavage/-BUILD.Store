@@ -2,6 +2,7 @@
 
 import { type MouseEvent, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
+import type { JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import {
@@ -14,6 +15,59 @@ const buttonClass =
   "rounded-md border border-[var(--surface-border)] px-2 py-1 text-xs text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText disabled:opacity-40";
 const preserveSelection = (event: MouseEvent<HTMLButtonElement>) =>
   event.preventDefault();
+const titleWord = (word: string) =>
+  /^[A-Z0-9][A-Za-z0-9'’/+-]*$/.test(word) || /^[&/+-]$/.test(word);
+
+function pastedHeading(line: string): { level: 2 | 3; text: string; body?: string } | null {
+  const markdown = line.match(/^(#{2,3})\s+(.+)$/);
+  if (markdown) return { level: markdown[1].length as 2 | 3, text: markdown[2] };
+
+  const marker = line.match(/^((?:\d{1,2}|[A-Z])\.)\s+(.+)$/);
+  if (marker) {
+    const words = marker[2].split(/\s+/);
+    let cut = 0;
+    for (let i = 0; i < Math.min(words.length, 8); i += 1) {
+      if (!titleWord(words[i])) break;
+      if (/^[a-z]/.test(words[i + 1] ?? "")) break;
+      cut = i + 1;
+    }
+    const text = words.slice(0, cut).join(" ");
+    const body = words.slice(cut).join(" ");
+    if (text && body.length >= 20) {
+      return { level: /^\d/.test(marker[1]) ? 2 : 3, text: `${marker[1]} ${text}`, body };
+    }
+  }
+
+  if (line.length <= 80 && line.split(/\s+/).every((word) => titleWord(word))) {
+    return { level: 2, text: line };
+  }
+  return null;
+}
+
+/** Turn clear section labels in plain-text pastes into real document headings. */
+function structuredPaste(text: string): JSONContent[] | null {
+  const lines = text
+    .replace(/([^\n])\s+(?=(?:\d{1,2}|[A-Z])\.\s+[A-Z])/g, "$1\n")
+    .replace(/\r\n/g, "\n")
+    .split("\n");
+  const content: JSONContent[] = [];
+  let recognised = false;
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    const heading = pastedHeading(line);
+    if (heading) {
+      recognised = true;
+      content.push({ type: "heading", attrs: { level: heading.level }, content: [{ type: "text", text: heading.text }] });
+      if (heading.body) content.push({ type: "paragraph", content: [{ type: "text", text: heading.body }] });
+      continue;
+    }
+    content.push({ type: "paragraph", content: [{ type: "text", text: line }] });
+  }
+
+  return recognised ? content : null;
+}
 
 export function RichTextEditor({
   name,
@@ -37,6 +91,13 @@ export function RichTextEditor({
     ],
     content: initial,
     editorProps: {
+      handlePaste: (_view, event) => {
+        const content = structuredPaste(event.clipboardData?.getData("text/plain") ?? "");
+        if (!content) return false;
+        event.preventDefault();
+        editor?.chain().focus().insertContent(content).run();
+        return true;
+      },
       attributes: {
         class:
           "min-h-64 px-4 py-3 text-sm leading-relaxed text-ink outline-none [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-display [&_h2]:font-semibold [&_h3]:mt-5 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-wider [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:my-4 [&_blockquote]:border-l-2 [&_blockquote]:border-brand-magenta [&_blockquote]:pl-4 [&_a]:text-brand-magentaText [&_a]:underline",

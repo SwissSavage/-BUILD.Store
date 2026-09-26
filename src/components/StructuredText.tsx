@@ -33,7 +33,7 @@ export function StructuredText({
   return (
     <Brief
       text={separateLegacyParagraphs(text)}
-      className={`mt-2 max-w-[75ch] text-sm ${className ?? ""}`}
+      className={`mt-2 text-sm ${className ?? ""}`}
     />
   );
 }

@@ -178,9 +178,10 @@ export default async function ProjectDetailPage({
         />
         <div className="space-y-6">
           <section id="project-brief">
-            <Card>
+            {/* Editorial reading surface, deliberately quieter than the action cards in the right rail. */}
+            <Card className="rounded-none border-0 bg-[var(--surface-reading)] p-8">
               <CardTitle>About this work</CardTitle>
-              <Brief text={project.description} title={project.title} className="mt-3" />
+              <Brief text={project.description} title={project.title} className="mt-4 [&_h2]:border-t [&_h2]:border-[var(--surface-border)] [&_h2]:pt-8" />
               <AdminObjectControls
                 editHref={`/admin/projects/${project.id}/edit`}
                 label="initiative"

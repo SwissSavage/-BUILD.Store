@@ -21,6 +21,7 @@ import { projects } from "@/db/schema";
 import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { updateHubspotDealStage } from "@/lib/crm-stub";
+import { formatBudget } from "@/lib/budget";
 
 const ALL_INDUSTRIES: Industry[] = ["stem", "creative-media", "professional-services"];
 
@@ -196,7 +197,7 @@ export default async function AdminRfpQueuePage() {
                     Client: <span className="font-mono">{p.clientId}</span>
                   </div>
                   <div className="mt-1 text-xs text-ink-faint">
-                    Budget: ${Number(p.budget).toLocaleString()}
+                    Budget: {formatBudget(p.budget)}
                   </div>
                   <div className="mt-1 text-xs text-ink-faint">
                     Submitted {new Date(p.createdAt).toLocaleDateString()}

@@ -21,6 +21,7 @@ import {
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { HubspotStageBadge } from "@/components/HubspotStageBadge";
+import { formatBudget } from "@/lib/budget";
 
 export const dynamic = "force-dynamic";
 
@@ -188,7 +189,7 @@ function ContractRow({
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-        <Stat label="Budget" value={`$${Number(project.budget).toLocaleString()}`} />
+        <Stat label="Budget" value={formatBudget(project.budget)} />
         <Stat
           label="Collected"
           value={

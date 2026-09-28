@@ -264,10 +264,10 @@ function PendingRow({
               <>
                 <label className="block text-xs text-ink-muted">
                   Pricing mode
-                  <select name="priceMode" defaultValue={application.priceMode ?? "hourly"} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink">
-                    <option value="hourly">Hourly</option>
-                    <option value="fixed">Total project price</option>
-                    <option value="negotiable">Negotiable</option>
+                  <select name="priceMode" defaultValue={application.priceMode ?? "hourly"} style={{ colorScheme: "dark" }} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-3 py-2 text-sm text-ink">
+                    <option className="bg-[#1A1A1A] text-white" value="hourly">Hourly</option>
+                    <option className="bg-[#1A1A1A] text-white" value="fixed">Total project price</option>
+                    <option className="bg-[#1A1A1A] text-white" value="negotiable">Negotiable</option>
                   </select>
                 </label>
                 <p className="self-end text-xs text-ink-faint">Fill only the price fields for the selected mode. Maximum is optional.</p>

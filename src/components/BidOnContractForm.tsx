@@ -138,11 +138,12 @@ export function BidOnContractForm({
               name="priceMode"
               value={priceMode}
               onChange={(event) => setPriceMode(event.target.value as ProposalPriceMode)}
-              className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-3 py-2 text-sm"
+              style={{ colorScheme: "dark" }}
             >
-              <option value="hourly">Hourly rate</option>
-              <option value="fixed">Total project price</option>
-              <option value="negotiable">Open to negotiation</option>
+              <option className="bg-[#1A1A1A] text-white" value="hourly">Hourly rate</option>
+              <option className="bg-[#1A1A1A] text-white" value="fixed">Total project price</option>
+              <option className="bg-[#1A1A1A] text-white" value="negotiable">Open to negotiation</option>
             </select>
           </div>
         </div>

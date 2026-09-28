@@ -41,6 +41,7 @@ import { getAllUsers } from "@/lib/readers/users";
 import { HubspotStageBadge } from "@/components/HubspotStageBadge";
 import { FeedbackPrompt } from "@/components/FeedbackPrompt";
 import { formatBudget } from "@/lib/budget";
+import { formatProposalHours } from "@/lib/proposal-terms";
 import {
   stepsForUser,
 } from "@/lib/mock-data/walkthroughs";
@@ -467,7 +468,7 @@ export default async function DashboardPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-ink-muted">
-                    {a.proposedRole} · {a.hoursPerWeek}h/wk
+                    {a.proposedRole} · {formatProposalHours(a.hoursPerWeek, a.hoursPerWeekMax)}
                   </p>
                 </Link>
               );

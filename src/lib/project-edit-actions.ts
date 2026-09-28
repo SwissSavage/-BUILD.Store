@@ -35,6 +35,7 @@ import {
   readProposalAttachments,
   type ProposalAttachment,
 } from "@/lib/proposal-attachments";
+import { parseContractProposalTerms, parseWeeklyHours } from "@/lib/proposal-terms";
 
 const INDUSTRIES: Industry[] = [
   "stem",
@@ -232,20 +233,11 @@ export async function editProposalAsAdmin(formData: FormData) {
   const proposedRole = String(formData.get("proposedRole") ?? "").trim();
   const pitch = String(formData.get("pitch") ?? "").trim();
   const portfolioLink = String(formData.get("portfolioLink") ?? "").trim();
-  const hoursPerWeek = Math.max(
-    0,
-    Math.min(60, Number.parseInt(String(formData.get("hoursPerWeek") ?? ""), 10) || 0),
-  );
-  const rateRaw = String(formData.get("hourlyRate") ?? "").trim();
-  const rate = rateRaw ? Number.parseFloat(rateRaw) : null;
 
   if (!id) throw new Error("Proposal id is required.");
   if (!proposedRole) throw new Error("Proposed role is required.");
   if (pitch.length < 20) {
     throw new Error("Pitch must be at least 20 characters.");
-  }
-  if (rateRaw && (!Number.isFinite(rate) || rate! < 0)) {
-    throw new Error("Hourly rate must be a non-negative number.");
   }
 
   const [before] = await db
@@ -261,14 +253,39 @@ export async function editProposalAsAdmin(formData: FormData) {
     throw new Error("This proposal has already been sent to the client and is locked.");
   }
 
+  const proposalProject = await getProjectById(before.projectId);
+  if (!proposalProject) throw new Error("Project not found.");
+  const terms = proposalProject.kind === "contract"
+    ? parseContractProposalTerms(formData, { minRate: 20, maxRate: 2500 })
+    : { ...parseWeeklyHours(formData, 60) };
+  const { files: newAttachments, error: attachmentError } = await readProposalAttachments(formData);
+  if (attachmentError) throw new Error(attachmentError);
+
+  const currentAttachments = (before.attachments ?? []) as ProposalAttachment[];
+  const attachmentEditor = String(formData.get("attachmentEditor") ?? "");
+  const keepIndices = new Set(
+    formData
+      .getAll("keepAttachment")
+      .map((value) => Number.parseInt(String(value), 10))
+      .filter((index) => Number.isInteger(index) && index >= 0 && index < currentAttachments.length),
+  );
+  const keptAttachments =
+    attachmentEditor === "staged"
+      ? currentAttachments.filter((_, index) => keepIndices.has(index))
+      : currentAttachments;
+  const attachments = [...keptAttachments, ...newAttachments];
+  if (attachments.length > MAX_PROPOSAL_ATTACHMENTS) {
+    throw new Error(`A proposal can have up to ${MAX_PROPOSAL_ATTACHMENTS} documents.`);
+  }
+
   await db
     .update(projectApplications)
     .set({
       proposedRole,
       pitch,
-      hoursPerWeek,
-      hourlyRate: rate === null ? null : rate.toFixed(2),
+      ...terms,
       portfolioLink: portfolioLink || null,
+      attachments,
     })
     .where(eq(projectApplications.id, id));
 
@@ -283,16 +300,22 @@ export async function editProposalAsAdmin(formData: FormData) {
       proposedRole: before.proposedRole,
       pitch: before.pitch,
       hoursPerWeek: before.hoursPerWeek,
+      hoursPerWeekMax: before.hoursPerWeekMax,
       hourlyRate: before.hourlyRate,
+      hourlyRateMax: before.hourlyRateMax,
+      priceMode: before.priceMode,
+      fixedPriceMin: before.fixedPriceMin,
+      fixedPriceMax: before.fixedPriceMax,
       portfolioLink: before.portfolioLink,
+      attachmentCount: currentAttachments.length,
     },
     after: {
       proposalId: id,
       proposedRole,
       pitch,
-      hoursPerWeek,
-      hourlyRate: rate === null ? null : rate.toFixed(2),
+      ...terms,
       portfolioLink: portfolioLink || null,
+      attachmentCount: attachments.length,
     },
     reason: "Proposal edited by admin during review before client presentation.",
   });
@@ -301,107 +324,4 @@ export async function editProposalAsAdmin(formData: FormData) {
   revalidatePath(`/admin/rfps/${before.projectId}/bids`);
   revalidatePath(`/contracts/${before.projectId}`);
   revalidatePath(`/projects/${before.projectId}`);
-}
-
-/** Update optional portfolio documents while a proposal remains in review. */
-export async function addProposalAttachmentsAsAdmin(formData: FormData) {
-  const admin = await requireAdmin();
-  const id = String(formData.get("id") ?? "").trim();
-  if (!id) throw new Error("Proposal id is required.");
-
-  const [before] = await db
-    .select({
-      projectId: projectApplications.projectId,
-      status: projectApplications.status,
-      clientPresentedAt: projectApplications.clientPresentedAt,
-      attachments: projectApplications.attachments,
-    })
-    .from(projectApplications)
-    .where(eq(projectApplications.id, id))
-    .limit(1);
-  if (!before) throw new Error("Proposal not found.");
-  if (before.status !== "pending" || before.clientPresentedAt) {
-    throw new Error("This proposal is locked and its documents cannot be changed.");
-  }
-
-  const { files, error } = await readProposalAttachments(formData);
-  if (error) throw new Error(error);
-  if (files.length === 0) return;
-
-  const attachments = (before.attachments ?? []) as ProposalAttachment[];
-  if (attachments.length + files.length > MAX_PROPOSAL_ATTACHMENTS) {
-    throw new Error(`A proposal can have up to ${MAX_PROPOSAL_ATTACHMENTS} documents.`);
-  }
-
-  await db
-    .update(projectApplications)
-    .set({ attachments: [...attachments, ...files] })
-    .where(eq(projectApplications.id, id));
-
-  await logAuditEvent({
-    actorUserId: admin.id,
-    actorRoleSnapshot: snapshotActorRole(admin),
-    action: "proposal.edited_by_admin",
-    resourceKind: "project",
-    resourceId: before.projectId,
-    before: { proposalId: id, attachmentCount: attachments.length },
-    after: { proposalId: id, attachmentCount: attachments.length + files.length },
-    reason: "Portfolio documents added by admin during proposal review.",
-  });
-
-  revalidateProposalPaths(before.projectId);
-}
-
-/** Remove one optional portfolio document before the proposal is sent to a client. */
-export async function removeProposalAttachmentAsAdmin(formData: FormData) {
-  const admin = await requireAdmin();
-  const id = String(formData.get("id") ?? "").trim();
-  const index = Number.parseInt(String(formData.get("index") ?? ""), 10);
-  if (!id || !Number.isInteger(index) || index < 0) {
-    throw new Error("A valid proposal document is required.");
-  }
-
-  const [before] = await db
-    .select({
-      projectId: projectApplications.projectId,
-      status: projectApplications.status,
-      clientPresentedAt: projectApplications.clientPresentedAt,
-      attachments: projectApplications.attachments,
-    })
-    .from(projectApplications)
-    .where(eq(projectApplications.id, id))
-    .limit(1);
-  if (!before) throw new Error("Proposal not found.");
-  if (before.status !== "pending" || before.clientPresentedAt) {
-    throw new Error("This proposal is locked and its documents cannot be changed.");
-  }
-
-  const attachments = (before.attachments ?? []) as ProposalAttachment[];
-  const removed = attachments[index];
-  if (!removed) throw new Error("Portfolio document not found.");
-
-  await db
-    .update(projectApplications)
-    .set({ attachments: attachments.filter((_, attachmentIndex) => attachmentIndex !== index) })
-    .where(eq(projectApplications.id, id));
-
-  await logAuditEvent({
-    actorUserId: admin.id,
-    actorRoleSnapshot: snapshotActorRole(admin),
-    action: "proposal.edited_by_admin",
-    resourceKind: "project",
-    resourceId: before.projectId,
-    before: { proposalId: id, attachmentCount: attachments.length },
-    after: { proposalId: id, attachmentCount: attachments.length - 1, removed: removed.name },
-    reason: "Portfolio document removed by admin during proposal review.",
-  });
-
-  revalidateProposalPaths(before.projectId);
-}
-
-function revalidateProposalPaths(projectId: string) {
-  revalidatePath("/admin/projects/applications");
-  revalidatePath(`/admin/rfps/${projectId}/bids`);
-  revalidatePath(`/contracts/${projectId}`);
-  revalidatePath(`/projects/${projectId}`);
 }

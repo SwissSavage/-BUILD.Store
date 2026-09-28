@@ -38,6 +38,7 @@ import { getAdminUsers } from "@/lib/readers/users";
 import { publicName } from "@/lib/types";
 import type { Notification, ProjectApplication } from "@/lib/types";
 import { richTextValuePlainText } from "@/lib/rich-text";
+import { parseWeeklyHours } from "@/lib/proposal-terms";
 
 /**
  * Create a notification. Writes to Postgres via the shared writer.
@@ -67,7 +68,6 @@ export async function applyToProject(formData: FormData) {
   const proposedRole = String(formData.get("proposedRole") ?? "").trim();
   const pitch = String(formData.get("pitch") ?? "").trim();
   const pitchText = richTextValuePlainText(pitch);
-  const hoursRaw = String(formData.get("hoursPerWeek") ?? "0");
   const portfolioRaw = String(formData.get("portfolioLink") ?? "").trim();
 
   // Reader swap 2026-08-28: was MOCK_PROJECTS, which meant a bid on a
@@ -95,7 +95,7 @@ export async function applyToProject(formData: FormData) {
     throw new Error("Role and pitch are required");
   }
 
-  const hoursPerWeek = Math.max(0, Math.min(60, Number(hoursRaw) || 0));
+  const { hoursPerWeek, hoursPerWeekMax } = parseWeeklyHours(formData, 60);
   const portfolioLink = portfolioRaw.length > 0 ? portfolioRaw : null;
 
   const id = `pa_${Date.now().toString(36)}`;
@@ -106,6 +106,7 @@ export async function applyToProject(formData: FormData) {
     proposedRole,
     pitch,
     hoursPerWeek,
+    hoursPerWeekMax,
     portfolioLink,
     status: "pending",
     reviewedBy: null,
@@ -127,6 +128,7 @@ export async function applyToProject(formData: FormData) {
     proposedRole: application.proposedRole,
     pitch: application.pitch,
     hoursPerWeek: application.hoursPerWeek,
+    hoursPerWeekMax: application.hoursPerWeekMax,
     hourlyRate: null,
     portfolioLink: application.portfolioLink,
     status: application.status,

@@ -22,9 +22,7 @@ import {
   rejectProjectApplication,
 } from "@/lib/project-application-actions";
 import {
-  addProposalAttachmentsAsAdmin,
   editProposalAsAdmin,
-  removeProposalAttachmentAsAdmin,
   withdrawProposalAsAdmin,
   restoreProposalAsAdmin,
 } from "@/lib/project-edit-actions";
@@ -38,6 +36,8 @@ import {
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { StructuredText } from "@/components/StructuredText";
+import { AdminProposalAttachments } from "@/components/AdminProposalAttachments";
+import { formatProposalHours, formatProposalPrice } from "@/lib/proposal-terms";
 
 const STATUS_ACCENT: Record<ProjectApplication["status"], string> = {
   pending: "#5070F0",
@@ -173,7 +173,7 @@ function PendingRow({
           </CardTitle>
           <p className="mt-1 text-xs text-ink-muted">
             {applicant ? TIER_LABELS[applicant.membershipTier] : ""} ·{" "}
-            {application.hoursPerWeek}h/wk · submitted{" "}
+            {formatProposalHours(application.hoursPerWeek, application.hoursPerWeekMax)} · submitted{" "}
             {formatDate(application.createdAt)}
           </p>
         </div>
@@ -191,81 +191,14 @@ function PendingRow({
             Proposed role
           </p>
           <p className="mt-1 font-medium">{application.proposedRole}</p>
+          {project?.kind === "contract" && (
+            <p className="mt-2 text-sm text-ink-muted">{formatProposalPrice(application)}</p>
+          )}
 
           <p className="mt-4 text-xs uppercase tracking-wider text-ink-muted">
             Pitch
           </p>
           <StructuredText text={application.pitch} />
-
-          <section className="mt-4">
-            <p className="text-xs uppercase tracking-wider text-ink-faint">
-              Portfolio documents
-            </p>
-            {(application.attachments ?? []).length > 0 ? (
-              <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-                {(application.attachments ?? []).map((doc, i) => (
-                  <li
-                    key={`${doc.name}-${i}`}
-                    className="relative rounded-xl border border-[var(--surface-border)] bg-[var(--surface-inset)] p-3 pr-16"
-                  >
-                    <a
-                      href={`/api/proposals/${application.id}/attachments/${i}`}
-                      className="block truncate text-sm text-brand-magentaText hover:underline"
-                      title={doc.name}
-                    >
-                      {doc.name}
-                    </a>
-                    <span className="mt-1 block text-xs text-ink-faint">
-                      {(doc.sizeBytes / 1024).toFixed(0)} KB
-                    </span>
-                    {!application.clientPresentedAt && (
-                      <form
-                        action={removeProposalAttachmentAsAdmin}
-                        className="absolute right-2 top-2"
-                      >
-                        <input type="hidden" name="id" value={application.id} />
-                        <input type="hidden" name="index" value={i} />
-                        <SubmitButton
-                          pendingLabel="…"
-                          title={`Remove ${doc.name}`}
-                          className="text-xs text-ink-muted hover:text-brand-magentaText"
-                        >
-                          Remove
-                        </SubmitButton>
-                      </form>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-2 text-sm text-ink-faint">No documents attached.</p>
-            )}
-            {!application.clientPresentedAt && (application.attachments ?? []).length < 3 && (
-              <form
-                action={addProposalAttachmentsAsAdmin}
-                className="mt-3 flex flex-wrap items-center gap-2"
-              >
-                <input type="hidden" name="id" value={application.id} />
-                <input
-                  name="attachments"
-                  type="file"
-                  multiple
-                  required
-                  accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.txt,.md"
-                  className="max-w-full text-xs text-ink-muted file:mr-3 file:rounded-full file:border-0 file:bg-[var(--surface-elevated)] file:px-3 file:py-1.5 file:text-xs file:text-ink hover:file:bg-[var(--surface-border)]"
-                />
-                <SubmitButton
-                  pendingLabel="Adding…"
-                  className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
-                >
-                  Add documents
-                </SubmitButton>
-              </form>
-            )}
-            {!application.clientPresentedAt && (
-              <p className="mt-1 text-xs text-ink-faint">Optional · up to 3 files, 2 MB each.</p>
-            )}
-          </section>
 
           {application.portfolioLink && (
             <p className="mt-3 text-xs">
@@ -300,6 +233,7 @@ function PendingRow({
       ) : (
         <form
           action={editProposalAsAdmin}
+          encType="multipart/form-data"
           className="mt-5 space-y-3 border-t border-[var(--surface-border)] pt-4"
         >
           <input type="hidden" name="id" value={application.id} />
@@ -307,22 +241,53 @@ function PendingRow({
             Admin review edit
           </p>
           <p className="text-xs text-ink-faint">
-            Updates the pending proposal before it is presented to a client. Portfolio documents are managed above.
+            Updates the pending proposal before it is presented to a client.
           </p>
+          <AdminProposalAttachments
+            proposalId={application.id}
+            attachments={application.attachments ?? []}
+          />
           <div className="grid gap-3 md:grid-cols-2">
             <label className="block text-xs text-ink-muted">
               Proposed role
               <input name="proposedRole" defaultValue={application.proposedRole} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
             </label>
             <label className="block text-xs text-ink-muted">
-              Hours per week
-              <input name="hoursPerWeek" type="number" min="0" max="60" defaultValue={application.hoursPerWeek} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+              Minimum hours per week
+              <input name="hoursPerWeek" type="number" required min="1" max={project?.kind === "contract" ? "80" : "60"} defaultValue={application.hoursPerWeek || ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+            </label>
+            <label className="block text-xs text-ink-muted">
+              Maximum hours per week (optional)
+              <input name="hoursPerWeekMax" type="number" min="1" max={project?.kind === "contract" ? "80" : "60"} defaultValue={application.hoursPerWeekMax ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
             </label>
             {project?.kind === "contract" && (
-              <label className="block text-xs text-ink-muted">
-                Hourly rate (USD)
-                <input name="hourlyRate" type="number" min="0" step="0.01" defaultValue={application.hourlyRate ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
-              </label>
+              <>
+                <label className="block text-xs text-ink-muted">
+                  Pricing mode
+                  <select name="priceMode" defaultValue={application.priceMode ?? "hourly"} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink">
+                    <option value="hourly">Hourly</option>
+                    <option value="fixed">Total project price</option>
+                    <option value="negotiable">Negotiable</option>
+                  </select>
+                </label>
+                <p className="self-end text-xs text-ink-faint">Fill only the price fields for the selected mode. Maximum is optional.</p>
+                <label className="block text-xs text-ink-muted">
+                  Minimum hourly rate (USD)
+                  <input name="hourlyRate" type="number" min="20" max="2500" step="0.01" defaultValue={application.hourlyRate ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+                </label>
+                <label className="block text-xs text-ink-muted">
+                  Maximum hourly rate (optional)
+                  <input name="hourlyRateMax" type="number" min="20" max="2500" step="0.01" defaultValue={application.hourlyRateMax ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+                </label>
+                <label className="block text-xs text-ink-muted">
+                  Minimum total project price (USD)
+                  <input name="fixedPriceMin" type="number" min="0.01" step="0.01" defaultValue={application.fixedPriceMin ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+                </label>
+                <label className="block text-xs text-ink-muted">
+                  Maximum total project price (optional)
+                  <input name="fixedPriceMax" type="number" min="0.01" step="0.01" defaultValue={application.fixedPriceMax ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+                </label>
+              </>
             )}
             <label className="block text-xs text-ink-muted">
               Portfolio link

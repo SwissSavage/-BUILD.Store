@@ -60,6 +60,7 @@ import { OpportunityHeader } from "@/components/OpportunityHeader";
 import { ExpandableSkillTags } from "@/components/ExpandableSkillTags";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { StructuredText } from "@/components/StructuredText";
+import { formatProposalHours } from "@/lib/proposal-terms";
 import { PeerReviewSection } from "@/components/PeerReviewSection";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
 import { TalentHand, type TalentHandEntry } from "@/components/TalentHand";
@@ -465,13 +466,13 @@ function ApplySection({
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           <div>
             <label
               htmlFor="hoursPerWeek"
               className="block text-xs uppercase tracking-wider text-ink-muted"
             >
-              Hours per week
+              Minimum hours per week
             </label>
             <input
               id="hoursPerWeek"
@@ -479,7 +480,22 @@ function ApplySection({
               type="number"
               min={1}
               max={60}
+              required
               defaultValue={5}
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label htmlFor="hoursPerWeekMax" className="block text-xs uppercase tracking-wider text-ink-muted">
+              Maximum hours per week (optional)
+            </label>
+            <input
+              id="hoursPerWeekMax"
+              name="hoursPerWeekMax"
+              type="number"
+              min={1}
+              max={60}
+              placeholder="30"
               className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
             />
           </div>
@@ -734,7 +750,7 @@ function ApplicationQueue({
                 </span>
               </div>
               <p className="mt-1 text-xs text-ink-muted">
-                {a.hoursPerWeek}h/wk · {formatDate(a.createdAt)}
+                {formatProposalHours(a.hoursPerWeek, a.hoursPerWeekMax)} · {formatDate(a.createdAt)}
               </p>
               <StructuredText text={a.pitch} />
               {a.adminNote && (

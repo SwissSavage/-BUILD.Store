@@ -29,10 +29,10 @@ import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import {
   computeRateBounds,
-  validateRateAgainstBounds,
 } from "@/lib/rate-bounds";
 import { richTextValuePlainText } from "@/lib/rich-text";
 import { readProposalAttachments } from "@/lib/proposal-attachments";
+import { parseContractProposalTerms } from "@/lib/proposal-terms";
 
 function newApplicationId(prefix: "app" | "bid"): string {
   return `${prefix}_${randomBytes(6).toString("hex")}`;
@@ -279,8 +279,6 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
   const pitch = String(formData.get("pitch") ?? "").trim();
   const pitchText = richTextValuePlainText(pitch);
   const proposedRole = String(formData.get("proposedRole") ?? "").trim();
-  const hoursPerWeekRaw = String(formData.get("hoursPerWeek") ?? "").trim();
-  const hourlyRateRaw = String(formData.get("hourlyRate") ?? "").trim();
   const portfolioLink = String(formData.get("portfolioLink") ?? "").trim();
 
   if (!contractId) {
@@ -298,10 +296,12 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
   // rates; this catches typos, missing decimals, and truly-out-of-band
   // inputs. Unusual-but-valid rates are handled through admin triage
   // on the pending queue, not through algorithmic tightening.
-  const proposedRate = Number.parseFloat(hourlyRateRaw);
-  const rateBounds = computeRateBounds(user);
-  const rateError = validateRateAgainstBounds(proposedRate, rateBounds);
-  if (rateError) return { ok: false, message: rateError };
+  let terms;
+  try {
+    terms = parseContractProposalTerms(formData, computeRateBounds(user));
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Check your proposed terms." };
+  }
 
   const { files: attachedDocs, error: attachmentError } =
     await readProposalAttachments(formData);
@@ -353,8 +353,6 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
     )
     .limit(1);
 
-  const hoursPerWeekParsed = Number.parseInt(hoursPerWeekRaw, 10) || 0;
-
   if (existing && existing.status === "approved") {
     // Already selected. Terms are locked at acceptance, so a silent
     // rewrite here would change an engagement that both sides agreed
@@ -382,8 +380,7 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
       .set({
         proposedRole: proposedRole.length > 0 ? proposedRole : "Contractor",
         pitch,
-        hoursPerWeek: hoursPerWeekParsed,
-        hourlyRate: proposedRate.toFixed(2),
+        ...terms,
         portfolioLink: portfolioLink.length > 0 ? portfolioLink : null,
         // Only overwrite when new files were picked. A browser cannot
         // re-populate a file input, so an edit that changes only the
@@ -438,8 +435,7 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
     userId: user.id,
     proposedRole: proposedRole.length > 0 ? proposedRole : "Contractor",
     pitch,
-    hoursPerWeek: hoursPerWeekParsed,
-    hourlyRate: proposedRate.toFixed(2),
+    ...terms,
     portfolioLink: portfolioLink.length > 0 ? portfolioLink : null,
     attachments: attachedDocs,
     status: "pending",

@@ -13,8 +13,7 @@
  * liner, and authors engagement-level scope (summary, deliverables,
  * timeline). Submitting compiles those picks into a single
  * cooperative_quote whose /quotes/[token] surface renders each pick
- * as a TalentHand card with per-Builder pricing pulled from the bid's
- * proposed hourly rate.
+ * as a TalentHand card with each Builder's proposed pricing terms.
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -28,6 +27,7 @@ import {
   projects,
   users,
 } from "@/db/schema";
+import { formatProposalHours, formatProposalPrice } from "@/lib/proposal-terms";
 import { compileBidsIntoQuote } from "@/lib/rfp-bid-compile-actions";
 import { scrubForClient } from "@/lib/pii-scrub";
 import { StructuredText } from "@/components/StructuredText";
@@ -80,7 +80,12 @@ export default async function RfpBidCompilePage({
       proposedRole: projectApplications.proposedRole,
       pitch: projectApplications.pitch,
       hoursPerWeek: projectApplications.hoursPerWeek,
+      hoursPerWeekMax: projectApplications.hoursPerWeekMax,
       hourlyRate: projectApplications.hourlyRate,
+      hourlyRateMax: projectApplications.hourlyRateMax,
+      priceMode: projectApplications.priceMode,
+      fixedPriceMin: projectApplications.fixedPriceMin,
+      fixedPriceMax: projectApplications.fixedPriceMax,
       portfolioLink: projectApplications.portfolioLink,
       status: projectApplications.status,
       createdAt: projectApplications.createdAt,
@@ -200,9 +205,6 @@ export default async function RfpBidCompilePage({
 
             <ul className="mt-4 space-y-3">
               {bids.map((b) => {
-                const rate = b.hourlyRate
-                  ? Number.parseFloat(b.hourlyRate)
-                  : null;
                 // Scrub the pitch preview before showing it to admin
                 // so admin catches PII the talent may have leaked and
                 // can note it back to them privately.
@@ -235,13 +237,9 @@ export default async function RfpBidCompilePage({
                             })}
                             </span>
                           )}
-                          {rate !== null && (
-                            <span className="text-[11px] text-ink-faint">
-                              · ${rate.toFixed(0)}/hr
-                              {b.hoursPerWeek > 0 &&
-                                ` · ${b.hoursPerWeek} hrs/wk`}
-                            </span>
-                          )}
+                          <span className="text-[11px] text-ink-faint">
+                            · {formatProposalPrice(b)} · {formatProposalHours(b.hoursPerWeek, b.hoursPerWeekMax)}
+                          </span>
                           <span className="text-[11px] text-ink-faint">
                             · {b.proposedRole}
                           </span>

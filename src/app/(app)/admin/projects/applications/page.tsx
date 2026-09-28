@@ -17,7 +17,10 @@ import { getAllApplications } from "@/lib/readers/project-applications";
 import { getAllUsers } from "@/lib/readers/users";
 import { getAllProjects } from "@/lib/readers/projects";
 import { safely } from "@/lib/readers";
-import { decideProjectApplication } from "@/lib/project-application-actions";
+import {
+  approveProjectApplication,
+  rejectProjectApplication,
+} from "@/lib/project-application-actions";
 import {
   editProposalAsAdmin,
   withdrawProposalAsAdmin,
@@ -288,7 +291,7 @@ function PendingRow({
       )}
 
       <form
-        action={decideProjectApplication}
+        action={rejectProjectApplication}
         className="mt-5 space-y-3 border-t border-[var(--surface-border)] pt-4"
       >
         <input type="hidden" name="id" value={application.id} />
@@ -307,16 +310,13 @@ function PendingRow({
         />
         <div className="flex flex-wrap gap-2">
           <SubmitButton pendingLabel="Saving…"
-            name="decision"
-            value="approve"
+            formAction={approveProjectApplication}
             className="rounded-full px-4 py-2 text-sm font-medium text-white"
             style={{ backgroundColor: "#007048" }}
           >
             Select for the team
           </SubmitButton>
           <SubmitButton pendingLabel="Saving…"
-            name="decision"
-            value="reject"
             className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Not this round

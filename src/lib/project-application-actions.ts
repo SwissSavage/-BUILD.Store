@@ -156,13 +156,15 @@ export async function applyToProject(formData: FormData) {
   revalidatePath("/notifications");
 }
 
-export async function decideProjectApplication(formData: FormData) {
+async function decideProjectApplication(
+  formData: FormData,
+  decision: "approve" | "reject",
+) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
   if (!user.isAdmin) throw new Error("Admin access required");
 
   const id = String(formData.get("id") ?? "");
-  const decision = String(formData.get("decision") ?? "");
   const adminNote = String(formData.get("adminNote") ?? "").trim();
 
   const app = await getApplicationById(id);
@@ -170,10 +172,6 @@ export async function decideProjectApplication(formData: FormData) {
   if (app.status !== "pending") {
     throw new Error("Already decided");
   }
-  if (decision !== "approve" && decision !== "reject") {
-    throw new Error("Unknown decision");
-  }
-
   const project = await getProjectById(app.projectId);
   if (!project) throw new Error("Project not found");
 
@@ -258,6 +256,18 @@ export async function decideProjectApplication(formData: FormData) {
   revalidatePath(`/projects/${project.id}`);
   revalidatePath("/admin/projects/applications");
   revalidatePath("/notifications");
+}
+
+/**
+ * Keep each review outcome bound to its submit control. Relying on a submit
+ * button's name/value dropped the decision from some Server Action requests.
+ */
+export async function approveProjectApplication(formData: FormData) {
+  return decideProjectApplication(formData, "approve");
+}
+
+export async function rejectProjectApplication(formData: FormData) {
+  return decideProjectApplication(formData, "reject");
 }
 
 export async function withdrawProjectApplication(formData: FormData) {

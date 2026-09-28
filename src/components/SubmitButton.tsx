@@ -40,6 +40,7 @@ interface SubmitButtonProps {
   title?: string;
   name?: string;
   value?: string;
+  formAction?: React.ComponentProps<"button">["formAction"];
   /** Inline styles, for the surfaces that set brand colours directly. */
   style?: React.CSSProperties;
 }
@@ -52,6 +53,7 @@ export function SubmitButton({
   title,
   name,
   value,
+  formAction,
   style,
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
@@ -61,6 +63,7 @@ export function SubmitButton({
       type="submit"
       name={name}
       value={value}
+      formAction={formAction}
       title={title}
       disabled={pending || disabled}
       aria-busy={pending}

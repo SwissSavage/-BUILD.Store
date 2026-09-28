@@ -22,7 +22,9 @@ import {
   rejectProjectApplication,
 } from "@/lib/project-application-actions";
 import {
+  addProposalAttachmentsAsAdmin,
   editProposalAsAdmin,
+  removeProposalAttachmentAsAdmin,
   withdrawProposalAsAdmin,
   restoreProposalAsAdmin,
 } from "@/lib/project-edit-actions";
@@ -195,28 +197,75 @@ function PendingRow({
           </p>
           <StructuredText text={application.pitch} />
 
-          {(application.attachments ?? []).length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs uppercase tracking-wider text-ink-faint">
-                Portfolio documents
-              </p>
-              <ul className="mt-2 space-y-1">
+          <section className="mt-4">
+            <p className="text-xs uppercase tracking-wider text-ink-faint">
+              Portfolio documents
+            </p>
+            {(application.attachments ?? []).length > 0 ? (
+              <ul className="mt-2 grid gap-2 sm:grid-cols-2">
                 {(application.attachments ?? []).map((doc, i) => (
-                  <li key={i}>
+                  <li
+                    key={`${doc.name}-${i}`}
+                    className="relative rounded-xl border border-[var(--surface-border)] bg-[var(--surface-inset)] p-3 pr-16"
+                  >
                     <a
                       href={`/api/proposals/${application.id}/attachments/${i}`}
-                      className="text-sm text-brand-magentaText hover:underline"
+                      className="block truncate text-sm text-brand-magentaText hover:underline"
+                      title={doc.name}
                     >
                       {doc.name}
-                    </a>{" "}
-                    <span className="text-xs text-ink-faint">
+                    </a>
+                    <span className="mt-1 block text-xs text-ink-faint">
                       {(doc.sizeBytes / 1024).toFixed(0)} KB
                     </span>
+                    {!application.clientPresentedAt && (
+                      <form
+                        action={removeProposalAttachmentAsAdmin}
+                        className="absolute right-2 top-2"
+                      >
+                        <input type="hidden" name="id" value={application.id} />
+                        <input type="hidden" name="index" value={i} />
+                        <SubmitButton
+                          pendingLabel="…"
+                          title={`Remove ${doc.name}`}
+                          className="text-xs text-ink-muted hover:text-brand-magentaText"
+                        >
+                          Remove
+                        </SubmitButton>
+                      </form>
+                    )}
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
+            ) : (
+              <p className="mt-2 text-sm text-ink-faint">No documents attached.</p>
+            )}
+            {!application.clientPresentedAt && (application.attachments ?? []).length < 3 && (
+              <form
+                action={addProposalAttachmentsAsAdmin}
+                className="mt-3 flex flex-wrap items-center gap-2"
+              >
+                <input type="hidden" name="id" value={application.id} />
+                <input
+                  name="attachments"
+                  type="file"
+                  multiple
+                  required
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.txt,.md"
+                  className="max-w-full text-xs text-ink-muted file:mr-3 file:rounded-full file:border-0 file:bg-[var(--surface-elevated)] file:px-3 file:py-1.5 file:text-xs file:text-ink hover:file:bg-[var(--surface-border)]"
+                />
+                <SubmitButton
+                  pendingLabel="Adding…"
+                  className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
+                >
+                  Add documents
+                </SubmitButton>
+              </form>
+            )}
+            {!application.clientPresentedAt && (
+              <p className="mt-1 text-xs text-ink-faint">Optional · up to 3 files, 2 MB each.</p>
+            )}
+          </section>
 
           {application.portfolioLink && (
             <p className="mt-3 text-xs">
@@ -258,7 +307,7 @@ function PendingRow({
             Admin review edit
           </p>
           <p className="text-xs text-ink-faint">
-            Updates the pending proposal before it is presented to a client. Attachments remain unchanged.
+            Updates the pending proposal before it is presented to a client. Portfolio documents are managed above.
           </p>
           <div className="grid gap-3 md:grid-cols-2">
             <label className="block text-xs text-ink-muted">

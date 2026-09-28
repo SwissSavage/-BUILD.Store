@@ -32,6 +32,7 @@ import {
   validateRateAgainstBounds,
 } from "@/lib/rate-bounds";
 import { richTextValuePlainText } from "@/lib/rich-text";
+import { readProposalAttachments } from "@/lib/proposal-attachments";
 
 function newApplicationId(prefix: "app" | "bid"): string {
   return `${prefix}_${randomBytes(6).toString("hex")}`;
@@ -150,63 +151,6 @@ async function submitJobApplicationInner(
     mode: "created",
     message: "Application submitted. You will hear back once the team is picked.",
   };
-}
-
-/**
- * Portfolio documents attached to a proposal.
- *
- * Same shape and same limits as RFP attachments, deliberately: one
- * mental model, one migration when R2 lands.
- */
-const MAX_PROPOSAL_ATTACHMENTS = 3;
-const MAX_PROPOSAL_ATTACHMENT_BYTES = 2 * 1024 * 1024;
-
-export interface ProposalAttachment {
-  name: string;
-  mimeType: string;
-  sizeBytes: number;
-  base64: string;
-}
-
-/**
- * Read attached portfolio docs off the form.
- *
- * Returns a rejection message instead of throwing, because an
- * oversized file is an expected outcome the contractor needs to read.
- * Browsers send empty File slots for untouched inputs, so those are
- * dropped rather than counted against the cap.
- */
-async function readProposalAttachments(
-  formData: FormData,
-): Promise<{ files: ProposalAttachment[]; error?: string }> {
-  const raw = formData
-    .getAll("attachments")
-    .filter((v): v is File => v instanceof File && v.size > 0);
-
-  if (raw.length > MAX_PROPOSAL_ATTACHMENTS) {
-    return {
-      files: [],
-      error: `Attach up to ${MAX_PROPOSAL_ATTACHMENTS} documents. Pick your strongest few.`,
-    };
-  }
-
-  const files: ProposalAttachment[] = [];
-  for (const f of raw) {
-    if (f.size > MAX_PROPOSAL_ATTACHMENT_BYTES) {
-      return {
-        files: [],
-        error: `"${f.name}" is ${(f.size / 1024 / 1024).toFixed(1)} MB. Max per file is 2 MB. Link anything larger.`,
-      };
-    }
-    const buf = Buffer.from(await f.arrayBuffer());
-    files.push({
-      name: f.name.slice(0, 200),
-      mimeType: f.type || "application/octet-stream",
-      sizeBytes: f.size,
-      base64: buf.toString("base64"),
-    });
-  }
-  return { files };
 }
 
 /**

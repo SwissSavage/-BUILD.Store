@@ -44,6 +44,9 @@ const nextConfig = {
   compress: true,
 
   experimental: {
+    // Proposal forms allow three 2 MB documents. The default 1 MB
+    // Server Action limit would reject a valid upload before validation runs.
+    serverActions: { bodySizeLimit: "8mb" },
     /**
      * Tree-shake barrel imports aggressively. When a package exports
      * hundreds of symbols and we import only a handful, this makes Next

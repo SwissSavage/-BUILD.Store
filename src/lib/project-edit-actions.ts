@@ -30,6 +30,11 @@ import { getProjectById } from "@/lib/readers/projects";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { parseRichText, richTextPlainText } from "@/lib/rich-text";
 import type { Industry } from "@/lib/types";
+import {
+  MAX_PROPOSAL_ATTACHMENTS,
+  readProposalAttachments,
+  type ProposalAttachment,
+} from "@/lib/proposal-attachments";
 
 const INDUSTRIES: Industry[] = [
   "stem",
@@ -296,4 +301,107 @@ export async function editProposalAsAdmin(formData: FormData) {
   revalidatePath(`/admin/rfps/${before.projectId}/bids`);
   revalidatePath(`/contracts/${before.projectId}`);
   revalidatePath(`/projects/${before.projectId}`);
+}
+
+/** Update optional portfolio documents while a proposal remains in review. */
+export async function addProposalAttachmentsAsAdmin(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Proposal id is required.");
+
+  const [before] = await db
+    .select({
+      projectId: projectApplications.projectId,
+      status: projectApplications.status,
+      clientPresentedAt: projectApplications.clientPresentedAt,
+      attachments: projectApplications.attachments,
+    })
+    .from(projectApplications)
+    .where(eq(projectApplications.id, id))
+    .limit(1);
+  if (!before) throw new Error("Proposal not found.");
+  if (before.status !== "pending" || before.clientPresentedAt) {
+    throw new Error("This proposal is locked and its documents cannot be changed.");
+  }
+
+  const { files, error } = await readProposalAttachments(formData);
+  if (error) throw new Error(error);
+  if (files.length === 0) return;
+
+  const attachments = (before.attachments ?? []) as ProposalAttachment[];
+  if (attachments.length + files.length > MAX_PROPOSAL_ATTACHMENTS) {
+    throw new Error(`A proposal can have up to ${MAX_PROPOSAL_ATTACHMENTS} documents.`);
+  }
+
+  await db
+    .update(projectApplications)
+    .set({ attachments: [...attachments, ...files] })
+    .where(eq(projectApplications.id, id));
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "proposal.edited_by_admin",
+    resourceKind: "project",
+    resourceId: before.projectId,
+    before: { proposalId: id, attachmentCount: attachments.length },
+    after: { proposalId: id, attachmentCount: attachments.length + files.length },
+    reason: "Portfolio documents added by admin during proposal review.",
+  });
+
+  revalidateProposalPaths(before.projectId);
+}
+
+/** Remove one optional portfolio document before the proposal is sent to a client. */
+export async function removeProposalAttachmentAsAdmin(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  const index = Number.parseInt(String(formData.get("index") ?? ""), 10);
+  if (!id || !Number.isInteger(index) || index < 0) {
+    throw new Error("A valid proposal document is required.");
+  }
+
+  const [before] = await db
+    .select({
+      projectId: projectApplications.projectId,
+      status: projectApplications.status,
+      clientPresentedAt: projectApplications.clientPresentedAt,
+      attachments: projectApplications.attachments,
+    })
+    .from(projectApplications)
+    .where(eq(projectApplications.id, id))
+    .limit(1);
+  if (!before) throw new Error("Proposal not found.");
+  if (before.status !== "pending" || before.clientPresentedAt) {
+    throw new Error("This proposal is locked and its documents cannot be changed.");
+  }
+
+  const attachments = (before.attachments ?? []) as ProposalAttachment[];
+  const removed = attachments[index];
+  if (!removed) throw new Error("Portfolio document not found.");
+
+  await db
+    .update(projectApplications)
+    .set({ attachments: attachments.filter((_, attachmentIndex) => attachmentIndex !== index) })
+    .where(eq(projectApplications.id, id));
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "proposal.edited_by_admin",
+    resourceKind: "project",
+    resourceId: before.projectId,
+    before: { proposalId: id, attachmentCount: attachments.length },
+    after: { proposalId: id, attachmentCount: attachments.length - 1, removed: removed.name },
+    reason: "Portfolio document removed by admin during proposal review.",
+  });
+
+  revalidateProposalPaths(before.projectId);
+}
+
+function revalidateProposalPaths(projectId: string) {
+  revalidatePath("/admin/projects/applications");
+  revalidatePath(`/admin/rfps/${projectId}/bids`);
+  revalidatePath(`/contracts/${projectId}`);
+  revalidatePath(`/projects/${projectId}`);
 }

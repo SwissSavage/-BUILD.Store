@@ -57,26 +57,28 @@ export function AdminProposalAttachments({
           {kept.map(({ document, index }) => (
             <li
               key={`${document.name}-${index}`}
-              className="relative flex aspect-square min-w-0 flex-col justify-between rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-3"
+              className="relative flex min-h-16 min-w-0 items-center gap-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] py-2 pl-3 pr-11"
             >
               <input type="hidden" name="keepAttachment" value={index} />
-              <FileText aria-hidden="true" size={20} className="text-ink-muted" />
-              <a
-                href={`/api/proposals/${proposalId}/attachments/${index}`}
-                className="truncate text-sm text-brand-magentaText hover:underline"
-                title={document.name}
-              >
-                {document.name}
-              </a>
-              <span className="text-xs text-ink-faint">
-                {(document.sizeBytes / 1024).toFixed(0)} KB
-              </span>
+              <FileText aria-hidden="true" size={18} className="shrink-0 text-ink-muted" />
+              <div className="min-w-0 flex-1">
+                <a
+                  href={`/api/proposals/${proposalId}/attachments/${index}`}
+                  className="block truncate text-sm text-brand-magentaText hover:underline"
+                  title={document.name}
+                >
+                  {document.name}
+                </a>
+                <span className="mt-0.5 block text-xs text-ink-faint">
+                  {(document.sizeBytes / 1024).toFixed(0)} KB
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => setKept((current) => current.filter((item) => item.index !== index))}
                 aria-label={`Remove ${document.name}`}
                 title={`Remove ${document.name}`}
-                className="absolute right-2 top-2 rounded-full p-1 text-ink-muted hover:bg-[var(--surface-border)] hover:text-brand-magentaText"
+                className="absolute right-1 top-1 inline-flex size-8 items-center justify-center rounded-full text-ink-muted hover:bg-[var(--surface-border)] hover:text-brand-magentaText focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-magenta"
               >
                 <X aria-hidden="true" size={15} />
               </button>
@@ -85,21 +87,23 @@ export function AdminProposalAttachments({
           {selected.map((file, index) => (
             <li
               key={`${file.name}-${index}`}
-              className="relative flex aspect-square min-w-0 flex-col justify-between rounded-xl border border-dashed border-brand-magenta/60 bg-[var(--surface)] p-3"
+              className="relative flex min-h-16 min-w-0 items-center gap-3 rounded-lg border border-dashed border-brand-magenta/60 bg-[var(--surface)] py-2 pl-3 pr-11"
             >
-              <FileText aria-hidden="true" size={20} className="text-brand-magentaText" />
-              <span className="truncate text-sm text-ink" title={file.name}>
-                {file.name}
-              </span>
-              <span className="text-xs text-ink-faint">
-                {(file.size / 1024).toFixed(0)} KB · pending
-              </span>
+              <FileText aria-hidden="true" size={18} className="shrink-0 text-brand-magentaText" />
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-sm text-ink" title={file.name}>
+                  {file.name}
+                </span>
+                <span className="mt-0.5 block text-xs text-ink-faint">
+                  {(file.size / 1024).toFixed(0)} KB · pending
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => removeSelected(index)}
                 aria-label={`Remove ${file.name}`}
                 title={`Remove ${file.name}`}
-                className="absolute right-2 top-2 rounded-full p-1 text-ink-muted hover:bg-[var(--surface-border)] hover:text-brand-magentaText"
+                className="absolute right-1 top-1 inline-flex size-8 items-center justify-center rounded-full text-ink-muted hover:bg-[var(--surface-border)] hover:text-brand-magentaText focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-magenta"
               >
                 <X aria-hidden="true" size={15} />
               </button>

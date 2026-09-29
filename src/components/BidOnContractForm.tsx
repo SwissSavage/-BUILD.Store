@@ -11,12 +11,13 @@
  * fields — see task #39.
  */
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { submitContractBid } from "@/lib/application-actions";
 import type { ProposalResult } from "@/lib/application-actions";
 import { Card } from "@/components/Card";
 import { DepersonalizeNotice } from "@/components/DepersonalizeNotice";
 import { RichTextEditor } from "@/components/RichTextEditor";
+import type { ProposalPriceMode } from "@/lib/proposal-terms";
 
 interface Props {
   contractId: string;
@@ -37,7 +38,12 @@ interface Props {
     proposedRole: string | null;
     pitch: string;
     hoursPerWeek: number | null;
+    hoursPerWeekMax?: number | null;
     hourlyRate: string | null;
+    hourlyRateMax?: string | null;
+    priceMode?: ProposalPriceMode | null;
+    fixedPriceMin?: string | null;
+    fixedPriceMax?: string | null;
     portfolioLink: string | null;
     status: string;
     createdAt: string;
@@ -69,6 +75,7 @@ export function BidOnContractForm({
   existing,
 }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
+  const [priceMode, setPriceMode] = useState<ProposalPriceMode>(existing?.priceMode ?? "hourly");
   const editing = !!existing && existing.status === "pending";
   const existingDocs = existing?.attachments ?? [];
   const locked = !!existing && existing.status === "approved";
@@ -110,7 +117,7 @@ export function BidOnContractForm({
       <form action={formAction} className="mt-6 space-y-4">
         <input type="hidden" name="contractId" value={contractId} />
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="proposedRole" className="text-sm font-medium">
               Proposed role
@@ -125,8 +132,26 @@ export function BidOnContractForm({
             />
           </div>
           <div>
+            <label htmlFor="priceMode" className="text-sm font-medium">Pricing</label>
+            <select
+              id="priceMode"
+              name="priceMode"
+              value={priceMode}
+              onChange={(event) => setPriceMode(event.target.value as ProposalPriceMode)}
+              className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-3 py-2 text-sm"
+              style={{ colorScheme: "dark" }}
+            >
+              <option className="bg-[#1A1A1A] text-white" value="hourly">Hourly rate</option>
+              <option className="bg-[#1A1A1A] text-white" value="fixed">Total project price</option>
+              <option className="bg-[#1A1A1A] text-white" value="negotiable">Open to negotiation</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
             <label htmlFor="hoursPerWeek" className="text-sm font-medium">
-              Hours per week
+              Minimum hours per week
             </label>
             <input
               id="hoursPerWeek"
@@ -134,38 +159,70 @@ export function BidOnContractForm({
               type="number"
               min={1}
               max={80}
+              required
               defaultValue={existing?.hoursPerWeek ?? ""}
               placeholder="20"
               className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
             />
           </div>
           <div>
-            <label htmlFor="hourlyRate" className="text-sm font-medium">
-              Hourly rate (USD)
+            <label htmlFor="hoursPerWeekMax" className="text-sm font-medium">
+              Maximum hours per week <span className="text-ink-muted">(optional)</span>
             </label>
             <input
-              id="hourlyRate"
-              name="hourlyRate"
+              id="hoursPerWeekMax"
+              name="hoursPerWeekMax"
               type="number"
-              required
-              min={rateBounds.minRate}
-              max={rateBounds.maxRate}
-              step={5}
-              defaultValue={existing?.hourlyRate ?? ""}
-              placeholder={`${rateBounds.minRate}–${rateBounds.maxRate}`}
+              min={1}
+              max={80}
+              defaultValue={existing?.hoursPerWeekMax ?? ""}
+              placeholder="40"
               className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
             />
           </div>
         </div>
 
-        <div className="rounded-md border border-dashed border-[var(--surface-border)] bg-[var(--surface-inset)] p-3 text-xs text-ink-muted">
-          <div className="font-medium text-ink">
-            Bid range: ${rateBounds.minRate}–${rateBounds.maxRate}/hr
+        {priceMode !== "negotiable" && (
+          <div key={priceMode} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label htmlFor="priceMinimum" className="text-sm font-medium">
+                {priceMode === "hourly" ? "Minimum hourly rate (USD)" : "Minimum project price (USD)"}
+              </label>
+              <input
+                id="priceMinimum"
+                name={priceMode === "hourly" ? "hourlyRate" : "fixedPriceMin"}
+                type="number"
+                required
+                min={priceMode === "hourly" ? rateBounds.minRate : 0.01}
+                max={priceMode === "hourly" ? rateBounds.maxRate : undefined}
+                step="0.01"
+                defaultValue={priceMode === "hourly" ? existing?.hourlyRate ?? "" : existing?.fixedPriceMin ?? ""}
+                className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label htmlFor="priceMaximum" className="text-sm font-medium">
+                Maximum {priceMode === "hourly" ? "hourly rate" : "project price"} <span className="text-ink-muted">(optional)</span>
+              </label>
+              <input
+                id="priceMaximum"
+                name={priceMode === "hourly" ? "hourlyRateMax" : "fixedPriceMax"}
+                type="number"
+                min={priceMode === "hourly" ? rateBounds.minRate : 0.01}
+                max={priceMode === "hourly" ? rateBounds.maxRate : undefined}
+                step="0.01"
+                defaultValue={priceMode === "hourly" ? existing?.hourlyRateMax ?? "" : existing?.fixedPriceMax ?? ""}
+                className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
+              />
+            </div>
           </div>
-          <p className="mt-1">{rateBounds.reason}</p>
-          <p className="mt-1 text-ink-faint">
-            The rate you set at engagement acceptance is locked for
-            the duration — do not re-anchor after acceptance.
+        )}
+        <div className="rounded-md border border-dashed border-[var(--surface-border)] bg-[var(--surface-inset)] p-3 text-xs text-ink-muted">
+          {priceMode === "hourly" && (
+            <p>Hourly rates must be ${rateBounds.minRate}–${rateBounds.maxRate}/hr. {rateBounds.reason}</p>
+          )}
+          <p className={priceMode === "hourly" ? "mt-1" : ""}>
+            A blank maximum means “from” your minimum. Your proposed terms can be revised until they are sent to the client.
           </p>
         </div>
 

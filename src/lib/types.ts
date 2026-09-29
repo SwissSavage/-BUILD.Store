@@ -2200,8 +2200,13 @@ export interface ProjectApplication {
   pitch: string;
   /** Estimated weekly availability the applicant can commit. */
   hoursPerWeek: number;
+  hoursPerWeekMax?: number | null;
   /** Proposed hourly rate for contract bids; internal applications omit it. */
   hourlyRate?: string | null;
+  hourlyRateMax?: string | null;
+  priceMode?: "hourly" | "fixed" | "negotiable" | null;
+  fixedPriceMin?: string | null;
+  fixedPriceMax?: string | null;
   /** Optional URL to relevant past work (overrides their Profile portfolio link). */
   portfolioLink: string | null;
   /**
@@ -3554,6 +3559,8 @@ export type CooperativeQuotePricing =
       type: "fixed";
       /** Total contract value in USD. */
       baseAmount: number;
+      /** A proposed floor, with no stated upper limit. */
+      minimumOnly?: boolean;
       /** Builders' share as a percentage (0-100). Baseline is 85. */
       talentSplit: number;
       /** Cooperative operations share as a percentage. Baseline is 15. */
@@ -3574,9 +3581,16 @@ export type CooperativeQuotePricing =
       type: "hourly";
       /** Hourly rate in USD. Open-ended engagement (no total). */
       hourlyRate: number;
+      hourlyRateMax?: number | null;
+      minimumOnly?: boolean;
       /** Builders' share as a percentage (0-100). Baseline is 85. */
       talentSplit: number;
       /** Cooperative operations share as a percentage. Baseline is 15. */
+      operationsSplit: number;
+    }
+  | {
+      type: "negotiable";
+      talentSplit: number;
       operationsSplit: number;
     };
 

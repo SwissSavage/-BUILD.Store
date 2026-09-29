@@ -30,6 +30,12 @@ import { getProjectById } from "@/lib/readers/projects";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { parseRichText, richTextPlainText } from "@/lib/rich-text";
 import type { Industry } from "@/lib/types";
+import {
+  MAX_PROPOSAL_ATTACHMENTS,
+  readProposalAttachments,
+  type ProposalAttachment,
+} from "@/lib/proposal-attachments";
+import { parseContractProposalTerms, parseWeeklyHours } from "@/lib/proposal-terms";
 
 const INDUSTRIES: Industry[] = [
   "stem",
@@ -227,20 +233,11 @@ export async function editProposalAsAdmin(formData: FormData) {
   const proposedRole = String(formData.get("proposedRole") ?? "").trim();
   const pitch = String(formData.get("pitch") ?? "").trim();
   const portfolioLink = String(formData.get("portfolioLink") ?? "").trim();
-  const hoursPerWeek = Math.max(
-    0,
-    Math.min(60, Number.parseInt(String(formData.get("hoursPerWeek") ?? ""), 10) || 0),
-  );
-  const rateRaw = String(formData.get("hourlyRate") ?? "").trim();
-  const rate = rateRaw ? Number.parseFloat(rateRaw) : null;
 
   if (!id) throw new Error("Proposal id is required.");
   if (!proposedRole) throw new Error("Proposed role is required.");
   if (pitch.length < 20) {
     throw new Error("Pitch must be at least 20 characters.");
-  }
-  if (rateRaw && (!Number.isFinite(rate) || rate! < 0)) {
-    throw new Error("Hourly rate must be a non-negative number.");
   }
 
   const [before] = await db
@@ -256,14 +253,39 @@ export async function editProposalAsAdmin(formData: FormData) {
     throw new Error("This proposal has already been sent to the client and is locked.");
   }
 
+  const proposalProject = await getProjectById(before.projectId);
+  if (!proposalProject) throw new Error("Project not found.");
+  const terms = proposalProject.kind === "contract"
+    ? parseContractProposalTerms(formData, { minRate: 20, maxRate: 2500 })
+    : { ...parseWeeklyHours(formData, 60) };
+  const { files: newAttachments, error: attachmentError } = await readProposalAttachments(formData);
+  if (attachmentError) throw new Error(attachmentError);
+
+  const currentAttachments = (before.attachments ?? []) as ProposalAttachment[];
+  const attachmentEditor = String(formData.get("attachmentEditor") ?? "");
+  const keepIndices = new Set(
+    formData
+      .getAll("keepAttachment")
+      .map((value) => Number.parseInt(String(value), 10))
+      .filter((index) => Number.isInteger(index) && index >= 0 && index < currentAttachments.length),
+  );
+  const keptAttachments =
+    attachmentEditor === "staged"
+      ? currentAttachments.filter((_, index) => keepIndices.has(index))
+      : currentAttachments;
+  const attachments = [...keptAttachments, ...newAttachments];
+  if (attachments.length > MAX_PROPOSAL_ATTACHMENTS) {
+    throw new Error(`A proposal can have up to ${MAX_PROPOSAL_ATTACHMENTS} documents.`);
+  }
+
   await db
     .update(projectApplications)
     .set({
       proposedRole,
       pitch,
-      hoursPerWeek,
-      hourlyRate: rate === null ? null : rate.toFixed(2),
+      ...terms,
       portfolioLink: portfolioLink || null,
+      attachments,
     })
     .where(eq(projectApplications.id, id));
 
@@ -278,16 +300,22 @@ export async function editProposalAsAdmin(formData: FormData) {
       proposedRole: before.proposedRole,
       pitch: before.pitch,
       hoursPerWeek: before.hoursPerWeek,
+      hoursPerWeekMax: before.hoursPerWeekMax,
       hourlyRate: before.hourlyRate,
+      hourlyRateMax: before.hourlyRateMax,
+      priceMode: before.priceMode,
+      fixedPriceMin: before.fixedPriceMin,
+      fixedPriceMax: before.fixedPriceMax,
       portfolioLink: before.portfolioLink,
+      attachmentCount: currentAttachments.length,
     },
     after: {
       proposalId: id,
       proposedRole,
       pitch,
-      hoursPerWeek,
-      hourlyRate: rate === null ? null : rate.toFixed(2),
+      ...terms,
       portfolioLink: portfolioLink || null,
+      attachmentCount: attachments.length,
     },
     reason: "Proposal edited by admin during review before client presentation.",
   });

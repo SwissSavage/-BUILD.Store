@@ -286,7 +286,7 @@ export function QuoteInteractiveSurface({
           as adding up the Quote column on Jamar's Google Doc quote
           sheet, just live. */}
       <section className="mt-20">
-        <CardEyebrow>Engagement Total</CardEyebrow>
+        <CardEyebrow>Proposed pricing</CardEyebrow>
         <h2 className="mt-2 font-display text-3xl font-semibold">
           {aggregateHeadline(aggregate)}
           {aggregateUnitLabel(aggregate) && (
@@ -296,9 +296,9 @@ export function QuoteInteractiveSurface({
           )}
         </h2>
         <p className="mt-3 max-w-xl text-sm text-ink-muted">
-          Sum of the per-Builder quotes on the cards above. Each
-          Builder&apos;s price + timeline is theirs; the total is what
-          you pay when the full crew ships together.
+          These are the Builders&apos; proposed terms. A range or negotiable
+          price is settled with the team before contracting; it is not a
+          fixed amount due when you choose a crew.
         </p>
       </section>
 

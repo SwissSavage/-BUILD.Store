@@ -1205,12 +1205,17 @@ export const projectApplications = pgTable("project_applications", {
   proposedRole: text("proposed_role").notNull(),
   pitch: text("pitch").notNull(),
   hoursPerWeek: integer("hours_per_week").notNull().default(0),
+  hoursPerWeekMax: integer("hours_per_week_max"),
   /**
    * Proposed hourly rate in USD. Bounded by the talent's current
    * compliance-tier rate cap (task #48, see `src/lib/rate-bounds.ts`).
    * Null-safe for legacy rows that predate the rate-cap mechanic.
    */
   hourlyRate: numeric("hourly_rate", { precision: 10, scale: 2 }),
+  hourlyRateMax: numeric("hourly_rate_max", { precision: 10, scale: 2 }),
+  priceMode: text("price_mode", { enum: ["hourly", "fixed", "negotiable"] }),
+  fixedPriceMin: numeric("fixed_price_min", { precision: 12, scale: 2 }),
+  fixedPriceMax: numeric("fixed_price_max", { precision: 12, scale: 2 }),
   portfolioLink: text("portfolio_link"),
   /**
    * Portfolio documents attached to the proposal. Base64 inline,

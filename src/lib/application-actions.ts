@@ -29,9 +29,10 @@ import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { MOCK_NOTIFICATIONS } from "@/lib/mock-data/notifications";
 import {
   computeRateBounds,
-  validateRateAgainstBounds,
 } from "@/lib/rate-bounds";
 import { richTextValuePlainText } from "@/lib/rich-text";
+import { readProposalAttachments } from "@/lib/proposal-attachments";
+import { parseContractProposalTerms } from "@/lib/proposal-terms";
 
 function newApplicationId(prefix: "app" | "bid"): string {
   return `${prefix}_${randomBytes(6).toString("hex")}`;
@@ -150,63 +151,6 @@ async function submitJobApplicationInner(
     mode: "created",
     message: "Application submitted. You will hear back once the team is picked.",
   };
-}
-
-/**
- * Portfolio documents attached to a proposal.
- *
- * Same shape and same limits as RFP attachments, deliberately: one
- * mental model, one migration when R2 lands.
- */
-const MAX_PROPOSAL_ATTACHMENTS = 3;
-const MAX_PROPOSAL_ATTACHMENT_BYTES = 2 * 1024 * 1024;
-
-export interface ProposalAttachment {
-  name: string;
-  mimeType: string;
-  sizeBytes: number;
-  base64: string;
-}
-
-/**
- * Read attached portfolio docs off the form.
- *
- * Returns a rejection message instead of throwing, because an
- * oversized file is an expected outcome the contractor needs to read.
- * Browsers send empty File slots for untouched inputs, so those are
- * dropped rather than counted against the cap.
- */
-async function readProposalAttachments(
-  formData: FormData,
-): Promise<{ files: ProposalAttachment[]; error?: string }> {
-  const raw = formData
-    .getAll("attachments")
-    .filter((v): v is File => v instanceof File && v.size > 0);
-
-  if (raw.length > MAX_PROPOSAL_ATTACHMENTS) {
-    return {
-      files: [],
-      error: `Attach up to ${MAX_PROPOSAL_ATTACHMENTS} documents. Pick your strongest few.`,
-    };
-  }
-
-  const files: ProposalAttachment[] = [];
-  for (const f of raw) {
-    if (f.size > MAX_PROPOSAL_ATTACHMENT_BYTES) {
-      return {
-        files: [],
-        error: `"${f.name}" is ${(f.size / 1024 / 1024).toFixed(1)} MB. Max per file is 2 MB. Link anything larger.`,
-      };
-    }
-    const buf = Buffer.from(await f.arrayBuffer());
-    files.push({
-      name: f.name.slice(0, 200),
-      mimeType: f.type || "application/octet-stream",
-      sizeBytes: f.size,
-      base64: buf.toString("base64"),
-    });
-  }
-  return { files };
 }
 
 /**
@@ -335,8 +279,6 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
   const pitch = String(formData.get("pitch") ?? "").trim();
   const pitchText = richTextValuePlainText(pitch);
   const proposedRole = String(formData.get("proposedRole") ?? "").trim();
-  const hoursPerWeekRaw = String(formData.get("hoursPerWeek") ?? "").trim();
-  const hourlyRateRaw = String(formData.get("hourlyRate") ?? "").trim();
   const portfolioLink = String(formData.get("portfolioLink") ?? "").trim();
 
   if (!contractId) {
@@ -354,10 +296,12 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
   // rates; this catches typos, missing decimals, and truly-out-of-band
   // inputs. Unusual-but-valid rates are handled through admin triage
   // on the pending queue, not through algorithmic tightening.
-  const proposedRate = Number.parseFloat(hourlyRateRaw);
-  const rateBounds = computeRateBounds(user);
-  const rateError = validateRateAgainstBounds(proposedRate, rateBounds);
-  if (rateError) return { ok: false, message: rateError };
+  let terms;
+  try {
+    terms = parseContractProposalTerms(formData, computeRateBounds(user));
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Check your proposed terms." };
+  }
 
   const { files: attachedDocs, error: attachmentError } =
     await readProposalAttachments(formData);
@@ -409,8 +353,6 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
     )
     .limit(1);
 
-  const hoursPerWeekParsed = Number.parseInt(hoursPerWeekRaw, 10) || 0;
-
   if (existing && existing.status === "approved") {
     // Already selected. Terms are locked at acceptance, so a silent
     // rewrite here would change an engagement that both sides agreed
@@ -438,8 +380,7 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
       .set({
         proposedRole: proposedRole.length > 0 ? proposedRole : "Contractor",
         pitch,
-        hoursPerWeek: hoursPerWeekParsed,
-        hourlyRate: proposedRate.toFixed(2),
+        ...terms,
         portfolioLink: portfolioLink.length > 0 ? portfolioLink : null,
         // Only overwrite when new files were picked. A browser cannot
         // re-populate a file input, so an edit that changes only the
@@ -494,8 +435,7 @@ async function contractBid(formData: FormData): Promise<ProposalResult> {
     userId: user.id,
     proposedRole: proposedRole.length > 0 ? proposedRole : "Contractor",
     pitch,
-    hoursPerWeek: hoursPerWeekParsed,
-    hourlyRate: proposedRate.toFixed(2),
+    ...terms,
     portfolioLink: portfolioLink.length > 0 ? portfolioLink : null,
     attachments: attachedDocs,
     status: "pending",

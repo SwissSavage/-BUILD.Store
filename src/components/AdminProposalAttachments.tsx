@@ -53,11 +53,11 @@ export function AdminProposalAttachments({
       </p>
 
       {total > 0 ? (
-        <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-3 flex flex-wrap gap-2">
           {kept.map(({ document, index }) => (
             <li
               key={`${document.name}-${index}`}
-              className="relative flex min-h-16 min-w-0 items-center gap-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] py-2 pl-3 pr-11"
+              className="relative flex h-[4.5rem] w-full max-w-64 flex-none min-w-0 items-center gap-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] py-2 pl-3 pr-11"
             >
               <input type="hidden" name="keepAttachment" value={index} />
               <FileText aria-hidden="true" size={18} className="shrink-0 text-ink-muted" />
@@ -87,7 +87,7 @@ export function AdminProposalAttachments({
           {selected.map((file, index) => (
             <li
               key={`${file.name}-${index}`}
-              className="relative flex min-h-16 min-w-0 items-center gap-3 rounded-lg border border-dashed border-brand-magenta/60 bg-[var(--surface)] py-2 pl-3 pr-11"
+              className="relative flex h-[4.5rem] w-full max-w-64 flex-none min-w-0 items-center gap-3 rounded-lg border border-dashed border-brand-magenta/60 bg-[var(--surface)] py-2 pl-3 pr-11"
             >
               <FileText aria-hidden="true" size={18} className="shrink-0 text-brand-magentaText" />
               <div className="min-w-0 flex-1">

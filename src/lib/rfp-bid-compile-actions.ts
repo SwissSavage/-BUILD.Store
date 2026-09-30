@@ -198,16 +198,16 @@ export async function compileBidsIntoQuote(formData: FormData) {
       talentSplit: 85,
       operationsSplit: 15,
     };
-    const suggestedClientPricing = clientPricingFromBuilderPayout(pricing);
+    const suggestedClientRate = Math.ceil(rate / 0.85);
     const clientRateRaw = String(
       formData.get(`clientRate_${p.id}`) ?? "",
     ).trim();
     const clientRate = clientRateRaw
       ? Number(clientRateRaw)
-      : suggestedClientPricing.hourlyRate;
+      : suggestedClientRate;
     if (
       !Number.isFinite(clientRate) ||
-      clientRate < suggestedClientPricing.hourlyRate
+      clientRate < suggestedClientRate
     ) {
       throw new Error(
         "Client rate cannot be below the grossed-up builder payout. Increase it or revise the builder's rate.",

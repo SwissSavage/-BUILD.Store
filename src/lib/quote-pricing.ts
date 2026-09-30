@@ -28,10 +28,10 @@ import type {
 } from "@/lib/types";
 
 /**
- * Format a whole-dollar USD amount without cents. Uses en-US locale.
+ * Format USD, retaining cents when a contributor proposes them.
  */
 export function formatUsd(amount: number): string {
-  return `$${Math.round(amount).toLocaleString("en-US")}`;
+  return formatUsdCents(amount);
 }
 
 /**
@@ -83,11 +83,13 @@ export function clientPricingFromBuilderPayout(
 export function pricingHeadline(pricing: CooperativeQuotePricing): string {
   switch (pricing.type) {
     case "fixed":
-      return formatUsd(pricing.baseAmount);
+      return `${pricing.minimumOnly ? "From " : ""}${formatUsd(pricing.baseAmount)}`;
     case "range":
       return `${formatUsd(pricing.baseAmountMin)} to ${formatUsd(pricing.baseAmountMax)}`;
     case "hourly":
-      return `${formatUsd(pricing.hourlyRate)}/hr`;
+      return `${pricing.minimumOnly ? "From " : ""}${formatUsd(pricing.hourlyRate)}${pricing.hourlyRateMax && pricing.hourlyRateMax > pricing.hourlyRate ? `–${formatUsd(pricing.hourlyRateMax)}` : ""}/hr`;
+    case "negotiable":
+      return "Price to be agreed";
   }
 }
 
@@ -100,11 +102,13 @@ export function pricingHeadline(pricing: CooperativeQuotePricing): string {
 export function pricingUnitLabel(pricing: CooperativeQuotePricing): string {
   switch (pricing.type) {
     case "fixed":
-      return "fixed";
+      return pricing.minimumOnly ? "minimum total project price" : "fixed total project price";
     case "range":
       return "range";
     case "hourly":
-      return "hourly, billed as delivered";
+      return pricing.hourlyRateMax && pricing.hourlyRateMax > pricing.hourlyRate ? "hourly range" : "hourly, billed as delivered";
+    case "negotiable":
+      return "negotiable";
   }
 }
 
@@ -118,11 +122,13 @@ export function pricingTalentAmount(
   const pct = pricing.talentSplit / 100;
   switch (pricing.type) {
     case "fixed":
-      return formatUsd(pricing.baseAmount * pct);
+      return `${pricing.minimumOnly ? "From " : ""}${formatUsd(pricing.baseAmount * pct)}`;
     case "range":
       return `${formatUsd(pricing.baseAmountMin * pct)} to ${formatUsd(pricing.baseAmountMax * pct)}`;
     case "hourly":
-      return `${formatUsdCents(pricing.hourlyRate * pct)}/hr`;
+      return `${pricing.minimumOnly ? "From " : ""}${formatUsdCents(pricing.hourlyRate * pct)}${pricing.hourlyRateMax && pricing.hourlyRateMax > pricing.hourlyRate ? `–${formatUsdCents(pricing.hourlyRateMax * pct)}` : ""}/hr`;
+    case "negotiable":
+      return "To be agreed";
   }
 }
 
@@ -136,11 +142,13 @@ export function pricingOperationsAmount(
   const pct = pricing.operationsSplit / 100;
   switch (pricing.type) {
     case "fixed":
-      return formatUsd(pricing.baseAmount * pct);
+      return `${pricing.minimumOnly ? "From " : ""}${formatUsd(pricing.baseAmount * pct)}`;
     case "range":
       return `${formatUsd(pricing.baseAmountMin * pct)} to ${formatUsd(pricing.baseAmountMax * pct)}`;
     case "hourly":
-      return `${formatUsdCents(pricing.hourlyRate * pct)}/hr`;
+      return `${pricing.minimumOnly ? "From " : ""}${formatUsdCents(pricing.hourlyRate * pct)}${pricing.hourlyRateMax && pricing.hourlyRateMax > pricing.hourlyRate ? `–${formatUsdCents(pricing.hourlyRateMax * pct)}` : ""}/hr`;
+    case "negotiable":
+      return "To be agreed";
   }
 }
 
@@ -180,7 +188,9 @@ export interface AggregateQuotePricing {
    * are rendered alongside the numeric total when present because an
    * open-ended hourly engagement cannot be reduced to a fixed sum.
    */
-  hourlyRates: number[];
+  hourlyRates: string[];
+  hasOpenUpperBound: boolean;
+  negotiableCount: number;
   /** Count of Builders in the aggregation. */
   builderCount: number;
 }
@@ -206,13 +216,16 @@ export function deriveAggregatePricing(
   let totalMin = 0;
   let totalMax = 0;
   let hasNumericTotal = false;
-  const hourlyRates: number[] = [];
+  let hasOpenUpperBound = false;
+  let negotiableCount = 0;
+  const hourlyRates: string[] = [];
   for (const b of builders) {
     switch (b.pricing.type) {
       case "fixed":
         totalMin += b.pricing.baseAmount;
         totalMax += b.pricing.baseAmount;
         hasNumericTotal = true;
+        hasOpenUpperBound ||= !!b.pricing.minimumOnly;
         break;
       case "range":
         totalMin += b.pricing.baseAmountMin;
@@ -220,12 +233,17 @@ export function deriveAggregatePricing(
         hasNumericTotal = true;
         break;
       case "hourly":
-        hourlyRates.push(b.pricing.hourlyRate);
+        hourlyRates.push(pricingHeadline(b.pricing));
+        break;
+      case "negotiable":
+        negotiableCount += 1;
         break;
     }
   }
   return {
     hasNumericTotal,
+    hasOpenUpperBound,
+    negotiableCount,
     totalMin,
     totalMax,
     hourlyRates,
@@ -245,14 +263,16 @@ export function aggregateHeadline(agg: AggregateQuotePricing): string {
   if (agg.builderCount === 0) return "No builders selected";
   const parts: string[] = [];
   if (agg.hasNumericTotal) {
-    if (agg.totalMin === agg.totalMax) {
+    if (agg.hasOpenUpperBound) {
+      parts.push(`From ${formatUsd(agg.totalMin)} total`);
+    } else if (agg.totalMin === agg.totalMax) {
       parts.push(formatUsd(agg.totalMin));
     } else {
       parts.push(`${formatUsd(agg.totalMin)} to ${formatUsd(agg.totalMax)}`);
     }
   }
   if (agg.hourlyRates.length > 0) {
-    const rateLabels = agg.hourlyRates.map((r) => `${formatUsd(r)}/hr`);
+    const rateLabels = agg.hourlyRates;
     const joined =
       rateLabels.length === 1
         ? rateLabels[0]
@@ -260,6 +280,9 @@ export function aggregateHeadline(agg: AggregateQuotePricing): string {
           ? `${rateLabels[0]} and ${rateLabels[1]}`
           : `${rateLabels.slice(0, -1).join(", ")}, and ${rateLabels[rateLabels.length - 1]}`;
     parts.push(agg.hasNumericTotal ? `plus ${joined}` : joined);
+  }
+  if (agg.negotiableCount > 0) {
+    parts.push(`${parts.length ? "plus " : ""}${agg.negotiableCount} price${agg.negotiableCount === 1 ? "" : "s"} to be agreed`);
   }
   return parts.join(" ");
 }
@@ -270,6 +293,9 @@ export function aggregateHeadline(agg: AggregateQuotePricing): string {
  */
 export function aggregateUnitLabel(agg: AggregateQuotePricing): string {
   if (agg.builderCount === 0) return "";
+  if (agg.negotiableCount > 0 && agg.hasNumericTotal) return "priced work plus open terms";
+  if (agg.hasOpenUpperBound) return "minimum engagement total";
+  if (agg.negotiableCount > 0 && !agg.hasNumericTotal && agg.hourlyRates.length === 0) return "negotiable";
   if (!agg.hasNumericTotal && agg.hourlyRates.length > 0) {
     return "hourly, billed as delivered";
   }

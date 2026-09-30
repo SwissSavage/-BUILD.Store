@@ -1,8 +1,8 @@
 /**
- * Compile up to three talent bids on an RFP into a client-facing cooperative
+ * Compile 3–5 talent bids on an RFP into a client-facing cooperative
  * quote (task #41).
  *
- * The client-facing three-person comparison is the flip side of the
+ * The client-facing "3–5 bid comparison" is the flip side of the
  * dispatch surface (#36): admin dispatches quote requests to matched
  * talent → talent submits bids on /contracts/[id] → those bids land in
  * project_applications → admin curates the strongest 3–5, wraps them
@@ -10,10 +10,8 @@
  * link that renders all picks as TalentHand cards.
  *
  * We deliberately reuse createCooperativeQuote's storage shape (the
- * cooperative_quotes table with jsonb proposedBuilders + scope). Every
- * bid becomes a ProposedBuilder entry with pricing.type === "hourly"
- * seeded from the bid's hourlyRate, so the aggregate math on
- * /quotes/[token] already works — no new render surface required.
+ * cooperative_quotes table with jsonb proposedBuilders + scope). Each
+ * bid keeps its proposed pricing mode and range in the client quote.
  *
  * Non-goals for MVP:
  *  - Editing the compiled quote's scope after dispatch (remove +
@@ -35,11 +33,12 @@ import {
 } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { richTextValuePlainText } from "@/lib/rich-text";
+import { formatProposalHours } from "@/lib/proposal-terms";
 import type {
   CooperativeQuote,
   ProposedBuilder,
 } from "@/lib/types";
-import { clientPricingFromBuilderPayout } from "@/lib/quote-pricing";
 
 function newQuoteId(): string {
   return `quote_${Date.now().toString(36)}_${Math.random()
@@ -55,9 +54,8 @@ function newClientToken(projectId: string): string {
 /**
  * Compile selected bids into a fresh cooperative quote for the client.
  * Admin picks between one and three bids: enough choice to compare,
- * without turning the client page into an overwhelming roster.
- * Each pick becomes a ProposedBuilder priced hourly at the bid's
- * proposed rate.
+ * without overwhelming the client.
+ * Each pick becomes a ProposedBuilder with the contributor's terms.
  */
 export async function compileBidsIntoQuote(formData: FormData) {
   const admin = await requireAdmin();
@@ -142,7 +140,12 @@ export async function compileBidsIntoQuote(formData: FormData) {
       userId: projectApplications.userId,
       proposedRole: projectApplications.proposedRole,
       hoursPerWeek: projectApplications.hoursPerWeek,
+      hoursPerWeekMax: projectApplications.hoursPerWeekMax,
       hourlyRate: projectApplications.hourlyRate,
+      hourlyRateMax: projectApplications.hourlyRateMax,
+      priceMode: projectApplications.priceMode,
+      fixedPriceMin: projectApplications.fixedPriceMin,
+      fixedPriceMax: projectApplications.fixedPriceMax,
       pitch: projectApplications.pitch,
       status: projectApplications.status,
     })
@@ -182,41 +185,37 @@ export async function compileBidsIntoQuote(formData: FormData) {
     const relevance =
       perBidRelevance.length >= 10
         ? perBidRelevance
-        : p.pitch.split(".")[0]?.slice(0, 200) ?? "Strong fit for this scope.";
-    const rate = p.hourlyRate ? Number.parseFloat(p.hourlyRate) : 0;
-    if (!Number.isFinite(rate) || rate <= 0) {
-      throw new Error(
-        "Every selected application needs a positive hourly rate before it can be quoted.",
-      );
+        : richTextValuePlainText(p.pitch).split(".")[0]?.slice(0, 200) ?? "Strong fit for this scope.";
+    const priceMode = p.priceMode ?? (p.hourlyRate ? "hourly" : "negotiable");
+    if (priceMode === "hourly" && (!p.hourlyRate || Number(p.hourlyRate) <= 0)) {
+      throw new Error(`Bid ${p.id} needs a valid hourly minimum before sending it to the client.`);
     }
-    const hoursLine = p.hoursPerWeek
-      ? `${p.hoursPerWeek} hrs/week across the engagement`
+    if (priceMode === "fixed" && (!p.fixedPriceMin || Number(p.fixedPriceMin) <= 0)) {
+      throw new Error(`Bid ${p.id} needs a valid project price before sending it to the client.`);
+    }
+    const split = { talentSplit: 85, operationsSplit: 15 };
+    let pricing: ProposedBuilder["pricing"];
+    if (priceMode === "fixed") {
+      pricing = p.fixedPriceMax && Number(p.fixedPriceMax) > Number(p.fixedPriceMin)
+        ? { type: "range", baseAmountMin: Number(p.fixedPriceMin), baseAmountMax: Number(p.fixedPriceMax), ...split }
+        : { type: "fixed", baseAmount: Number(p.fixedPriceMin), minimumOnly: !p.fixedPriceMax, ...split };
+    } else if (priceMode === "hourly") {
+      pricing = {
+        type: "hourly",
+        hourlyRate: Number(p.hourlyRate),
+        hourlyRateMax: p.hourlyRateMax ? Number(p.hourlyRateMax) : null,
+        minimumOnly: !p.hourlyRateMax,
+        ...split,
+      };
+    } else {
+      pricing = { type: "negotiable", ...split };
+    }
+    const hoursLine = p.hoursPerWeek > 0
+      ? `${formatProposalHours(p.hoursPerWeek, p.hoursPerWeekMax)} across the engagement`
       : "Availability per engagement";
-    const pricing = {
-      type: "hourly" as const,
-      hourlyRate: rate,
-      talentSplit: 85,
-      operationsSplit: 15,
-    };
-    const suggestedClientRate = Math.ceil(rate / 0.85);
-    const clientRateRaw = String(
-      formData.get(`clientRate_${p.id}`) ?? "",
-    ).trim();
-    const clientRate = clientRateRaw
-      ? Number(clientRateRaw)
-      : suggestedClientRate;
-    if (
-      !Number.isFinite(clientRate) ||
-      clientRate < suggestedClientRate
-    ) {
-      throw new Error(
-        "Client rate cannot be below the grossed-up builder payout. Increase it or revise the builder's rate.",
-      );
-    }
     return {
       userId: p.userId,
       pricing,
-      clientPricing: { ...pricing, hourlyRate: Math.round(clientRate) },
       timeline: hoursLine,
       relevance,
     };
@@ -242,7 +241,16 @@ export async function compileBidsIntoQuote(formData: FormData) {
     createdByUserId: admin.id,
     selectedLeadUserId: null,
   };
-  await db.insert(cooperativeQuotes).values(row);
+  // Sending the quote freezes exactly the proposals the client saw.
+  // A later quote removal cannot reopen them, because the client may
+  // already have reviewed the original magic link.
+  await db.transaction(async (tx) => {
+    await tx.insert(cooperativeQuotes).values(row);
+    await tx
+      .update(projectApplications)
+      .set({ clientPresentedAt: now })
+      .where(inArray(projectApplications.id, applicationIds));
+  });
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -270,4 +278,3 @@ export async function compileBidsIntoQuote(formData: FormData) {
   // magic link out to the client email.
   redirect(`/admin/cooperative-quotes`);
 }
-

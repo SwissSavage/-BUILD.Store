@@ -21,6 +21,7 @@ import type { Metadata } from "next";
 import { getAllProjects } from "@/lib/readers/projects";
 import { safely } from "@/lib/readers";
 import { INDUSTRY_LABELS } from "@/lib/types";
+import { briefSummary } from "@/components/Brief";
 import { Card, CardEyebrow } from "@/components/Card";
 
 export const dynamic = "force-dynamic";
@@ -99,7 +100,7 @@ export default async function CaseStudiesIndex() {
                 {p.title}
               </Link>
               <p className="mt-2 line-clamp-3 text-sm text-ink-muted">
-                {p.description}
+                {briefSummary(p.description, { skipTitle: p.title })}
               </p>
               {p.skillsRequired.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">

@@ -9,12 +9,11 @@
  * into the 3–5-card client comparison — the endpoint of the RFP-to-
  * client-quote arc.
  *
- * The admin picks 1–3 bids, jots a curated per-bid relevance one-
+ * The admin picks 3–5 bids, jots a curated per-bid relevance one-
  * liner, and authors engagement-level scope (summary, deliverables,
  * timeline). Submitting compiles those picks into a single
  * cooperative_quote whose /quotes/[token] surface renders each pick
- * as a TalentHand card with per-Builder pricing pulled from the bid's
- * proposed hourly rate.
+ * as a TalentHand card with each Builder's proposed pricing terms.
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -28,33 +27,15 @@ import {
   projects,
   users,
 } from "@/db/schema";
+import { formatProposalHours, formatProposalPrice } from "@/lib/proposal-terms";
 import { compileBidsIntoQuote } from "@/lib/rfp-bid-compile-actions";
 import { scrubForClient } from "@/lib/pii-scrub";
+import { StructuredText } from "@/components/StructuredText";
+import { richTextValuePlainText } from "@/lib/rich-text";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 interface Params {
   id: string;
-}
-
-/**
- * RFP descriptions may be stored as Tiptap JSON, while the quote compiler
- * currently edits its scope in a plain textarea. Convert only for this
- * prefill; malformed or legacy plain text passes through unchanged.
- */
-function plainScopePrefill(value: string | null): string {
-  if (!value) return "";
-  try {
-    const parsed: unknown = JSON.parse(value.replace(/^tiptap:/, ""));
-    const read = (node: unknown): string => {
-      if (!node || typeof node !== "object") return "";
-      const record = node as { text?: unknown; content?: unknown[] };
-      if (typeof record.text === "string") return record.text;
-      return (record.content ?? []).map(read).filter(Boolean).join("\n");
-    };
-    return read(parsed).replace(/\n{3,}/g, "\n\n").trim() || value;
-  } catch {
-    return value;
-  }
 }
 
 export default async function RfpBidCompilePage({
@@ -99,7 +80,12 @@ export default async function RfpBidCompilePage({
       proposedRole: projectApplications.proposedRole,
       pitch: projectApplications.pitch,
       hoursPerWeek: projectApplications.hoursPerWeek,
+      hoursPerWeekMax: projectApplications.hoursPerWeekMax,
       hourlyRate: projectApplications.hourlyRate,
+      hourlyRateMax: projectApplications.hourlyRateMax,
+      priceMode: projectApplications.priceMode,
+      fixedPriceMin: projectApplications.fixedPriceMin,
+      fixedPriceMax: projectApplications.fixedPriceMax,
       portfolioLink: projectApplications.portfolioLink,
       status: projectApplications.status,
       createdAt: projectApplications.createdAt,
@@ -140,7 +126,7 @@ export default async function RfpBidCompilePage({
         {rfp.title}
       </h1>
       <p className="mt-2 text-sm text-ink-muted">
-        Pick up to three bids. Each becomes a portrait card on the client
+        Pick up to three bids. Each becomes a TalentHand card on the client
         magic-link. Per-Builder pricing seeds from each bid's
         proposed hourly rate.
       </p>
@@ -219,15 +205,10 @@ export default async function RfpBidCompilePage({
 
             <ul className="mt-4 space-y-3">
               {bids.map((b) => {
-                const rate = b.hourlyRate
-                  ? Number.parseFloat(b.hourlyRate)
-                  : null;
-                const suggestedClientRate =
-                  rate !== null ? Math.ceil(rate / 0.85) : null;
                 // Scrub the pitch preview before showing it to admin
                 // so admin catches PII the talent may have leaked and
                 // can note it back to them privately.
-                const scrub = scrubForClient(b.pitch);
+                const scrub = scrubForClient(richTextValuePlainText(b.pitch));
                 return (
                   <li
                     key={b.id}
@@ -256,13 +237,9 @@ export default async function RfpBidCompilePage({
                             })}
                             </span>
                           )}
-                          {rate !== null && (
-                            <span className="text-[11px] text-ink-faint">
-                              · ${rate.toFixed(0)}/hr
-                              {b.hoursPerWeek > 0 &&
-                                ` · ${b.hoursPerWeek} hrs/wk`}
-                            </span>
-                          )}
+                          <span className="text-[11px] text-ink-faint">
+                            · {formatProposalPrice(b)} · {formatProposalHours(b.hoursPerWeek, b.hoursPerWeekMax)}
+                          </span>
                           <span className="text-[11px] text-ink-faint">
                             · {b.proposedRole}
                           </span>
@@ -272,10 +249,13 @@ export default async function RfpBidCompilePage({
                             </span>
                           )}
                         </div>
-                        <p className="mt-2 whitespace-pre-wrap text-xs text-ink-muted">
-                          {scrub.scrubbed.slice(0, 400)}
-                          {scrub.scrubbed.length > 400 ? "…" : ""}
-                        </p>
+                        <StructuredText
+                          text={
+                            scrub.hits.length > 0
+                              ? scrub.scrubbed.slice(0, 400) + (scrub.scrubbed.length > 400 ? "…" : "")
+                              : b.pitch
+                          }
+                        />
                         <label className="mt-3 block">
                           <span className="text-[10px] uppercase tracking-wider text-ink-muted">
                             Relevance line (shown on client card)
@@ -285,25 +265,6 @@ export default async function RfpBidCompilePage({
                             placeholder="Why this person for this scope. One sentence."
                             className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
                           />
-                        </label>
-                        <label className="mt-3 block">
-                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">
-                            Client hourly rate
-                          </span>
-                          <input
-                            name={`clientRate_${b.id}`}
-                            type="number"
-                            min={suggestedClientRate ?? undefined}
-                            step="1"
-                            defaultValue={suggestedClientRate ?? undefined}
-                            placeholder="Set a rate"
-                            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
-                          />
-                          <span className="mt-1 block text-[11px] text-ink-faint">
-                            {rate !== null && suggestedClientRate !== null
-                              ? `Builder payout: $${rate.toFixed(0)}/hr · suggested client rate: $${suggestedClientRate}/hr · FM/admin: $${(suggestedClientRate - rate).toFixed(0)}/hr`
-                              : "Add a builder rate before compiling this quote."}
-                          </span>
                         </label>
                       </div>
                     </div>
@@ -339,7 +300,7 @@ export default async function RfpBidCompilePage({
                 <textarea
                   name="scopeSummary"
                   rows={4}
-                  defaultValue={plainScopePrefill(rfp.description)}
+                  defaultValue={richTextValuePlainText(rfp.description)}
                   className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 />
                 <span className="text-[11px] text-ink-faint">

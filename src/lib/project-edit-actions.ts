@@ -21,13 +21,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { projects } from "@/db/schema";
+import { projectApplications, projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { parseRichText, richTextPlainText } from "@/lib/rich-text";
 import type { Industry } from "@/lib/types";
+import {
+  MAX_PROPOSAL_ATTACHMENTS,
+  readProposalAttachments,
+  type ProposalAttachment,
+} from "@/lib/proposal-attachments";
+import { parseContractProposalTerms, parseWeeklyHours } from "@/lib/proposal-terms";
 
 const INDUSTRIES: Industry[] = [
   "stem",
@@ -57,6 +65,11 @@ export async function editProject(formData: FormData) {
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const featuredImageUrl = String(formData.get("featuredImageUrl") ?? "").trim();
+  const richDescription = parseRichText(description);
+  const descriptionText = richDescription
+    ? richTextPlainText(richDescription)
+    : description;
   const industryRaw = String(formData.get("industry") ?? "").trim();
   const statusRaw = String(formData.get("status") ?? "").trim();
   const skillsRequired = String(formData.get("skillsRequired") ?? "")
@@ -65,7 +78,7 @@ export async function editProject(formData: FormData) {
     .filter(Boolean);
 
   if (!title) throw new Error("Title is required.");
-  if (description.length < 30) {
+  if (descriptionText.trim().length < 30) {
     throw new Error(
       "Description must be at least 30 characters. This is what people decide to bid on.",
     );
@@ -76,12 +89,23 @@ export async function editProject(formData: FormData) {
   if (!STATUSES.includes(statusRaw as ProjectStatus)) {
     throw new Error("Unknown status.");
   }
+  if (featuredImageUrl) {
+    try {
+      const url = new URL(featuredImageUrl);
+      if (url.protocol !== "https:" && url.protocol !== "http:") {
+        throw new Error();
+      }
+    } catch {
+      throw new Error("Featured image must be a valid http(s) URL.");
+    }
+  }
 
   await db
     .update(projects)
     .set({
       title,
       description,
+      featuredImageUrl: featuredImageUrl || null,
       industry: industryRaw as Industry,
       status: statusRaw as ProjectStatus,
       skillsRequired,
@@ -100,8 +124,9 @@ export async function editProject(formData: FormData) {
       status: before.status,
       industry: before.industry,
       skillsRequired: before.skillsRequired,
+      featuredImageUrl: before.featuredImageUrl ?? null,
     },
-    after: { title, status: statusRaw, industry: industryRaw, skillsRequired },
+    after: { title, status: statusRaw, industry: industryRaw, skillsRequired, featuredImageUrl: featuredImageUrl || null },
     reason: "Listing edited by admin.",
   });
 
@@ -110,6 +135,7 @@ export async function editProject(formData: FormData) {
   revalidatePath("/projects");
   revalidatePath("/contracts");
   revalidatePath("/admin/projects");
+  redirect(before.kind === "contract" ? `/contracts/${id}` : `/projects/${id}`);
 }
 
 /**
@@ -128,8 +154,6 @@ export async function withdrawProposalAsAdmin(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("id is required");
-
-  const { projectApplications } = await import("@/db/schema");
 
   const [existing] = await db
     .select({
@@ -180,8 +204,6 @@ export async function restoreProposalAsAdmin(formData: FormData) {
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("id is required");
 
-  const { projectApplications } = await import("@/db/schema");
-
   const restored = await db
     .update(projectApplications)
     .set({ status: "pending", withdrawnAt: null })
@@ -202,4 +224,104 @@ export async function restoreProposalAsAdmin(formData: FormData) {
   });
 
   revalidatePath("/admin/projects/applications");
+}
+
+/** Edit a pending proposal during admin review, before client presentation. */
+export async function editProposalAsAdmin(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  const proposedRole = String(formData.get("proposedRole") ?? "").trim();
+  const pitch = String(formData.get("pitch") ?? "").trim();
+  const portfolioLink = String(formData.get("portfolioLink") ?? "").trim();
+
+  if (!id) throw new Error("Proposal id is required.");
+  if (!proposedRole) throw new Error("Proposed role is required.");
+  if (pitch.length < 20) {
+    throw new Error("Pitch must be at least 20 characters.");
+  }
+
+  const [before] = await db
+    .select()
+    .from(projectApplications)
+    .where(eq(projectApplications.id, id))
+    .limit(1);
+  if (!before) throw new Error("Proposal not found.");
+  if (before.status !== "pending") {
+    throw new Error("Only proposals awaiting admin review can be edited.");
+  }
+  if (before.clientPresentedAt) {
+    throw new Error("This proposal has already been sent to the client and is locked.");
+  }
+
+  const proposalProject = await getProjectById(before.projectId);
+  if (!proposalProject) throw new Error("Project not found.");
+  const terms = proposalProject.kind === "contract"
+    ? parseContractProposalTerms(formData, { minRate: 20, maxRate: 2500 })
+    : { ...parseWeeklyHours(formData, 60) };
+  const { files: newAttachments, error: attachmentError } = await readProposalAttachments(formData);
+  if (attachmentError) throw new Error(attachmentError);
+
+  const currentAttachments = (before.attachments ?? []) as ProposalAttachment[];
+  const attachmentEditor = String(formData.get("attachmentEditor") ?? "");
+  const keepIndices = new Set(
+    formData
+      .getAll("keepAttachment")
+      .map((value) => Number.parseInt(String(value), 10))
+      .filter((index) => Number.isInteger(index) && index >= 0 && index < currentAttachments.length),
+  );
+  const keptAttachments =
+    attachmentEditor === "staged"
+      ? currentAttachments.filter((_, index) => keepIndices.has(index))
+      : currentAttachments;
+  const attachments = [...keptAttachments, ...newAttachments];
+  if (attachments.length > MAX_PROPOSAL_ATTACHMENTS) {
+    throw new Error(`A proposal can have up to ${MAX_PROPOSAL_ATTACHMENTS} documents.`);
+  }
+
+  await db
+    .update(projectApplications)
+    .set({
+      proposedRole,
+      pitch,
+      ...terms,
+      portfolioLink: portfolioLink || null,
+      attachments,
+    })
+    .where(eq(projectApplications.id, id));
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "proposal.edited_by_admin",
+    resourceKind: "project",
+    resourceId: before.projectId,
+    before: {
+      proposalId: id,
+      proposedRole: before.proposedRole,
+      pitch: before.pitch,
+      hoursPerWeek: before.hoursPerWeek,
+      hoursPerWeekMax: before.hoursPerWeekMax,
+      hourlyRate: before.hourlyRate,
+      hourlyRateMax: before.hourlyRateMax,
+      priceMode: before.priceMode,
+      fixedPriceMin: before.fixedPriceMin,
+      fixedPriceMax: before.fixedPriceMax,
+      portfolioLink: before.portfolioLink,
+      attachmentCount: currentAttachments.length,
+    },
+    after: {
+      proposalId: id,
+      proposedRole,
+      pitch,
+      ...terms,
+      portfolioLink: portfolioLink || null,
+      attachmentCount: attachments.length,
+    },
+    reason: "Proposal edited by admin during review before client presentation.",
+  });
+
+  revalidatePath("/admin/projects/applications");
+  revalidatePath(`/admin/rfps/${before.projectId}/bids`);
+  revalidatePath(`/contracts/${before.projectId}`);
+  revalidatePath(`/projects/${before.projectId}`);
 }

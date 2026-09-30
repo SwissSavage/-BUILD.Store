@@ -40,6 +40,8 @@ import { mvpScoreReader } from "@/lib/readers";
 import { getAllUsers } from "@/lib/readers/users";
 import { HubspotStageBadge } from "@/components/HubspotStageBadge";
 import { FeedbackPrompt } from "@/components/FeedbackPrompt";
+import { formatBudget } from "@/lib/budget";
+import { formatProposalHours } from "@/lib/proposal-terms";
 import {
   stepsForUser,
 } from "@/lib/mock-data/walkthroughs";
@@ -413,7 +415,7 @@ export default async function DashboardPage() {
                   <HubspotStageBadge stage={p.hubspotStage} />
                 </div>
                 <div className="mt-4 flex items-center justify-between text-xs text-ink-faint">
-                  <span>Budget · ${Number(p.budget).toLocaleString()}</span>
+                  <span>Budget · {formatBudget(p.budget)}</span>
                   <Link
                     href="/contracts"
                     className="hover:underline"
@@ -466,7 +468,7 @@ export default async function DashboardPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-ink-muted">
-                    {a.proposedRole} · {a.hoursPerWeek}h/wk
+                    {a.proposedRole} · {formatProposalHours(a.hoursPerWeek, a.hoursPerWeekMax)}
                   </p>
                 </Link>
               );

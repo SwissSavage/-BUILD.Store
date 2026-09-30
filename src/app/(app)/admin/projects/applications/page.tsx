@@ -17,8 +17,12 @@ import { getAllApplications } from "@/lib/readers/project-applications";
 import { getAllUsers } from "@/lib/readers/users";
 import { getAllProjects } from "@/lib/readers/projects";
 import { safely } from "@/lib/readers";
-import { decideProjectApplication } from "@/lib/project-application-actions";
 import {
+  approveProjectApplication,
+  rejectProjectApplication,
+} from "@/lib/project-application-actions";
+import {
+  editProposalAsAdmin,
   withdrawProposalAsAdmin,
   restoreProposalAsAdmin,
 } from "@/lib/project-edit-actions";
@@ -31,6 +35,9 @@ import {
   type User,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { StructuredText } from "@/components/StructuredText";
+import { AdminProposalAttachments } from "@/components/AdminProposalAttachments";
+import { formatProposalHours, formatProposalPrice } from "@/lib/proposal-terms";
 
 const STATUS_ACCENT: Record<ProjectApplication["status"], string> = {
   pending: "#5070F0",
@@ -166,7 +173,7 @@ function PendingRow({
           </CardTitle>
           <p className="mt-1 text-xs text-ink-muted">
             {applicant ? TIER_LABELS[applicant.membershipTier] : ""} ·{" "}
-            {application.hoursPerWeek}h/wk · submitted{" "}
+            {formatProposalHours(application.hoursPerWeek, application.hoursPerWeekMax)} · submitted{" "}
             {formatDate(application.createdAt)}
           </p>
         </div>
@@ -184,36 +191,14 @@ function PendingRow({
             Proposed role
           </p>
           <p className="mt-1 font-medium">{application.proposedRole}</p>
+          {project?.kind === "contract" && (
+            <p className="mt-2 text-sm text-ink-muted">{formatProposalPrice(application)}</p>
+          )}
 
           <p className="mt-4 text-xs uppercase tracking-wider text-ink-muted">
             Pitch
           </p>
-          <p className="mt-1 text-sm italic text-ink-muted">
-            "{application.pitch}"
-          </p>
-
-          {(application.attachments ?? []).length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs uppercase tracking-wider text-ink-faint">
-                Portfolio documents
-              </p>
-              <ul className="mt-2 space-y-1">
-                {(application.attachments ?? []).map((doc, i) => (
-                  <li key={i}>
-                    <a
-                      href={`/api/proposals/${application.id}/attachments/${i}`}
-                      className="text-sm text-brand-magentaText hover:underline"
-                    >
-                      {doc.name}
-                    </a>{" "}
-                    <span className="text-xs text-ink-faint">
-                      {(doc.sizeBytes / 1024).toFixed(0)} KB
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <StructuredText text={application.pitch} />
 
           {application.portfolioLink && (
             <p className="mt-3 text-xs">
@@ -241,8 +226,86 @@ function PendingRow({
         </div>
       </div>
 
+      {application.clientPresentedAt ? (
+        <p className="mt-5 border-t border-[var(--surface-border)] pt-4 text-sm text-ink-muted">
+          Client quote sent {formatDate(application.clientPresentedAt)}. This proposal is locked to preserve the version the client received.
+        </p>
+      ) : (
+        <form
+          action={editProposalAsAdmin}
+          encType="multipart/form-data"
+          className="mt-5 space-y-3 border-t border-[var(--surface-border)] pt-4"
+        >
+          <input type="hidden" name="id" value={application.id} />
+          <p className="text-xs uppercase tracking-wider text-ink-muted">
+            Admin review edit
+          </p>
+          <p className="text-xs text-ink-faint">
+            Updates the pending proposal before it is presented to a client.
+          </p>
+          <AdminProposalAttachments
+            proposalId={application.id}
+            attachments={application.attachments ?? []}
+          />
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="block text-xs text-ink-muted">
+              Proposed role
+              <input name="proposedRole" defaultValue={application.proposedRole} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+            </label>
+            <label className="block text-xs text-ink-muted">
+              Minimum hours per week
+              <input name="hoursPerWeek" type="number" required min="1" max={project?.kind === "contract" ? "80" : "60"} defaultValue={application.hoursPerWeek || ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+            </label>
+            <label className="block text-xs text-ink-muted">
+              Maximum hours per week (optional)
+              <input name="hoursPerWeekMax" type="number" min="1" max={project?.kind === "contract" ? "80" : "60"} defaultValue={application.hoursPerWeekMax ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+            </label>
+            {project?.kind === "contract" && (
+              <>
+                <label className="block text-xs text-ink-muted">
+                  Pricing mode
+                  <select name="priceMode" defaultValue={application.priceMode ?? "hourly"} style={{ colorScheme: "dark" }} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-3 py-2 text-sm text-ink">
+                    <option className="bg-[#1A1A1A] text-white" value="hourly">Hourly</option>
+                    <option className="bg-[#1A1A1A] text-white" value="fixed">Total project price</option>
+                    <option className="bg-[#1A1A1A] text-white" value="negotiable">Negotiable</option>
+                  </select>
+                </label>
+                <p className="self-end text-xs text-ink-faint">Fill only the price fields for the selected mode. Maximum is optional.</p>
+                <label className="block text-xs text-ink-muted">
+                  Minimum hourly rate (USD)
+                  <input name="hourlyRate" type="number" min="20" max="2500" step="0.01" defaultValue={application.hourlyRate ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+                </label>
+                <label className="block text-xs text-ink-muted">
+                  Maximum hourly rate (optional)
+                  <input name="hourlyRateMax" type="number" min="20" max="2500" step="0.01" defaultValue={application.hourlyRateMax ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+                </label>
+                <label className="block text-xs text-ink-muted">
+                  Minimum total project price (USD)
+                  <input name="fixedPriceMin" type="number" min="0.01" step="0.01" defaultValue={application.fixedPriceMin ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+                </label>
+                <label className="block text-xs text-ink-muted">
+                  Maximum total project price (optional)
+                  <input name="fixedPriceMax" type="number" min="0.01" step="0.01" defaultValue={application.fixedPriceMax ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+                </label>
+              </>
+            )}
+            <label className="block text-xs text-ink-muted">
+              Portfolio link
+              <input name="portfolioLink" type="url" defaultValue={application.portfolioLink ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+            </label>
+          </div>
+          <label className="block text-xs text-ink-muted">
+            Pitch
+            <textarea name="pitch" rows={4} defaultValue={application.pitch} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
+          </label>
+          <SubmitButton pendingLabel="Saving…" className="rounded-full border border-brand-magenta/40 px-4 py-2 text-sm text-brand-magentaText hover:bg-brand-magenta/10">
+            Save admin edit
+          </SubmitButton>
+        </form>
+      )}
+
       <form
-        action={decideProjectApplication}
+        action={rejectProjectApplication}
         className="mt-5 space-y-3 border-t border-[var(--surface-border)] pt-4"
       >
         <input type="hidden" name="id" value={application.id} />
@@ -261,16 +324,13 @@ function PendingRow({
         />
         <div className="flex flex-wrap gap-2">
           <SubmitButton pendingLabel="Saving…"
-            name="decision"
-            value="approve"
+            formAction={approveProjectApplication}
             className="rounded-full px-4 py-2 text-sm font-medium text-white"
             style={{ backgroundColor: "#007048" }}
           >
             Select for the team
           </SubmitButton>
           <SubmitButton pendingLabel="Saving…"
-            name="decision"
-            value="reject"
             className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Not this round

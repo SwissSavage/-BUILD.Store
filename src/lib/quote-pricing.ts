@@ -70,6 +70,10 @@ export function clientPricingFromBuilderPayout(
       };
     case "hourly":
       return { ...pricing, hourlyRate: grossUp(pricing.hourlyRate) };
+    case "negotiable":
+      // No numeric payout exists to gross up. The client-facing quote
+      // keeps this as negotiable until an admin supplies a price.
+      return pricing;
   }
 }
 

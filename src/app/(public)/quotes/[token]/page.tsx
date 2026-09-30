@@ -40,7 +40,6 @@ import type { QuoteFlipReveaCrewMember } from "@/components/QuoteFlipReveal";
 import { QuoteInteractiveSurface } from "@/components/QuoteInteractiveSurface";
 import { QuoteDecidedUndoButton } from "@/components/QuoteDecidedUndoButton";
 import {
-  clientPricingFromBuilderPayout,
   pricingHeadline,
   pricingUnitLabel,
 } from "@/lib/quote-pricing";
@@ -138,7 +137,9 @@ export default async function CooperativeQuotePage({
   const courtIds = new Set(championsCourtMembers(allScores, roster));
   const clientFacingBuilders = quote.proposedBuilders.map((builder) => ({
     ...builder,
-    pricing: clientPricingFromBuilderPayout(builder.pricing),
+    // Quotes authored before clientPricing existed already store their
+    // displayed client amount in pricing; preserve that historical value.
+    pricing: builder.clientPricing ?? builder.pricing,
   }));
   const crew: QuoteFlipReveaCrewMember[] = clientFacingBuilders
     .map((b): QuoteFlipReveaCrewMember | null => {

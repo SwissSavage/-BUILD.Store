@@ -40,6 +40,7 @@ import type {
   CooperativeQuote,
   ProposedBuilder,
 } from "@/lib/types";
+import { clientPricingFromBuilderPayout } from "@/lib/quote-pricing";
 
 function newQuoteId(): string {
   return `quote_${Date.now().toString(36)}_${Math.random()
@@ -187,14 +188,16 @@ export async function compileBidsIntoQuote(formData: FormData) {
     const hoursLine = p.hoursPerWeek
       ? `${p.hoursPerWeek} hrs/week across the engagement`
       : "Availability per engagement";
+    const pricing = {
+      type: "hourly" as const,
+      hourlyRate: rate,
+      talentSplit: 85,
+      operationsSplit: 15,
+    };
     return {
       userId: p.userId,
-      pricing: {
-        type: "hourly" as const,
-        hourlyRate: rate,
-        talentSplit: 85,
-        operationsSplit: 15,
-      },
+      pricing,
+      clientPricing: clientPricingFromBuilderPayout(pricing),
       timeline: hoursLine,
       relevance,
     };

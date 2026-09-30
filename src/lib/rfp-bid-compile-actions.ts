@@ -1,8 +1,8 @@
 /**
- * Compile 3–5 talent bids on an RFP into a client-facing cooperative
+ * Compile up to three talent bids on an RFP into a client-facing cooperative
  * quote (task #41).
  *
- * The client-facing "3–5 bid comparison" is the flip side of the
+ * The client-facing three-person comparison is the flip side of the
  * dispatch surface (#36): admin dispatches quote requests to matched
  * talent → talent submits bids on /contracts/[id] → those bids land in
  * project_applications → admin curates the strongest 3–5, wraps them
@@ -54,8 +54,8 @@ function newClientToken(projectId: string): string {
 
 /**
  * Compile selected bids into a fresh cooperative quote for the client.
- * Admin picks between 3 and 5 bids (Jamar's "3–5 comparison cards"
- * design intent — enough choice to feel curated, few enough to skim).
+ * Admin picks between one and three bids: enough choice to compare,
+ * without turning the client page into an overwhelming roster.
  * Each pick becomes a ProposedBuilder priced hourly at the bid's
  * proposed rate.
  */
@@ -75,14 +75,12 @@ export async function compileBidsIntoQuote(formData: FormData) {
   const deliverablesRaw = String(formData.get("deliverables") ?? "");
 
   if (!rfpId) throw new Error("rfpId is required.");
-  if (applicationIds.length < 3) {
-    throw new Error(
-      "Pick at least 3 bids. The client needs enough options to feel curated.",
-    );
+  if (applicationIds.length === 0) {
+    throw new Error("Pick at least one bid for the client quote.");
   }
-  if (applicationIds.length > 5) {
+  if (applicationIds.length > 3) {
     throw new Error(
-      "Pick at most 5 bids. Any more and the comparison card view stops being skimmable.",
+      "Pick at most 3 bids. Any more and the client comparison stops being skimmable.",
     );
   }
   if (clientDisplayName.length < 2) {

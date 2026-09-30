@@ -9,7 +9,7 @@
  * into the 3–5-card client comparison — the endpoint of the RFP-to-
  * client-quote arc.
  *
- * The admin picks 3–5 bids, jots a curated per-bid relevance one-
+ * The admin picks 1–3 bids, jots a curated per-bid relevance one-
  * liner, and authors engagement-level scope (summary, deliverables,
  * timeline). Submitting compiles those picks into a single
  * cooperative_quote whose /quotes/[token] surface renders each pick
@@ -121,7 +121,7 @@ export default async function RfpBidCompilePage({
         {rfp.title}
       </h1>
       <p className="mt-2 text-sm text-ink-muted">
-        Pick 3–5 bids. Each becomes a TalentHand card on the client
+        Pick up to three bids. Each becomes a portrait card on the client
         magic-link. Per-Builder pricing seeds from each bid's
         proposed hourly rate.
       </p>
@@ -193,7 +193,7 @@ export default async function RfpBidCompilePage({
           <Card>
             <CardTitle>Bids received ({bids.length})</CardTitle>
             <p className="mt-1 text-xs text-ink-muted">
-              Check 3–5 bids to include in the client comparison. Add a
+              Check one to three bids to include in the client comparison. Add a
               curated relevance line beneath each pick — that's what
               the client sees on the card.
             </p>

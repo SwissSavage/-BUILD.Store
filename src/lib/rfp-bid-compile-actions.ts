@@ -185,6 +185,11 @@ export async function compileBidsIntoQuote(formData: FormData) {
         ? perBidRelevance
         : richTextValuePlainText(p.pitch).split(".")[0]?.slice(0, 200) ?? "Strong fit for this scope.";
     const rate = p.hourlyRate ? Number.parseFloat(p.hourlyRate) : 0;
+    if (!Number.isFinite(rate) || rate <= 0) {
+      throw new Error(
+        "Every selected application needs a positive hourly rate before it can be quoted.",
+      );
+    }
     const hoursLine = p.hoursPerWeek
       ? `${p.hoursPerWeek} hrs/week across the engagement`
       : "Availability per engagement";
@@ -194,10 +199,25 @@ export async function compileBidsIntoQuote(formData: FormData) {
       talentSplit: 85,
       operationsSplit: 15,
     };
+    const suggestedClientPricing = clientPricingFromBuilderPayout(pricing);
+    const clientRateRaw = String(
+      formData.get(`clientRate_${p.id}`) ?? "",
+    ).trim();
+    const clientRate = clientRateRaw
+      ? Number(clientRateRaw)
+      : suggestedClientPricing.hourlyRate;
+    if (
+      !Number.isFinite(clientRate) ||
+      clientRate < suggestedClientPricing.hourlyRate
+    ) {
+      throw new Error(
+        "Client rate cannot be below the grossed-up builder payout. Increase it or revise the builder's rate.",
+      );
+    }
     return {
       userId: p.userId,
       pricing,
-      clientPricing: clientPricingFromBuilderPayout(pricing),
+      clientPricing: { ...pricing, hourlyRate: Math.round(clientRate) },
       timeline: hoursLine,
       relevance,
     };

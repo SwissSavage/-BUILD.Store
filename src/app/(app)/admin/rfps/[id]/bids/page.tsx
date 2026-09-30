@@ -284,7 +284,7 @@ export default async function RfpBidCompilePage({
                             className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
                           />
                           <span className="mt-1 block text-[11px] text-ink-faint">
-                            {suggestedClientRate !== null
+                            {rate !== null && suggestedClientRate !== null
                               ? `Builder payout: $${rate.toFixed(0)}/hr · suggested client rate: $${suggestedClientRate}/hr · FM/admin: $${(suggestedClientRate - rate).toFixed(0)}/hr`
                               : "Add a builder rate before compiling this quote."}
                           </span>

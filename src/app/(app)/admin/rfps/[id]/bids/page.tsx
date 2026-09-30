@@ -36,6 +36,27 @@ interface Params {
   id: string;
 }
 
+/**
+ * RFP descriptions may be stored as Tiptap JSON, while the quote compiler
+ * currently edits its scope in a plain textarea. Convert only for this
+ * prefill; malformed or legacy plain text passes through unchanged.
+ */
+function plainScopePrefill(value: string | null): string {
+  if (!value) return "";
+  try {
+    const parsed: unknown = JSON.parse(value.replace(/^tiptap:/, ""));
+    const read = (node: unknown): string => {
+      if (!node || typeof node !== "object") return "";
+      const record = node as { text?: unknown; content?: unknown[] };
+      if (typeof record.text === "string") return record.text;
+      return (record.content ?? []).map(read).filter(Boolean).join("\n");
+    };
+    return read(parsed).replace(/\n{3,}/g, "\n\n").trim() || value;
+  } catch {
+    return value;
+  }
+}
+
 export default async function RfpBidCompilePage({
   params,
 }: {
@@ -318,7 +339,7 @@ export default async function RfpBidCompilePage({
                 <textarea
                   name="scopeSummary"
                   rows={4}
-                  defaultValue={rfp.description}
+                  defaultValue={plainScopePrefill(rfp.description)}
                   className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 />
                 <span className="text-[11px] text-ink-faint">

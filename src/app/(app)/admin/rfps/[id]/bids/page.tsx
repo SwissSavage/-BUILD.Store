@@ -201,6 +201,8 @@ export default async function RfpBidCompilePage({
                 const rate = b.hourlyRate
                   ? Number.parseFloat(b.hourlyRate)
                   : null;
+                const suggestedClientRate =
+                  rate !== null ? Math.ceil(rate / 0.85) : null;
                 // Scrub the pitch preview before showing it to admin
                 // so admin catches PII the talent may have leaked and
                 // can note it back to them privately.
@@ -262,6 +264,25 @@ export default async function RfpBidCompilePage({
                             placeholder="Why this person for this scope. One sentence."
                             className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
                           />
+                        </label>
+                        <label className="mt-3 block">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                            Client hourly rate
+                          </span>
+                          <input
+                            name={`clientRate_${b.id}`}
+                            type="number"
+                            min={suggestedClientRate ?? undefined}
+                            step="1"
+                            defaultValue={suggestedClientRate ?? undefined}
+                            placeholder="Set a rate"
+                            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
+                          />
+                          <span className="mt-1 block text-[11px] text-ink-faint">
+                            {suggestedClientRate !== null
+                              ? `Builder payout: $${rate.toFixed(0)}/hr · suggested client rate: $${suggestedClientRate}/hr · FM/admin: $${(suggestedClientRate - rate).toFixed(0)}/hr`
+                              : "Add a builder rate before compiling this quote."}
+                          </span>
                         </label>
                       </div>
                     </div>

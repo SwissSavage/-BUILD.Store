@@ -31,6 +31,7 @@ import { formatProposalHours, formatProposalPrice } from "@/lib/proposal-terms";
 import { compileBidsIntoQuote } from "@/lib/rfp-bid-compile-actions";
 import { scrubForClient } from "@/lib/pii-scrub";
 import { StructuredText } from "@/components/StructuredText";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import { richTextValuePlainText } from "@/lib/rich-text";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -293,21 +294,36 @@ export default async function RfpBidCompilePage({
                 />
               </label>
 
-              <label className="block">
-                <span className="text-xs uppercase tracking-wider text-ink-muted">
-                  Scope summary
+              <section>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs uppercase tracking-wider text-ink-muted">
+                    Scope summary
+                  </span>
+                  <span className="text-[11px] text-ink-faint">
+                    Client-facing preview
+                  </span>
+                </div>
+                <div className="mt-2 max-h-72 overflow-y-auto rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-4 py-3">
+                  <StructuredText text={rfp.description ?? ""} />
+                </div>
+                <details className="group mt-3">
+                  <summary className="cursor-pointer text-xs font-medium text-brand-magentaText hover:underline">
+                    Edit scope
+                  </summary>
+                  <div className="mt-3">
+                    <RichTextEditor
+                      name="scopeSummary"
+                      initialValue={rfp.description ?? ""}
+                      required
+                      minLength={20}
+                    />
+                  </div>
+                </details>
+                <span className="mt-2 block text-[11px] text-ink-faint">
+                  Review the formatted scope first. Open Edit scope only when
+                  the client-facing wording needs changes.
                 </span>
-                <textarea
-                  name="scopeSummary"
-                  rows={4}
-                  defaultValue={richTextValuePlainText(rfp.description)}
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
-                />
-                <span className="text-[11px] text-ink-faint">
-                  Prefilled from the RFP description. Reword for
-                  client-facing tone as needed.
-                </span>
-              </label>
+              </section>
 
               <label className="block">
                 <span className="text-xs uppercase tracking-wider text-ink-muted">

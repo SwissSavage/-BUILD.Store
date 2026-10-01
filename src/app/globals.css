@@ -312,9 +312,8 @@ html {
   transform: rotateY(180deg);
 }
 
-/* Client quote selection reuses the landing page's magenta border language,
-   but plays once so the selected card is marked without visual noise. */
-@property --fm-quote-selection-angle {
+/* Same conic border and hover cadence as the Future Modern landing CTA. */
+@property --fm-quote-angle {
   syntax: "<angle>";
   inherits: false;
   initial-value: 0deg;
@@ -328,21 +327,25 @@ html {
 .fm-quote-card-option--selected::after {
   content: "";
   position: absolute;
-  inset: -3px;
+  inset: -1.5px;
   z-index: 1;
-  padding: 2px;
+  padding: 1.5px;
   border-radius: inherit;
-  background: conic-gradient(from var(--fm-quote-selection-angle), #c7228a, color-mix(in srgb, #c7228a 55%, black), rgba(199, 34, 138, 0.18), #c7228a);
+  background: conic-gradient(from var(--fm-quote-angle, 0deg), #c7228a, color-mix(in srgb, #c7228a 60%, black), color-mix(in oklch, #c7228a 14%, transparent), #c7228a);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   pointer-events: none;
-  animation: fm-quote-selection 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: fm-quote-rotate-border 3s linear infinite;
 }
 
-@keyframes fm-quote-selection {
-  to { --fm-quote-selection-angle: 360deg; }
+.fm-quote-card-option--selected:hover::after {
+  animation-duration: 1.5s;
+}
+
+@keyframes fm-quote-rotate-border {
+  to { --fm-quote-angle: 360deg; }
 }
 
 @media (prefers-reduced-motion: reduce) {

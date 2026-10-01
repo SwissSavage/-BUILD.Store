@@ -3633,6 +3633,9 @@ export interface ProposedBuilder {
    * the TalentHand.
    */
   relevance: string;
+  /** Full proposal text when a quote is compiled from an RFP bid. Older and
+   * manually composed quotes omit this and use the curated relevance line. */
+  pitch?: string;
 }
 
 export interface CooperativeQuote {

@@ -218,6 +218,7 @@ export async function compileBidsIntoQuote(formData: FormData) {
       pricing,
       timeline: hoursLine,
       relevance,
+      pitch: p.pitch,
     };
   });
 

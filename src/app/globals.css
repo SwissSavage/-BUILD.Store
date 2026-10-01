@@ -312,10 +312,47 @@ html {
   transform: rotateY(180deg);
 }
 
+/* Client quote selection reuses the landing page's magenta border language,
+   but plays once so the selected card is marked without visual noise. */
+@property --fm-quote-selection-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.fm-quote-card-option {
+  position: relative;
+  border-radius: 1rem;
+}
+
+.fm-quote-card-option--selected::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  z-index: 1;
+  padding: 2px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--fm-quote-selection-angle), #c7228a, color-mix(in srgb, #c7228a 55%, black), rgba(199, 34, 138, 0.18), #c7228a);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: fm-quote-selection 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fm-quote-selection {
+  to { --fm-quote-selection-angle: 360deg; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fm-card-flipper-inner {
     transition: none;
     transition-delay: 0s;
+  }
+
+  .fm-quote-card-option--selected::after {
+    animation: none;
   }
 }
 

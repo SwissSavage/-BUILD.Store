@@ -43,6 +43,7 @@ import {
   pricingHeadline,
   pricingUnitLabel,
 } from "@/lib/quote-pricing";
+import { richTextValuePlainText } from "@/lib/rich-text";
 
 /**
  * Force-dynamic on this route. The surface is stateful (evolves
@@ -165,6 +166,7 @@ export default async function CooperativeQuotePage({
         },
         tier,
         relevance: b.relevance,
+        pitch: b.pitch ? richTextValuePlainText(b.pitch) : undefined,
         quoteLine: {
           pricingHeadline: pricingHeadline(b.pricing),
           pricingUnit: pricingUnitLabel(b.pricing),

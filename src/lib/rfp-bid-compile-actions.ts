@@ -40,6 +40,9 @@ import type {
   ProposedBuilder,
 } from "@/lib/types";
 
+const minimumProposalCount = 3;
+const maximumProposalCount = 5;
+
 function newQuoteId(): string {
   return `quote_${Date.now().toString(36)}_${Math.random()
     .toString(36)
@@ -53,7 +56,7 @@ function newClientToken(projectId: string): string {
 
 /**
  * Compile selected bids into a fresh cooperative quote for the client.
- * Admin picks between one and three bids: enough choice to compare,
+ * Admin picks between three and five bids: enough choice to compare,
  * without overwhelming the client.
  * Each pick becomes a ProposedBuilder with the contributor's terms.
  */
@@ -73,12 +76,12 @@ export async function compileBidsIntoQuote(formData: FormData) {
   const deliverablesRaw = String(formData.get("deliverables") ?? "");
 
   if (!rfpId) throw new Error("rfpId is required.");
-  if (applicationIds.length === 0) {
-    throw new Error("Pick at least one bid for the client quote.");
+  if (applicationIds.length < minimumProposalCount) {
+    throw new Error(`Pick at least ${minimumProposalCount} bids for the client quote.`);
   }
-  if (applicationIds.length > 3) {
+  if (applicationIds.length > maximumProposalCount) {
     throw new Error(
-      "Pick at most 3 bids. Any more and the client comparison stops being skimmable.",
+      `Pick at most ${maximumProposalCount} bids. Any more and the client comparison stops being skimmable.`,
     );
   }
   if (clientDisplayName.length < 2) {

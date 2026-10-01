@@ -128,7 +128,7 @@ export default async function RfpBidCompilePage({
         {rfp.title}
       </h1>
       <p className="mt-2 text-sm text-ink-muted">
-        Pick up to three bids. Each becomes a TalentHand card on the client
+        Pick three to five bids. Each becomes a TalentHand card on the client
         magic-link. Per-Builder pricing seeds from each bid's
         proposed hourly rate.
       </p>
@@ -203,9 +203,10 @@ export default async function RfpBidCompilePage({
           <Card>
             <CardTitle>Bids received ({bids.length})</CardTitle>
             <p className="mt-1 text-xs text-ink-muted">
-              Check one to three bids to include in the client comparison. Add a
-              curated relevance line beneath each pick — that's what
-              the client sees on the card.
+              Check three to five bids to include in the client comparison. Once
+              five are selected, the remaining choices lock until one is removed.
+              Add a curated relevance line beneath each pick — that&apos;s what the
+              client sees on the card.
             </p>
 
             <ul className="mt-4 space-y-3">
@@ -224,7 +225,7 @@ export default async function RfpBidCompilePage({
                         type="checkbox"
                         name="applicationIds"
                         value={b.id}
-                        className="mt-1 h-4 w-4 data-[invalid=true]:outline data-[invalid=true]:outline-2 data-[invalid=true]:outline-red-500"
+                        className="mt-1 h-4 w-4 disabled:cursor-not-allowed disabled:opacity-40 data-[invalid=true]:outline data-[invalid=true]:outline-2 data-[invalid=true]:outline-red-500"
                       />
                       <div className="flex-1">
                         <div className="flex flex-wrap items-baseline gap-2">

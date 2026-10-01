@@ -91,7 +91,7 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
 
   return (
     <section>
-      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {crew.map((member, index) => {
           const isFlipped = flippedIds.has(member.user.id);
           const isSelected = selectedUserId === member.user.id;

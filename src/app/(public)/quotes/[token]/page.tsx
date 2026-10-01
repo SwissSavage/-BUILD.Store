@@ -183,7 +183,7 @@ export default async function CooperativeQuotePage({
     : null;
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-12">
+    <div className="mx-auto max-w-6xl px-6 py-12">
       {/* Header — client + project context */}
       <div>
         <CardEyebrow>Cooperative Quote</CardEyebrow>

@@ -2,8 +2,18 @@
 
 import { useEffect, useState } from "react";
 
+const minimumProposalCount = 3;
+const maximumProposalCount = 5;
+
 const requirements = [
-  { message: "Select at least one proposal.", valid: (form: HTMLFormElement) => Boolean(form.querySelector('input[name="applicationIds"]:checked')), target: 'input[name="applicationIds"]' },
+  {
+    message: "Select three to five proposals for the client comparison.",
+    valid: (form: HTMLFormElement) => {
+      const count = form.querySelectorAll('input[name="applicationIds"]:checked').length;
+      return count >= minimumProposalCount && count <= maximumProposalCount;
+    },
+    target: 'input[name="applicationIds"]',
+  },
   { message: "Enter the client display name.", valid: (form: HTMLFormElement) => ((form.elements.namedItem("clientDisplayName") as HTMLInputElement | null)?.value.trim().length ?? 0) >= 2, target: '[name="clientDisplayName"]' },
   { message: "Write a scope summary of at least 20 characters.", valid: (form: HTMLFormElement) => ((form.querySelector('[data-quote-field="scopeSummary"]') as HTMLTextAreaElement | null)?.value.trim().length ?? 0) >= 20, target: '[data-quote-focus="scopeSummary"] [contenteditable="true"]' },
   { message: "Add at least one deliverable.", valid: (form: HTMLFormElement) => ((form.elements.namedItem("deliverables") as HTMLTextAreaElement | null)?.value.trim().length ?? 0) > 0, target: '[name="deliverables"]' },
@@ -26,6 +36,11 @@ export function QuoteCompileRequirements() {
     };
     const sync = () => {
       const invalid = validate();
+      const choices = form.querySelectorAll<HTMLInputElement>('input[name="applicationIds"]');
+      const selectedCount = [...choices].filter((choice) => choice.checked).length;
+      choices.forEach((choice) => {
+        choice.disabled = !choice.checked && selectedCount >= maximumProposalCount;
+      });
       setFieldStates(invalid);
       setErrors((current) => current.length ? invalid.map((item) => item.message) : current);
     };

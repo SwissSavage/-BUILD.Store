@@ -26,7 +26,7 @@
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { notInArray, desc, eq, and, inArray } from "drizzle-orm";
+import { notInArray, desc, eq, and, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   cooperativeQuotes as cooperativeQuotesTable,
@@ -67,12 +67,14 @@ async function eligibleProjects() {
             eq(projectsTable.kind, "contract"),
             eq(projectsTable.isRfp, true),
             eq(projectsTable.status, "open"),
+            isNotNull(projectsTable.rfpApprovedAt),
             notInArray(projectsTable.id, takenIds),
           )
         : and(
             eq(projectsTable.kind, "contract"),
             eq(projectsTable.isRfp, true),
             eq(projectsTable.status, "open"),
+            isNotNull(projectsTable.rfpApprovedAt),
           ),
     );
 }
@@ -134,7 +136,7 @@ export default async function AdminCooperativeQuotesPage() {
             Pre-project client proposals
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-ink-muted">
-            Start with an RFP's actual applicants, then curate up to three
+            Start with an RFP&apos;s actual applicants, then curate three to five
             builders into the interactive quote a client receives. The
             client visits <code>/quotes/[clientToken]</code>, reviews the
             portrait cards, and chooses a lead.
@@ -151,7 +153,7 @@ export default async function AdminCooperativeQuotesPage() {
           <Card className="mt-4">
             <p className="text-sm text-ink-muted">
               No approved RFP without a quote is ready for compilation.
-              Approve an RFP and collect applications first.
+              Approve an RFP, then collect applications before returning here.
             </p>
           </Card>
         ) : (
@@ -164,7 +166,7 @@ export default async function AdminCooperativeQuotesPage() {
                 >
                   <CardTitle>{project.title}</CardTitle>
                   <p className="mt-2 text-sm text-ink-muted">
-                    Review this RFP&apos;s applicants and curate up to three
+                    Review this RFP&apos;s applicants and curate three to five
                     people for the client quote.
                   </p>
                 </Link>

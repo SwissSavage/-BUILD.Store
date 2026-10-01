@@ -32,7 +32,7 @@ import { compileBidsIntoQuote } from "@/lib/rfp-bid-compile-actions";
 import { scrubForClient } from "@/lib/pii-scrub";
 import { StructuredText } from "@/components/StructuredText";
 import { RichTextEditor } from "@/components/RichTextEditor";
-import { BidSelectionRequirement } from "@/components/BidSelectionRequirement";
+import { QuoteCompileRequirements } from "@/components/BidSelectionRequirement";
 import { richTextValuePlainText } from "@/lib/rich-text";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -194,9 +194,11 @@ export default async function RfpBidCompilePage({
         <form
           action={compileBidsIntoQuote}
           id="compile-bids-form"
+          noValidate
           className="mt-6 space-y-6"
         >
           <input type="hidden" name="rfpId" value={id} />
+          <QuoteCompileRequirements />
 
           <Card>
             <CardTitle>Bids received ({bids.length})</CardTitle>
@@ -222,8 +224,7 @@ export default async function RfpBidCompilePage({
                         type="checkbox"
                         name="applicationIds"
                         value={b.id}
-                        aria-describedby="bid-selection-requirement"
-                        className="mt-1 h-4 w-4"
+                        className="mt-1 h-4 w-4 data-[invalid=true]:outline data-[invalid=true]:outline-2 data-[invalid=true]:outline-red-500"
                       />
                       <div className="flex-1">
                         <div className="flex flex-wrap items-baseline gap-2">
@@ -276,7 +277,6 @@ export default async function RfpBidCompilePage({
                 );
               })}
             </ul>
-            <BidSelectionRequirement />
           </Card>
 
           <Card>
@@ -294,7 +294,9 @@ export default async function RfpBidCompilePage({
                 <input
                   name="clientDisplayName"
                   defaultValue={rfp.clientId ?? ""}
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  required
+                  minLength={2}
+                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
                 />
               </label>
 
@@ -320,6 +322,7 @@ export default async function RfpBidCompilePage({
                       initialValue={rfp.description ?? ""}
                       required
                       minLength={20}
+                      validationKey="scopeSummary"
                     />
                   </div>
                 </details>
@@ -336,8 +339,9 @@ export default async function RfpBidCompilePage({
                 <textarea
                   name="deliverables"
                   rows={4}
+                  required
                   placeholder={"Weekly deliverable\nMilestone 1: …\nMilestone 2: …"}
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
                 />
               </label>
 
@@ -347,8 +351,10 @@ export default async function RfpBidCompilePage({
                 </span>
                 <input
                   name="timeline"
+                  required
+                  minLength={4}
                   placeholder="8 weeks from kickoff — 2 discovery, 4 build, 2 polish"
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
                 />
               </label>
             </div>

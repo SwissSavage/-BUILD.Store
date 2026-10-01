@@ -50,6 +50,34 @@ export function formatUsdCents(amount: number): string {
 }
 
 /**
+ * Converts a builder's requested payout to the price presented to the
+ * client. The payout must remain 85% of the final client amount; the
+ * remainder funds cooperative operations. Round upward so the payout is
+ * never reduced by a fractional-cent calculation.
+ */
+export function clientPricingFromBuilderPayout(
+  pricing: CooperativeQuotePricing,
+): CooperativeQuotePricing {
+  const grossUp = (amount: number) => Math.ceil(amount / 0.85);
+  switch (pricing.type) {
+    case "fixed":
+      return { ...pricing, baseAmount: grossUp(pricing.baseAmount) };
+    case "range":
+      return {
+        ...pricing,
+        baseAmountMin: grossUp(pricing.baseAmountMin),
+        baseAmountMax: grossUp(pricing.baseAmountMax),
+      };
+    case "hourly":
+      return { ...pricing, hourlyRate: grossUp(pricing.hourlyRate) };
+    case "negotiable":
+      // No numeric payout exists to gross up. The client-facing quote
+      // keeps this as negotiable until an admin supplies a price.
+      return pricing;
+  }
+}
+
+/**
  * Big headline copy that goes at the top of a per-Builder pricing
  * block.
  *   - fixed  : "$25,000"

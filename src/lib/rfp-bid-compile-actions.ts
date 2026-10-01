@@ -40,6 +40,9 @@ import type {
   ProposedBuilder,
 } from "@/lib/types";
 
+const minimumProposalCount = 3;
+const maximumProposalCount = 5;
+
 function newQuoteId(): string {
   return `quote_${Date.now().toString(36)}_${Math.random()
     .toString(36)
@@ -53,8 +56,8 @@ function newClientToken(projectId: string): string {
 
 /**
  * Compile selected bids into a fresh cooperative quote for the client.
- * Admin picks between 3 and 5 bids (Jamar's "3–5 comparison cards"
- * design intent — enough choice to feel curated, few enough to skim).
+ * Admin picks between three and five bids: enough choice to compare,
+ * without overwhelming the client.
  * Each pick becomes a ProposedBuilder with the contributor's terms.
  */
 export async function compileBidsIntoQuote(formData: FormData) {
@@ -73,14 +76,12 @@ export async function compileBidsIntoQuote(formData: FormData) {
   const deliverablesRaw = String(formData.get("deliverables") ?? "");
 
   if (!rfpId) throw new Error("rfpId is required.");
-  if (applicationIds.length < 3) {
-    throw new Error(
-      "Pick at least 3 bids. The client needs enough options to feel curated.",
-    );
+  if (applicationIds.length < minimumProposalCount) {
+    throw new Error(`Pick at least ${minimumProposalCount} bids for the client quote.`);
   }
-  if (applicationIds.length > 5) {
+  if (applicationIds.length > maximumProposalCount) {
     throw new Error(
-      "Pick at most 5 bids. Any more and the comparison card view stops being skimmable.",
+      `Pick at most ${maximumProposalCount} bids. Any more and the client comparison stops being skimmable.`,
     );
   }
   if (clientDisplayName.length < 2) {
@@ -220,6 +221,7 @@ export async function compileBidsIntoQuote(formData: FormData) {
       pricing,
       timeline: hoursLine,
       relevance,
+      pitch: p.pitch,
     };
   });
 

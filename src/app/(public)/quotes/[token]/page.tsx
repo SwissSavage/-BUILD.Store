@@ -43,6 +43,7 @@ import {
   pricingHeadline,
   pricingUnitLabel,
 } from "@/lib/quote-pricing";
+import { richTextValuePlainText } from "@/lib/rich-text";
 
 /**
  * Force-dynamic on this route. The surface is stateful (evolves
@@ -135,7 +136,13 @@ export default async function CooperativeQuotePage({
   const scoreById = new Map(allScores.map((sc) => [sc.userId, sc]));
 
   const courtIds = new Set(championsCourtMembers(allScores, roster));
-  const crew: QuoteFlipReveaCrewMember[] = quote.proposedBuilders
+  const clientFacingBuilders = quote.proposedBuilders.map((builder) => ({
+    ...builder,
+    // Quotes authored before clientPricing existed already store their
+    // displayed client amount in pricing; preserve that historical value.
+    pricing: builder.clientPricing ?? builder.pricing,
+  }));
+  const crew: QuoteFlipReveaCrewMember[] = clientFacingBuilders
     .map((b): QuoteFlipReveaCrewMember | null => {
       const user = roster.find((u) => u.id === b.userId);
       if (!user) return null;
@@ -159,6 +166,7 @@ export default async function CooperativeQuotePage({
         },
         tier,
         relevance: b.relevance,
+        pitch: b.pitch ? richTextValuePlainText(b.pitch) : undefined,
         quoteLine: {
           pricingHeadline: pricingHeadline(b.pricing),
           pricingUnit: pricingUnitLabel(b.pricing),
@@ -175,7 +183,7 @@ export default async function CooperativeQuotePage({
     : null;
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-12">
+    <div className="mx-auto max-w-6xl px-6 py-12">
       {/* Header — client + project context */}
       <div>
         <CardEyebrow>Cooperative Quote</CardEyebrow>
@@ -197,7 +205,7 @@ export default async function CooperativeQuotePage({
           clientToken={quote.clientToken}
           scope={quote.scope}
           crew={crew}
-          proposedBuilders={quote.proposedBuilders}
+          proposedBuilders={clientFacingBuilders}
         />
       )}
 

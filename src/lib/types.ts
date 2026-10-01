@@ -3617,6 +3617,11 @@ export interface ProposedBuilder {
    */
   pricing: CooperativeQuotePricing;
   /**
+   * Client-facing price saved when the builder payout is grossed up.
+   * Older quotes omit this and retain their original client-price shape.
+   */
+  clientPricing?: CooperativeQuotePricing;
+  /**
    * Per-Builder timeline in human terms — e.g. "6 weeks" or "part-
    * time across the engagement." Distinct from `scope.timeline`,
    * which is the engagement-level rhythm (kickoff → close phases).
@@ -3628,6 +3633,9 @@ export interface ProposedBuilder {
    * the TalentHand.
    */
   relevance: string;
+  /** Full proposal text when a quote is compiled from an RFP bid. Older and
+   * manually composed quotes omit this and use the curated relevance line. */
+  pitch?: string;
 }
 
 export interface CooperativeQuote {

@@ -91,11 +91,13 @@ export function RichTextEditor({
   initialValue,
   required = false,
   minLength,
+  validationKey,
 }: {
   name: string;
   initialValue: string;
   required?: boolean;
   minLength?: number;
+  validationKey?: string;
 }) {
   const initial = richTextInitialValue(initialValue);
   const [value, setValue] = useState(() => serializeRichText(initial));
@@ -103,7 +105,7 @@ export function RichTextEditor({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ heading: { levels: [2, 3] } }),
+      StarterKit.configure({ heading: { levels: [2, 3] }, link: false }),
       Underline,
       Link.configure({
         openOnClick: false,
@@ -156,13 +158,17 @@ export function RichTextEditor({
   };
 
   return (
-    <div className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)]">
+    <div
+      data-quote-focus={validationKey}
+      className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
+    >
       <input type="hidden" name={name} value={value} />
       {(required || minLength) && (
         <textarea
           aria-hidden="true"
           tabIndex={-1}
           className="sr-only"
+          data-quote-field={validationKey}
           value={plainText}
           required={required}
           minLength={minLength}

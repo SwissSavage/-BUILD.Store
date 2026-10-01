@@ -39,6 +39,7 @@ import {
   type QuoteFlipReveaCrewMember,
 } from "@/components/QuoteFlipReveal";
 import { CardEyebrow } from "@/components/Card";
+import { StructuredText } from "@/components/StructuredText";
 import type { TalentHandDecision } from "@/components/TalentHand";
 import { QuoteDecidedUndoButton } from "@/components/QuoteDecidedUndoButton";
 import {
@@ -257,7 +258,7 @@ export function QuoteInteractiveSurface({
         <h2 className="mt-2 font-display text-3xl font-semibold">
           What the crew delivers
         </h2>
-        <p className="mt-4 text-ink-muted">{scope.summary}</p>
+        <StructuredText text={scope.summary} className="mt-4 text-ink-muted" />
 
         <ul className="mt-8 space-y-3">
           {scope.deliverables.map((deliverable) => (

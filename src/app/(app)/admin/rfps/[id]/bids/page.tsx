@@ -309,7 +309,7 @@ export default async function RfpBidCompilePage({
                     Client-facing preview
                   </span>
                 </div>
-                <div className="mt-2 max-h-72 overflow-y-auto rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-4 py-3">
+                <div className="mt-2 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-4 py-3">
                   <StructuredText text={rfp.description ?? ""} />
                 </div>
                 <details className="group mt-3">

@@ -301,34 +301,19 @@ export default async function RfpBidCompilePage({
               </label>
 
               <section>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs uppercase tracking-wider text-ink-muted">
-                    Scope summary
-                  </span>
-                  <span className="text-[11px] text-ink-faint">
-                    Client-facing preview
-                  </span>
-                </div>
-                <div className="mt-2 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-4 py-3">
-                  <StructuredText text={rfp.description ?? ""} />
-                </div>
-                <details className="group mt-3">
-                  <summary className="cursor-pointer text-xs font-medium text-brand-magentaText hover:underline">
-                    Edit scope
-                  </summary>
-                  <div className="mt-3">
-                    <RichTextEditor
-                      name="scopeSummary"
-                      initialValue={rfp.description ?? ""}
-                      required
-                      minLength={20}
-                      validationKey="scopeSummary"
-                    />
-                  </div>
-                </details>
+                <span className="text-xs uppercase tracking-wider text-ink-muted">
+                  Scope summary
+                </span>
+                <RichTextEditor
+                  name="scopeSummary"
+                  initialValue={rfp.description ?? ""}
+                  required
+                  minLength={20}
+                  validationKey="scopeSummary"
+                />
                 <span className="mt-2 block text-[11px] text-ink-faint">
-                  Review the formatted scope first. Open Edit scope only when
-                  the client-facing wording needs changes.
+                  Edit the client-facing scope directly. Formatting is retained
+                  when the quote is compiled.
                 </span>
               </section>
 

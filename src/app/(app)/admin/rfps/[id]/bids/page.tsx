@@ -32,6 +32,7 @@ import { compileBidsIntoQuote } from "@/lib/rfp-bid-compile-actions";
 import { scrubForClient } from "@/lib/pii-scrub";
 import { StructuredText } from "@/components/StructuredText";
 import { RichTextEditor } from "@/components/RichTextEditor";
+import { BidSelectionRequirement } from "@/components/BidSelectionRequirement";
 import { richTextValuePlainText } from "@/lib/rich-text";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -192,6 +193,7 @@ export default async function RfpBidCompilePage({
       ) : existingQuote ? null : (
         <form
           action={compileBidsIntoQuote}
+          id="compile-bids-form"
           className="mt-6 space-y-6"
         >
           <input type="hidden" name="rfpId" value={id} />
@@ -220,6 +222,7 @@ export default async function RfpBidCompilePage({
                         type="checkbox"
                         name="applicationIds"
                         value={b.id}
+                        aria-describedby="bid-selection-requirement"
                         className="mt-1 h-4 w-4"
                       />
                       <div className="flex-1">
@@ -273,6 +276,7 @@ export default async function RfpBidCompilePage({
                 );
               })}
             </ul>
+            <BidSelectionRequirement />
           </Card>
 
           <Card>

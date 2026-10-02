@@ -68,6 +68,7 @@ interface QuoteInteractiveSurfaceProps {
    */
   proposedBuilders: ProposedBuilder[];
   crew: QuoteFlipReveaCrewMember[];
+  previewOnly?: boolean;
 }
 
 export function QuoteInteractiveSurface({
@@ -75,6 +76,7 @@ export function QuoteInteractiveSurface({
   scope,
   proposedBuilders,
   crew,
+  previewOnly = false,
 }: QuoteInteractiveSurfaceProps) {
   const router = useRouter();
   const [selectedLeadUserId, setSelectedLeadUserId] = useState<string | null>(
@@ -304,7 +306,7 @@ export function QuoteInteractiveSurface({
       </section>
 
       {/* Decision panel */}
-      <section className="mt-20 rounded-2xl border border-brand-magenta/30 bg-brand-magenta/5 px-6 py-8">
+      {!previewOnly && <section className="mt-20 rounded-2xl border border-brand-magenta/30 bg-brand-magenta/5 px-6 py-8">
         <h2 className="font-display text-2xl font-semibold text-brand-magentaText">
           Ready to $BUILD together?
         </h2>
@@ -427,7 +429,7 @@ export function QuoteInteractiveSurface({
             {error}
           </p>
         )}
-      </section>
+      </section>}
     </>
   );
 }

@@ -6,22 +6,64 @@
  */
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-stub";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { membershipApplications, users as usersTable } from "@/db/schema";
 import { membershipApplicationReader, safely } from "@/lib/readers";
 import { getAllUsers } from "@/lib/readers/users";
-import { TIER_LABELS } from "@/lib/types";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { notify } from "@/lib/writers/notifications";
+import { TIER_LABELS, type MembershipTier } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
+const TIERS: readonly MembershipTier[] = ["viewer", "partner", "member"];
+
+/**
+ * Approve or reject a membership application.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-02)
+ *
+ * This action had no authorisation check. The page called
+ * requireAdmin, the action did not, and a server action is a public
+ * POST endpoint regardless of what gates the page that renders it.
+ * Anyone holding the action id could grant themselves a membership
+ * tier, and action ids are stable for a build and sit in rendered
+ * HTML rather than being secret.
+ *
+ * The reviewer came from a hidden form field as well, so the record of
+ * who approved a promotion was whatever the caller said it was.
+ *
+ * Three other things were missing and are added here. The decision was
+ * not guarded on the application still being pending, so a replayed
+ * request could re-decide a settled one and overwrite the timestamp.
+ * There was no audit entry, which left a hole exactly where
+ * promotions happen, while the same change made from the member page
+ * writes user.membership_tier_changed. And nobody told the member.
+ * ─────────────────────────────────────────────────────────────
+ */
 async function decide(formData: FormData) {
   "use server";
-  const id = String(formData.get("id"));
-  const decision = String(formData.get("decision")) as "approved" | "rejected";
-  const reviewerId = String(formData.get("reviewerId"));
+  const admin = await requireAdmin();
+
+  const id = String(formData.get("id") ?? "").trim();
+  const decisionRaw = String(formData.get("decision") ?? "").trim();
+  if (decisionRaw !== "approved" && decisionRaw !== "rejected") return;
+  const decision: "approved" | "rejected" = decisionRaw;
 
   const app = await membershipApplicationReader.byId(id);
   if (!app) return;
+  if (app.status !== "pending") return;
+
+  // The requested tier is applied directly to the user row, so confirm
+  // it is one of the three before it is written.
+  if (decision === "approved" && !TIERS.includes(app.requestedTier)) return;
+
+  const target = decision === "approved" ? await safely(
+    () => getAllUsers().then((r) => r.users.find((u) => u.id === app.userId)),
+    undefined,
+  ) : undefined;
+  const previousTier = target?.membershipTier ?? null;
 
   const now = new Date().toISOString();
 
@@ -33,11 +75,22 @@ async function decide(formData: FormData) {
   // Application status and the tier grant move together in one
   // transaction. A half-applied promotion (application marked
   // approved, tier never granted) is worse than neither.
-  await db.transaction(async (tx) => {
-    await tx
+  //
+  // The status update is guarded on the row still being pending, so a
+  // double submit or a replayed request settles it once.
+  const settled = await db.transaction(async (tx) => {
+    const claimed = await tx
       .update(membershipApplications)
-      .set({ status: decision, reviewedBy: reviewerId, reviewedAt: now })
-      .where(eq(membershipApplications.id, id));
+      .set({ status: decision, reviewedBy: admin.id, reviewedAt: now })
+      .where(
+        and(
+          eq(membershipApplications.id, id),
+          eq(membershipApplications.status, "pending"),
+        )!,
+      )
+      .returning({ id: membershipApplications.id });
+
+    if (claimed.length === 0) return false;
 
     if (decision === "approved") {
       await tx
@@ -45,6 +98,37 @@ async function decide(formData: FormData) {
         .set({ membershipTier: app.requestedTier, updatedAt: now })
         .where(eq(usersTable.id, app.userId));
     }
+    return true;
+  });
+
+  if (!settled) return;
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "user.membership_tier_changed",
+    resourceKind: "user",
+    resourceId: app.userId,
+    before: { membershipTier: previousTier, applicationStatus: "pending" },
+    after: {
+      membershipTier:
+        decision === "approved" ? app.requestedTier : previousTier,
+      applicationStatus: decision,
+    },
+  });
+
+  await notify({
+    userId: app.userId,
+    kind: "direct_message",
+    title:
+      decision === "approved"
+        ? `You are now a ${TIER_LABELS[app.requestedTier]}`
+        : "Your membership application was not approved",
+    body:
+      decision === "approved"
+        ? `Your application was approved and your account has been moved to ${TIER_LABELS[app.requestedTier]}.`
+        : "Your application was reviewed and not approved this time. An admin can tell you what would change that.",
+    href: "/profile",
   });
 
   revalidatePath("/admin/applications");
@@ -55,7 +139,9 @@ async function decide(formData: FormData) {
 export const dynamic = "force-dynamic";
 
 export default async function AdminApplicationsPage() {
-  const me = await requireAdmin();
+  // The page gate. The action does its own check, because a server
+  // action is reachable without ever rendering this page.
+  await requireAdmin();
   // Reader swap 2026-08-29: queue read a mock array.
   const [applications, { users: roster }] = await Promise.all([
     safely(() => membershipApplicationReader.all(), []),
@@ -108,7 +194,6 @@ export default async function AdminApplicationsPage() {
                     <form action={decide}>
                       <input type="hidden" name="id" value={app.id} />
                       <input type="hidden" name="decision" value="approved" />
-                      <input type="hidden" name="reviewerId" value={me.id} />
                       <button
                         type="submit"
                         className="rounded-full bg-brand-green px-4 py-1.5 text-xs font-medium text-brand-white hover:opacity-90"
@@ -119,7 +204,6 @@ export default async function AdminApplicationsPage() {
                     <form action={decide}>
                       <input type="hidden" name="id" value={app.id} />
                       <input type="hidden" name="decision" value="rejected" />
-                      <input type="hidden" name="reviewerId" value={me.id} />
                       <button
                         type="submit"
                         className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta"

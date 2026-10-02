@@ -62,6 +62,7 @@ function newClientToken(projectId: string): string {
  */
 export async function compileBidsIntoQuote(formData: FormData) {
   const admin = await requireAdmin();
+  const intent = formData.get("intent") === "send" ? "send" : "draft";
 
   const rfpId = String(formData.get("rfpId") ?? "").trim();
   const applicationIds = formData
@@ -121,16 +122,14 @@ export async function compileBidsIntoQuote(formData: FormData) {
     throw new Error("RFP not found or not open for compilation.");
   }
 
-  // Block re-compilation — createCooperativeQuote uses the same
-  // guard. Admin removes the existing quote first if the plan changes.
-  const existingQuote = await db
-    .select({ id: cooperativeQuotes.id })
+  const [existingQuote] = await db
+    .select()
     .from(cooperativeQuotes)
     .where(eq(cooperativeQuotes.projectId, rfpId))
     .limit(1);
-  if (existingQuote.length > 0) {
+  if (existingQuote && existingQuote.status !== "draft") {
     throw new Error(
-      "A quote already exists for this RFP. Remove it from /admin/cooperative-quotes before compiling a new one.",
+      "A client-facing quote already exists for this RFP. Create a revised draft instead of changing the version the client received.",
     );
   }
 
@@ -226,9 +225,10 @@ export async function compileBidsIntoQuote(formData: FormData) {
   });
 
   const now = new Date().toISOString();
+  const isSending = intent === "send";
   const row: CooperativeQuote = {
-    id: newQuoteId(),
-    clientToken: newClientToken(rfpId),
+    id: existingQuote?.id ?? newQuoteId(),
+    clientToken: existingQuote?.clientToken ?? newClientToken(rfpId),
     projectId: rfpId,
     clientDisplayName,
     proposedBuilders,
@@ -237,29 +237,42 @@ export async function compileBidsIntoQuote(formData: FormData) {
       deliverables,
       timeline,
     },
-    status: "sent",
-    sentAt: now,
+    status: isSending ? "sent" : "draft",
+    sentAt: isSending ? now : null,
     viewedAt: null,
     decidedAt: null,
-    createdAt: now,
-    createdByUserId: admin.id,
+    createdAt: existingQuote?.createdAt ?? now,
+    createdByUserId: existingQuote?.createdByUserId ?? admin.id,
     selectedLeadUserId: null,
   };
-  // Sending the quote freezes exactly the proposals the client saw.
-  // A later quote removal cannot reopen them, because the client may
-  // already have reviewed the original magic link.
   await db.transaction(async (tx) => {
-    await tx.insert(cooperativeQuotes).values(row);
-    await tx
-      .update(projectApplications)
-      .set({ clientPresentedAt: now })
-      .where(inArray(projectApplications.id, applicationIds));
+    if (existingQuote) {
+      await tx
+        .update(cooperativeQuotes)
+        .set({
+          clientDisplayName: row.clientDisplayName,
+          proposedBuilders: row.proposedBuilders,
+          scope: row.scope,
+          status: row.status,
+          sentAt: row.sentAt,
+        })
+        .where(eq(cooperativeQuotes.id, row.id));
+    } else {
+      await tx.insert(cooperativeQuotes).values(row);
+    }
+    if (isSending) {
+      // Sending freezes exactly the bid versions the client receives.
+      await tx
+        .update(projectApplications)
+        .set({ clientPresentedAt: now })
+        .where(inArray(projectApplications.id, applicationIds));
+    }
   });
 
   await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
-    action: "quote.created",
+    action: isSending ? "quote.sent" : "quote.draft_saved",
     resourceKind: "cooperative_quote",
     resourceId: row.id,
     before: null,
@@ -269,16 +282,19 @@ export async function compileBidsIntoQuote(formData: FormData) {
       clientDisplayName,
       compiledFromApplicationIds: applicationIds,
       proposedBuilderIds: proposedBuilders.map((b) => b.userId),
-      compileMode: "rfp_bid_compile",
+      intent,
     },
-    reason: `Compiled ${picks.length} bids into client quote for ${rfp.title}`,
+    reason: isSending
+      ? `Sent ${picks.length} bids to ${rfp.clientId ?? "the client"} for ${rfp.title}`
+      : `Saved a ${picks.length}-bid draft for ${rfp.title}`,
   });
 
   revalidatePath("/admin/cooperative-quotes");
   revalidatePath(`/admin/rfps/${rfpId}/bids`);
   revalidatePath(`/quotes/${row.clientToken}`);
-
-  // Land admin on the composed quote surface so they can copy the
-  // magic link out to the client email.
-  redirect(`/admin/cooperative-quotes`);
+  redirect(
+    isSending
+      ? "/admin/cooperative-quotes"
+      : `/quotes/${row.clientToken}?draft=1`,
+  );
 }

@@ -44,6 +44,7 @@ import {
   pricingUnitLabel,
 } from "@/lib/quote-pricing";
 import { richTextValuePlainText } from "@/lib/rich-text";
+import { getCurrentUser } from "@/lib/auth-stub";
 
 /**
  * Force-dynamic on this route. The surface is stateful (evolves
@@ -83,10 +84,13 @@ export const metadata: Metadata = {
 
 export default async function CooperativeQuotePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ draft?: string }>;
 }) {
   const { token } = await params;
+  const { draft } = await searchParams;
   // SANDBOX→LIVE swap history:
   //   - Pre-Beta cutover: findCooperativeQuote() lookup against
   //     MOCK_COOPERATIVE_QUOTES.
@@ -102,7 +106,10 @@ export default async function CooperativeQuotePage({
     .where(eq(cooperativeQuotesTable.clientToken, token))
     .limit(1);
   if (!row) notFound();
-  if (row.status === "draft") notFound();
+  const isDraftPreview = row.status === "draft";
+  if (isDraftPreview && (draft !== "1" || !(await getCurrentUser())?.isAdmin)) {
+    notFound();
+  }
 
   // Cast jsonb → canonical types. The DB column is typed unknown by
   // Drizzle; the runtime shape is enforced by the authoring flow.
@@ -186,6 +193,12 @@ export default async function CooperativeQuotePage({
     <div className="mx-auto max-w-6xl px-6 py-12">
       {/* Header — client + project context */}
       <div>
+        {isDraftPreview && (
+          <div className="mb-6 rounded-xl border border-brand-magenta/40 bg-brand-magenta/5 px-4 py-3 text-sm text-ink-muted">
+            <strong className="text-brand-magentaText">Admin draft preview.</strong>{" "}
+            This is not client-facing; bids remain editable until the quote is sent.
+          </div>
+        )}
         <CardEyebrow>Cooperative Quote</CardEyebrow>
         <h1 className="mt-2 font-display text-4xl font-semibold leading-tight md:text-5xl">
           A proposal for {quote.clientDisplayName}
@@ -206,6 +219,7 @@ export default async function CooperativeQuotePage({
           scope={quote.scope}
           crew={crew}
           proposedBuilders={clientFacingBuilders}
+          previewOnly={isDraftPreview}
         />
       )}
 

@@ -32,6 +32,10 @@ export const dynamic = "force-dynamic";
  */
 async function advance(formData: FormData) {
   "use server";
+  // The page gate does not reach this. A server action is a public
+  // POST endpoint, and without this anyone holding the action id could
+  // move any project to completed or cancelled.
+  await requireAdmin();
   const id = String(formData.get("id"));
   const next = String(formData.get("status")) as Project["status"];
   const now = new Date().toISOString();

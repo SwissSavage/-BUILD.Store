@@ -30,8 +30,15 @@ const TIER_DESCRIPTIONS: Record<MembershipTier, string> = {
 
 async function applyForTier(formData: FormData) {
   "use server";
-  const uid = String(formData.get("uid") ?? "");
-  const currentTier = String(formData.get("currentTier") ?? "") as MembershipTier;
+  // Both of these came from hidden form fields, which meant anyone
+  // holding the action id could file a tier application in another
+  // member's name, and state their current tier as whatever suited
+  // them. The applicant is whoever is signed in, and their current
+  // tier is whatever the row says.
+  const me = await getCurrentUser();
+  if (!me) throw new Error("Sign in required.");
+  const uid = me.id;
+  const currentTier = me.membershipTier as MembershipTier;
   const requestedTier = String(formData.get("requestedTier") ?? "") as Exclude<MembershipTier, "viewer">;
   const why = String(formData.get("why") ?? "");
 
@@ -128,8 +135,6 @@ export default async function MembershipPage() {
             <CardEyebrow>Next tier</CardEyebrow>
             <CardTitle className="mt-2">{TIER_LABELS[nextTier]}</CardTitle>
             <form action={applyForTier} className="mt-4 space-y-4">
-              <input type="hidden" name="uid" value={user.id} />
-              <input type="hidden" name="currentTier" value={user.membershipTier} />
               <input type="hidden" name="requestedTier" value={nextTier} />
               <label className="block">
                 <span className="text-xs uppercase tracking-wider text-ink-muted">

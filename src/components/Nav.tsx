@@ -222,6 +222,9 @@ async function AdminDropdown({ self }: { self: User }) {
             Outside contributors
           </AdminLink>
           <AdminLink href="/admin/epk">EPK approvals</AdminLink>
+          <AdminLink href="/admin/disclosure">
+            Circumvention review
+          </AdminLink>
         </AdminSection>
 
         <AdminSection label="Deals & projects">

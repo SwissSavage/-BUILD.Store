@@ -231,13 +231,21 @@ export default async function AdminCooperativeQuotesPage() {
                         ? "builder"
                         : "builders"}
                     </CardTitle>
-                    <p className="mt-3 text-xs text-ink-muted">
-                      Client magic-link (production dispatches to the
-                      client contact):
-                    </p>
-                    <code className="mt-1 block break-all rounded-lg bg-[var(--surface-inset)] px-3 py-2 text-[11px] text-ink">
-                      /quotes/{quote.clientToken}
-                    </code>
+                    {quote.status === "draft" ? (
+                      <p className="mt-3 text-xs text-ink-muted">
+                        Internal draft. The client link is inactive and selected bids remain editable.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="mt-3 text-xs text-ink-muted">
+                          Client magic-link (production dispatches to the
+                          client contact):
+                        </p>
+                        <code className="mt-1 block break-all rounded-lg bg-[var(--surface-inset)] px-3 py-2 text-[11px] text-ink">
+                          /quotes/{quote.clientToken}
+                        </code>
+                      </>
+                    )}
 
                     {/* Task #45 — SOW dual-envelope status strip.
                         Only renders on approved quotes since dispatch
@@ -288,12 +296,21 @@ export default async function AdminCooperativeQuotesPage() {
                     )}
 
                     <div className="mt-4 flex items-center gap-3">
-                      <Link
-                        href={`/quotes/${quote.clientToken}`}
-                        className="text-xs text-brand-magentaText hover:underline"
-                      >
-                        Preview client view →
-                      </Link>
+                      {quote.status === "draft" ? (
+                        <Link
+                          href={`/admin/rfps/${quote.projectId}/bids`}
+                          className="text-xs text-brand-magentaText hover:underline"
+                        >
+                          Continue editing draft →
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/quotes/${quote.clientToken}`}
+                          className="text-xs text-brand-magentaText hover:underline"
+                        >
+                          Preview client view →
+                        </Link>
+                      )}
                       <form action={removeCooperativeQuote}>
                         <input
                           type="hidden"

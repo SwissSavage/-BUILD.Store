@@ -58,6 +58,7 @@ export function QuoteCompileRequirements() {
     form.addEventListener("input", sync);
     form.addEventListener("change", sync);
     form.addEventListener("submit", onSubmit);
+    sync();
     return () => {
       form.removeEventListener("input", sync);
       form.removeEventListener("change", sync);
@@ -67,7 +68,7 @@ export function QuoteCompileRequirements() {
 
   return errors.length > 0 ? (
     <section role="alert" className="rounded-xl border border-red-500/70 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-      <p className="font-semibold">Finish the required fields before compiling.</p>
+      <p className="font-semibold">Finish the required fields before saving.</p>
       <ul className="mt-2 list-disc space-y-1 pl-5">
         {errors.map((error) => <li key={error}>{error}</li>)}
       </ul>

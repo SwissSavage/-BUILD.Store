@@ -4239,6 +4239,8 @@ export type AuditLogAction =
   | "receipt.removed"
   // Cooperative Quotes (pre-project client-gated artifact)
   | "quote.created"
+  | "quote.draft_saved"
+  | "quote.sent"
   | "quote.removed"
   | "quote.approved"
   | "quote.declined"
@@ -4356,6 +4358,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "receipt.generated": "Cooperative Receipt generated",
   "receipt.removed": "Cooperative Receipt removed",
   "quote.created": "Cooperative Quote created",
+  "quote.draft_saved": "Cooperative Quote draft saved",
+  "quote.sent": "Cooperative Quote sent to client",
   "quote.removed": "Cooperative Quote removed",
   "quote.approved": "Cooperative Quote approved by client",
   "quote.declined": "Cooperative Quote declined by client",

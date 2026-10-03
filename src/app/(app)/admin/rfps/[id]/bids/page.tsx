@@ -34,6 +34,7 @@ import { StructuredText } from "@/components/StructuredText";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { QuoteCompileRequirements } from "@/components/BidSelectionRequirement";
 import { richTextValuePlainText } from "@/lib/rich-text";
+import type { CooperativeQuote, ProposedBuilder } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 interface Params {
@@ -66,14 +67,16 @@ export default async function RfpBidCompilePage({
   // Existing quote check — surface a warning + link, don't render the
   // composer, since compileBidsIntoQuote will throw on double-compile.
   const [existingQuote] = await db
-    .select({
-      id: cooperativeQuotes.id,
-      clientToken: cooperativeQuotes.clientToken,
-      status: cooperativeQuotes.status,
-    })
+    .select()
     .from(cooperativeQuotes)
     .where(eq(cooperativeQuotes.projectId, id))
     .limit(1);
+  const draftQuote = existingQuote?.status === "draft" ? existingQuote : null;
+  const draftBuilders = (draftQuote?.proposedBuilders ?? []) as ProposedBuilder[];
+  const draftBuilderByUserId = new Map(
+    draftBuilders.map((builder) => [builder.userId, builder]),
+  );
+  const draftScope = draftQuote?.scope as CooperativeQuote["scope"] | undefined;
 
   const bids = await db
     .select({
@@ -150,13 +153,13 @@ export default async function RfpBidCompilePage({
         </Link>
       </div>
 
-      {existingQuote && (
+      {existingQuote && !draftQuote && (
         <Card className="mt-6 border-brand-magenta/40 bg-[var(--surface-elevated)]">
-          <CardEyebrow>Quote already compiled</CardEyebrow>
+          <CardEyebrow>Client quote already sent</CardEyebrow>
           <p className="mt-2 text-sm text-ink-muted">
             A cooperative quote already exists for this RFP (status:{" "}
             <span className="font-medium">{existingQuote.status}</span>).
-            Remove it before re-compiling.
+            Its bid versions are locked so the client keeps the exact quote they received.
           </p>
           <div className="mt-3 flex gap-3">
             <Link
@@ -190,7 +193,7 @@ export default async function RfpBidCompilePage({
             , then check back.
           </p>
         </Card>
-      ) : existingQuote ? null : (
+      ) : existingQuote && !draftQuote ? null : (
         <form
           action={compileBidsIntoQuote}
           id="compile-bids-form"
@@ -199,6 +202,15 @@ export default async function RfpBidCompilePage({
         >
           <input type="hidden" name="rfpId" value={id} />
           <QuoteCompileRequirements />
+
+          {draftQuote && (
+            <Card className="border-brand-magenta/40 bg-brand-magenta/5">
+              <CardEyebrow>Editing saved draft</CardEyebrow>
+              <p className="mt-2 text-sm text-ink-muted">
+                This draft is internal. Contributors can still update their bids until you send the client quote.
+              </p>
+            </Card>
+          )}
 
           <Card>
             <CardTitle>Bids received ({bids.length})</CardTitle>
@@ -225,6 +237,7 @@ export default async function RfpBidCompilePage({
                         type="checkbox"
                         name="applicationIds"
                         value={b.id}
+                        defaultChecked={draftBuilderByUserId.has(b.userId)}
                         className="mt-1 h-4 w-4 disabled:cursor-not-allowed disabled:opacity-40 data-[invalid=true]:outline data-[invalid=true]:outline-2 data-[invalid=true]:outline-red-500"
                       />
                       <div className="flex-1">
@@ -268,6 +281,7 @@ export default async function RfpBidCompilePage({
                           </span>
                           <input
                             name={`relevance_${b.id}`}
+                            defaultValue={draftBuilderByUserId.get(b.userId)?.relevance ?? ""}
                             placeholder="Why this person for this scope. One sentence."
                             className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
                           />
@@ -307,7 +321,7 @@ export default async function RfpBidCompilePage({
                 </span>
                 <RichTextEditor
                   name="scopeSummary"
-                  initialValue={rfp.description ?? ""}
+                  initialValue={draftScope?.summary ?? rfp.description ?? ""}
                   required
                   minLength={20}
                   validationKey="scopeSummary"
@@ -324,6 +338,7 @@ export default async function RfpBidCompilePage({
                 </span>
                 <textarea
                   name="deliverables"
+                  defaultValue={draftScope?.deliverables.join("\n") ?? ""}
                   rows={4}
                   required
                   placeholder={"Weekly deliverable\nMilestone 1: …\nMilestone 2: …"}
@@ -337,6 +352,7 @@ export default async function RfpBidCompilePage({
                 </span>
                 <input
                   name="timeline"
+                  defaultValue={draftScope?.timeline ?? ""}
                   required
                   minLength={4}
                   placeholder="8 weeks from kickoff — 2 discovery, 4 build, 2 polish"
@@ -346,16 +362,26 @@ export default async function RfpBidCompilePage({
             </div>
           </Card>
 
-          <button
-            type="submit"
-            className="fm-btn-primary rounded-full px-6 py-2 text-sm font-medium"
-          >
-            Compile into client quote
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              name="intent"
+              value="draft"
+              className="rounded-full border border-[var(--surface-border)] px-6 py-2 text-sm font-medium hover:border-brand-magenta hover:text-brand-magentaText"
+            >
+              Save &amp; see draft
+            </button>
+            <button
+              type="submit"
+              name="intent"
+              value="send"
+              className="fm-btn-primary rounded-full px-6 py-2 text-sm font-medium"
+            >
+              Send client quote
+            </button>
+          </div>
           <p className="text-[11px] text-ink-faint">
-            Creates a cooperative_quote row + client magic-link. Copy
-            the link from /admin/cooperative-quotes and send to the
-            client email.
+            Drafts stay internal and keep bids editable. Sending activates the client link and locks the selected bid versions.
           </p>
         </form>
       )}

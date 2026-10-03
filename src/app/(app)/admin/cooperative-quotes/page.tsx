@@ -26,17 +26,15 @@
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { notInArray, desc, eq, and, inArray } from "drizzle-orm";
+import { notInArray, desc, eq, and, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   cooperativeQuotes as cooperativeQuotesTable,
   projects as projectsTable,
 } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { getAllUsers } from "@/lib/readers/users";
-import { publicName, type ProposedBuilder, type User } from "@/lib/types";
+import { type ProposedBuilder } from "@/lib/types";
 import {
-  createCooperativeQuote,
   removeCooperativeQuote,
   retrySowDispatch,
 } from "@/lib/quote-actions";
@@ -50,34 +48,9 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * Candidate builders for proposal: Members + Partners. Sorted for
- * a predictable reference table. Admins can propose themselves —
- * sometimes the founder IS the lead on a founding-client engagement.
- *
- * Reads the live roster. The seed-mirroring assumption this used to
- * rely on stopped holding the moment real people started signing up —
- * a founding-client engagement could not have been proposed to any of
- * them.
- */
-function proposalCandidates(roster: User[]) {
-  return [...roster]
-    .filter(
-      (u) =>
-        u.membershipTier === "member" || u.membershipTier === "partner",
-    )
-    .sort((a, b) =>
-      publicName(a).localeCompare(publicName(b), "en", {
-        sensitivity: "base",
-      }),
-    );
-}
-
-/**
- * Eligible projects for quoting — contracts (not RFPs) that don't
- * already have a quote authored. Fetches from Postgres, excludes
- * projects with existing quotes via a NOT IN subquery so the admin
- * can't double-book. Remove the existing quote first if the plan
- * changes.
+ * Quote composition starts from an approved RFP's applications. Keeping
+ * the project picker here, and the applicant picker on the RFP's bid page,
+ * prevents the old all-roster JSON workflow from bypassing project scope.
  */
 async function eligibleProjects() {
   const alreadyQuoted = await db
@@ -92,9 +65,17 @@ async function eligibleProjects() {
       takenIds.length > 0
         ? and(
             eq(projectsTable.kind, "contract"),
+            eq(projectsTable.isRfp, true),
+            eq(projectsTable.status, "open"),
+            isNotNull(projectsTable.rfpApprovedAt),
             notInArray(projectsTable.id, takenIds),
           )
-        : eq(projectsTable.kind, "contract"),
+        : and(
+            eq(projectsTable.kind, "contract"),
+            eq(projectsTable.isRfp, true),
+            eq(projectsTable.status, "open"),
+            isNotNull(projectsTable.rfpApprovedAt),
+          ),
     );
 }
 
@@ -116,33 +97,6 @@ const STATUS_LABEL: Record<QuoteStatus, string> = {
   declined: "Declined",
 };
 
-/** JSON schema example — rendered as the composer placeholder. */
-const BUILDER_JSON_TEMPLATE = `[
-  {
-    "userId": "u_bbg",
-    "pricing": {
-      "type": "range",
-      "baseAmountMin": 18000,
-      "baseAmountMax": 24000,
-      "talentSplit": 85,
-      "operationsSplit": 15
-    },
-    "timeline": "6 weeks across pre-pro, production, and post",
-    "relevance": "BBG carries the FM voice through every read."
-  },
-  {
-    "userId": "u_sunny",
-    "pricing": {
-      "type": "fixed",
-      "baseAmount": 14000,
-      "talentSplit": 85,
-      "operationsSplit": 15
-    },
-    "timeline": "5 weeks brand direction",
-    "relevance": "Sunny's brand systems chops mean the film ships coherent."
-  }
-]`;
-
 export default async function AdminCooperativeQuotesPage() {
   const viewer = await getCurrentUser();
   if (!viewer || !viewer.isAdmin) {
@@ -153,8 +107,6 @@ export default async function AdminCooperativeQuotesPage() {
     .select()
     .from(cooperativeQuotesTable)
     .orderBy(desc(cooperativeQuotesTable.createdAt));
-  const { users: roster } = await getAllUsers();
-  const candidates = proposalCandidates(roster);
   const projects = await eligibleProjects();
 
   // Batch-load the projects referenced by existing quotes so the list
@@ -184,206 +136,43 @@ export default async function AdminCooperativeQuotesPage() {
             Pre-project client proposals
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-ink-muted">
-            Author the interactive quote a client receives after a
-            consultation call. Client visits{" "}
-            <code>/quotes/[clientToken]</code>, sees face-down cards,
-            reveals the proposed crew (each Builder carries their own
-            price + timeline right on the card), picks their lead. Same
-            URL evolves into the project dashboard after approval.
+            Start with an RFP&apos;s actual applicants, then curate three to five
+            builders into the interactive quote a client receives. The
+            client visits <code>/quotes/[clientToken]</code>, reviews the
+            portrait cards, and chooses a lead.
           </p>
         </div>
       </div>
 
       {/* Author a new quote */}
       <section className="mt-10">
-        <h2 className="font-display text-2xl font-semibold">
-          Author a new quote
-        </h2>
+          <h2 className="font-display text-2xl font-semibold">
+            Start a client quote
+          </h2>
         {projects.length === 0 ? (
           <Card className="mt-4">
             <p className="text-sm text-ink-muted">
-              Every eligible contract project already has a quote.
-              Remove an existing quote below to re-author.
+              No approved RFP without a quote is ready for compilation.
+              Approve an RFP, then collect applications before returning here.
             </p>
           </Card>
         ) : (
-          <form
-            action={createCooperativeQuote}
-            className="mt-6 space-y-5 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
-          >
-            <div>
-              <label
-                htmlFor="projectId"
-                className="block text-xs uppercase tracking-wider text-ink-muted"
-              >
-                Project
-              </label>
-              <select
-                id="projectId"
-                name="projectId"
-                required
-                defaultValue=""
-                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
-              >
-                <option value="" disabled>
-                  Pick a contract project…
-                </option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-[11px] text-ink-faint">
-                Only contracts without existing quotes appear here.
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="clientDisplayName"
-                className="block text-xs uppercase tracking-wider text-ink-muted"
-              >
-                Client display name
-              </label>
-              <input
-                id="clientDisplayName"
-                name="clientDisplayName"
-                type="text"
-                required
-                placeholder="URL Media"
-                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
-              />
-              <p className="mt-1 text-[11px] text-ink-faint">
-                How the client is referred to on the quote header.
-              </p>
-            </div>
-
-            {/* Candidate reference table — read-only lookup of userIds
-                so the admin can copy them into the JSON below. Members
-                + Partners only. */}
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-ink-muted">
-                Candidate builders (reference)
-              </label>
-              <div className="mt-2 grid gap-1 text-[11px] sm:grid-cols-2">
-                {candidates.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1"
-                  >
-                    <span className="truncate font-medium">
-                      {publicName(user)}
-                    </span>
-                    <code className="text-[10px] text-ink-faint">
-                      {user.id}
-                    </code>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-1 text-[11px] text-ink-faint">
-                Copy the userIds into the proposedBuilders JSON below.
-                Order matters — the first entry is the recommended lead.
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="proposedBuildersJson"
-                className="block text-xs uppercase tracking-wider text-ink-muted"
-              >
-                Proposed builders (JSON, 1-5 entries)
-              </label>
-              <textarea
-                id="proposedBuildersJson"
-                name="proposedBuildersJson"
-                rows={16}
-                required
-                placeholder={BUILDER_JSON_TEMPLATE}
-                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 font-mono text-xs"
-              />
-              <p className="mt-1 text-[11px] text-ink-faint">
-                Each Builder carries per-Builder pricing (fixed / range
-                / hourly), timeline, and relevance line. Aggregate
-                engagement total derives from the sum of picked
-                Builders on the client surface. Full per-Builder subform
-                UI is queued for a follow-on tier.
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="scopeSummary"
-                className="block text-xs uppercase tracking-wider text-ink-muted"
-              >
-                Scope summary
-              </label>
-              <textarea
-                id="scopeSummary"
-                name="scopeSummary"
-                rows={3}
-                required
-                minLength={20}
-                placeholder="One-paragraph summary of what the crew delivers. Shown in the client's Scope section."
-                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="deliverables"
-                className="block text-xs uppercase tracking-wider text-ink-muted"
-              >
-                Deliverables (one per line)
-              </label>
-              <textarea
-                id="deliverables"
-                name="deliverables"
-                rows={5}
-                required
-                placeholder={
-                  "Hero film, 3 minutes, delivered in ProRes + H.264\n" +
-                  "Social cutdowns: 60s, 30s, 15s\n" +
-                  "Launch microsite, single-page interactive"
-                }
-                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
-              />
-              <p className="mt-1 text-[11px] text-ink-faint">
-                Newline-separated. Leading bullets (- * · •) stripped
-                automatically.
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="timeline"
-                className="block text-xs uppercase tracking-wider text-ink-muted"
-              >
-                Engagement timeline rhythm
-              </label>
-              <input
-                id="timeline"
-                name="timeline"
-                type="text"
-                required
-                placeholder="8 weeks from kickoff. 2 pre-production, 3 production, 3 post."
-                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
-              />
-              <p className="mt-1 text-[11px] text-ink-faint">
-                Engagement-level phase story. Per-Builder timelines
-                live on each entry in the JSON above.
-              </p>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
-              >
-                Create quote
-              </button>
-            </div>
-          </form>
+          <ul className="mt-6 grid gap-3">
+            {projects.map((project) => (
+              <li key={project.id}>
+                <Link
+                  href={`/admin/rfps/${project.id}/bids`}
+                  className="block rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-5 transition-colors hover:border-brand-magenta"
+                >
+                  <CardTitle>{project.title}</CardTitle>
+                  <p className="mt-2 text-sm text-ink-muted">
+                    Review this RFP&apos;s applicants and curate three to five
+                    people for the client quote.
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

@@ -17,6 +17,8 @@ import { getProjectById } from "@/lib/readers/projects";
 import { editProject } from "@/lib/project-edit-actions";
 import { trashProject } from "@/lib/project-trash-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +40,7 @@ export default async function EditProjectPage({
     project.kind === "contract" ? `/contracts/${id}` : `/projects/${id}`;
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-12">
+    <div className="mx-auto max-w-3xl px-6 py-12">
       <Link href={backHref} className="text-sm text-ink-muted hover:text-ink">
         ← Back to the listing
       </Link>
@@ -62,15 +64,26 @@ export default async function EditProjectPage({
             />
           </label>
 
-          <label className={labelClass}>
-            Description
-            <textarea
+          <div className={labelClass}>
+            <span>Brief</span>
+            <RichTextEditor
               name="description"
-              rows={10}
-              required
-              defaultValue={project.description ?? ""}
+              initialValue={project.description ?? ""}
+            />
+          </div>
+
+          <label className={labelClass}>
+            Featured image URL <span className="text-ink-faint">(optional)</span>
+            <input
+              name="featuredImageUrl"
+              type="url"
+              defaultValue={project.featuredImageUrl ?? ""}
+              placeholder="https://…"
               className={inputClass}
             />
+            <span className="mt-1 block text-xs text-ink-faint">
+              Shows an editorial image above the listing. Leave blank to keep the standard header.
+            </span>
           </label>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -114,12 +127,12 @@ export default async function EditProjectPage({
             />
           </label>
 
-          <button
-            type="submit"
+          <SubmitButton
+            pendingLabel="Saving…"
             className="fm-btn-primary rounded-full px-5 py-2.5 text-sm font-medium"
           >
             Save changes
-          </button>
+          </SubmitButton>
         </form>
       </Card>
 

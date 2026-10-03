@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { FileText, Tags, Users } from "lucide-react";
 import { getProjectById } from "@/lib/readers/projects";
 import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
@@ -17,7 +18,11 @@ import {
   INDUSTRY_LABELS,
   publicNameDisambiguated,
 } from "@/lib/types";
-import { Card, CardEyebrow } from "@/components/Card";
+import { Brief, briefHeadings, briefPlainText } from "@/components/Brief";
+import { BriefTableOfContents } from "@/components/BriefTableOfContents";
+import { Card, CardTitle } from "@/components/Card";
+import { OpportunityHeader } from "@/components/OpportunityHeader";
+import { ExpandableSkillTags } from "@/components/ExpandableSkillTags";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +45,7 @@ export async function generateMetadata({
   }
   return {
     title: `${p.title} — Case study at Future Modern`,
-    description: p.description.slice(0, 155),
+    description: briefPlainText(p.description).slice(0, 155),
     alternates: { canonical: `${SITE_URL}/case-studies/${p.id}` },
   };
 }
@@ -65,12 +70,13 @@ export default async function CaseStudyDetail({
   const contributors = (project.assignedMemberIds ?? [])
     .map((uid) => roster.find((u) => u.id === uid))
     .filter((u): u is (typeof roster)[number] => !!u);
+  const publishedAt = project.collectedAt ?? project.rfpApprovedAt;
 
   const creativeWork = {
     "@context": "https://schema.org",
     "@type": "CreativeWork",
     name: project.title,
-    description: project.description,
+    description: briefPlainText(project.description),
     url: `${SITE_URL}/case-studies/${project.id}`,
     creator: {
       "@id": `${SITE_URL}#organization`,
@@ -98,77 +104,96 @@ export default async function CaseStudyDetail({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(creativeWork) }}
       />
-      <div className="mx-auto max-w-3xl px-6 py-12">
-        <Link
-          href="/case-studies"
-          className="text-sm text-ink-muted hover:text-ink"
-        >
-          ← All case studies
-        </Link>
-
-        <div className="mt-4 flex items-center gap-3">
-          <span
-            className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-            style={{
-              backgroundColor: "rgba(0,112,72,0.15)",
-              color: "var(--fm-green-text)",
-            }}
-          >
-            Completed
-          </span>
-          <span className="text-xs uppercase tracking-wider text-ink-muted">
-            {INDUSTRY_LABELS[project.industry]}
-          </span>
-        </div>
-
-        <h1 className="mt-2 font-display text-4xl font-semibold">
-          {project.title}
-        </h1>
-        <p className="mt-4 text-lg text-ink-muted">
-          {project.description}
-        </p>
-
-        {project.skillsRequired.length > 0 && (
-          <div className="mt-8">
-            <p className="text-xs uppercase tracking-wider text-ink-muted">
-              Skills applied
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {project.skillsRequired.map((s) => (
-                <span
-                  key={s}
-                  className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-sm text-ink-muted"
-                >
-                  {s}
+      <div className="mx-auto max-w-app px-6 py-12">
+        <OpportunityHeader
+          backHref="/case-studies"
+          backLabel="All case studies"
+          imageUrl={project.featuredImageUrl}
+          kind="Case study"
+          industry={INDUSTRY_LABELS[project.industry]}
+          title={project.title}
+          postedAt={publishedAt}
+          trailing={
+            <span className="rounded-full bg-[rgba(0,112,72,0.18)] px-2.5 py-0.5 text-xs font-medium text-brand-greenText">
+              Completed
+            </span>
+          }
+        />
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+          <BriefTableOfContents
+            targetId="case-study-brief"
+            headings={briefHeadings(project.description)}
+          />
+          <section id="case-study-brief">
+            <Card className="p-8">
+              <Brief text={project.description} title={project.title} />
+            </Card>
+          </section>
+          <aside className="h-fit space-y-4 lg:sticky lg:top-24 lg:self-start">
+            <Card>
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <FileText aria-hidden="true" size={18} strokeWidth={1.75} />
+                  Case study details
                 </span>
-              ))}
-            </div>
-          </div>
-        )}
+              </CardTitle>
+              <div className="mt-4 space-y-4">
+                <Field label="Status" value="Completed" />
+                <Field
+                  label="Published"
+                  value={new Date(publishedAt).toLocaleDateString(undefined, {
+                    year: "numeric", month: "short", day: "numeric",
+                  })}
+                />
+              </div>
+            </Card>
 
-        {contributors.length > 0 && (
-          <Card className="mt-8">
-            <CardEyebrow>Contributors</CardEyebrow>
-            <ul className="mt-3 space-y-2">
-              {contributors.map((c) => (
-                <li key={c.id} className="text-sm">
-                  <Link
-                    href={`/u/${c.handle}`}
-                    className="font-medium hover:text-brand-magentaText"
-                  >
-                    {publicNameDisambiguated(c, roster)}
-                  </Link>
-                  {memberLabel(c) && (
-                    <span className="ml-2 text-xs text-ink-muted">
-                      · {memberLabel(c)}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )}
+            {project.skillsRequired.length > 0 && (
+              <Card>
+                <CardTitle>
+                  <span className="flex items-center gap-2">
+                    <Tags aria-hidden="true" size={18} strokeWidth={1.75} />
+                    Skills applied
+                  </span>
+                </CardTitle>
+                <ExpandableSkillTags skills={project.skillsRequired} />
+              </Card>
+            )}
+
+            {contributors.length > 0 && (
+            <Card>
+              <CardTitle>
+                <span className="flex items-center gap-2">
+                  <Users aria-hidden="true" size={18} strokeWidth={1.75} />
+                  Contributors
+                </span>
+              </CardTitle>
+              <ul className="mt-3 space-y-2">
+                {contributors.map((c) => (
+                  <li key={c.id} className="text-sm">
+                    <Link href={`/u/${c.handle}`} className="font-medium hover:text-brand-magentaText">
+                      {publicNameDisambiguated(c, roster)}
+                    </Link>
+                    {memberLabel(c) && (
+                      <span className="ml-2 text-xs text-ink-muted">· {memberLabel(c)}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+            )}
+          </aside>
+        </div>
       </div>
     </>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wider text-ink-muted">{label}</p>
+      <p className="mt-1 font-medium">{value}</p>
+    </div>
   );
 }

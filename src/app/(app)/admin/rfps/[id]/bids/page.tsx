@@ -13,8 +13,7 @@
  * liner, and authors engagement-level scope (summary, deliverables,
  * timeline). Submitting compiles those picks into a single
  * cooperative_quote whose /quotes/[token] surface renders each pick
- * as a TalentHand card with per-Builder pricing pulled from the bid's
- * proposed hourly rate.
+ * as a TalentHand card with each Builder's proposed pricing terms.
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -28,8 +27,13 @@ import {
   projects,
   users,
 } from "@/db/schema";
+import { formatProposalHours, formatProposalPrice } from "@/lib/proposal-terms";
 import { compileBidsIntoQuote } from "@/lib/rfp-bid-compile-actions";
 import { scrubForClient } from "@/lib/pii-scrub";
+import { StructuredText } from "@/components/StructuredText";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { QuoteCompileRequirements } from "@/components/BidSelectionRequirement";
+import { richTextValuePlainText } from "@/lib/rich-text";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 interface Params {
@@ -78,7 +82,12 @@ export default async function RfpBidCompilePage({
       proposedRole: projectApplications.proposedRole,
       pitch: projectApplications.pitch,
       hoursPerWeek: projectApplications.hoursPerWeek,
+      hoursPerWeekMax: projectApplications.hoursPerWeekMax,
       hourlyRate: projectApplications.hourlyRate,
+      hourlyRateMax: projectApplications.hourlyRateMax,
+      priceMode: projectApplications.priceMode,
+      fixedPriceMin: projectApplications.fixedPriceMin,
+      fixedPriceMax: projectApplications.fixedPriceMax,
       portfolioLink: projectApplications.portfolioLink,
       status: projectApplications.status,
       createdAt: projectApplications.createdAt,
@@ -119,7 +128,7 @@ export default async function RfpBidCompilePage({
         {rfp.title}
       </h1>
       <p className="mt-2 text-sm text-ink-muted">
-        Pick 3–5 bids. Each becomes a TalentHand card on the client
+        Pick three to five bids. Each becomes a TalentHand card on the client
         magic-link. Per-Builder pricing seeds from each bid's
         proposed hourly rate.
       </p>
@@ -184,27 +193,28 @@ export default async function RfpBidCompilePage({
       ) : existingQuote ? null : (
         <form
           action={compileBidsIntoQuote}
+          id="compile-bids-form"
+          noValidate
           className="mt-6 space-y-6"
         >
           <input type="hidden" name="rfpId" value={id} />
+          <QuoteCompileRequirements />
 
           <Card>
             <CardTitle>Bids received ({bids.length})</CardTitle>
             <p className="mt-1 text-xs text-ink-muted">
-              Check 3–5 bids to include in the client comparison. Add a
-              curated relevance line beneath each pick — that's what
-              the client sees on the card.
+              Check three to five bids to include in the client comparison. Once
+              five are selected, the remaining choices lock until one is removed.
+              Add a curated relevance line beneath each pick — that&apos;s what the
+              client sees on the card.
             </p>
 
             <ul className="mt-4 space-y-3">
               {bids.map((b) => {
-                const rate = b.hourlyRate
-                  ? Number.parseFloat(b.hourlyRate)
-                  : null;
                 // Scrub the pitch preview before showing it to admin
                 // so admin catches PII the talent may have leaked and
                 // can note it back to them privately.
-                const scrub = scrubForClient(b.pitch);
+                const scrub = scrubForClient(richTextValuePlainText(b.pitch));
                 return (
                   <li
                     key={b.id}
@@ -215,7 +225,7 @@ export default async function RfpBidCompilePage({
                         type="checkbox"
                         name="applicationIds"
                         value={b.id}
-                        className="mt-1 h-4 w-4"
+                        className="mt-1 h-4 w-4 disabled:cursor-not-allowed disabled:opacity-40 data-[invalid=true]:outline data-[invalid=true]:outline-2 data-[invalid=true]:outline-red-500"
                       />
                       <div className="flex-1">
                         <div className="flex flex-wrap items-baseline gap-2">
@@ -233,13 +243,9 @@ export default async function RfpBidCompilePage({
                             })}
                             </span>
                           )}
-                          {rate !== null && (
-                            <span className="text-[11px] text-ink-faint">
-                              · ${rate.toFixed(0)}/hr
-                              {b.hoursPerWeek > 0 &&
-                                ` · ${b.hoursPerWeek} hrs/wk`}
-                            </span>
-                          )}
+                          <span className="text-[11px] text-ink-faint">
+                            · {formatProposalPrice(b)} · {formatProposalHours(b.hoursPerWeek, b.hoursPerWeekMax)}
+                          </span>
                           <span className="text-[11px] text-ink-faint">
                             · {b.proposedRole}
                           </span>
@@ -249,10 +255,13 @@ export default async function RfpBidCompilePage({
                             </span>
                           )}
                         </div>
-                        <p className="mt-2 whitespace-pre-wrap text-xs text-ink-muted">
-                          {scrub.scrubbed.slice(0, 400)}
-                          {scrub.scrubbed.length > 400 ? "…" : ""}
-                        </p>
+                        <StructuredText
+                          text={
+                            scrub.hits.length > 0
+                              ? scrub.scrubbed.slice(0, 400) + (scrub.scrubbed.length > 400 ? "…" : "")
+                              : b.pitch
+                          }
+                        />
                         <label className="mt-3 block">
                           <span className="text-[10px] uppercase tracking-wider text-ink-muted">
                             Relevance line (shown on client card)
@@ -286,25 +295,28 @@ export default async function RfpBidCompilePage({
                 <input
                   name="clientDisplayName"
                   defaultValue={rfp.clientId ?? ""}
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  required
+                  minLength={2}
+                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
                 />
               </label>
 
-              <label className="block">
+              <section>
                 <span className="text-xs uppercase tracking-wider text-ink-muted">
                   Scope summary
                 </span>
-                <textarea
+                <RichTextEditor
                   name="scopeSummary"
-                  rows={4}
-                  defaultValue={rfp.description}
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  initialValue={rfp.description ?? ""}
+                  required
+                  minLength={20}
+                  validationKey="scopeSummary"
                 />
-                <span className="text-[11px] text-ink-faint">
-                  Prefilled from the RFP description. Reword for
-                  client-facing tone as needed.
+                <span className="mt-2 block text-[11px] text-ink-faint">
+                  Edit the client-facing scope directly. Formatting is retained
+                  when the quote is compiled.
                 </span>
-              </label>
+              </section>
 
               <label className="block">
                 <span className="text-xs uppercase tracking-wider text-ink-muted">
@@ -313,8 +325,9 @@ export default async function RfpBidCompilePage({
                 <textarea
                   name="deliverables"
                   rows={4}
+                  required
                   placeholder={"Weekly deliverable\nMilestone 1: …\nMilestone 2: …"}
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
                 />
               </label>
 
@@ -324,8 +337,10 @@ export default async function RfpBidCompilePage({
                 </span>
                 <input
                   name="timeline"
+                  required
+                  minLength={4}
                   placeholder="8 weeks from kickoff — 2 discovery, 4 build, 2 polish"
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
                 />
               </label>
             </div>

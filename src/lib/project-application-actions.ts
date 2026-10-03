@@ -37,6 +37,8 @@ import {
 import { getAdminUsers } from "@/lib/readers/users";
 import { publicName } from "@/lib/types";
 import type { Notification, ProjectApplication } from "@/lib/types";
+import { richTextValuePlainText } from "@/lib/rich-text";
+import { parseWeeklyHours } from "@/lib/proposal-terms";
 
 /**
  * Create a notification. Writes to Postgres via the shared writer.
@@ -65,7 +67,7 @@ export async function applyToProject(formData: FormData) {
   const projectId = String(formData.get("projectId") ?? "");
   const proposedRole = String(formData.get("proposedRole") ?? "").trim();
   const pitch = String(formData.get("pitch") ?? "").trim();
-  const hoursRaw = String(formData.get("hoursPerWeek") ?? "0");
+  const pitchText = richTextValuePlainText(pitch);
   const portfolioRaw = String(formData.get("portfolioLink") ?? "").trim();
 
   // Reader swap 2026-08-28: was MOCK_PROJECTS, which meant a bid on a
@@ -89,11 +91,11 @@ export async function applyToProject(formData: FormData) {
     throw new Error("You already have a pending application on this project");
   }
 
-  if (proposedRole.length === 0 || pitch.length === 0) {
+  if (proposedRole.length === 0 || pitchText.length === 0) {
     throw new Error("Role and pitch are required");
   }
 
-  const hoursPerWeek = Math.max(0, Math.min(60, Number(hoursRaw) || 0));
+  const { hoursPerWeek, hoursPerWeekMax } = parseWeeklyHours(formData, 60);
   const portfolioLink = portfolioRaw.length > 0 ? portfolioRaw : null;
 
   const id = `pa_${Date.now().toString(36)}`;
@@ -104,6 +106,7 @@ export async function applyToProject(formData: FormData) {
     proposedRole,
     pitch,
     hoursPerWeek,
+    hoursPerWeekMax,
     portfolioLink,
     status: "pending",
     reviewedBy: null,
@@ -125,6 +128,7 @@ export async function applyToProject(formData: FormData) {
     proposedRole: application.proposedRole,
     pitch: application.pitch,
     hoursPerWeek: application.hoursPerWeek,
+    hoursPerWeekMax: application.hoursPerWeekMax,
     hourlyRate: null,
     portfolioLink: application.portfolioLink,
     status: application.status,
@@ -154,13 +158,15 @@ export async function applyToProject(formData: FormData) {
   revalidatePath("/notifications");
 }
 
-export async function decideProjectApplication(formData: FormData) {
+async function decideProjectApplication(
+  formData: FormData,
+  decision: "approve" | "reject",
+) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
   if (!user.isAdmin) throw new Error("Admin access required");
 
   const id = String(formData.get("id") ?? "");
-  const decision = String(formData.get("decision") ?? "");
   const adminNote = String(formData.get("adminNote") ?? "").trim();
 
   const app = await getApplicationById(id);
@@ -168,10 +174,6 @@ export async function decideProjectApplication(formData: FormData) {
   if (app.status !== "pending") {
     throw new Error("Already decided");
   }
-  if (decision !== "approve" && decision !== "reject") {
-    throw new Error("Unknown decision");
-  }
-
   const project = await getProjectById(app.projectId);
   if (!project) throw new Error("Project not found");
 
@@ -256,6 +258,18 @@ export async function decideProjectApplication(formData: FormData) {
   revalidatePath(`/projects/${project.id}`);
   revalidatePath("/admin/projects/applications");
   revalidatePath("/notifications");
+}
+
+/**
+ * Keep each review outcome bound to its submit control. Relying on a submit
+ * button's name/value dropped the decision from some Server Action requests.
+ */
+export async function approveProjectApplication(formData: FormData) {
+  return decideProjectApplication(formData, "approve");
+}
+
+export async function rejectProjectApplication(formData: FormData) {
+  return decideProjectApplication(formData, "reject");
 }
 
 export async function withdrawProjectApplication(formData: FormData) {

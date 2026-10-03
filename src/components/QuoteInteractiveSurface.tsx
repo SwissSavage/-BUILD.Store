@@ -39,6 +39,7 @@ import {
   type QuoteFlipReveaCrewMember,
 } from "@/components/QuoteFlipReveal";
 import { CardEyebrow } from "@/components/Card";
+import { StructuredText } from "@/components/StructuredText";
 import type { TalentHandDecision } from "@/components/TalentHand";
 import { QuoteDecidedUndoButton } from "@/components/QuoteDecidedUndoButton";
 import {
@@ -257,7 +258,7 @@ export function QuoteInteractiveSurface({
         <h2 className="mt-2 font-display text-3xl font-semibold">
           What the crew delivers
         </h2>
-        <p className="mt-4 text-ink-muted">{scope.summary}</p>
+        <StructuredText text={scope.summary} className="mt-4 text-ink-muted" />
 
         <ul className="mt-8 space-y-3">
           {scope.deliverables.map((deliverable) => (
@@ -286,7 +287,7 @@ export function QuoteInteractiveSurface({
           as adding up the Quote column on Jamar's Google Doc quote
           sheet, just live. */}
       <section className="mt-20">
-        <CardEyebrow>Engagement Total</CardEyebrow>
+        <CardEyebrow>Proposed pricing</CardEyebrow>
         <h2 className="mt-2 font-display text-3xl font-semibold">
           {aggregateHeadline(aggregate)}
           {aggregateUnitLabel(aggregate) && (
@@ -296,9 +297,9 @@ export function QuoteInteractiveSurface({
           )}
         </h2>
         <p className="mt-3 max-w-xl text-sm text-ink-muted">
-          Sum of the per-Builder quotes on the cards above. Each
-          Builder&apos;s price + timeline is theirs; the total is what
-          you pay when the full crew ships together.
+          These are the Builders&apos; proposed terms. A range or negotiable
+          price is settled with the team before contracting; it is not a
+          fixed amount due when you choose a crew.
         </p>
       </section>
 

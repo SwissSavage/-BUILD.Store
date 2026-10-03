@@ -10,10 +10,8 @@
  * link that renders all picks as TalentHand cards.
  *
  * We deliberately reuse createCooperativeQuote's storage shape (the
- * cooperative_quotes table with jsonb proposedBuilders + scope). Every
- * bid becomes a ProposedBuilder entry with pricing.type === "hourly"
- * seeded from the bid's hourlyRate, so the aggregate math on
- * /quotes/[token] already works — no new render surface required.
+ * cooperative_quotes table with jsonb proposedBuilders + scope). Each
+ * bid keeps its proposed pricing mode and range in the client quote.
  *
  * Non-goals for MVP:
  *  - Editing the compiled quote's scope after dispatch (remove +
@@ -35,10 +33,15 @@ import {
 } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { richTextValuePlainText } from "@/lib/rich-text";
+import { formatProposalHours } from "@/lib/proposal-terms";
 import type {
   CooperativeQuote,
   ProposedBuilder,
 } from "@/lib/types";
+
+const minimumProposalCount = 3;
+const maximumProposalCount = 5;
 
 function newQuoteId(): string {
   return `quote_${Date.now().toString(36)}_${Math.random()
@@ -53,10 +56,9 @@ function newClientToken(projectId: string): string {
 
 /**
  * Compile selected bids into a fresh cooperative quote for the client.
- * Admin picks between 3 and 5 bids (Jamar's "3–5 comparison cards"
- * design intent — enough choice to feel curated, few enough to skim).
- * Each pick becomes a ProposedBuilder priced hourly at the bid's
- * proposed rate.
+ * Admin picks between three and five bids: enough choice to compare,
+ * without overwhelming the client.
+ * Each pick becomes a ProposedBuilder with the contributor's terms.
  */
 export async function compileBidsIntoQuote(formData: FormData) {
   const admin = await requireAdmin();
@@ -74,14 +76,12 @@ export async function compileBidsIntoQuote(formData: FormData) {
   const deliverablesRaw = String(formData.get("deliverables") ?? "");
 
   if (!rfpId) throw new Error("rfpId is required.");
-  if (applicationIds.length < 3) {
-    throw new Error(
-      "Pick at least 3 bids. The client needs enough options to feel curated.",
-    );
+  if (applicationIds.length < minimumProposalCount) {
+    throw new Error(`Pick at least ${minimumProposalCount} bids for the client quote.`);
   }
-  if (applicationIds.length > 5) {
+  if (applicationIds.length > maximumProposalCount) {
     throw new Error(
-      "Pick at most 5 bids. Any more and the comparison card view stops being skimmable.",
+      `Pick at most ${maximumProposalCount} bids. Any more and the client comparison stops being skimmable.`,
     );
   }
   if (clientDisplayName.length < 2) {
@@ -143,7 +143,12 @@ export async function compileBidsIntoQuote(formData: FormData) {
       userId: projectApplications.userId,
       proposedRole: projectApplications.proposedRole,
       hoursPerWeek: projectApplications.hoursPerWeek,
+      hoursPerWeekMax: projectApplications.hoursPerWeekMax,
       hourlyRate: projectApplications.hourlyRate,
+      hourlyRateMax: projectApplications.hourlyRateMax,
+      priceMode: projectApplications.priceMode,
+      fixedPriceMin: projectApplications.fixedPriceMin,
+      fixedPriceMax: projectApplications.fixedPriceMax,
       pitch: projectApplications.pitch,
       status: projectApplications.status,
     })
@@ -183,21 +188,40 @@ export async function compileBidsIntoQuote(formData: FormData) {
     const relevance =
       perBidRelevance.length >= 10
         ? perBidRelevance
-        : p.pitch.split(".")[0]?.slice(0, 200) ?? "Strong fit for this scope.";
-    const rate = p.hourlyRate ? Number.parseFloat(p.hourlyRate) : 0;
-    const hoursLine = p.hoursPerWeek
-      ? `${p.hoursPerWeek} hrs/week across the engagement`
+        : richTextValuePlainText(p.pitch).split(".")[0]?.slice(0, 200) ?? "Strong fit for this scope.";
+    const priceMode = p.priceMode ?? (p.hourlyRate ? "hourly" : "negotiable");
+    if (priceMode === "hourly" && (!p.hourlyRate || Number(p.hourlyRate) <= 0)) {
+      throw new Error(`Bid ${p.id} needs a valid hourly minimum before sending it to the client.`);
+    }
+    if (priceMode === "fixed" && (!p.fixedPriceMin || Number(p.fixedPriceMin) <= 0)) {
+      throw new Error(`Bid ${p.id} needs a valid project price before sending it to the client.`);
+    }
+    const split = { talentSplit: 85, operationsSplit: 15 };
+    let pricing: ProposedBuilder["pricing"];
+    if (priceMode === "fixed") {
+      pricing = p.fixedPriceMax && Number(p.fixedPriceMax) > Number(p.fixedPriceMin)
+        ? { type: "range", baseAmountMin: Number(p.fixedPriceMin), baseAmountMax: Number(p.fixedPriceMax), ...split }
+        : { type: "fixed", baseAmount: Number(p.fixedPriceMin), minimumOnly: !p.fixedPriceMax, ...split };
+    } else if (priceMode === "hourly") {
+      pricing = {
+        type: "hourly",
+        hourlyRate: Number(p.hourlyRate),
+        hourlyRateMax: p.hourlyRateMax ? Number(p.hourlyRateMax) : null,
+        minimumOnly: !p.hourlyRateMax,
+        ...split,
+      };
+    } else {
+      pricing = { type: "negotiable", ...split };
+    }
+    const hoursLine = p.hoursPerWeek > 0
+      ? `${formatProposalHours(p.hoursPerWeek, p.hoursPerWeekMax)} across the engagement`
       : "Availability per engagement";
     return {
       userId: p.userId,
-      pricing: {
-        type: "hourly" as const,
-        hourlyRate: rate,
-        talentSplit: 85,
-        operationsSplit: 15,
-      },
+      pricing,
       timeline: hoursLine,
       relevance,
+      pitch: p.pitch,
     };
   });
 
@@ -221,7 +245,16 @@ export async function compileBidsIntoQuote(formData: FormData) {
     createdByUserId: admin.id,
     selectedLeadUserId: null,
   };
-  await db.insert(cooperativeQuotes).values(row);
+  // Sending the quote freezes exactly the proposals the client saw.
+  // A later quote removal cannot reopen them, because the client may
+  // already have reviewed the original magic link.
+  await db.transaction(async (tx) => {
+    await tx.insert(cooperativeQuotes).values(row);
+    await tx
+      .update(projectApplications)
+      .set({ clientPresentedAt: now })
+      .where(inArray(projectApplications.id, applicationIds));
+  });
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -249,4 +282,3 @@ export async function compileBidsIntoQuote(formData: FormData) {
   // magic link out to the client email.
   redirect(`/admin/cooperative-quotes`);
 }
-

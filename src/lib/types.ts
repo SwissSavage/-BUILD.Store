@@ -359,6 +359,8 @@ export interface Project {
   id: string;
   title: string;
   description: string;
+  /** Optional editorial image shown above the project or contract brief. */
+  featuredImageUrl?: string | null;
   industry: Industry;
   skillsRequired: string[];
   budget: string; // numeric(12,2)
@@ -2198,6 +2200,13 @@ export interface ProjectApplication {
   pitch: string;
   /** Estimated weekly availability the applicant can commit. */
   hoursPerWeek: number;
+  hoursPerWeekMax?: number | null;
+  /** Proposed hourly rate for contract bids; internal applications omit it. */
+  hourlyRate?: string | null;
+  hourlyRateMax?: string | null;
+  priceMode?: "hourly" | "fixed" | "negotiable" | null;
+  fixedPriceMin?: string | null;
+  fixedPriceMax?: string | null;
   /** Optional URL to relevant past work (overrides their Profile portfolio link). */
   portfolioLink: string | null;
   /**
@@ -2218,6 +2227,8 @@ export interface ProjectApplication {
   adminNote: string | null;
   /** When the applicant withdrew. Null unless status="withdrawn". */
   withdrawnAt: string | null;
+  /** When this proposal was included in a client-facing quote. */
+  clientPresentedAt?: string | null;
   createdAt: string;
 }
 
@@ -3548,6 +3559,8 @@ export type CooperativeQuotePricing =
       type: "fixed";
       /** Total contract value in USD. */
       baseAmount: number;
+      /** A proposed floor, with no stated upper limit. */
+      minimumOnly?: boolean;
       /** Builders' share as a percentage (0-100). Baseline is 85. */
       talentSplit: number;
       /** Cooperative operations share as a percentage. Baseline is 15. */
@@ -3568,9 +3581,16 @@ export type CooperativeQuotePricing =
       type: "hourly";
       /** Hourly rate in USD. Open-ended engagement (no total). */
       hourlyRate: number;
+      hourlyRateMax?: number | null;
+      minimumOnly?: boolean;
       /** Builders' share as a percentage (0-100). Baseline is 85. */
       talentSplit: number;
       /** Cooperative operations share as a percentage. Baseline is 15. */
+      operationsSplit: number;
+    }
+  | {
+      type: "negotiable";
+      talentSplit: number;
       operationsSplit: number;
     };
 
@@ -3597,6 +3617,11 @@ export interface ProposedBuilder {
    */
   pricing: CooperativeQuotePricing;
   /**
+   * Client-facing price saved when the builder payout is grossed up.
+   * Older quotes omit this and retain their original client-price shape.
+   */
+  clientPricing?: CooperativeQuotePricing;
+  /**
    * Per-Builder timeline in human terms — e.g. "6 weeks" or "part-
    * time across the engagement." Distinct from `scope.timeline`,
    * which is the engagement-level rhythm (kickoff → close phases).
@@ -3608,6 +3633,9 @@ export interface ProposedBuilder {
    * the TalentHand.
    */
   relevance: string;
+  /** Full proposal text when a quote is compiled from an RFP bid. Older and
+   * manually composed quotes omit this and use the curated relevance line. */
+  pitch?: string;
 }
 
 export interface CooperativeQuote {
@@ -4198,6 +4226,7 @@ export type AuditLogAction =
   // "purged" and "trashed" are not the same event to anyone reading
   // it later.
   | "project.edited"
+  | "proposal.edited_by_admin"
   | "proposal.removed_from_queue"
   | "proposal.restored_to_queue"
   | "project.trashed"
@@ -4316,6 +4345,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "canonization.caption_updated": "Canonization caption updated",
   "canonization.phygital_requested": "Phygital canon card requested",
   "project.edited": "Listing edited",
+  "proposal.edited_by_admin": "Proposal edited by admin",
   "proposal.removed_from_queue": "Proposal removed from the queue",
   "proposal.restored_to_queue": "Proposal restored to the queue",
   "project.trashed": "Project moved to trash",

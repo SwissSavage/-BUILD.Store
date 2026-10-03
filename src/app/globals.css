@@ -29,6 +29,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 /* Marquee-style scroll for the header banner.
  *
  * The track is exactly two identical halves and the animation runs
@@ -302,10 +312,50 @@ body {
   transform: rotateY(180deg);
 }
 
+/* Same conic border and hover cadence as the Future Modern landing CTA. */
+@property --fm-quote-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.fm-quote-card-option {
+  position: relative;
+  border-radius: 1rem;
+}
+
+.fm-quote-card-option--selected::after {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  z-index: 1;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--fm-quote-angle, 0deg), #c7228a, color-mix(in srgb, #c7228a 60%, black), color-mix(in oklch, #c7228a 14%, transparent), #c7228a);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: fm-quote-rotate-border 3s linear infinite;
+}
+
+.fm-quote-card-option--selected:hover::after {
+  animation-duration: 1.5s;
+}
+
+@keyframes fm-quote-rotate-border {
+  to { --fm-quote-angle: 360deg; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fm-card-flipper-inner {
     transition: none;
     transition-delay: 0s;
+  }
+
+  .fm-quote-card-option--selected::after {
+    animation: none;
   }
 }
 

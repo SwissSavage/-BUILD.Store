@@ -49,6 +49,7 @@ import { Card, CardEyebrow } from "@/components/Card";
 import { TierBadge } from "@/components/TierBadge";
 import { Avatar } from "@/components/Avatar";
 import { MvpCard } from "@/components/MvpCard";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import {
   loadProfileEditData,
   saveProfile,

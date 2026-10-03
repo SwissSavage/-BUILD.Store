@@ -18,8 +18,10 @@
  * Client component because it holds `open` state + the sign-out form.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
+import { Bell, Menu, X } from "lucide-react";
 import { signOut } from "@/lib/auth-actions";
 
 interface MobileMenuAppProps {
@@ -34,11 +36,18 @@ const memberLinks = [
   { href: "/jobs", label: "Jobs" },
   { href: "/contracts", label: "Contracts" },
   { href: "/projects", label: "Projects" },
-  { href: "/wallet", label: "Wallet" },
   { href: "/store", label: "Store" },
   { href: "/orders", label: "Orders" },
   { href: "/portfolio", label: "Portfolio" },
+  { href: "/community", label: "Community" },
+];
+
+const accountLinks = [
+  { href: "/profile", label: "Profile" },
   { href: "/locker", label: "Locker" },
+  { href: "/wallet", label: "Wallet" },
+  { href: "/profile/edit/paperwork", label: "Signed agreements" },
+  { href: "/profile/edit/paperwork", label: "Open agreements" },
 ];
 
 const publicLinks = [
@@ -47,6 +56,7 @@ const publicLinks = [
   { href: "/jobs", label: "Jobs" },
   { href: "/contracts", label: "Contracts" },
   { href: "/portfolio", label: "Portfolio" },
+  { href: "/community", label: "Community" },
   { href: "/cohort", label: "Cohort" },
   { href: "/articles", label: "Articles" },
   { href: "/partners", label: "Partners" },
@@ -59,7 +69,6 @@ const publicAuthLinks = [
 ];
 
 const adminLinks = [
-  { href: "/profile", label: "Profile" },
   { href: "/admin", label: "Admin home" },
   { href: "/admin/team", label: "Team" },
   { href: "/admin/members", label: "Members" },
@@ -92,6 +101,14 @@ export function MobileMenuApp({
   unread,
 }: MobileMenuAppProps) {
   const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (open && dialog && !dialog.open) dialog.showModal();
+  }, [open]);
+
+  const closeMenu = () => setOpen(false);
 
   return (
     <>
@@ -102,20 +119,7 @@ export function MobileMenuApp({
         aria-expanded={open}
         className="relative inline-flex items-center justify-center rounded-md p-2 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
       >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M4 6h16M4 12h16M4 18h16"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </svg>
+        <Menu aria-hidden="true" size={24} strokeWidth={1.6} />
         {/* Notification dot on the hamburger so unread state is visible
             before the user opens the menu. Only shows for logged-in
             users with unread notifications. */}
@@ -127,18 +131,26 @@ export function MobileMenuApp({
         )}
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col bg-[var(--surface)]"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Navigation menu"
-        >
+      {open &&
+        createPortal(
+          <dialog
+            ref={dialogRef}
+            onCancel={(event) => {
+              event.preventDefault();
+              closeMenu();
+            }}
+            onClose={closeMenu}
+            aria-label="Navigation menu"
+            className="fixed inset-0 m-0 flex h-[100dvh] w-screen max-h-none max-w-none flex-col overflow-hidden border-0 bg-[var(--surface)] p-0 text-ink outline-none"
+          >
+          {/* Native dialog puts the menu in the browser's top layer.
+              The Nav header has backdrop-filter, which otherwise turns a
+              fixed child into a header-sized overlay on mobile. */}
           {/* Drawer header — logo + close button */}
           <div className="flex items-center justify-between border-b border-[var(--surface-border)] px-6 py-4">
             <Link
               href="/"
-              onClick={() => setOpen(false)}
+              onClick={closeMenu}
               className="flex items-center gap-2.5 font-display text-xl font-semibold tracking-tight"
               aria-label="Future Modern home"
             >
@@ -155,24 +167,12 @@ export function MobileMenuApp({
             </Link>
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={closeMenu}
+              autoFocus
               aria-label="Close menu"
               className="inline-flex items-center justify-center rounded-md p-2 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
             >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M6 6l12 12M6 18L18 6"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <X aria-hidden="true" size={24} strokeWidth={1.6} />
             </button>
           </div>
 
@@ -185,7 +185,7 @@ export function MobileMenuApp({
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        onClick={() => setOpen(false)}
+                        onClick={closeMenu}
                         className="block rounded-lg px-4 py-3 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                       >
                         {item.label}
@@ -195,10 +195,13 @@ export function MobileMenuApp({
                   <li>
                     <Link
                       href="/notifications"
-                      onClick={() => setOpen(false)}
+                      onClick={closeMenu}
                       className="flex items-center justify-between rounded-lg px-4 py-3 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                     >
-                      <span>🔔 Notifications</span>
+                      <span className="inline-flex items-center gap-2">
+                        <Bell aria-hidden="true" size={18} strokeWidth={1.6} />
+                        Notifications
+                      </span>
                       {unread > 0 && (
                         <span className="fm-btn-primary inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-2 text-xs font-medium">
                           {unread > 9 ? "9+" : unread}
@@ -206,23 +209,30 @@ export function MobileMenuApp({
                       )}
                     </Link>
                   </li>
-                  {!isAdmin && (
-                    <li>
+                </ul>
+
+                <div className="my-6 border-t border-[var(--surface-border)]" />
+                <h2 className="px-4 pb-2 text-sm font-medium text-ink-muted">
+                  Account
+                </h2>
+                <ul className="space-y-1 text-base">
+                  {accountLinks.map((item) => (
+                    <li key={item.label}>
                       <Link
-                        href="/profile"
-                        onClick={() => setOpen(false)}
-                        className="block rounded-lg px-4 py-3 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
+                        href={item.href}
+                        onClick={closeMenu}
+                        className="block rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                       >
-                        Profile
+                        {item.label}
                       </Link>
                     </li>
-                  )}
-                  {!isAdmin && isEpk && (
+                  ))}
+                  {isEpk && (
                     <li>
                       <Link
                         href="/profile/epk"
-                        onClick={() => setOpen(false)}
-                        className="block rounded-lg px-4 py-3 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
+                        onClick={closeMenu}
+                        className="block rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                       >
                         EPK
                       </Link>
@@ -234,15 +244,15 @@ export function MobileMenuApp({
                 {isAdmin && (
                   <>
                     <div className="my-6 border-t border-[var(--surface-border)]" />
-                    <p className="px-4 pb-2 text-[11px] uppercase tracking-wider text-brand-magentaText">
+                    <h2 className="px-4 pb-2 text-sm font-medium text-ink-muted">
                       Admin
-                    </p>
+                    </h2>
                     <ul className="space-y-1 text-base">
                       {adminLinks.map((item) => (
                         <li key={item.href}>
                           <Link
                             href={item.href}
-                            onClick={() => setOpen(false)}
+                            onClick={closeMenu}
                             className="block rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                           >
                             {item.label}
@@ -264,7 +274,7 @@ export function MobileMenuApp({
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        onClick={() => setOpen(false)}
+                        onClick={closeMenu}
                         className="block rounded-lg px-4 py-3 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                       >
                         {item.label}
@@ -280,7 +290,7 @@ export function MobileMenuApp({
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        onClick={() => setOpen(false)}
+                        onClick={closeMenu}
                         className="block rounded-lg px-4 py-3 text-ink-muted transition-colors hover:bg-[var(--surface-elevated)] hover:text-ink"
                       >
                         {item.label}
@@ -308,15 +318,16 @@ export function MobileMenuApp({
             ) : (
               <Link
                 href="/signup"
-                onClick={() => setOpen(false)}
+                onClick={closeMenu}
                 className="fm-btn-primary block rounded-full px-5 py-3 text-center text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
               >
                 $BUILD a team
               </Link>
             )}
           </div>
-        </div>
-      )}
+          </dialog>,
+          document.body,
+        )}
     </>
   );
 }

@@ -32,6 +32,7 @@ import { compileBidsIntoQuote } from "@/lib/rfp-bid-compile-actions";
 import { scrubForClient } from "@/lib/pii-scrub";
 import { StructuredText } from "@/components/StructuredText";
 import { RichTextEditor } from "@/components/RichTextEditor";
+import type { ProposalAttachment } from "@/lib/proposal-attachments";
 import { QuoteCompileRequirements } from "@/components/BidSelectionRequirement";
 import { richTextValuePlainText } from "@/lib/rich-text";
 import type { CooperativeQuote, ProposedBuilder } from "@/lib/types";
@@ -92,6 +93,7 @@ export default async function RfpBidCompilePage({
       fixedPriceMin: projectApplications.fixedPriceMin,
       fixedPriceMax: projectApplications.fixedPriceMax,
       portfolioLink: projectApplications.portfolioLink,
+      attachments: projectApplications.attachments,
       status: projectApplications.status,
       createdAt: projectApplications.createdAt,
       firstName: users.firstName,
@@ -268,13 +270,102 @@ export default async function RfpBidCompilePage({
                             </span>
                           )}
                         </div>
-                        <StructuredText
-                          text={
-                            scrub.hits.length > 0
-                              ? scrub.scrubbed.slice(0, 400) + (scrub.scrubbed.length > 400 ? "…" : "")
-                              : b.pitch
-                          }
-                        />
+                        {/* The pitch is client-facing copy and was
+                            read-only here, carried to the quote
+                            verbatim. On a quote assembled from several
+                            bids that meant no way to fix voice, length
+                            or anything a builder wrote badly, with the
+                            client reading the seams.
+
+                            Editing writes to the quote only. The bid
+                            row keeps the builder's original words, so
+                            what they submitted is still on the record.
+
+                            Prefilled with the scrubbed text when the
+                            PII scan flagged something, so saving
+                            without touching it does not put contact
+                            details back in front of a client. */}
+                        <label className="mt-3 block">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                            Pitch (client-facing, edit freely)
+                          </span>
+                          <RichTextEditor
+                            name={`pitch_${b.id}`}
+                            initialValue={
+                              draftBuilderByUserId.get(b.userId)?.pitch ??
+                              (scrub.hits.length > 0 ? scrub.scrubbed : b.pitch)
+                            }
+                          />
+                        </label>
+
+                        {/* What they actually submitted, kept in view.
+                            The framing is the product here: most
+                            talent cannot pitch themselves, which is
+                            the whole reason an admin writes the
+                            client-facing version. But the editor
+                            replaces their text, so without this you
+                            lose the source the moment you start
+                            writing, and the facts you are allowed to
+                            repeat live in it.
+
+                            Always the unedited original, never the
+                            scrubbed copy, because judging whether a
+                            claim is theirs to make means reading what
+                            they wrote. */}
+                        <details className="mt-3 group">
+                          <summary className="cursor-pointer list-none text-[10px] uppercase tracking-wider text-ink-faint hover:text-brand-magentaText">
+                            What they wrote
+                            <span className="ml-1 group-open:hidden">▸</span>
+                            <span className="ml-1 hidden group-open:inline">▾</span>
+                          </summary>
+                          <div className="mt-2 rounded-lg border border-dashed border-[var(--surface-border)] px-3 py-2">
+                            <StructuredText text={b.pitch} />
+                          </div>
+                        </details>
+
+                        {/* Portfolio and attachments. These are on the
+                            bid row and were selected but never rendered
+                            here, so the one page where you decide who
+                            goes to the client showed none of their
+                            work. */}
+                        {(b.portfolioLink ||
+                          (b.attachments as ProposalAttachment[] | null)?.length) && (
+                          <div className="mt-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2">
+                            <p className="text-[10px] uppercase tracking-wider text-ink-muted">
+                              Their work
+                            </p>
+                            <ul className="mt-2 space-y-1">
+                              {b.portfolioLink && (
+                                <li>
+                                  <a
+                                    href={b.portfolioLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-brand-magentaText hover:underline"
+                                  >
+                                    Portfolio link →
+                                  </a>
+                                </li>
+                              )}
+                              {((b.attachments as ProposalAttachment[] | null) ?? []).map(
+                                (file) => (
+                                  <li key={file.name}>
+                                    <a
+                                      href={`data:${file.mimeType};base64,${file.base64}`}
+                                      download={file.name}
+                                      className="text-xs text-brand-magentaText hover:underline"
+                                    >
+                                      {file.name}
+                                    </a>
+                                    <span className="ml-2 text-[10px] text-ink-faint">
+                                      {(file.sizeBytes / 1024).toFixed(0)} KB
+                                    </span>
+                                  </li>
+                                ),
+                              )}
+                            </ul>
+                          </div>
+                        )}
                         <label className="mt-3 block">
                           <span className="text-[10px] uppercase tracking-wider text-ink-muted">
                             Relevance line (shown on client card)

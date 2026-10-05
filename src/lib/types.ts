@@ -3686,8 +3686,27 @@ export interface ProposedBuilder {
    * the same reason the framing is admin-authored.
    */
   workSamples?: { label: string; url?: string; context: string }[];
-  /** Full proposal text when a quote is compiled from an RFP bid. Older and
-   * manually composed quotes omit this and use the curated relevance line. */
+  /**
+   * The member's proposal text, as submitted or as edited on the
+   * compile form. Admin-facing reference only.
+   *
+   * ───────────────────────────────────────────────────────────
+   * WHY IT IS NOT CLIENT-FACING (2026-10-05)
+   *
+   * Neither sent $BUILD quote sheet has a column for a proposal. What
+   * the client reads is the extraction: relevance, strengths,
+   * trade-offs, deliverables and work samples.
+   *
+   * The reason is not length. A member writing about themselves is
+   * selling themselves, and some of what they write points away from
+   * the cooperative: a real bid argued at length for hiring an agency
+   * over a solo consultant, complete with a bench and a replacement
+   * guarantee. On that firm's own site it is good positioning. Printed
+   * inside an FM quote sheet it is an argument for the client to go
+   * straight to them. Nobody does this carelessly; everybody pitching
+   * does it, and noticing is the job.
+   * ───────────────────────────────────────────────────────────
+   */
   pitch?: string;
 }
 

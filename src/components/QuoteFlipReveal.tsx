@@ -32,7 +32,6 @@ export interface QuoteFlipReveaCrewMember {
   weaknesses?: string;
   /** Named links with a line on what the person did, not bare URLs. */
   workSamples?: { label: string; url?: string; context: string }[];
-  pitch?: string;
   quoteLine: {
     pricingHeadline: string;
     pricingUnit: string;
@@ -225,19 +224,6 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
                     ))}
                   </ul>
                 </div>
-              )}
-
-              {selected.pitch && (
-                <details className="group mt-6 max-w-3xl">
-                  <summary className="cursor-pointer list-none text-[11px] uppercase tracking-wider text-ink-faint hover:text-brand-magentaText">
-                    Full proposal
-                    <span className="ml-1 group-open:hidden">▸</span>
-                    <span className="ml-1 hidden group-open:inline">▾</span>
-                  </summary>
-                  <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink-muted">
-                    {selected.pitch}
-                  </p>
-                </details>
               )}
 
               <p className="mt-6 text-sm text-ink-faint">{selected.quoteLine.timeline}</p>

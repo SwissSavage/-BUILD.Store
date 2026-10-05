@@ -43,7 +43,6 @@ import {
   pricingHeadline,
   pricingUnitLabel,
 } from "@/lib/quote-pricing";
-import { richTextValuePlainText } from "@/lib/rich-text";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getVerifiedQuoteClient } from "@/lib/quote-client-session";
 import { QuoteSignerVerification } from "@/components/QuoteSignerVerification";
@@ -184,7 +183,12 @@ export default async function CooperativeQuotePage({
         strengths: b.strengths,
         weaknesses: b.weaknesses,
         workSamples: b.workSamples,
-        pitch: b.pitch ? richTextValuePlainText(b.pitch) : undefined,
+        // The pitch is deliberately not projected to the client.
+        // What goes out is the extraction: relevance, strengths,
+        // trade-offs, deliverables and work samples. Neither sent
+        // $BUILD quote sheet has a column for a proposal, and a member
+        // writing about themselves is always selling themselves, which
+        // on a cooperative quote points the client the wrong way.
         quoteLine: {
           pricingHeadline: pricingHeadline(b.pricing),
           pricingUnit: pricingUnitLabel(b.pricing),

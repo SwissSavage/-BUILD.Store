@@ -32,6 +32,7 @@ import { revalidatePath } from "next/cache";
 import { notify } from "@/lib/writers/notifications";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
+import { getVerifiedQuoteClient } from "@/lib/quote-client-session";
 import { secureToken } from "@/lib/secure-token";
 import {
   cooperativeQuotes,
@@ -440,38 +441,38 @@ export async function approveCooperativeQuote(formData: FormData) {
   const selectedLeadUserId = String(
     formData.get("selectedLeadUserId") ?? "",
   ).trim();
-  // Task #45 — client contact info captured on approve so the dual-
-  // envelope SOW dispatch has an address. Magic-link viewing is
-  // anonymous, so this is the first point where the client identifies.
-  const clientContactEmail = String(
-    formData.get("clientContactEmail") ?? "",
-  )
-    .trim()
-    .toLowerCase();
-  const clientContactName = String(
-    formData.get("clientContactName") ?? "",
-  ).trim();
+  // Task #45 captured the SOW address from the form, because viewing
+  // was anonymous and approve was the first point the client said who
+  // they were. Saying is not proving: anyone with the link could put
+  // any address on the agreement. Both now come from the verified
+  // session below and the form fields are ignored.
 
   if (!token) throw new Error("Quote token is required.");
   if (!selectedLeadUserId) {
     throw new Error("Select a lead builder before approving.");
   }
-  if (
-    !clientContactEmail ||
-    !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clientContactEmail)
-  ) {
-    throw new Error("A valid contact email is required to send you the SOW.");
-  }
-  if (clientContactName.length < 2) {
-    throw new Error("Your name is required so we can address the SOW to you.");
-  }
-
   const [quote] = await db
     .select()
     .from(cooperativeQuotes)
     .where(eq(cooperativeQuotes.clientToken, token))
     .limit(1);
   if (!quote) throw new Error("Quote not found.");
+  // Every decision on a quote needs a verified mailbox behind it. The
+  // token gets you the proposal; it does not get you the signature.
+  // quote-verification-actions.ts carries the reasoning for why reading
+  // stays open while deciding does not.
+  const signer = await getVerifiedQuoteClient(quote.id, token);
+  if (!signer) {
+    throw new Error(
+      "Confirm your email before deciding. Enter your address on the proposal and we will send you a code.",
+    );
+  }
+
+  // The SOW is addressed to the mailbox that was proved, never to what
+  // the form said. This is the whole point of the gate above.
+  const clientContactEmail = signer.email;
+  const clientContactName = signer.name;
+
   if (quote.status === "approved" || quote.status === "declined") {
     throw new Error(
       `This quote has already been ${quote.status}. Contact your Future Modern account owner if you need to change the decision.`,
@@ -759,6 +760,17 @@ export async function declineCooperativeQuote(formData: FormData) {
     .where(eq(cooperativeQuotes.clientToken, token))
     .limit(1);
   if (!quote) throw new Error("Quote not found.");
+  // Every decision on a quote needs a verified mailbox behind it. The
+  // token gets you the proposal; it does not get you the signature.
+  // quote-verification-actions.ts carries the reasoning for why reading
+  // stays open while deciding does not.
+  const signer = await getVerifiedQuoteClient(quote.id, token);
+  if (!signer) {
+    throw new Error(
+      "Confirm your email before deciding. Enter your address on the proposal and we will send you a code.",
+    );
+  }
+
   if (quote.status === "approved" || quote.status === "declined") {
     throw new Error(
       `This quote has already been ${quote.status}. Contact your Future Modern account owner if you need to change the decision.`,
@@ -868,6 +880,17 @@ export async function undoCooperativeQuoteDecision(formData: FormData) {
     .where(eq(cooperativeQuotes.clientToken, token))
     .limit(1);
   if (!quote) throw new Error("Quote not found.");
+  // Every decision on a quote needs a verified mailbox behind it. The
+  // token gets you the proposal; it does not get you the signature.
+  // quote-verification-actions.ts carries the reasoning for why reading
+  // stays open while deciding does not.
+  const signer = await getVerifiedQuoteClient(quote.id, token);
+  if (!signer) {
+    throw new Error(
+      "Confirm your email before deciding. Enter your address on the proposal and we will send you a code.",
+    );
+  }
+
   if (quote.status !== "approved" && quote.status !== "declined") {
     throw new Error(
       "Only approved or declined quotes can be reopened.",

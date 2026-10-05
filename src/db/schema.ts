@@ -1711,6 +1711,62 @@ export const profileDisclosureReviews = pgTable("profile_disclosure_reviews", {
 });
 
 
+/**
+ * Proving that whoever is approving a quote controls the mailbox they
+ * are approving as.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-05)
+ *
+ * approveCooperativeQuote, declineCooperativeQuote and
+ * undoCooperativeQuoteDecision each took the client token and nothing
+ * else. Anyone holding the URL could approve a six-figure engagement,
+ * choose which builder led it, and type any name and address, which
+ * then became the address the SOW envelope was dispatched to. The code
+ * described this as the client identifying themselves. It was the
+ * client asserting something, which is not the same word.
+ *
+ * Reading the quote stays open on the token, deliberately. A champion
+ * forwarding the proposal up the ladder is the motion working, and
+ * putting a sign-in wall in front of the CFO kills the forward you
+ * wanted. It is the decision that needs an identity, not the read.
+ *
+ * WHAT THIS DOES AND DOES NOT CHECK
+ *
+ * It checks that the signer controls the mailbox. It does not check
+ * who they are or whether they were on a list, because that was the
+ * call: a quote only ever goes to people close to the deal, plenty of
+ * real buyers sign from a personal address, and someone who signs
+ * without the authority to sign is answerable for having signed. Same
+ * standard every e-signature product uses. The point is that the
+ * address on the agreement is real and reachable.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const quoteClientVerifications = pgTable("quote_client_verifications", {
+  id: text("id").primaryKey(),
+  quoteId: text("quote_id")
+    .notNull()
+    .references(() => cooperativeQuotes.id, { onDelete: "cascade" }),
+  /** Lowercased. What the signature will be attributed to. */
+  email: text("email").notNull(),
+  /** How they asked to be addressed on the SOW. */
+  name: text("name").notNull(),
+  /** SHA-256 of the one-time code. The code itself is never stored. */
+  codeHash: text("code_hash").notNull(),
+  /**
+   * Random secret handed to the browser in an httpOnly cookie once the
+   * code checks out. Server-side session rather than a signed claim,
+   * so revoking is a DELETE.
+   */
+  sessionToken: text("session_token"),
+  /** Wrong guesses. Five and the row is spent. */
+  attempts: integer("attempts").notNull().default(0),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  expiresAt: timestamp("expires_at", { mode: "string", withTimezone: true }).notNull(),
+  verifiedAt: timestamp("verified_at", { mode: "string", withTimezone: true }),
+});
+
+
 export const schema = {
   users,
   accounts,
@@ -1775,4 +1831,5 @@ export const schema = {
   communityMessages,
   payoutMethods,
   profileDisclosureReviews,
+  quoteClientVerifications,
 } as const;

@@ -34,6 +34,7 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { QuoteSignerVerification } from "@/components/QuoteSignerVerification";
 import {
   QuoteFlipReveal,
   type QuoteFlipReveaCrewMember,
@@ -68,6 +69,12 @@ interface QuoteInteractiveSurfaceProps {
    */
   proposedBuilders: ProposedBuilder[];
   crew: QuoteFlipReveaCrewMember[];
+  /**
+   * The mailbox this browser has proved it controls on this quote, or
+   * null. Decided server-side from an httpOnly cookie; the component
+   * only ever reads it, so it cannot be faked from the client.
+   */
+  verifiedAs: { email: string; name: string } | null;
   previewOnly?: boolean;
 }
 
@@ -76,6 +83,7 @@ export function QuoteInteractiveSurface({
   scope,
   proposedBuilders,
   crew,
+  verifiedAs,
   previewOnly = false,
 }: QuoteInteractiveSurfaceProps) {
   const router = useRouter();
@@ -84,11 +92,9 @@ export function QuoteInteractiveSurface({
   );
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
-  // Task #45 — client contact captured on approve so we can dispatch
-  // the client SOW envelope. Magic-link viewing is anonymous, so this
-  // is the first (and only) point where the client identifies.
-  const [clientContactEmail, setClientContactEmail] = useState("");
-  const [clientContactName, setClientContactName] = useState("");
+  // Task #45 captured the SOW contact here, as free text, because
+  // viewing was anonymous. It is now whatever mailbox the signer
+  // proved, read server-side and passed in as `verifiedAs`.
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   // Optimistic post-decision state. Once the server action returns,
@@ -126,25 +132,14 @@ export function QuoteInteractiveSurface({
 
   function handleApprove() {
     if (!selectedLeadUserId || pending) return;
-    // Task #45 — client email + name are required on approve so
-    // the dual-envelope SOW dispatch has a target. Cheap client-side
-    // guard; the server action also validates.
-    const trimmedEmail = clientContactEmail.trim();
-    const trimmedName = clientContactName.trim();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmedEmail)) {
-      setError("Enter a valid email so we can send you the SOW.");
-      return;
-    }
-    if (trimmedName.length < 2) {
-      setError("Enter your name so we can address the SOW to you.");
+    if (!verifiedAs) {
+      setError("Confirm your email before approving.");
       return;
     }
     setError(null);
     const formData = new FormData();
     formData.set("token", clientToken);
     formData.set("selectedLeadUserId", selectedLeadUserId);
-    formData.set("clientContactEmail", trimmedEmail);
-    formData.set("clientContactName", trimmedName);
     startTransition(async () => {
       try {
         await approveCooperativeQuote(formData);
@@ -328,41 +323,28 @@ export function QuoteInteractiveSurface({
           </p>
         )}
 
-        {/* Task #45 — capture client contact so we can send the SOW.
-            Displayed alongside the approve button so it's clearly the
-            same action, not an extra step. */}
-        {selectedLeadUserId && (
-          <div className="mt-6 grid gap-3 md:grid-cols-2">
-            <label className="block">
-              <span className="text-[11px] uppercase tracking-wider text-ink-muted">
-                Your name (for the SOW)
-              </span>
-              <input
-                type="text"
-                value={clientContactName}
-                onChange={(e) => setClientContactName(e.target.value)}
-                placeholder="Full name"
-                disabled={pending}
-                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none disabled:opacity-60"
-              />
-            </label>
-            <label className="block">
-              <span className="text-[11px] uppercase tracking-wider text-ink-muted">
-                Email to send the SOW to
-              </span>
-              <input
-                type="email"
-                value={clientContactEmail}
-                onChange={(e) => setClientContactEmail(e.target.value)}
-                placeholder="name@company.com"
-                disabled={pending}
-                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none disabled:opacity-60"
-              />
-            </label>
-          </div>
+        {/* Who the agreement will be addressed to. Not editable here:
+            it is the mailbox that answered the code, which is the only
+            reason the name on a signed SOW means anything. */}
+        {verifiedAs ? (
+          <p className="mt-6 text-sm text-ink-muted">
+            Signing as <span className="text-ink">{verifiedAs.name}</span> ·{" "}
+            {verifiedAs.email}
+          </p>
+        ) : (
+          !previewOnly && <QuoteSignerVerification clientToken={clientToken} />
         )}
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        {/* The decision controls only exist once a mailbox has
+            answered. The server actions enforce this too; hiding them
+            here is so a buyer is not presented with a button that will
+            refuse them. */}
+        <div
+          className={`mt-6 flex flex-wrap gap-3 ${
+            verifiedAs ? "" : "pointer-events-none opacity-40"
+          }`}
+          aria-hidden={!verifiedAs}
+        >
           <button
             type="button"
             onClick={handleApprove}

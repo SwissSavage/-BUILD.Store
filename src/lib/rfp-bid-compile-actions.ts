@@ -222,13 +222,19 @@ export async function compileBidsIntoQuote(formData: FormData) {
         `List what each Builder is delivering, one per line. Missing for bid ${p.id}.`,
       );
     }
+    // Client-facing pitch. Editable on the compile form, because a
+    // quote assembled from several bids has to read as one document
+    // and the builder's own words are not always the ones to send.
+    // The bid row is untouched: what they submitted stays on the
+    // record, and this is the version the client sees.
+    const editedPitch = String(formData.get(`pitch_${p.id}`) ?? "").trim();
     return {
       userId: p.userId,
       pricing,
       deliverables: perBidDeliverables,
       timeline: hoursLine,
       relevance,
-      pitch: p.pitch,
+      pitch: editedPitch.length > 0 ? editedPitch : p.pitch,
     };
   });
 

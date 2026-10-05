@@ -270,34 +270,6 @@ export default async function RfpBidCompilePage({
                             </span>
                           )}
                         </div>
-                        {/* The pitch is client-facing copy and was
-                            read-only here, carried to the quote
-                            verbatim. On a quote assembled from several
-                            bids that meant no way to fix voice, length
-                            or anything a builder wrote badly, with the
-                            client reading the seams.
-
-                            Editing writes to the quote only. The bid
-                            row keeps the builder's original words, so
-                            what they submitted is still on the record.
-
-                            Prefilled with the scrubbed text when the
-                            PII scan flagged something, so saving
-                            without touching it does not put contact
-                            details back in front of a client. */}
-                        <label className="mt-3 block">
-                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">
-                            Pitch (client-facing, edit freely)
-                          </span>
-                          <RichTextEditor
-                            name={`pitch_${b.id}`}
-                            initialValue={
-                              draftBuilderByUserId.get(b.userId)?.pitch ??
-                              (scrub.hits.length > 0 ? scrub.scrubbed : b.pitch)
-                            }
-                          />
-                        </label>
-
                         {/* Strengths and weaknesses carry most of the
                             weight in a real $BUILD quote sheet, and
                             the app had nowhere to put them. The client
@@ -362,20 +334,20 @@ export default async function RfpBidCompilePage({
                           />
                         </label>
 
-                        {/* What they actually submitted, kept in view.
-                            The framing is the product here: most
-                            talent cannot pitch themselves, which is
-                            the whole reason an admin writes the
-                            client-facing version. But the editor
-                            replaces their text, so without this you
-                            lose the source the moment you start
-                            writing, and the facts you are allowed to
-                            repeat live in it.
+                        {/* Source material, and nothing more. The
+                            pitch does not reach the client at all: the
+                            price points, deliverables, strengths,
+                            trade-offs and work samples speak for
+                            themselves, and neither sent $BUILD quote
+                            sheet has a column for a proposal.
 
-                            Always the unedited original, never the
-                            scrubbed copy, because judging whether a
-                            claim is theirs to make means reading what
-                            they wrote. */}
+                            So there is nothing to edit here. This is
+                            where you read what they claimed, pull out
+                            the facts worth repeating, and write the
+                            cells above. Always the unedited original,
+                            never the scrubbed copy, because judging
+                            whether a claim is theirs to make means
+                            reading what they actually wrote. */}
                         <details className="mt-3 group">
                           <summary className="cursor-pointer list-none text-[10px] uppercase tracking-wider text-ink-faint hover:text-brand-magentaText">
                             What they wrote

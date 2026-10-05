@@ -222,13 +222,6 @@ export async function compileBidsIntoQuote(formData: FormData) {
         `List what each Builder is delivering, one per line. Missing for bid ${p.id}.`,
       );
     }
-    // Client-facing pitch. Editable on the compile form, because a
-    // quote assembled from several bids has to read as one document
-    // and the builder's own words are not always the ones to send.
-    // The bid row is untouched: what they submitted stays on the
-    // record, and this is the version the client sees.
-    const editedPitch = String(formData.get(`pitch_${p.id}`) ?? "").trim();
-
     // The two fields that carry most of the weight in a real quote
     // sheet. Required, because a client choosing between people needs
     // the trade-off stated and a card with only strengths on it is
@@ -268,7 +261,11 @@ export async function compileBidsIntoQuote(formData: FormData) {
       strengths,
       weaknesses,
       workSamples: workSamples.length > 0 ? workSamples : undefined,
-      pitch: editedPitch.length > 0 ? editedPitch : p.pitch,
+      // Carried for admin reference only. The pitch never reaches a
+      // client: the price points, deliverables, strengths, trade-offs
+      // and work samples speak for themselves, and a member writing
+      // about themselves is always selling themselves.
+      pitch: p.pitch,
     };
   });
 

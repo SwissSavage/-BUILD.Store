@@ -30,6 +30,7 @@ import {
 import { formatProposalHours, formatProposalPrice } from "@/lib/proposal-terms";
 import { compileBidsIntoQuote } from "@/lib/rfp-bid-compile-actions";
 import { scrubForClient } from "@/lib/pii-scrub";
+import { StructuredText } from "@/components/StructuredText";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import type { ProposalAttachment } from "@/lib/proposal-attachments";
 import { QuoteCompileRequirements } from "@/components/BidSelectionRequirement";
@@ -296,6 +297,31 @@ export default async function RfpBidCompilePage({
                             }
                           />
                         </label>
+
+                        {/* What they actually submitted, kept in view.
+                            The framing is the product here: most
+                            talent cannot pitch themselves, which is
+                            the whole reason an admin writes the
+                            client-facing version. But the editor
+                            replaces their text, so without this you
+                            lose the source the moment you start
+                            writing, and the facts you are allowed to
+                            repeat live in it.
+
+                            Always the unedited original, never the
+                            scrubbed copy, because judging whether a
+                            claim is theirs to make means reading what
+                            they wrote. */}
+                        <details className="mt-3 group">
+                          <summary className="cursor-pointer list-none text-[10px] uppercase tracking-wider text-ink-faint hover:text-brand-magentaText">
+                            What they wrote
+                            <span className="ml-1 group-open:hidden">▸</span>
+                            <span className="ml-1 hidden group-open:inline">▾</span>
+                          </summary>
+                          <div className="mt-2 rounded-lg border border-dashed border-[var(--surface-border)] px-3 py-2">
+                            <StructuredText text={b.pitch} />
+                          </div>
+                        </details>
 
                         {/* Portfolio and attachments. These are on the
                             bid row and were selected but never rendered

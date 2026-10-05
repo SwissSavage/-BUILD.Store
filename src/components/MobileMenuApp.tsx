@@ -22,6 +22,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Bell, Menu, X } from "lucide-react";
+import { adminNavGroups } from "@/lib/admin-nav";
 import { signOut } from "@/lib/auth-actions";
 
 interface MobileMenuAppProps {
@@ -68,31 +69,13 @@ const publicAuthLinks = [
   { href: "/signin", label: "Sign in" },
 ];
 
-const adminLinks = [
-  { href: "/admin", label: "Admin home" },
-  { href: "/admin/team", label: "Team" },
-  { href: "/admin/members", label: "Members" },
-  { href: "/admin/projects", label: "All projects" },
-  { href: "/admin/projects/applications", label: "Project applications" },
-  { href: "/admin/projects/contributions", label: "Outside contributors" },
-  { href: "/admin/chat", label: "Live chat" },
-  { href: "/admin/cohort", label: "Cohort spotlights" },
-  { href: "/admin/cooperative-quotes", label: "Cooperative quotes" },
-  { href: "/admin/receipts", label: "Cooperative receipts" },
-  { href: "/admin/agreements", label: "Agreements" },
-  { href: "/admin/vouchers", label: "$BUILD vouchers" },
-  { href: "/admin/pools", label: "Structural pools" },
-  { href: "/admin/invoices", label: "Invoices + receipts" },
-  { href: "/admin/reserve", label: "Contract reserves" },
-  { href: "/admin/clients", label: "Client patterns" },
-  { href: "/admin/referrals", label: "Partner referrals" },
-  { href: "/admin/feedback", label: "Beta feedback" },
-  { href: "/admin/peer-reviews", label: "Peer reviews" },
-  { href: "/admin/testimonials", label: "Customer testimonials" },
-  { href: "/admin/epk", label: "EPK approvals" },
-  { href: "/admin/categories", label: "Store categories" },
-  { href: "/admin/locker", label: "Locker moderation" },
-];
+/**
+ * Admin home plus every destination in ADMIN_NAV, grouped the same way
+ * the desktop dropdown groups them. This used to be a fourth
+ * hand-maintained list and had drifted to 23 of 49 destinations, with
+ * /admin/inbound missing from it.
+ */
+const adminSections = adminNavGroups();
 
 export function MobileMenuApp({
   isLoggedIn,
@@ -248,18 +231,36 @@ export function MobileMenuApp({
                       Admin
                     </h2>
                     <ul className="space-y-1 text-base">
-                      {adminLinks.map((item) => (
-                        <li key={item.href}>
-                          <Link
-                            href={item.href}
-                            onClick={closeMenu}
-                            className="block rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
-                          >
-                            {item.label}
-                          </Link>
-                        </li>
-                      ))}
+                      <li>
+                        <Link
+                          href="/admin"
+                          onClick={closeMenu}
+                          className="block rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
+                        >
+                          Admin home
+                        </Link>
+                      </li>
                     </ul>
+                    {adminSections.map((section) => (
+                      <div key={section.group} className="mt-4">
+                        <h3 className="px-4 pb-1 text-[11px] uppercase tracking-wider text-ink-faint">
+                          {section.label}
+                        </h3>
+                        <ul className="space-y-1 text-base">
+                          {section.entries.map((entry) => (
+                            <li key={entry.href}>
+                              <Link
+                                href={entry.href}
+                                onClick={closeMenu}
+                                className="block rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
+                              >
+                                {entry.label}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
                     <p className="mt-4 px-4 text-[10px] text-ink-faint">
                       &ldquo;View site as&rdquo; picker is desktop-only.
                     </p>

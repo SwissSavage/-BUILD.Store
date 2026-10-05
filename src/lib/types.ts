@@ -4244,6 +4244,11 @@ export type AuditLogAction =
   | "quote.removed"
   | "quote.approved"
   | "quote.declined"
+  // Inbound admission decisions. Applies to every kind that is a
+  // request to be let in (talent, partner, store), not to demand
+  // inbound, which is a pipeline rather than a yes or no.
+  | "inbound.approved"
+  | "inbound.rejected"
   // Contracts + compensation
   | "rfp.approved"
   | "rfp.rejected"
@@ -4363,6 +4368,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "quote.removed": "Cooperative Quote removed",
   "quote.approved": "Cooperative Quote approved by client",
   "quote.declined": "Cooperative Quote declined by client",
+  "inbound.approved": "Inbound application approved",
+  "inbound.rejected": "Inbound application rejected",
   "rfp.approved": "RFP approved",
   "rfp.rejected": "RFP rejected",
   "contract.base_released": "Base pay released",
@@ -4444,6 +4451,9 @@ export type AuditLogResourceKind =
   | "triangulated_composite"
   | "partner_referral"
   | "notification_rule"
+  // Inbound queue rows, so an admission decision has a resource to
+  // hang off rather than being logged against config.
+  | "inbound_submission"
   | "config"
   // Payments hub (task #63)
   | "payout_method"

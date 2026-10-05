@@ -58,8 +58,12 @@ interface QuoteInteractiveSurfaceProps {
   clientToken: string;
   scope: {
     summary: string;
-    deliverables: string[];
-    timeline: string;
+    /** Only what spans the whole crew. Per-Builder lists live on
+        proposedBuilders. Usually absent. */
+    deliverables?: string[];
+    /** @deprecated Pre-2026-10-05 quotes only. The engagement timeline
+        is read off the Builders the client picks. */
+    timeline?: string;
   };
   /**
    * Raw per-Builder pricing shapes — used to derive the aggregate
@@ -257,25 +261,83 @@ export function QuoteInteractiveSurface({
         </h2>
         <StructuredText text={scope.summary} className="mt-4 text-ink-muted" />
 
-        <ul className="mt-8 space-y-3">
-          {scope.deliverables.map((deliverable) => (
-            <li
-              key={deliverable}
-              className="flex items-start gap-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-5 py-4 text-sm"
-            >
-              <span
-                aria-hidden
-                className="fm-btn-primary mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full"
-              />
-              <span className="text-ink">{deliverable}</span>
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-6 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-5 py-4">
-          <CardEyebrow>Timeline</CardEyebrow>
-          <p className="mt-2 text-sm text-ink-muted">{scope.timeline}</p>
+        {/* Who owes what. Each Builder bid their own scope, so the
+            deliverables sit with the person doing them rather than in
+            one flattened list that could not say whose was whose. */}
+        <div className="mt-8 space-y-4">
+          {crew.map((member) => {
+            const builder = proposedBuilders.find(
+              (b) => b.userId === member.user.id,
+            );
+            const items = builder?.deliverables ?? [];
+            if (items.length === 0) return null;
+            return (
+              <div
+                key={member.user.id}
+                className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-5 py-4"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-sm font-medium text-ink">
+                    {member.user.firstName} {member.user.lastName}
+                  </p>
+                  {builder?.timeline && (
+                    <p className="text-xs text-ink-muted">{builder.timeline}</p>
+                  )}
+                </div>
+                <ul className="mt-3 space-y-2">
+                  {items.map((deliverable) => (
+                    <li
+                      key={deliverable}
+                      className="flex items-start gap-3 text-sm"
+                    >
+                      <span
+                        aria-hidden
+                        className="fm-btn-primary mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+                      />
+                      <span className="text-ink">{deliverable}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </div>
+
+        {/* Anything the crew owes jointly. Usually empty. */}
+        {(scope.deliverables?.length ?? 0) > 0 && (
+          <div className="mt-6 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-5 py-4">
+            <CardEyebrow>Across the engagement</CardEyebrow>
+            <ul className="mt-3 space-y-2">
+              {scope.deliverables?.map((deliverable) => (
+                <li key={deliverable} className="flex items-start gap-3 text-sm">
+                  <span
+                    aria-hidden
+                    className="fm-btn-primary mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+                  />
+                  <span className="text-ink">{deliverable}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Timeline is the sum of its parts, not a number written
+            before anyone knew who was doing the work. Pre-2026-10-05
+            quotes carry an authored one; those still show it. */}
+        {scope.timeline ? (
+          <div className="mt-6 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-5 py-4">
+            <CardEyebrow>Timeline</CardEyebrow>
+            <p className="mt-2 text-sm text-ink-muted">{scope.timeline}</p>
+          </div>
+        ) : (
+          <div className="mt-6 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-5 py-4">
+            <CardEyebrow>Timeline</CardEyebrow>
+            <p className="mt-2 text-sm text-ink-muted">
+              Each Builder&apos;s commitment is listed on their card above.
+              The engagement takes its shape from the ones you pick.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Aggregate pricing block. Derived from sum of per-Builder

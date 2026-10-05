@@ -16,8 +16,27 @@ const requirements = [
   },
   { message: "Enter the client display name.", valid: (form: HTMLFormElement) => ((form.elements.namedItem("clientDisplayName") as HTMLInputElement | null)?.value.trim().length ?? 0) >= 2, target: '[name="clientDisplayName"]' },
   { message: "Write a scope summary of at least 20 characters.", valid: (form: HTMLFormElement) => ((form.querySelector('[data-quote-field="scopeSummary"]') as HTMLTextAreaElement | null)?.value.trim().length ?? 0) >= 20, target: '[data-quote-focus="scopeSummary"] [contenteditable="true"]' },
-  { message: "Add at least one deliverable.", valid: (form: HTMLFormElement) => ((form.elements.namedItem("deliverables") as HTMLTextAreaElement | null)?.value.trim().length ?? 0) > 0, target: '[name="deliverables"]' },
-  { message: "Enter an engagement timeline (at least 4 characters).", valid: (form: HTMLFormElement) => ((form.elements.namedItem("timeline") as HTMLInputElement | null)?.value.trim().length ?? 0) >= 4, target: '[name="timeline"]' },
+  // Deliverables are per Builder now. The shared field is optional and
+  // the engagement timeline is gone entirely: nothing about the shape
+  // of the work is settled until the client picks their crew, so the
+  // quote shows each Builder's own timeline instead of one authored up
+  // front. Every picked bid needs its own list, because a card with a
+  // price and no deliverables is the thing a client cannot evaluate.
+  {
+    message: "Give every picked Builder at least one deliverable.",
+    valid: (form: HTMLFormElement) => {
+      const picked = Array.from(
+        form.querySelectorAll<HTMLInputElement>('input[name="applicationIds"]:checked'),
+      ).map((input) => input.value);
+      return picked.every((id) => {
+        const field = form.querySelector<HTMLTextAreaElement>(
+          `[data-quote-deliverables="${id}"]`,
+        );
+        return (field?.value.trim().length ?? 0) > 0;
+      });
+    },
+    target: "[data-quote-deliverables]",
+  },
 ] as const;
 
 /** Stops incomplete quote compilation before the server action is called. */

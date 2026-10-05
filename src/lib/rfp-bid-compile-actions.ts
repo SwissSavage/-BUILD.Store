@@ -73,7 +73,6 @@ export async function compileBidsIntoQuote(formData: FormData) {
     formData.get("clientDisplayName") ?? "",
   ).trim();
   const scopeSummary = String(formData.get("scopeSummary") ?? "").trim();
-  const timeline = String(formData.get("timeline") ?? "").trim();
   const deliverablesRaw = String(formData.get("deliverables") ?? "");
 
   if (!rfpId) throw new Error("rfpId is required.");
@@ -93,18 +92,13 @@ export async function compileBidsIntoQuote(formData: FormData) {
       "Scope summary is too thin. Write a full paragraph so the client understands what they're getting.",
     );
   }
-  if (timeline.length < 4) {
-    throw new Error("Engagement timeline is required.");
-  }
+  // Engagement-level deliverables are now optional and usually empty.
+  // What each Builder owes lives on their own entry, read per pick
+  // below. See the WHY on CooperativeQuote["scope"].
   const deliverables = deliverablesRaw
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  if (deliverables.length === 0) {
-    throw new Error(
-      "List at least one deliverable, one per line.",
-    );
-  }
 
   // Verify RFP is a compilable open contract.
   const [rfp] = await db
@@ -215,9 +209,23 @@ export async function compileBidsIntoQuote(formData: FormData) {
     const hoursLine = p.hoursPerWeek > 0
       ? `${formatProposalHours(p.hoursPerWeek, p.hoursPerWeekMax)} across the engagement`
       : "Availability per engagement";
+    // What this person is on the hook for. Authored per bid, because
+    // bids arrive as prose and projectApplications has no deliverables
+    // column to carry one through. Required: a Builder card with a
+    // price and no deliverables is the thing a client cannot evaluate.
+    const perBidDeliverables = String(formData.get(`deliverables_${p.id}`) ?? "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (perBidDeliverables.length === 0) {
+      throw new Error(
+        `List what each Builder is delivering, one per line. Missing for bid ${p.id}.`,
+      );
+    }
     return {
       userId: p.userId,
       pricing,
+      deliverables: perBidDeliverables,
       timeline: hoursLine,
       relevance,
       pitch: p.pitch,
@@ -234,8 +242,11 @@ export async function compileBidsIntoQuote(formData: FormData) {
     proposedBuilders,
     scope: {
       summary: scopeSummary,
-      deliverables,
-      timeline,
+      // Only what spans the whole crew. Nothing is written for
+      // `timeline`: the engagement shape is derived from the selected
+      // Builders' own timelines, because none of it is real until the
+      // client picks who is doing the work.
+      deliverables: deliverables.length > 0 ? deliverables : undefined,
     },
     status: isSending ? "sent" : "draft",
     sentAt: isSending ? now : null,

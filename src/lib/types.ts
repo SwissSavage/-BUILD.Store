@@ -3637,6 +3637,14 @@ export interface ProposedBuilder {
    */
   timeline: string;
   /**
+   * What this Builder is on the hook for, carried from their own bid.
+   *
+   * Each person on a cooperative quote is quoting something different.
+   * A single engagement-level list could not say who owed what, and
+   * the detail survived only as prose buried in `pitch`.
+   */
+  deliverables?: string[];
+  /**
    * "Why this person for this project" one-liner. Admin-authored,
    * first-name basis, no jargon. Shown under the Builder's card in
    * the TalentHand.
@@ -3673,18 +3681,36 @@ export interface CooperativeQuote {
   proposedBuilders: ProposedBuilder[];
   /** Scope block — what the crew delivers. */
   scope: {
-    /** One-paragraph scope summary. */
+    /** One-paragraph scope summary. The engagement in prose. */
     summary: string;
-    /** Enumerated deliverables. */
-    deliverables: string[];
     /**
-     * Engagement-level timeline rhythm — e.g. "8 weeks from kickoff.
-     * 2 weeks pre-production, 3 weeks production, 3 weeks post."
-     * Distinct from per-Builder timeline on each `proposedBuilders`
-     * entry — this is the phase story, that is the individual
-     * availability window.
+     * Deliverables that belong to the engagement rather than to any one
+     * Builder. Optional, and usually empty.
+     *
+     * ───────────────────────────────────────────────────────────
+     * WHY (2026-10-05)
+     *
+     * This was the only place deliverables existed, and it was
+     * required. Four Builders each bid their own scope and compiling
+     * flattened all of it into one hand-typed list, which lost the
+     * thing a client most wants to know: who owes what. Deliverables
+     * now live on each ProposedBuilder, carried from what that person
+     * actually bid. This field is what is left over for anything that
+     * genuinely spans the whole crew.
+     * ───────────────────────────────────────────────────────────
      */
-    timeline: string;
+    deliverables?: string[];
+    /**
+     * Engagement-level timeline. REMOVED — see the comment above and
+     * `quoteTimelineComponents`. Nothing about the shape of the work is
+     * real until the client picks their crew, so the engagement
+     * timeline is derived from the selected Builders' own timelines
+     * rather than authored up front. Kept optional only so quotes
+     * compiled before 2026-10-05 still parse.
+     *
+     * @deprecated Do not write. Read only for historical rows.
+     */
+    timeline?: string;
   };
   /**
    * Status lifecycle:

@@ -181,6 +181,9 @@ export default async function CooperativeQuotePage({
         },
         tier,
         relevance: b.relevance,
+        strengths: b.strengths,
+        weaknesses: b.weaknesses,
+        workSamples: b.workSamples,
         pitch: b.pitch ? richTextValuePlainText(b.pitch) : undefined,
         quoteLine: {
           pricingHeadline: pricingHeadline(b.pricing),

@@ -298,6 +298,70 @@ export default async function RfpBidCompilePage({
                           />
                         </label>
 
+                        {/* Strengths and weaknesses carry most of the
+                            weight in a real $BUILD quote sheet, and
+                            the app had nowhere to put them. The client
+                            is choosing between people and wants the
+                            trade-offs stated, not a blurb each.
+
+                            Write weaknesses plainly. "Does not code,
+                            would need to pair with a web developer"
+                            and "No real UX/UI experience" are both
+                            from quotes that went out and won work. A
+                            client who cannot see the trade-off cannot
+                            decide, and finds out after they hire. */}
+                        <div className="mt-3 grid gap-2 md:grid-cols-2">
+                          <label className="block">
+                            <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                              Strengths
+                            </span>
+                            <textarea
+                              name={`strengths_${b.id}`}
+                              data-quote-strengths={b.id}
+                              defaultValue={draftBuilderByUserId.get(b.userId)?.strengths ?? ""}
+                              rows={3}
+                              placeholder="What they are genuinely good at, for this scope."
+                              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                              Weaknesses
+                            </span>
+                            <textarea
+                              name={`weaknesses_${b.id}`}
+                              data-quote-weaknesses={b.id}
+                              defaultValue={draftBuilderByUserId.get(b.userId)?.weaknesses ?? ""}
+                              rows={3}
+                              placeholder="The honest trade-off. What they will need paired with them."
+                              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
+                            />
+                          </label>
+                        </div>
+
+                        {/* The "Work Sample(s)" column. One per line as
+                            "Label | context", optionally "Label | URL |
+                            context". A bare link makes the client work
+                            out why they are looking at it; the line of
+                            context is what the quote sheet has always
+                            carried. Curated here rather than taken from
+                            the bid, because most members do not present
+                            their own portfolio effectively. */}
+                        <label className="mt-3 block">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                            Work samples (one per line: Label | URL | what they did on it)
+                          </span>
+                          <textarea
+                            name={`workSamples_${b.id}`}
+                            defaultValue={(draftBuilderByUserId.get(b.userId)?.workSamples ?? [])
+                              .map((w) => [w.label, w.url, w.context].filter(Boolean).join(" | "))
+                              .join("\n")}
+                            rows={3}
+                            placeholder={"Ontraport | https://... | Engineering manager and primary engineer on this platform"}
+                            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
+                          />
+                        </label>
+
                         {/* What they actually submitted, kept in view.
                             The framing is the product here: most
                             talent cannot pitch themselves, which is

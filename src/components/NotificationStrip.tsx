@@ -60,6 +60,8 @@ const KIND_ACCENT: Record<NotificationKind, string> = {
   quote_declined: "#D828A0",
   agreement_signature_completed: "#007048",
   documenso_account_ready: "#007048",
+  profile_disclosure_fix: "#B4740F",
+  profile_hidden_pending_fix: "#B4740F",
 };
 
 export async function NotificationStrip({

@@ -32,6 +32,7 @@ import {
 } from "@/lib/milestone-actions";
 import { runAgreementRenewalSweep } from "@/lib/agreement-renewal-actions";
 import { runFraudScan } from "@/lib/fraud-scan";
+import { runDisclosureSweep } from "@/lib/disclosure-review-actions";
 import { purgeExpiredProjects } from "@/lib/project-trash-actions";
 import { recomputeAllMvpScores } from "@/lib/writers/mvp-score";
 
@@ -79,6 +80,22 @@ export async function GET(request: Request) {
   // so the cron config stays a single daily job.
   const fraud = await runFraudScan();
 
+  // Circumvention — a public bio carrying an email, phone, booking
+  // link or bare domain comes out of discovery on its own and the
+  // member is told why. Only those four codes; a full name or a
+  // company name is a judgement call and waits for /admin/disclosure.
+  //
+  // Wrapped because this is the newest sweep here and a failure in it
+  // must not take down trash retention or the MVP recompute below.
+  let disclosure: { scanned: number; hidden: number } | { error: string };
+  try {
+    disclosure = await runDisclosureSweep();
+  } catch (err) {
+    disclosure = { error: err instanceof Error ? err.message : String(err) };
+    // eslint-disable-next-line no-console
+    console.error("[cron] disclosure sweep failed", err);
+  }
+
   // Trash retention — clears projects past the restore window along
   // with their applications and milestones.
   const trash = await purgeExpiredProjects();
@@ -107,6 +124,7 @@ export async function GET(request: Request) {
     weeklyRollup: rollup,
     agreementRenewals: renewals,
     fraudScan: fraud,
+    disclosureSweep: disclosure,
     trashPurge: trash,
     mvpRecompute: mvp,
   });

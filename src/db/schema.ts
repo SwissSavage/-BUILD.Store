@@ -1668,6 +1668,49 @@ export const payoutMethods = pgTable("payout_methods", {
 //  Full schema re-export bundle (drizzle-kit + client entry)
 // ──────────────────────────────────────────────────────────────────────
 
+/**
+ * A judgement call an admin made about one piece of member-authored
+ * text on /admin/disclosure.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-05)
+ *
+ * The review page re-ran the guard on every load and listed everything
+ * it found, with no way to record that a human had looked. A bio you
+ * read and judged acceptable came back on the list every time, so after
+ * one pass the page stopped being worth opening.
+ *
+ * Keyed on a hash of the exact text that was cleared, not on the user.
+ * Clearing a member rather than a sentence would whitelist them
+ * permanently and the next thing they wrote would go unreviewed.
+ * Editing the bio changes the hash and the row returns to the queue,
+ * which is the behaviour you want.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const profileDisclosureReviews = pgTable("profile_disclosure_reviews", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** "bio" or "tagline". */
+  field: text("field").notNull(),
+  /** SHA-256 of the exact text that was cleared. */
+  textHash: text("text_hash").notNull(),
+  /**
+   * Nullable with ON DELETE SET NULL. Deleting the admin who cleared
+   * something must not fail on a foreign key, and must not take the
+   * decision with it. Who actually did it lives in the audit log,
+   * which is the record that is supposed to outlive the account.
+   */
+  reviewedBy: text("reviewed_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  reviewedAt: timestamp("reviewed_at", { mode: "string", withTimezone: true }).notNull(),
+  /** Admin-only. Why this text was acceptable. */
+  note: text("note"),
+});
+
+
 export const schema = {
   users,
   accounts,
@@ -1731,4 +1774,5 @@ export const schema = {
   partnerReferrals,
   communityMessages,
   payoutMethods,
+  profileDisclosureReviews,
 } as const;

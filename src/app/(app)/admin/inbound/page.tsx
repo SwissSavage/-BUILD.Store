@@ -23,6 +23,7 @@ import { getAdminUsers } from "@/lib/readers/users";
 import { safely } from "@/lib/readers";
 import { scoreTalentMatch } from "@/lib/talent-match";
 import {
+  decideInboundAdmission,
   setInboundStatus,
   assignInbound,
   unassignInbound,
@@ -46,6 +47,13 @@ import {
   type InboundSubmissionStatus,
   type User,
 } from "@/lib/types";
+import {
+  inboundStatusLabel,
+  inboundStatusOptions,
+  inboundTriageHeading,
+  isAdmissionKind,
+  isTerminalInboundStatus,
+} from "@/lib/inbound-triage";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 const KIND_OPTIONS: InboundSubmissionKind[] = [
@@ -246,7 +254,7 @@ function SubmissionRow({
               color: STATUS_FG[row.status],
             }}
           >
-            {INBOUND_SUBMISSION_STATUS_LABELS[row.status]}
+            {inboundStatusLabel(row.kind, row.status)}
           </span>
           {row.derived && (
             <span className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[10px] uppercase tracking-wider text-ink-faint">
@@ -353,10 +361,11 @@ function SubmissionRow({
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <div className="rounded-lg border border-[var(--surface-border)] p-3">
           <div className="text-[10px] uppercase tracking-wider text-ink-faint">
-            Triage
+            {inboundTriageHeading(row.kind)}
           </div>
           {!row.derived ? (
             <>
+              {!(isAdmissionKind(row.kind) && isTerminalInboundStatus(row.status)) && (
               <form
                 action={setInboundStatus}
                 className="mt-2 flex flex-wrap items-end gap-2 text-xs"
@@ -369,9 +378,9 @@ function SubmissionRow({
                     defaultValue={row.status}
                     className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1"
                   >
-                    {STATUS_OPTIONS.map((s) => (
+                    {inboundStatusOptions(row.kind).map((s) => (
                       <option key={s} value={s}>
-                        {INBOUND_SUBMISSION_STATUS_LABELS[s]}
+                        {inboundStatusLabel(row.kind, s)}
                       </option>
                     ))}
                   </select>
@@ -383,6 +392,7 @@ function SubmissionRow({
                   Update
                 </button>
               </form>
+              )}
 
               <form
                 action={assignInbound}
@@ -443,18 +453,72 @@ function SubmissionRow({
                 </button>
               </form>
 
-              {row.kind === "join_talent_signup" && row.submitterEmail && (
-                <form action={promoteInboundToInvite} className="mt-3">
-                  <input type="hidden" name="id" value={row.id} />
-                  <button
-                    type="submit"
-                    className="fm-btn-primary rounded-full px-3 py-1.5 text-[11px] font-medium"
-                    title="Prefill /admin/members/invite with this applicant's email + name and jump you there. Countersign-first invite ceremony fires from that page."
-                  >
-                    Promote to invite →
-                  </button>
-                </form>
-              )}
+              {/* Admission kinds get a decision, not a pipeline. The yes
+                  and the no sit side by side with the same weight;
+                  before this the yes was a magenta button and the no
+                  was the fifth option in a dropdown labelled "Closed".
+                  Deciding tells the applicant nothing, on purpose. */}
+              {isAdmissionKind(row.kind) &&
+                (isTerminalInboundStatus(row.status) ? (
+                  <div className="mt-3 rounded-lg border border-[var(--surface-border)] p-3">
+                    <div className="text-[11px] text-ink-muted">
+                      {inboundStatusLabel(row.kind, row.status)} · the
+                      applicant was not notified.
+                    </div>
+                    <form action={setInboundStatus} className="mt-2">
+                      <input type="hidden" name="id" value={row.id} />
+                      <input type="hidden" name="status" value="in_triage" />
+                      <button
+                        type="submit"
+                        className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
+                      >
+                        Reopen
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {row.kind === "join_talent_signup" ? (
+                      row.submitterEmail ? (
+                        <form action={promoteInboundToInvite}>
+                          <input type="hidden" name="id" value={row.id} />
+                          <button
+                            type="submit"
+                            className="fm-btn-primary rounded-full px-3 py-1.5 text-[11px] font-medium"
+                            title="Prefill /admin/members/invite with this applicant's email + name and jump you there. Countersign-first invite ceremony fires from that page."
+                          >
+                            Promote to invite →
+                          </button>
+                        </form>
+                      ) : (
+                        <span className="text-[11px] text-ink-faint">
+                          No submitter email, so there is nobody to invite.
+                        </span>
+                      )
+                    ) : (
+                      <form action={decideInboundAdmission}>
+                        <input type="hidden" name="id" value={row.id} />
+                        <input type="hidden" name="decision" value="approved" />
+                        <button
+                          type="submit"
+                          className="fm-btn-primary rounded-full px-3 py-1.5 text-[11px] font-medium"
+                        >
+                          Approve
+                        </button>
+                      </form>
+                    )}
+                    <form action={decideInboundAdmission}>
+                      <input type="hidden" name="id" value={row.id} />
+                      <input type="hidden" name="decision" value="rejected" />
+                      <button
+                        type="submit"
+                        className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] font-medium text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
+                      >
+                        Reject
+                      </button>
+                    </form>
+                  </div>
+                ))}
 
               {(row.proposedKeywordTags?.length ?? 0) > 0 && (
                 <div className="mt-3 rounded-lg border border-dashed border-[#D8931B]/60 bg-[rgba(216,147,27,0.06)] p-3">

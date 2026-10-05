@@ -2785,6 +2785,13 @@ export type NotificationKind =
   | "agreement_renewal_day_of"
   | "agreement_renewal_overdue"
   | "portfolio_fraud_flag"
+  // Circumvention review. profile_disclosure_fix is an admin asking a
+  // member to edit their own words; profile_hidden_pending_fix is what
+  // the member is told when the profile comes out of discovery, either
+  // because an admin did it or because the daily sweep found contact
+  // details sitting in a live bio.
+  | "profile_disclosure_fix"
+  | "profile_hidden_pending_fix"
   | "rfp_quote_request"
   | "booking_request_received"
   | "booking_request_approved"
@@ -2844,6 +2851,8 @@ export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   rfp_quote_request: "Quote request from admin",
   agreement_signature_completed: "Agreement signed",
   documenso_account_ready: "Documenso account ready",
+  profile_disclosure_fix: "Profile text needs an edit",
+  profile_hidden_pending_fix: "Profile hidden pending a fix",
 };
 
 /* ------------------------------------------------------------------ */
@@ -4244,6 +4253,15 @@ export type AuditLogAction =
   | "quote.removed"
   | "quote.approved"
   | "quote.declined"
+  // Circumvention review
+  | "profile.disclosure_reviewed"
+  | "profile.disclosure_fix_requested"
+  | "profile.hidden_pending_fix"
+  // Inbound admission decisions. Applies to every kind that is a
+  // request to be let in (talent, partner, store), not to demand
+  // inbound, which is a pipeline rather than a yes or no.
+  | "inbound.approved"
+  | "inbound.rejected"
   // Contracts + compensation
   | "rfp.approved"
   | "rfp.rejected"
@@ -4363,6 +4381,11 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "quote.removed": "Cooperative Quote removed",
   "quote.approved": "Cooperative Quote approved by client",
   "quote.declined": "Cooperative Quote declined by client",
+  "profile.disclosure_reviewed": "Profile disclosure reviewed, no action",
+  "profile.disclosure_fix_requested": "Member asked to fix their profile text",
+  "profile.hidden_pending_fix": "Profile hidden from discovery pending a fix",
+  "inbound.approved": "Inbound application approved",
+  "inbound.rejected": "Inbound application rejected",
   "rfp.approved": "RFP approved",
   "rfp.rejected": "RFP rejected",
   "contract.base_released": "Base pay released",
@@ -4444,6 +4467,9 @@ export type AuditLogResourceKind =
   | "triangulated_composite"
   | "partner_referral"
   | "notification_rule"
+  // Inbound queue rows, so an admission decision has a resource to
+  // hang off rather than being logged against config.
+  | "inbound_submission"
   | "config"
   // Payments hub (task #63)
   | "payout_method"

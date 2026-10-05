@@ -72,6 +72,10 @@ const KIND_ACCENT: Record<NotificationKind, string> = {
   quote_declined: "#D828A0",
   agreement_signature_completed: "#007048",
   documenso_account_ready: "#007048",
+  // Circumvention. Amber rather than red: the member is being
+  // asked to change something, not disciplined.
+  profile_disclosure_fix: "#B4740F",
+  profile_hidden_pending_fix: "#B4740F",
 };
 
 function formatTime(iso: string): string {

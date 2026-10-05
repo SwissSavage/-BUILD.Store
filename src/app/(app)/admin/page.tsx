@@ -3,6 +3,7 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
+import { adminNavGroups, type AdminNavGroup } from "@/lib/admin-nav";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import { getAllUsers } from "@/lib/readers/users";
 import { getAllProjects, getDeletedProjects } from "@/lib/readers/projects";
@@ -38,33 +39,20 @@ export const dynamic = "force-dynamic";
  * "Create" sits first because posting work is the thing you come here
  * to do; everything else is reacting to what already exists.
  */
-const GROUPS = [
-  {
-    key: "create",
-    label: "Create",
-    blurb: "Put something new into the cooperative.",
-  },
-  {
-    key: "queues",
-    label: "Needs a decision",
-    blurb: "Things waiting on you. The counts are what is open, not the total.",
-  },
-  {
-    key: "money",
-    label: "Money",
-    blurb: "Attribution, settlement, payouts, $BUILD.",
-  },
-  {
-    key: "people",
-    label: "People + work",
-    blurb: "Roster, standing, and everything in flight.",
-  },
-  {
-    key: "governance",
-    label: "Governance",
-    blurb: "Audit trail, access, compliance, trash.",
-  },
-] as const;
+/**
+ * Section descriptions. The section names and their membership live in
+ * ADMIN_NAV; only the prose is page-local, because the nav dropdown has
+ * no room for it.
+ */
+const GROUP_BLURBS: Record<AdminNavGroup, string> = {
+  queues: "Things waiting on you. The counts are what is open, not the total.",
+  people: "Roster, standing, and recognition.",
+  deals: "Projects, contracts, quotes, and the people who bring them in.",
+  money: "Attribution, settlement, payouts, $BUILD.",
+  content: "Everything members and visitors read or post.",
+  governance: "Audit trail, access, compliance, trash.",
+  create: "Put something new into the cooperative.",
+};
 
 export default async function AdminHome() {
   await requireAdmin();
@@ -182,177 +170,120 @@ export default async function AdminHome() {
   ).length;
   const championsCircleCount = championsCourtMembers(scores, roster).length;
 
-  const tiles = [
-    {
-      href: "/admin/inbound",
-      group: "queues",
-      title: "Inbound",
+  // Live counts for the destinations that have one. Labels and
+  // grouping come from ADMIN_NAV so the dropdown, the mobile menu
+  // and this page cannot disagree about what exists or what it is
+  // called. A destination with no entry here still renders, just
+  // without a number.
+  const tileMeta: Record<string, { count: number; sub: string }> = {
+    "/admin/inbound": {
       count: inboundOpen,
       sub: `Open across signups, RFPs, chats, quotes, partner apps · ${inboundRows.length} total`,
     },
-    {
-      href: "/admin/mvp",
-      group: "people",
-      title: "MVP Score",
+    "/admin/mvp": {
       count: championsCircleCount,
       sub: `Champion's Court (top 10% AND ≥ 90) · ${scores.length} snapshots`,
     },
-    { href: "/admin/members",
-      group: "people", title: "Members", count: roster.length, sub: "Across all tiers" },
-    { href: "/admin/applications",
-      group: "queues", title: "Applications", count: pending, sub: "Pending review" },
-    { href: "/admin/projects",
-      group: "people", title: "Projects", count: openProjects, sub: "Open RFPs" },
-    {
-      href: "/admin/contracts/new",
-      group: "create",
-      title: "Post a contract",
+    "/admin/members": {
+      count: roster.length,
+      sub: "Across all tiers",
+    },
+    "/admin/applications": {
+      count: pending,
+      sub: "Pending review",
+    },
+    "/admin/projects": {
+      count: openProjects,
+      sub: "Open RFPs",
+    },
+    "/admin/contracts/new": {
       count: openProjects,
       sub: "Goes live immediately · open contracts shown",
     },
-    {
-      href: "/admin/rfps",
-      group: "queues",
-      title: "RFP intake",
+    "/admin/rfps": {
       count: rfpPending,
       sub: "Client submissions awaiting vetting",
     },
-    {
-      href: "/admin/quotes",
-      group: "queues",
-      title: "Quote sheets",
+    "/admin/quotes": {
       count: quotesPending,
       sub: "Awaiting approval to client",
     },
-    {
-      href: "/admin/portfolios",
-      group: "queues",
-      title: "Portfolio review",
+    "/admin/portfolios": {
       count: portfolioPending,
       sub: "Pending PII scrub",
     },
-    {
-      href: "/admin/contracts",
-      group: "money",
-      title: "Contract operations",
+    "/admin/contracts": {
       count: Math.round(outstandingAR),
       sub: "$ outstanding AR · attribution + settle + AR/AP ledger",
     },
-    {
-      href: "/admin/tokens",
-      group: "money",
-      title: "$BUILD distributed",
+    "/admin/tokens": {
       count: Math.round(totalDistributed),
       sub: "All-time, all members",
     },
-    {
-      href: "/admin/marketplace",
-      group: "queues",
-      title: "Marketplace",
+    "/admin/marketplace": {
       count: marketplaceQueue,
       sub: `${sellerAppsPending} seller apps · ${productsPending} listings pending`,
     },
-    {
-      href: "/admin/whitelist",
-      group: "queues",
-      title: "Whitelist",
+    "/admin/whitelist": {
       count: whitelistQueue,
       sub: `${whitelistOpen} donations open · ${consultNew} consults new · access not for sale`,
     },
-    {
-      href: "/admin/members/invite",
-      group: "create",
-      title: "Invite someone",
+    "/admin/members/invite": {
       count: roster.length,
       sub: "Onto a contract or general membership · members shown",
     },
-    {
-      href: "/admin/jobs",
-      group: "create",
-      title: "Jobs",
+    "/admin/jobs": {
       count: openJobCount,
       sub: `${openJobCount} open on the public board · ${jobRows.length} total`,
     },
-    {
-      href: "/admin/partners",
-      group: "create",
-      title: "Partners",
+    "/admin/partners": {
       count: partnerCount,
       sub: "Service + SaaS partners and affiliates · all public-facing",
     },
-    {
-      href: "/admin/team",
-      group: "people",
-      title: "Team",
+    "/admin/team": {
       count: roster.filter((u) => u.isAdmin).length,
       sub: "Active admins",
     },
-    {
-      href: "/admin/feedback",
-      group: "queues",
-      title: "Beta feedback",
+    "/admin/feedback": {
       count: feedbackNew,
       sub: `${feedbackRows.length} total · ${feedbackNew} untriaged`,
     },
-    {
-      href: "/admin/peer-reviews",
-      group: "queues",
-      title: "Peer reviews",
+    "/admin/peer-reviews": {
       count: peerReviewRows.length - peerReviewsVoided,
       sub: `${peerReviewRows.length} written · ${peerReviewsVoided} voided`,
     },
-    {
-      href: "/admin/testimonials",
-      group: "queues",
-      title: "Testimonials",
+    "/admin/testimonials": {
       count: testimonialsPending,
       sub: `${testimonialsPending} customer reviews awaiting promotion`,
     },
-    {
-      href: "/admin/payments",
-      group: "money",
-      title: "Payments",
+    "/admin/payments": {
       count: splits.filter(
         (s) => s.payoutStatus === "queued" || s.payoutStatus === "pending",
       ).length,
       sub: "Payout rail status · manual-send queue",
     },
-    {
-      href: "/admin/compliance",
-      group: "governance",
-      title: "Compliance",
+    "/admin/compliance": {
       count: auditRows.length,
       sub: "SOC 2 + ISO 27001 control status · audit log entries",
     },
-    {
-      href: "/admin/audit-log",
-      group: "governance",
-      title: "Audit log",
+    "/admin/audit-log": {
       count: auditRows.length,
       sub: "Append-only. Every security-relevant action, reverse-chron.",
     },
-    {
-      href: "/admin/access-review",
-      group: "governance",
-      title: "Access review",
+    "/admin/access-review": {
       count: roster.filter((u) => u.isAdmin).length,
       sub: "Admins carrying the flag · quarterly walk-through cadence",
     },
-    {
-      href: "/admin/trash",
-      group: "governance",
-      title: "Trash",
+    "/admin/trash": {
       count: trashedCount,
       sub: "Deleted projects · restorable for 30 days",
     },
-    {
-      href: "/admin/walkthrough",
-      group: "governance",
-      title: "Walkthrough / stress test",
+    "/admin/walkthrough": {
       count: 12,
       sub: "Tier-by-tier audit + 12 stress tests · Bayu copy audit",
     },
-  ];
+  };
+
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -362,32 +293,47 @@ export default async function AdminHome() {
       {/* Grouped by what you came here to do. A flat grid of two
           dozen tiles meant the thing you needed was findable only if
           you already knew its name — "post a contract" in particular
-          read as just another number. */}
-      {GROUPS.map((group) => {
-        const groupTiles = tiles.filter((t) => t.group === group.key);
-        if (groupTiles.length === 0) return null;
-        return (
-          <section key={group.key} className="mt-10">
-            <h2 className="font-display text-2xl font-semibold">
-              {group.label}
-            </h2>
-            <p className="mt-1 text-sm text-ink-muted">{group.blurb}</p>
-            <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {groupTiles.map((t) => (
-                <Link key={t.href} href={t.href}>
+          read as just another number.
+
+          Sections and their contents come from ADMIN_NAV, the same
+          list the nav dropdown and the mobile menu read. Before that
+          existed, this page showed 26 of the 61 admin pages and the
+          dropdown showed a different 24, so a destination could be
+          missing from both and nobody would notice. */}
+      {adminNavGroups().map((section) => (
+        <section key={section.group} className="mt-10">
+          <h2 className="font-display text-2xl font-semibold">
+            {section.label}
+          </h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            {GROUP_BLURBS[section.group]}
+          </p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {section.entries.map((entry) => {
+              const meta = tileMeta[entry.href];
+              return (
+                <Link key={entry.href} href={entry.href}>
                   <Card className="h-full transition-colors hover:border-brand-magenta">
-                    <CardEyebrow>{t.title}</CardEyebrow>
-                    <CardTitle className="mt-2 text-3xl">
-                      {t.count.toLocaleString()}
-                    </CardTitle>
-                    <p className="mt-1 text-xs text-ink-muted">{t.sub}</p>
+                    <CardEyebrow>{entry.label}</CardEyebrow>
+                    {meta ? (
+                      <>
+                        <CardTitle className="mt-2 text-3xl">
+                          {meta.count.toLocaleString()}
+                        </CardTitle>
+                        <p className="mt-1 text-xs text-ink-muted">
+                          {meta.sub}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-xs text-ink-muted">Open →</p>
+                    )}
                   </Card>
                 </Link>
-              ))}
-            </div>
-          </section>
-        );
-      })}
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

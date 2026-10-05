@@ -37,6 +37,30 @@ const requirements = [
     },
     target: "[data-quote-deliverables]",
   },
+  {
+    // Both, not either. A card listing only what someone is good at is
+    // marketing; the client is choosing between people and needs the
+    // trade-off to decide.
+    message: "Give every picked Builder both strengths and weaknesses.",
+    valid: (form: HTMLFormElement) => {
+      const picked = Array.from(
+        form.querySelectorAll<HTMLInputElement>('input[name="applicationIds"]:checked'),
+      ).map((input) => input.value);
+      return picked.every((id) => {
+        const strengths = form.querySelector<HTMLTextAreaElement>(
+          `[data-quote-strengths="${id}"]`,
+        );
+        const weaknesses = form.querySelector<HTMLTextAreaElement>(
+          `[data-quote-weaknesses="${id}"]`,
+        );
+        return (
+          (strengths?.value.trim().length ?? 0) > 0 &&
+          (weaknesses?.value.trim().length ?? 0) > 0
+        );
+      });
+    },
+    target: "[data-quote-weaknesses]",
+  },
 ] as const;
 
 /** Stops incomplete quote compilation before the server action is called. */

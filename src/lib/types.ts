@@ -3648,8 +3648,44 @@ export interface ProposedBuilder {
    * "Why this person for this project" one-liner. Admin-authored,
    * first-name basis, no jargon. Shown under the Builder's card in
    * the TalentHand.
+   *
+   * Maps to the positioning line in the Service Provider cell of the
+   * quote sheet, e.g. "Extensive portfolio supporting clients from SMB
+   * to Enterprise."
    */
   relevance: string;
+  /**
+   * What this person is good at, and what they are not.
+   *
+   * ───────────────────────────────────────────────────────────
+   * WHY (2026-10-05)
+   *
+   * These carry most of the weight in a real $BUILD quote sheet and
+   * the app had nowhere to put them. The client is choosing between
+   * people and wants the trade-offs stated, not a blurb per candidate.
+   * Weaknesses are written plainly and honestly — real examples from
+   * sent quotes include "Does not code, would need to pair with a web
+   * developer" and "No real UX/UI experience" — because a client who
+   * cannot see the trade-off cannot make an informed decision, and
+   * finds out after they have hired.
+   *
+   * Admin-authored, like the rest of the framing. A member cannot
+   * reasonably be asked to write their own weaknesses for a document
+   * that decides whether they get the work.
+   * ───────────────────────────────────────────────────────────
+   */
+  strengths?: string;
+  weaknesses?: string;
+  /**
+   * The "Work Sample(s)" column. A named link plus one line on what it
+   * is and what this person did on it, because a bare URL makes the
+   * client do the work of figuring out why they are looking at it.
+   *
+   * Admin-curated rather than carried straight from the bid: most
+   * members do not present their own portfolio effectively, which is
+   * the same reason the framing is admin-authored.
+   */
+  workSamples?: { label: string; url?: string; context: string }[];
   /** Full proposal text when a quote is compiled from an RFP bid. Older and
    * manually composed quotes omit this and use the curated relevance line. */
   pitch?: string;

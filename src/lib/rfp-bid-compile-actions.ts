@@ -228,12 +228,46 @@ export async function compileBidsIntoQuote(formData: FormData) {
     // The bid row is untouched: what they submitted stays on the
     // record, and this is the version the client sees.
     const editedPitch = String(formData.get(`pitch_${p.id}`) ?? "").trim();
+
+    // The two fields that carry most of the weight in a real quote
+    // sheet. Required, because a client choosing between people needs
+    // the trade-off stated and a card with only strengths on it is
+    // marketing rather than a basis for a decision.
+    const strengths = String(formData.get(`strengths_${p.id}`) ?? "").trim();
+    const weaknesses = String(formData.get(`weaknesses_${p.id}`) ?? "").trim();
+    if (!strengths || !weaknesses) {
+      throw new Error(
+        `Write both strengths and weaknesses for every Builder. Missing for bid ${p.id}.`,
+      );
+    }
+
+    // "Label | URL | context" per line, with the URL optional, since
+    // some samples are a description of work that has no public link.
+    const workSamples = String(formData.get(`workSamples_${p.id}`) ?? "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split("|").map((part) => part.trim());
+        const [label, second, third] = parts;
+        const looksLikeUrl = /^https?:\/\//i.test(second ?? "");
+        return {
+          label: label ?? "",
+          url: looksLikeUrl ? second : undefined,
+          context: (looksLikeUrl ? third : [second, third].filter(Boolean).join(" ")) ?? "",
+        };
+      })
+      .filter((sample) => sample.label.length > 0);
+
     return {
       userId: p.userId,
       pricing,
       deliverables: perBidDeliverables,
       timeline: hoursLine,
       relevance,
+      strengths,
+      weaknesses,
+      workSamples: workSamples.length > 0 ? workSamples : undefined,
       pitch: editedPitch.length > 0 ? editedPitch : p.pitch,
     };
   });

@@ -27,6 +27,11 @@ export interface QuoteFlipReveaCrewMember {
   >;
   tier: TradingCardTier;
   relevance: string;
+  /** The trade-off, stated. Carries most of the weight of the sheet. */
+  strengths?: string;
+  weaknesses?: string;
+  /** Named links with a line on what the person did, not bare URLs. */
+  workSamples?: { label: string; url?: string; context: string }[];
   pitch?: string;
   quoteLine: {
     pricingHeadline: string;
@@ -155,11 +160,87 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
         <section className="mt-8 border-t border-[var(--surface-border)] pt-6" aria-live="polite">
           {selected ? (
             <>
-              <p className="text-xs uppercase tracking-wider text-brand-magentaText">Why {selected.user.firstName} fits</p>
-              <p className="mt-3 max-w-3xl whitespace-pre-line text-base leading-relaxed text-ink-muted">
-                {selected.pitch || selected.relevance}
+              {/* Strengths, weaknesses and work samples lead. The
+                  long pitch used to be the whole of this panel, and a
+                  client comparing four people does not read four
+                  blurbs: they want the trade-offs stated and enough to
+                  decide. Anyone they want to meet, they meet on a
+                  call. The pitch is still here, one click down. */}
+              <p className="text-xs uppercase tracking-wider text-brand-magentaText">
+                Why {selected.user.firstName} fits
               </p>
-              <p className="mt-4 text-sm text-ink-faint">{selected.quoteLine.timeline}</p>
+              <p className="mt-3 max-w-3xl text-base leading-relaxed text-ink">
+                {selected.relevance}
+              </p>
+
+              {(selected.strengths || selected.weaknesses) && (
+                <div className="mt-6 grid max-w-3xl gap-4 md:grid-cols-2">
+                  {selected.strengths && (
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+                        Strengths
+                      </p>
+                      <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink">
+                        {selected.strengths}
+                      </p>
+                    </div>
+                  )}
+                  {selected.weaknesses && (
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+                        Trade-offs
+                      </p>
+                      <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-muted">
+                        {selected.weaknesses}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(selected.workSamples?.length ?? 0) > 0 && (
+                <div className="mt-6 max-w-3xl">
+                  <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+                    Work samples
+                  </p>
+                  <ul className="mt-2 space-y-2">
+                    {selected.workSamples?.map((sample) => (
+                      <li key={sample.label} className="text-sm leading-relaxed">
+                        {sample.url ? (
+                          <a
+                            href={sample.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand-magentaText hover:underline"
+                          >
+                            {sample.label}
+                          </a>
+                        ) : (
+                          <span className="text-ink">{sample.label}</span>
+                        )}
+                        {sample.context && (
+                          <span className="text-ink-muted"> · {sample.context}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {selected.pitch && (
+                <details className="group mt-6 max-w-3xl">
+                  <summary className="cursor-pointer list-none text-[11px] uppercase tracking-wider text-ink-faint hover:text-brand-magentaText">
+                    Full proposal
+                    <span className="ml-1 group-open:hidden">▸</span>
+                    <span className="ml-1 hidden group-open:inline">▾</span>
+                  </summary>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink-muted">
+                    {selected.pitch}
+                  </p>
+                </details>
+              )}
+
+              <p className="mt-6 text-sm text-ink-faint">{selected.quoteLine.timeline}</p>
             </>
           ) : (
             <p className="text-sm text-ink-muted">Select a builder card to read their proposal and availability.</p>

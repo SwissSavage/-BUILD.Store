@@ -1,12 +1,17 @@
 name: Build & push image to GHCR
 
-# Every push to main builds the Next.js Docker image and pushes it to
-# GitHub Container Registry (ghcr.io). Dokploy on the Hetzner box is
-# configured to pull the `latest` tag on redeploy — no more on-server
-# nixpacks builds filling the disk.
+# Every push to main builds the Next.js Docker image, pushes it to
+# GitHub Container Registry (ghcr.io), and only then asks Dokploy on the
+# Hetzner box to pull `latest` and redeploy. No more on-server nixpacks
+# builds filling the disk.
 #
-# Auth uses the built-in GITHUB_TOKEN with `packages: write` permission
-# — no extra secrets required. The published image lives at:
+# Dokploy's own auto-deploy is OFF, deliberately. See the WHY on the
+# "Trigger Dokploy deploy" step: watching git meant deploying three
+# minutes before the image existed.
+#
+# Auth to GHCR uses the built-in GITHUB_TOKEN with `packages: write`.
+# The deploy step needs one repo secret, DOKPLOY_DEPLOY_WEBHOOK. The
+# published image lives at:
 #   ghcr.io/swisssavage/-build.store:latest
 #   ghcr.io/swisssavage/-build.store:sha-<commit>
 #
@@ -97,6 +102,55 @@ jobs:
             DOCUMENSO_WEBHOOK_SECRET=dummy
             GOOGLE_CLIENT_ID=dummy
             GOOGLE_CLIENT_SECRET=dummy
+
+      # ──────────────────────────────────────────────────────────
+      # WHY THIS STEP EXISTS (2026-10-05)
+      #
+      # Dokploy used to auto-deploy off the GitHub push webhook. That
+      # webhook fires the moment a commit lands on main, while this
+      # workflow is still building, so Dokploy pulled `latest` three
+      # minutes before `latest` pointed at the new image. The deploy
+      # succeeded, reported green, and shipped the previous commit.
+      #
+      # Nothing about that looks wrong from the outside, which is why
+      # it went unnoticed: merged PR, green Action, green deploy, old
+      # code. It also got worse when two merges landed close together,
+      # because the concurrency rule above cancels the older build and
+      # `latest` can then sit on a stale commit for more than one cycle.
+      #
+      # Auto-deploy is off in Dokploy now. The deploy is triggered from
+      # here instead, after the push has succeeded, so the trigger is
+      # the image existing rather than the commit existing. That
+      # ordering cannot race.
+      #
+      # Needs the repo secret DOKPLOY_DEPLOY_WEBHOOK, which is the
+      # deploy webhook URL from the Dokploy application settings. The
+      # step is skipped rather than failed when the secret is absent,
+      # so a fork or a repo without it still builds.
+      # ──────────────────────────────────────────────────────────
+      - name: Trigger Dokploy deploy
+        if: ${{ success() && github.ref == 'refs/heads/main' && env.DOKPLOY_DEPLOY_WEBHOOK != '' }}
+        env:
+          DOKPLOY_DEPLOY_WEBHOOK: ${{ secrets.DOKPLOY_DEPLOY_WEBHOOK }}
+        run: |
+          echo "Image is published. Asking Dokploy to pull and redeploy."
+          # --fail so a 4xx/5xx from Dokploy fails the workflow rather
+          # than leaving a green run next to a deploy that never ran.
+          # Retries cover a brief Dokploy restart; they do not cover a
+          # wrong URL, which will exhaust them and fail, as it should.
+          curl --fail --silent --show-error \
+            --retry 3 --retry-delay 10 --retry-all-errors \
+            --max-time 60 \
+            -X POST "$DOKPLOY_DEPLOY_WEBHOOK"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deploy triggered for \`sha-${GITHUB_SHA::7}\`." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy not triggered
+        if: ${{ success() && github.ref == 'refs/heads/main' && env.DOKPLOY_DEPLOY_WEBHOOK == '' }}
+        env:
+          DOKPLOY_DEPLOY_WEBHOOK: ${{ secrets.DOKPLOY_DEPLOY_WEBHOOK }}
+        run: |
+          echo "::warning::DOKPLOY_DEPLOY_WEBHOOK is not set. The image was published but nothing was deployed. Redeploy by hand in Dokploy, or add the secret."
 
       - name: Summary
         run: |

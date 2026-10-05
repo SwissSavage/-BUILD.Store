@@ -286,6 +286,24 @@ export default async function RfpBidCompilePage({
                             className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
                           />
                         </label>
+                        {/* What this person owes. Everyone on the quote
+                            is bidding something different, so a single
+                            engagement-level list could never say who
+                            owed what. The bid itself carries this only
+                            as prose, which is why it is authored here. */}
+                        <label className="mt-3 block">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                            Deliverables (one per line, shown on client card)
+                          </span>
+                          <textarea
+                            name={`deliverables_${b.id}`}
+                            data-quote-deliverables={b.id}
+                            defaultValue={(draftBuilderByUserId.get(b.userId)?.deliverables ?? []).join("\n")}
+                            rows={3}
+                            placeholder={"What this person hands over.\nOne line each."}
+                            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
+                          />
+                        </label>
                       </div>
                     </div>
                   </li>
@@ -332,31 +350,25 @@ export default async function RfpBidCompilePage({
                 </span>
               </section>
 
+              {/* Only what belongs to the whole crew rather than to one
+                  person. Each Builder's own deliverables are authored
+                  on their card above. Usually left empty.
+
+                  There is no engagement timeline field. Nothing about
+                  the shape of the work is settled until the client
+                  picks who is doing it, so the quote shows each
+                  Builder's own timeline and the client reads the
+                  engagement off those. */}
               <label className="block">
                 <span className="text-xs uppercase tracking-wider text-ink-muted">
-                  Deliverables (one per line)
+                  Shared deliverables (optional, one per line)
                 </span>
                 <textarea
                   name="deliverables"
-                  defaultValue={draftScope?.deliverables.join("\n") ?? ""}
-                  rows={4}
-                  required
-                  placeholder={"Weekly deliverable\nMilestone 1: …\nMilestone 2: …"}
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-xs uppercase tracking-wider text-ink-muted">
-                  Engagement timeline
-                </span>
-                <input
-                  name="timeline"
-                  defaultValue={draftScope?.timeline ?? ""}
-                  required
-                  minLength={4}
-                  placeholder="8 weeks from kickoff — 2 discovery, 4 build, 2 polish"
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
+                  defaultValue={(draftScope?.deliverables ?? []).join("\n")}
+                  rows={3}
+                  placeholder={"Anything the whole crew owes jointly.\nLeave empty if each Builder's own list covers it."}
+                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 />
               </label>
             </div>

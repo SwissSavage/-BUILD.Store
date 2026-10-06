@@ -386,6 +386,81 @@ export async function createCooperativeQuote(formData: FormData) {
  * should soft-delete so the magic-link stops resolving without
  * losing the historical record.
  */
+/**
+ * Pull a sent quote back to draft so it can be rebuilt.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-05)
+ *
+ * compileBidsIntoQuote refuses to touch a quote that is no longer a
+ * draft, and tells you to "create a revised draft instead of changing
+ * the version the client received." Nothing in the application created
+ * one. A sent quote was frozen permanently and the only way out was
+ * deleting it, which takes the client token with it and breaks any link
+ * already in their inbox.
+ *
+ * That gap mattered the moment the client-pricing bug was fixed, since
+ * every quote compiled before it carries the Builder's payout as the
+ * client price and has to be rebuilt to be correct.
+ *
+ * Only from sent or viewed. A quote the client has approved or declined
+ * is a decision, and reversing a decision is undoCooperativeQuoteDecision,
+ * which has its own verification gate. This cannot be used to reach
+ * around that.
+ *
+ * The client token survives. The same URL keeps working and shows the
+ * draft state, so a client who reloads sees that it is being revised
+ * rather than a dead link.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function returnQuoteToDraft(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Quote id is required.");
+
+  const [quote] = await db
+    .select()
+    .from(cooperativeQuotes)
+    .where(eq(cooperativeQuotes.id, id))
+    .limit(1);
+  if (!quote) throw new Error("Quote not found.");
+  if (quote.status === "draft") return;
+  if (quote.status === "approved" || quote.status === "declined") {
+    throw new Error(
+      `This quote has been ${quote.status}. Reopen the decision on the client page first, which asks the client to confirm their email.`,
+    );
+  }
+
+  // Guarded on the status we read, so two admins pressing this at once
+  // cannot both write an audit row claiming they did it.
+  const claimed = await db
+    .update(cooperativeQuotes)
+    .set({ status: "draft", sentAt: null, viewedAt: null })
+    .where(
+      and(
+        eq(cooperativeQuotes.id, id),
+        eq(cooperativeQuotes.status, quote.status),
+      )!,
+    )
+    .returning({ id: cooperativeQuotes.id });
+  if (claimed.length === 0) return;
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "quote.returned_to_draft",
+    resourceKind: "cooperative_quote",
+    resourceId: quote.id,
+    before: { status: quote.status, sentAt: quote.sentAt, viewedAt: quote.viewedAt },
+    after: { status: "draft" },
+    reason: null,
+  });
+
+  revalidatePath("/admin/cooperative-quotes");
+  revalidatePath(`/admin/rfps/${quote.projectId}/bids`);
+  revalidatePath(`/quotes/${quote.clientToken}`);
+}
+
 export async function removeCooperativeQuote(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();

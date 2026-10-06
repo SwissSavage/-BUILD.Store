@@ -36,6 +36,7 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { type ProposedBuilder } from "@/lib/types";
 import {
   removeCooperativeQuote,
+  returnQuoteToDraft,
   retrySowDispatch,
 } from "@/lib/quote-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
@@ -304,12 +305,39 @@ export default async function AdminCooperativeQuotesPage() {
                           Continue editing draft →
                         </Link>
                       ) : (
-                        <Link
-                          href={`/quotes/${quote.clientToken}`}
-                          className="text-xs text-brand-magentaText hover:underline"
-                        >
-                          Preview client view →
-                        </Link>
+                        <>
+                          <Link
+                            href={`/quotes/${quote.clientToken}`}
+                            className="text-xs text-brand-magentaText hover:underline"
+                          >
+                            Preview client view →
+                          </Link>
+                          {/* compileBidsIntoQuote refuses to touch a
+                              quote that is no longer a draft and tells
+                              you to make a revised one. Nothing made
+                              one, so a sent quote was frozen and the
+                              only way out was deleting it, which takes
+                              the client token with it and breaks the
+                              link already in their inbox.
+
+                              Not offered on approved or declined. That
+                              is a decision, and reversing it goes
+                              through the client page, which asks them
+                              to confirm their email first. */}
+                          {(quote.status === "sent" ||
+                            quote.status === "viewed") && (
+                            <form action={returnQuoteToDraft}>
+                              <input type="hidden" name="id" value={quote.id} />
+                              <button
+                                type="submit"
+                                className="text-xs text-ink-muted hover:text-brand-magentaText hover:underline"
+                                title="Pulls this back to draft so you can rebuild it from the bids. The client link keeps working and shows the draft state."
+                              >
+                                Pull back to draft
+                              </button>
+                            </form>
+                          )}
+                        </>
                       )}
                       <form action={removeCooperativeQuote}>
                         <input

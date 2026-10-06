@@ -35,8 +35,15 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { richTextValuePlainText } from "@/lib/rich-text";
 import { formatProposalHours } from "@/lib/proposal-terms";
+import {
+  clientPricingFromBuilderPayout,
+  formatUsdCents,
+  suggestedBuilderHourlyPayout,
+  suggestedClientHourlyRate,
+} from "@/lib/quote-pricing";
 import type {
   CooperativeQuote,
+  CooperativeQuotePricing,
   ProposedBuilder,
 } from "@/lib/types";
 
@@ -206,6 +213,101 @@ export async function compileBidsIntoQuote(formData: FormData) {
     } else {
       pricing = { type: "negotiable", ...split };
     }
+    // ──────────────────────────────────────────────────────────
+    // WHY (2026-10-05)
+    //
+    // clientPricingFromBuilderPayout has existed, correct, and unused.
+    // Nothing called it, so clientPricing was never written, and the
+    // quote page falls back to `builder.clientPricing ?? builder.pricing`.
+    // The client was shown the builder's own payout: a member asking
+    // $55/hr appeared on the client quote at $55/hr, with the
+    // cooperative's 15% nowhere in the number the client approves.
+    //
+    // That is a revenue bug, not a display one. A client who approves
+    // that quote has approved $55/hr, and the operations share has to
+    // come out of someone after the fact.
+    //
+    // Default is the straight gross-up. clientRate_<id> overrides it
+    // when an admin wants margin above the floor, for a bonus hedge or
+    // because the market rate for the work is higher than what the
+    // member thought to ask. The builder's payout is untouched either
+    // way: `pricing` still carries exactly what they bid.
+    // ──────────────────────────────────────────────────────────
+    const clientPricing = (() => {
+      // Hourly bids go through the standing rules: $10 over a Builder's
+      // minimum, never under a $50/hr payout, and a quoted band taken at
+      // the top already clears the hedge so nothing is added to it.
+      // Fixed and range project prices get the straight gross-up, since
+      // adding $10 to a scoped project price means nothing.
+      const grossedUp: CooperativeQuotePricing =
+        pricing.type === "hourly"
+          ? {
+              ...pricing,
+              hourlyRate: suggestedClientHourlyRate(
+                pricing.hourlyRate,
+                pricing.hourlyRateMax,
+              ),
+              hourlyRateMax: pricing.hourlyRateMax
+                ? Math.ceil(
+                    suggestedBuilderHourlyPayout(
+                      pricing.hourlyRate,
+                      pricing.hourlyRateMax,
+                    ) / 0.85,
+                  )
+                : null,
+            }
+          : clientPricingFromBuilderPayout(pricing);
+      const override = Number(
+        String(formData.get(`clientRate_${p.id}`) ?? "").replace(/[$,\s]/g, ""),
+      );
+      if (!Number.isFinite(override) || override <= 0) return grossedUp;
+
+      // Never below the gross-up. Quoting under it would pay the member
+      // out of the cooperative's share without anyone deciding to.
+      const floor = (() => {
+        switch (grossedUp.type) {
+          case "hourly":
+            return grossedUp.hourlyRate;
+          case "fixed":
+            return grossedUp.baseAmount;
+          case "range":
+            return grossedUp.baseAmountMin;
+          default:
+            return 0;
+        }
+      })();
+      if (override < floor) {
+        throw new Error(
+          `Client rate for bid ${p.id} is below the ${formatUsdCents(floor)} floor that keeps the builder's payout whole.`,
+        );
+      }
+
+      switch (grossedUp.type) {
+        case "hourly":
+          return {
+            ...grossedUp,
+            hourlyRate: override,
+            // Scale the top of the band by the same factor so an
+            // override does not quietly flatten a range into a point.
+            hourlyRateMax: grossedUp.hourlyRateMax
+              ? Math.ceil(grossedUp.hourlyRateMax * (override / grossedUp.hourlyRate))
+              : null,
+          };
+        case "fixed":
+          return { ...grossedUp, baseAmount: override };
+        case "range":
+          return {
+            ...grossedUp,
+            baseAmountMin: override,
+            baseAmountMax: Math.ceil(
+              grossedUp.baseAmountMax * (override / grossedUp.baseAmountMin),
+            ),
+          };
+        default:
+          return grossedUp;
+      }
+    })();
+
     const hoursLine = p.hoursPerWeek > 0
       ? `${formatProposalHours(p.hoursPerWeek, p.hoursPerWeekMax)} across the engagement`
       : "Availability per engagement";
@@ -255,6 +357,7 @@ export async function compileBidsIntoQuote(formData: FormData) {
     return {
       userId: p.userId,
       pricing,
+      clientPricing,
       deliverables: perBidDeliverables,
       timeline: hoursLine,
       relevance,

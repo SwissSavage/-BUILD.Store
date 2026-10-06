@@ -71,10 +71,14 @@ function ownerOf(el: HTMLElement | undefined): string {
 
 const requirements: Requirement[] = [
   {
-    message: () => "Select three to five proposals for the client comparison.",
+    // Three to five is the house standard for a readable comparison, and
+    // it is advice rather than a gate. Sometimes two bids are the two
+    // worth sending and holding the quote for a third is the worse
+    // call. Only an empty selection actually blocks, because a quote
+    // with nobody on it is not a quote.
+    message: () => "Pick at least one bid for the client quote.",
     offenders: (form) => {
-      const count = pickedIds(form).length;
-      if (count >= minimumProposalCount && count <= maximumProposalCount) return [];
+      if (pickedIds(form).length > 0) return [];
       const first = form.querySelector<HTMLElement>('input[name="applicationIds"]');
       return first ? [first] : [];
     },
@@ -154,6 +158,7 @@ const AUTHORED_SELECTOR = [
 
 export function QuoteCompileRequirements({ draftKey }: { draftKey?: string }) {
   const [errors, setErrors] = useState<string[]>([]);
+  const [notes, setNotes] = useState<string[]>([]);
   const [restored, setRestored] = useState(false);
 
   useEffect(() => {
@@ -237,6 +242,16 @@ export function QuoteCompileRequirements({ draftKey }: { draftKey?: string }) {
       });
 
       setErrors(messages);
+
+      // Advice. Shown, never enforced, never disables anything.
+      const count = pickedIds(form).length;
+      setNotes(
+        count > 0 && count < minimumProposalCount
+          ? [
+              `${count} bid${count === 1 ? "" : "s"} selected. Three to five is the house standard for a comparison the client can read, but send what is worth sending.`,
+            ]
+          : [],
+      );
       persist();
     };
 
@@ -261,7 +276,7 @@ export function QuoteCompileRequirements({ draftKey }: { draftKey?: string }) {
     };
   }, [draftKey]);
 
-  if (errors.length === 0 && !restored) return null;
+  if (errors.length === 0 && notes.length === 0 && !restored) return null;
 
   return (
     <div className="space-y-2">
@@ -269,6 +284,13 @@ export function QuoteCompileRequirements({ draftKey }: { draftKey?: string }) {
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] px-4 py-3 text-xs text-ink-muted">
           Restored text you had typed here earlier but not saved. Check it
           before saving.
+        </div>
+      )}
+      {notes.length > 0 && (
+        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] px-4 py-3 text-xs text-ink-muted">
+          {notes.map((note) => (
+            <p key={note}>{note}</p>
+          ))}
         </div>
       )}
       {errors.length > 0 && (

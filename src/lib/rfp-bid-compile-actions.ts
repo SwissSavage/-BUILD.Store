@@ -83,8 +83,12 @@ export async function compileBidsIntoQuote(formData: FormData) {
   const deliverablesRaw = String(formData.get("deliverables") ?? "");
 
   if (!rfpId) throw new Error("rfpId is required.");
-  if (applicationIds.length < minimumProposalCount) {
-    throw new Error(`Pick at least ${minimumProposalCount} bids for the client quote.`);
+  // Three to five is the house standard for a readable comparison, not a
+  // rule the software gets to enforce. Sometimes there are two bids
+  // worth sending and waiting for a third is worse than sending two.
+  // The form says so; it no longer refuses.
+  if (applicationIds.length === 0) {
+    throw new Error("Pick at least one bid for the client quote.");
   }
   if (applicationIds.length > maximumProposalCount) {
     throw new Error(

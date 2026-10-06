@@ -311,3 +311,71 @@ export function aggregateUnitLabel(agg: AggregateQuotePricing): string {
   }
   return "";
 }
+
+/**
+ * Cooperative floor and bonus hedge on a Builder's hourly payout.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-05, Jamar)
+ *
+ * Two standing rules, encoded here rather than remembered per quote:
+ *
+ *   BONUS HEDGE   A Builder who asks for a number gets at least $10/hr
+ *                 over it. Members routinely under-ask, and the margin
+ *                 funds the bonus gate without renegotiating later.
+ *
+ *   FLOOR         No Builder is paid under $50/hr through the
+ *                 cooperative, whatever they asked for. A member
+ *                 bidding $25 is pricing against a market they are
+ *                 guessing at; the cooperative does not take the
+ *                 discount.
+ *
+ * Both act on the PAYOUT. The client price is this grossed up by the
+ * 85/15 split, which the caller does separately.
+ *
+ * Not applied to fixed or range bids: a project price is quoted against
+ * a scope, and adding $10 to it means nothing.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const BUILDER_HOURLY_FLOOR = 50;
+export const BUILDER_BONUS_HEDGE = 10;
+
+/**
+ * What a Builder is actually paid per hour, given what they asked.
+ *
+ * `askMin` is their floor and `askMax` the top of any band they quoted.
+ * Three numbers compete and the highest wins:
+ *
+ *   the rate being taken   a Builder quoting $100 to $175 and taken at
+ *                          the top is already $75 above their own
+ *                          minimum, so the hedge is satisfied and
+ *                          stacking another $10 would be hedging twice
+ *
+ *   askMin + hedge         a Builder who names one number gets $10 over
+ *                          it, because members under-ask and the margin
+ *                          funds the bonus gate without a renegotiation
+ *
+ *   the floor              nobody is paid under $50/hr through the
+ *                          cooperative, whatever they asked
+ *
+ * Reproduces all three live bids: $55 flat becomes $65, $25 flat becomes
+ * $50, and $100 to $175 taken at the top stays $175.
+ */
+export function suggestedBuilderHourlyPayout(
+  askMin: number,
+  askMax?: number | null,
+): number {
+  const floorish = (n: number) => (Number.isFinite(n) && n > 0 ? n : 0);
+  const min = floorish(askMin);
+  const taken = floorish(askMax ?? 0) || min;
+  return Math.max(taken, min + BUILDER_BONUS_HEDGE, BUILDER_HOURLY_FLOOR);
+}
+
+/** What the client is quoted once the rules and the 85/15 split apply. */
+export function suggestedClientHourlyRate(
+  askMin: number,
+  askMax?: number | null,
+): number {
+  return Math.ceil(suggestedBuilderHourlyPayout(askMin, askMax) / 0.85);
+}
+

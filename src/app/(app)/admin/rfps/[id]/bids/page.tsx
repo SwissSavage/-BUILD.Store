@@ -28,6 +28,12 @@ import {
   users,
 } from "@/db/schema";
 import { formatProposalHours, formatProposalPrice } from "@/lib/proposal-terms";
+import {
+  formatUsdCents,
+  suggestedBuilderHourlyPayout,
+  suggestedClientHourlyRate,
+} from "@/lib/quote-pricing";
+import type { CooperativeQuotePricing } from "@/lib/types";
 import { compileBidsIntoQuote } from "@/lib/rfp-bid-compile-actions";
 import { scrubForClient } from "@/lib/pii-scrub";
 import { StructuredText } from "@/components/StructuredText";
@@ -270,6 +276,53 @@ export default async function RfpBidCompilePage({
                             </span>
                           )}
                         </div>
+                        {/* ───────────────────────────────────────
+                            What the client pays, as distinct from what
+                            the Builder is paid.
+
+                            clientPricingFromBuilderPayout had existed,
+                            correct and uncalled, so clientPricing was
+                            never written and the client quote fell back
+                            to the Builder's own payout. A member asking
+                            $55/hr appeared on the client quote at
+                            $55/hr, with the cooperative's 15% nowhere
+                            in the number the client approves.
+
+                            Blank means the straight gross-up, shown
+                            below the field. Fill it in when the work is
+                            worth more than the member thought to ask,
+                            or to leave room for a bonus. Their payout
+                            does not move either way.
+                            ─────────────────────────────────────── */}
+                        <label className="mt-3 block">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                            Client rate (optional override)
+                          </span>
+                          <input
+                            name={`clientRate_${b.id}`}
+                            inputMode="decimal"
+                            defaultValue={
+                              draftBuilderByUserId.get(b.userId)?.clientPricing
+                                ? clientRateOf(
+                                    draftBuilderByUserId.get(b.userId)!.clientPricing!,
+                                  )
+                                : ""
+                            }
+                            placeholder={`Default ${formatUsdCents(
+                              suggestedClientRate(b),
+                            )}${b.priceMode === "hourly" ? "/hr" : ""}`}
+                            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
+                          />
+                          <span className="mt-1 block text-[10px] text-ink-faint">
+                            They bid {formatProposalPrice(b)}. Rules give them{" "}
+                            {formatUsdCents(suggestedPayout(b))}
+                            {b.priceMode === "hourly" ? "/hr" : ""} and the
+                            client {formatUsdCents(suggestedClientRate(b))}
+                            {b.priceMode === "hourly" ? "/hr" : ""}. Leave blank
+                            to use that. Below it is refused.
+                          </span>
+                        </label>
+
                         {/* Strengths and weaknesses carry most of the
                             weight in a real $BUILD quote sheet, and
                             the app had nowhere to put them. The client
@@ -526,4 +579,58 @@ export default async function RfpBidCompilePage({
       )}
     </div>
   );
+}
+
+/**
+ * The client rate the standing rules produce for this bid, shown beside
+ * the override field so an admin sees what they are departing from.
+ *
+ * Hourly only. A fixed or range project price is quoted against a
+ * scope, so the $10 hedge and the $50 floor do not apply to it; those
+ * fall back to the straight gross-up.
+ */
+function suggestedClientRate(bid: {
+  priceMode?: string | null;
+  hourlyRate?: string | null;
+  hourlyRateMax?: string | null;
+  fixedPriceMin?: string | null;
+}): number {
+  if (bid.priceMode === "hourly") {
+    return suggestedClientHourlyRate(
+      Number(bid.hourlyRate ?? 0),
+      bid.hourlyRateMax ? Number(bid.hourlyRateMax) : null,
+    );
+  }
+  const raw = Number(bid.fixedPriceMin ?? 0);
+  return raw > 0 ? Math.ceil(raw / 0.85) : 0;
+}
+
+/** What the Builder takes home under the same rules. */
+function suggestedPayout(bid: {
+  priceMode?: string | null;
+  hourlyRate?: string | null;
+  hourlyRateMax?: string | null;
+  fixedPriceMin?: string | null;
+}): number {
+  if (bid.priceMode === "hourly") {
+    return suggestedBuilderHourlyPayout(
+      Number(bid.hourlyRate ?? 0),
+      bid.hourlyRateMax ? Number(bid.hourlyRateMax) : null,
+    );
+  }
+  return Number(bid.fixedPriceMin ?? 0);
+}
+
+/** The headline number out of a stored client price, for the field default. */
+function clientRateOf(pricing: CooperativeQuotePricing): string {
+  switch (pricing.type) {
+    case "hourly":
+      return String(pricing.hourlyRate);
+    case "fixed":
+      return String(pricing.baseAmount);
+    case "range":
+      return String(pricing.baseAmountMin);
+    default:
+      return "";
+  }
 }

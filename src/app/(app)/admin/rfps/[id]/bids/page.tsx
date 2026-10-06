@@ -209,7 +209,7 @@ export default async function RfpBidCompilePage({
           className="mt-6 space-y-6"
         >
           <input type="hidden" name="rfpId" value={id} />
-          <QuoteCompileRequirements />
+          <QuoteCompileRequirements draftKey={id} />
 
           {draftQuote && (
             <Card className="border-brand-magenta/40 bg-brand-magenta/5">
@@ -343,6 +343,7 @@ export default async function RfpBidCompilePage({
                             <textarea
                               name={`strengths_${b.id}`}
                               data-quote-strengths={b.id}
+                              data-quote-owner={b.firstName ?? b.handle ?? "this Builder"}
                               defaultValue={draftBuilderByUserId.get(b.userId)?.strengths ?? ""}
                               rows={3}
                               placeholder="What they are genuinely good at, for this scope."
@@ -356,6 +357,7 @@ export default async function RfpBidCompilePage({
                             <textarea
                               name={`weaknesses_${b.id}`}
                               data-quote-weaknesses={b.id}
+                              data-quote-owner={b.firstName ?? b.handle ?? "this Builder"}
                               defaultValue={draftBuilderByUserId.get(b.userId)?.weaknesses ?? ""}
                               rows={3}
                               placeholder="The honest trade-off. What they will need paired with them."
@@ -478,6 +480,7 @@ export default async function RfpBidCompilePage({
                           <textarea
                             name={`deliverables_${b.id}`}
                             data-quote-deliverables={b.id}
+                            data-quote-owner={b.firstName ?? b.handle ?? "this Builder"}
                             defaultValue={(draftBuilderByUserId.get(b.userId)?.deliverables ?? []).join("\n")}
                             rows={3}
                             placeholder={"What this person hands over.\nOne line each."}
@@ -559,6 +562,7 @@ export default async function RfpBidCompilePage({
               type="submit"
               name="intent"
               value="draft"
+              data-quote-submit
               className="rounded-full border border-[var(--surface-border)] px-6 py-2 text-sm font-medium hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Save &amp; see draft
@@ -567,6 +571,7 @@ export default async function RfpBidCompilePage({
               type="submit"
               name="intent"
               value="send"
+              data-quote-submit
               className="fm-btn-primary rounded-full px-6 py-2 text-sm font-medium"
             >
               Send client quote

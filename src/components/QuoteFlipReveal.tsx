@@ -7,6 +7,7 @@
  */
 
 import { useState } from "react";
+import { publicName } from "@/lib/types";
 import { CardBack } from "@/components/CardBack";
 import { TradingCard3D } from "@/components/TradingCard3D";
 import type { TalentHandDecision } from "@/components/TalentHand";
@@ -24,6 +25,11 @@ export interface QuoteFlipReveaCrewMember {
     | "avatarPortraitUrl"
     | "discipline"
     | "membershipTier"
+    // publicName needs both to honour an artist's alias. Without them
+    // it silently falls back to the first-name convention, which is
+    // right for everyone else and wrong for an artist.
+    | "displayName"
+    | "profileMode"
   >;
   tier: TradingCardTier;
   relevance: string;
@@ -99,7 +105,11 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
         {crew.map((member, index) => {
           const isFlipped = flippedIds.has(member.user.id);
           const isSelected = selectedUserId === member.user.id;
-          const name = `${member.user.firstName} ${member.user.lastName}`.trim() || member.user.handle;
+          // No last names on a client-facing surface, ever. The
+          // first-name convention is what stops a client routing
+          // around the cooperative to reach talent directly, and a
+          // quote is the most client-facing page there is.
+          const name = publicName(member.user);
           return (
             <button
               key={member.user.id}

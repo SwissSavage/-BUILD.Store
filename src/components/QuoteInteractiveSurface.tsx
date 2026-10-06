@@ -52,7 +52,7 @@ import {
   aggregateUnitLabel,
   deriveAggregatePricing,
 } from "@/lib/quote-pricing";
-import type { ProposedBuilder } from "@/lib/types";
+import { publicName, type ProposedBuilder } from "@/lib/types";
 
 interface QuoteInteractiveSurfaceProps {
   clientToken: string;
@@ -181,7 +181,7 @@ export function QuoteInteractiveSurface({
     if (!selectedLeadUserId) return null;
     const found = crew.find((c) => c.user.id === selectedLeadUserId);
     if (!found) return null;
-    return `${found.user.firstName} ${found.user.lastName}`.trim();
+    return publicName(found.user);
   })();
 
   // Optimistic post-decision UI. Runs the moment the server action
@@ -278,7 +278,7 @@ export function QuoteInteractiveSurface({
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="text-sm font-medium text-ink">
-                    {member.user.firstName} {member.user.lastName}
+                    {publicName(member.user)}
                   </p>
                   {builder?.timeline && (
                     <p className="text-xs text-ink-muted">{builder.timeline}</p>

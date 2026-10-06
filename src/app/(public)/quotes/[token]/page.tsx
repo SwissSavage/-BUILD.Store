@@ -35,6 +35,7 @@ import { getAllUsers } from "@/lib/readers/users";
 import { mvpScoreReader, safely } from "@/lib/readers";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import { deriveTradingCardTier } from "@/components/TradingCard";
+import { publicName } from "@/lib/types";
 import { CardEyebrow, CardTitle } from "@/components/Card";
 import type { QuoteFlipReveaCrewMember } from "@/components/QuoteFlipReveal";
 import { QuoteInteractiveSurface } from "@/components/QuoteInteractiveSurface";
@@ -177,6 +178,11 @@ export default async function CooperativeQuotePage({
           avatarPortraitUrl: user.avatarPortraitUrl,
           discipline: user.discipline,
           membershipTier: user.membershipTier,
+          // publicName honours an artist's alias only when both are
+          // present. Omitting them silently downgrades an artist to
+          // the first-name convention.
+          displayName: user.displayName,
+          profileMode: user.profileMode,
         },
         tier,
         relevance: b.relevance,
@@ -250,7 +256,7 @@ export default async function CooperativeQuotePage({
             <p className="mt-4 max-w-xl text-ink-muted">
               Your lead builder is{" "}
               <strong className="text-ink">
-                {selectedLead.user.firstName} {selectedLead.user.lastName}
+                {publicName(selectedLead.user)}
               </strong>
               . We&apos;re kicking off contracts and calendar within one
               business day. You&apos;ll hear from Future Modern on

@@ -32,7 +32,14 @@ import { revalidatePath } from "next/cache";
 import { notify } from "@/lib/writers/notifications";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { getVerifiedQuoteClient } from "@/lib/quote-client-session";
+import {
+  isPlausibleSignature,
+  quoteSignatureStatement,
+  signedCopy,
+} from "@/lib/quote-signature";
+import { buildSignedQuotePdf } from "@/lib/quote-signed-pdf";
+import { sendTransactionalEmail } from "@/lib/email";
+import { headers } from "next/headers";
 import { secureToken } from "@/lib/secure-token";
 import {
   cooperativeQuotes,
@@ -47,6 +54,8 @@ import {
   inviteRecipientToTemplate,
 } from "@/lib/documenso";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { pricingHeadline, pricingUnitLabel } from "@/lib/quote-pricing";
+import { publicName } from "@/lib/types";
 import type {
   CooperativeQuote,
   CooperativeQuotePricing,
@@ -532,21 +541,43 @@ export async function approveCooperativeQuote(formData: FormData) {
     .where(eq(cooperativeQuotes.clientToken, token))
     .limit(1);
   if (!quote) throw new Error("Quote not found.");
-  // Every decision on a quote needs a verified mailbox behind it. The
-  // token gets you the proposal; it does not get you the signature.
-  // quote-verification-actions.ts carries the reasoning for why reading
-  // stays open while deciding does not.
-  const signer = await getVerifiedQuoteClient(quote.id, token);
-  if (!signer) {
-    throw new Error(
-      "Confirm your email before deciding. Enter your address on the proposal and we will send you a code.",
-    );
-  }
 
-  // The SOW is addressed to the mailbox that was proved, never to what
-  // the form said. This is the whole point of the gate above.
-  const clientContactEmail = signer.email;
-  const clientContactName = signer.name;
+  // ──────────────────────────────────────────────────────────
+  // WHY A SIGNATURE AND NOT A CODE (2026-10-07)
+  //
+  // This used to require a one-time code emailed to the signer. That
+  // was the right answer to "anyone with the link can approve" and the
+  // wrong answer for this product: the link only ever reaches a
+  // decision maker or someone beside one, the close happens on a call,
+  // and a verification step in front of a signature protects against a
+  // case that does not occur while taxing every case that does.
+  //
+  // The signature is the accountability. Someone who signs without the
+  // authority to sign is answerable for having signed, which is how
+  // every e-signature product works.
+  //
+  // The statement is stored with it, not referenced, so the record says
+  // what this person was shown rather than that a flag went true.
+  // ──────────────────────────────────────────────────────────
+  const clientContactName = String(formData.get("clientContactName") ?? "").trim();
+  const clientContactEmail = String(formData.get("clientContactEmail") ?? "")
+    .trim()
+    .toLowerCase();
+  const signatureTyped = String(formData.get("signatureTyped") ?? "").trim();
+
+  if (clientContactName.length < 2) {
+    throw new Error("Enter the name this agreement should be addressed to.");
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clientContactEmail)) {
+    throw new Error("Enter a valid email so both sides get a signed copy.");
+  }
+  if (!isPlausibleSignature(signatureTyped, clientContactName)) {
+    throw new Error("Sign by typing your name in the signature field.");
+  }
+  const signatureStatement = quoteSignatureStatement(quote.clientDisplayName);
+  const signedAt = new Date().toISOString();
+  const signerIp =
+    (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
   if (quote.status === "approved" || quote.status === "declined") {
     throw new Error(
@@ -573,6 +604,11 @@ export async function approveCooperativeQuote(formData: FormData) {
       selectedLeadUserId,
       clientContactEmail,
       clientContactName,
+      // The signature and what it was given against, recorded together.
+      clientSignatureTyped: signatureTyped,
+      clientSignatureStatement: signatureStatement,
+      clientSignatureIp: signerIp,
+      clientSignedAt: signedAt,
     })
     .where(eq(cooperativeQuotes.id, quote.id));
   // Reflect changes in the in-memory object for notification helper.
@@ -581,6 +617,14 @@ export async function approveCooperativeQuote(formData: FormData) {
   quote.selectedLeadUserId = selectedLeadUserId;
   quote.clientContactEmail = clientContactEmail;
   quote.clientContactName = clientContactName;
+
+  // Names for the signed copy. publicName, because the document goes to
+  // the client and the first-name convention holds there too.
+  const builderNames = new Map<string, string>();
+  for (const b of proposedBuilders) {
+    const u = await getUserById(b.userId);
+    if (u) builderNames.set(b.userId, publicName(u));
+  }
 
   const leadUser = await getUserById(selectedLeadUserId);
   const leadName = leadUser
@@ -606,6 +650,71 @@ export async function approveCooperativeQuote(formData: FormData) {
       "contractsent",
       `Client ${quote.clientDisplayName} selected ${leadName} as lead. Awaiting LOI + SOW signatures.`,
     );
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // The signed copy, to the client and to FM.
+  //
+  // A PDF rather than an email body: a signed quote gets forwarded to a
+  // finance team, filed, and read back months later. An email body
+  // loses its formatting on forward and nobody treats it as a document.
+  //
+  // Wrapped and awaited-but-not-fatal. The quote is already approved in
+  // the database by this point, and a mail failure must not make the
+  // client think their signature did not land. It is logged loudly
+  // instead, because a missing signed copy is a real problem, just not
+  // one to solve by throwing at the person who signed.
+  // ──────────────────────────────────────────────────────────
+  try {
+    const crewForCopy = proposedBuilders.map((b) => {
+      const priced = b.clientPricing ?? b.pricing;
+      return {
+        name: builderNames.get(b.userId) ?? b.userId,
+        rate: `${pricingHeadline(priced)} ${pricingUnitLabel(priced)}`.trim(),
+        timeline: b.timeline,
+      };
+    });
+    const copy = signedCopy({
+      clientDisplayName: quote.clientDisplayName,
+      projectTitle,
+      signerName: clientContactName,
+      signerEmail: clientContactEmail,
+      signatureTyped,
+      statement: signatureStatement,
+      signedAt,
+      leadName,
+      crew: crewForCopy,
+    });
+    const pdf = await buildSignedQuotePdf({
+      clientDisplayName: quote.clientDisplayName,
+      projectTitle,
+      signerName: clientContactName,
+      signerEmail: clientContactEmail,
+      signatureTyped,
+      statement: signatureStatement,
+      signedAt,
+      signerIp,
+      leadName,
+      crew: crewForCopy,
+      quoteId: quote.id,
+    });
+    const attachments = [
+      {
+        filename: `signed-proposal-${quote.clientDisplayName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`,
+        content: pdf,
+        contentType: "application/pdf",
+      },
+    ];
+    const fmInbox = process.env.EMAIL_FROM;
+    await Promise.all([
+      sendTransactionalEmail({ to: clientContactEmail, ...copy, attachments }),
+      ...(fmInbox
+        ? [sendTransactionalEmail({ to: fmInbox, ...copy, attachments })]
+        : []),
+    ]);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[quote] signed copy failed to send", quote.id, err);
   }
 
   await logAuditEvent({
@@ -835,16 +944,6 @@ export async function declineCooperativeQuote(formData: FormData) {
     .where(eq(cooperativeQuotes.clientToken, token))
     .limit(1);
   if (!quote) throw new Error("Quote not found.");
-  // Every decision on a quote needs a verified mailbox behind it. The
-  // token gets you the proposal; it does not get you the signature.
-  // quote-verification-actions.ts carries the reasoning for why reading
-  // stays open while deciding does not.
-  const signer = await getVerifiedQuoteClient(quote.id, token);
-  if (!signer) {
-    throw new Error(
-      "Confirm your email before deciding. Enter your address on the proposal and we will send you a code.",
-    );
-  }
 
   if (quote.status === "approved" || quote.status === "declined") {
     throw new Error(
@@ -955,16 +1054,6 @@ export async function undoCooperativeQuoteDecision(formData: FormData) {
     .where(eq(cooperativeQuotes.clientToken, token))
     .limit(1);
   if (!quote) throw new Error("Quote not found.");
-  // Every decision on a quote needs a verified mailbox behind it. The
-  // token gets you the proposal; it does not get you the signature.
-  // quote-verification-actions.ts carries the reasoning for why reading
-  // stays open while deciding does not.
-  const signer = await getVerifiedQuoteClient(quote.id, token);
-  if (!signer) {
-    throw new Error(
-      "Confirm your email before deciding. Enter your address on the proposal and we will send you a code.",
-    );
-  }
 
   if (quote.status !== "approved" && quote.status !== "declined") {
     throw new Error(

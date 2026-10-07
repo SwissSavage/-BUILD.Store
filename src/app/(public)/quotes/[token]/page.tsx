@@ -45,8 +45,6 @@ import {
   pricingUnitLabel,
 } from "@/lib/quote-pricing";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { getVerifiedQuoteClient } from "@/lib/quote-client-session";
-import { QuoteSignerVerification } from "@/components/QuoteSignerVerification";
 
 /**
  * Force-dynamic on this route. The surface is stateful (evolves
@@ -113,11 +111,6 @@ export default async function CooperativeQuotePage({
     notFound();
   }
 
-  // Which mailbox, if any, this browser has proved it controls on this
-  // quote. Read from an httpOnly cookie server-side, so it is a fact
-  // about the request rather than something the page can be told.
-  // Null is the normal case: reading the proposal needs nothing.
-  const verifiedAs = await getVerifiedQuoteClient(row.id, row.clientToken);
 
   // Cast jsonb → canonical types. The DB column is typed unknown by
   // Drizzle; the runtime shape is enforced by the authoring flow.
@@ -237,10 +230,10 @@ export default async function CooperativeQuotePage({
       {!decided && (
         <QuoteInteractiveSurface
           clientToken={quote.clientToken}
+          clientDisplayName={quote.clientDisplayName}
           scope={quote.scope}
           crew={crew}
           proposedBuilders={clientFacingBuilders}
-          verifiedAs={verifiedAs}
           previewOnly={isDraftPreview}
         />
       )}
@@ -274,14 +267,10 @@ export default async function CooperativeQuotePage({
               .
             </p>
           )}
-          {verifiedAs ? (
-            <QuoteDecidedUndoButton
-              clientToken={quote.clientToken}
-              previousDecision="approved"
-            />
-          ) : (
-            <QuoteSignerVerification clientToken={quote.clientToken} />
-          )}
+          <QuoteDecidedUndoButton
+            clientToken={quote.clientToken}
+            previousDecision="approved"
+          />
         </section>
       )}
 
@@ -308,14 +297,10 @@ export default async function CooperativeQuotePage({
               .
             </p>
           )}
-          {verifiedAs ? (
-            <QuoteDecidedUndoButton
-              clientToken={quote.clientToken}
-              previousDecision="declined"
-            />
-          ) : (
-            <QuoteSignerVerification clientToken={quote.clientToken} />
-          )}
+          <QuoteDecidedUndoButton
+            clientToken={quote.clientToken}
+            previousDecision="declined"
+          />
         </section>
       )}
 

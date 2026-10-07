@@ -348,6 +348,35 @@ export const cooperativeQuotes = pgTable("cooperative_quotes", {
   // right addresses. Nullable because pre-#45 rows won't have these.
   clientContactEmail: text("client_contact_email"),
   clientContactName: text("client_contact_name"),
+  /**
+   * The signature, and what it was given against.
+   *
+   * ───────────────────────────────────────────────────────────
+   * WHY (2026-10-07)
+   *
+   * Approving used to need a one-time code emailed to the signer. That
+   * was the right answer to "anyone with the link can approve" and the
+   * wrong answer for this product: the link only ever reaches a
+   * decision maker or someone next to one, the close happens on a
+   * call, and a verification step in front of a signature is friction
+   * protecting against a case that does not occur.
+   *
+   * A signature is the accountability instead, which is how every
+   * e-signature product works and how Jamar already described it:
+   * someone who signs without the authority to sign is answerable for
+   * having signed.
+   *
+   * The statement is stored alongside the name, not just referenced,
+   * because the evidence that matters later is what the person was
+   * shown and agreed to, not that a boolean went true. If the wording
+   * changes next quarter, old signatures still carry the words their
+   * signer actually read.
+   * ───────────────────────────────────────────────────────────
+   */
+  clientSignatureTyped: text("client_signature_typed"),
+  clientSignatureStatement: text("client_signature_statement"),
+  clientSignatureIp: text("client_signature_ip"),
+  clientSignedAt: timestamp("client_signed_at", { mode: "string", withTimezone: true }),
   clientSowDocumensoId: text("client_sow_documenso_id"),
   talentEngagementDocumensoId: text("talent_engagement_documenso_id"),
   sowDispatchedAt: timestamp("sow_dispatched_at", { mode: "string", withTimezone: true }),

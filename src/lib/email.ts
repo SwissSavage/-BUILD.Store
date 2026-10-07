@@ -38,6 +38,16 @@ export interface SendEmailInput {
   subject: string;
   text: string;
   html?: string;
+  /**
+   * Attachments, in nodemailer's own shape. Added for the signed quote
+   * copy, where the record has to survive being forwarded to a finance
+   * team that will not read an email body as a document.
+   */
+  attachments?: {
+    filename: string;
+    content: Buffer;
+    contentType?: string;
+  }[];
 }
 
 export async function sendTransactionalEmail(input: SendEmailInput) {
@@ -50,5 +60,6 @@ export async function sendTransactionalEmail(input: SendEmailInput) {
     subject: input.subject,
     text: input.text,
     html: input.html,
+    attachments: input.attachments,
   });
 }

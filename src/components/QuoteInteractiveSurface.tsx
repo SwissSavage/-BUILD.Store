@@ -34,7 +34,6 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { QuoteSignerVerification } from "@/components/QuoteSignerVerification";
 import {
   QuoteFlipReveal,
   type QuoteFlipReveaCrewMember,
@@ -53,9 +52,12 @@ import {
   deriveAggregatePricing,
 } from "@/lib/quote-pricing";
 import { publicName, type ProposedBuilder } from "@/lib/types";
+import { quoteSignatureStatement } from "@/lib/quote-signature";
 
 interface QuoteInteractiveSurfaceProps {
   clientToken: string;
+  /** For the signature statement, which names who is being signed for. */
+  clientDisplayName: string;
   scope: {
     summary: string;
     /** Only what spans the whole crew. Per-Builder lists live on
@@ -73,32 +75,32 @@ interface QuoteInteractiveSurfaceProps {
    */
   proposedBuilders: ProposedBuilder[];
   crew: QuoteFlipReveaCrewMember[];
-  /**
-   * The mailbox this browser has proved it controls on this quote, or
-   * null. Decided server-side from an httpOnly cookie; the component
-   * only ever reads it, so it cannot be faked from the client.
-   */
-  verifiedAs: { email: string; name: string } | null;
   previewOnly?: boolean;
 }
 
 export function QuoteInteractiveSurface({
   clientToken,
+  clientDisplayName,
   scope,
   proposedBuilders,
   crew,
-  verifiedAs,
   previewOnly = false,
 }: QuoteInteractiveSurfaceProps) {
   const router = useRouter();
   const [selectedLeadUserId, setSelectedLeadUserId] = useState<string | null>(
     null,
   );
+  const [signerName, setSignerName] = useState("");
+  const [signerEmail, setSignerEmail] = useState("");
+  const [signatureTyped, setSignatureTyped] = useState("");
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
-  // Task #45 captured the SOW contact here, as free text, because
-  // viewing was anonymous. It is now whatever mailbox the signer
-  // proved, read server-side and passed in as `verifiedAs`.
+  // Task #45 captured the SOW contact as free text, then a code-verified
+  // session replaced it, then a signature replaced that. See the WHY in
+  // approveCooperativeQuote: the link only reaches a decision maker, the
+  // close happens on a call, and a verification step in front of a
+  // signature taxes every real case to guard against one that does not
+  // occur. The signature is the accountability.
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   // Optimistic post-decision state. Once the server action returns,
@@ -134,16 +136,28 @@ export function QuoteInteractiveSurface({
     }
   }
 
+  // Rendered from the same function the action stores, so the wording
+  // on screen and the wording on record cannot drift apart.
+  const statement = quoteSignatureStatement(clientDisplayName);
+
+  const signatureReady =
+    signerName.trim().length >= 2 &&
+    /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(signerEmail.trim()) &&
+    signatureTyped.trim().length >= 3;
+
   function handleApprove() {
     if (!selectedLeadUserId || pending) return;
-    if (!verifiedAs) {
-      setError("Confirm your email before approving.");
+    if (!signatureReady) {
+      setError("Add your name, email and signature before approving.");
       return;
     }
     setError(null);
     const formData = new FormData();
     formData.set("token", clientToken);
     formData.set("selectedLeadUserId", selectedLeadUserId);
+    formData.set("clientContactName", signerName.trim());
+    formData.set("clientContactEmail", signerEmail.trim());
+    formData.set("signatureTyped", signatureTyped.trim());
     startTransition(async () => {
       try {
         await approveCooperativeQuote(formData);
@@ -388,25 +402,67 @@ export function QuoteInteractiveSurface({
         {/* Who the agreement will be addressed to. Not editable here:
             it is the mailbox that answered the code, which is the only
             reason the name on a signed SOW means anything. */}
-        {verifiedAs ? (
-          <p className="mt-6 text-sm text-ink-muted">
-            Signing as <span className="text-ink">{verifiedAs.name}</span> ·{" "}
-            {verifiedAs.email}
+        {/* Sign here. One screen: who you are, where the copy goes,
+            and the signature itself, with the statement shown in full
+            above it rather than hidden behind a checkbox. */}
+        <div className="mt-6 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
+          <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+            Sign to approve
           </p>
-        ) : (
-          !previewOnly && <QuoteSignerVerification clientToken={clientToken} />
-        )}
+          <p className="mt-2 max-w-prose text-sm leading-relaxed text-ink-muted">
+            {statement}
+          </p>
 
-        {/* The decision controls only exist once a mailbox has
-            answered. The server actions enforce this too; hiding them
-            here is so a buyer is not presented with a button that will
-            refuse them. */}
-        <div
-          className={`mt-6 flex flex-wrap gap-3 ${
-            verifiedAs ? "" : "pointer-events-none opacity-40"
-          }`}
-          aria-hidden={!verifiedAs}
-        >
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <label className="block">
+              <span className="text-[11px] uppercase tracking-wider text-ink-muted">
+                Your name
+              </span>
+              <input
+                type="text"
+                value={signerName}
+                onChange={(e) => setSignerName(e.target.value)}
+                placeholder="Full name"
+                disabled={pending}
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none disabled:opacity-60"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[11px] uppercase tracking-wider text-ink-muted">
+                Email for the signed copy
+              </span>
+              <input
+                type="email"
+                value={signerEmail}
+                onChange={(e) => setSignerEmail(e.target.value)}
+                placeholder="name@company.com"
+                disabled={pending}
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none disabled:opacity-60"
+              />
+            </label>
+          </div>
+
+          <label className="mt-3 block">
+            <span className="text-[11px] uppercase tracking-wider text-ink-muted">
+              Signature
+            </span>
+            <input
+              type="text"
+              value={signatureTyped}
+              onChange={(e) => setSignatureTyped(e.target.value)}
+              placeholder="Type your name to sign"
+              disabled={pending}
+              autoComplete="off"
+              className="mt-1 w-full rounded-lg border-b-2 border-[var(--surface-border)] bg-transparent px-1 py-2 font-display text-2xl italic text-ink placeholder:text-base placeholder:not-italic placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none disabled:opacity-60"
+            />
+          </label>
+          <p className="mt-2 text-[11px] text-ink-faint">
+            Both you and Future Modern receive a signed PDF copy of this
+            proposal, including the terms above, as soon as you approve.
+          </p>
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-3">
           <button
             type="button"
             onClick={handleApprove}

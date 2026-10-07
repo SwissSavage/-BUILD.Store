@@ -18,6 +18,7 @@
  */
 "use server";
 
+import { requireAdmin } from "@/lib/auth-stub";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
@@ -265,10 +266,20 @@ async function decideProjectApplication(
  * button's name/value dropped the decision from some Server Action requests.
  */
 export async function approveProjectApplication(formData: FormData) {
+  // Stated here, not only in the helper below. An exported server
+  // action is a public endpoint on its own, and authorisation that
+  // is only visible one call down reads as absent to anyone
+  // auditing this file, which is how four real holes survived.
+  await requireAdmin();
   return decideProjectApplication(formData, "approve");
 }
 
 export async function rejectProjectApplication(formData: FormData) {
+  // Stated here, not only in the helper below. An exported server
+  // action is a public endpoint on its own, and authorisation that
+  // is only visible one call down reads as absent to anyone
+  // auditing this file, which is how four real holes survived.
+  await requireAdmin();
   return decideProjectApplication(formData, "reject");
 }
 

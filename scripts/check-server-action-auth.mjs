@@ -29,6 +29,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 import { readdir, readFile } from "node:fs/promises";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -124,4 +125,84 @@ if (findings.length > 0) {
 
 console.log(
   `✓ every inline server action authenticates (${checked} checked, ${PUBLIC.size} public by design)`,
+);
+
+// ──────────────────────────────────────────────────────────────
+// PART TWO: module-level "use server" files (2026-10-07)
+//
+// Everything above walks inline actions under src/app. A file in
+// src/lib with a top-level "use server" publishes every exported async
+// function as a public POST endpoint too, and nothing was checking
+// those. The audit that prompted this found four live holes: three
+// cron sweeps and a project purge, all callable by anyone, plus a
+// reserve credit that took the actor's identity from its caller.
+//
+// Same rule, wider net. A gate is any of the recognised helpers, a
+// token the caller must already hold, or the cron secret.
+// ──────────────────────────────────────────────────────────────
+const LIB_GATES =
+  /requireAdmin|requireUser|requireSeller|requireMember|getCurrentUser|isAdmin|assertCronCaller|SESSION_COOKIE|VISITOR_COOKIE|formData\.get\("token"\)|clientToken|inviteCode|getVerifiedQuoteClient/;
+
+// Public on purpose, each with the reason it is safe.
+const LIB_PUBLIC = new Map([
+  ["startVisitorThread", "visitor chat widget; anonymous by design"],
+  ["sendVisitorMessage", "visitor chat widget; thread is cookie-scoped"],
+  ["createEpkBookingRequest", "public booking form on an artist's EPK"],
+  ["submitProspectiveContribution", "public contribution form on a project"],
+  ["sendInviteLoiForSignature", "the invite code is the credential; validated unrevoked, unconsumed, unexpired"],
+  ["handleSignup", "public signup intake"],
+]);
+
+function libFiles(dir, out = []) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) libFiles(full, out);
+    else if (entry.name.endsWith(".ts")) out.push(full);
+  }
+  return out;
+}
+
+const libOffenders = [];
+let libChecked = 0;
+let libPublic = 0;
+
+for (const file of libFiles("src/lib")) {
+  const src = readFileSync(file, "utf8");
+  const directive = src.slice(0, 4000).match(/^\s*["']use server["'];?\s*$/m);
+  if (!directive) continue;
+  // A directive after an import is not a module-level one.
+  if (/^\s*(import|export)\s/m.test(src.slice(0, directive.index))) continue;
+
+  for (const m of src.matchAll(/export async function (\w+)\(/g)) {
+    const name = m[1];
+    const next = src.indexOf("\nexport async function", m.index + 1);
+    const body = src.slice(m.index, next === -1 ? src.length : next);
+    libChecked += 1;
+    if (LIB_PUBLIC.has(name)) {
+      libPublic += 1;
+      continue;
+    }
+    if (!LIB_GATES.test(body)) libOffenders.push({ file, name });
+  }
+}
+
+if (libOffenders.length > 0) {
+  console.error(
+    [
+      "",
+      `${libOffenders.length} exported server action(s) in src/lib have no gate:`,
+      "",
+      ...libOffenders.map((o) => `  ${o.name}  (${o.file})`),
+      "",
+      "A module-level \"use server\" publishes every exported async function",
+      "as a public POST endpoint. Add an auth check, or add the function to",
+      "LIB_PUBLIC in this script with the reason it is safe.",
+      "",
+    ].join("\n"),
+  );
+  process.exit(1);
+}
+
+console.log(
+  `✓ src/lib server actions gated (${libChecked} checked, ${libPublic} public by design)`,
 );

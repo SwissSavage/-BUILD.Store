@@ -72,8 +72,27 @@ import type {
  */
 export async function creditReserveOnInvoiceCollection(input: {
   projectId: string;
-  actorUserId: string | null;
+  /**
+   * @deprecated Ignored. Identity comes from the session.
+   *
+   * ─────────────────────────────────────────────────────────
+   * WHY (2026-10-07)
+   *
+   * This took the actor from its caller while living in a module with
+   * a top-level "use server", so it was a public POST endpoint that
+   * credited a reserve pool and attributed the credit to whichever
+   * user id the caller named. One legitimate call site, the admin
+   * ledger page, which is gated; the action behind it was not.
+   *
+   * Kept in the signature rather than removed so the existing call
+   * site keeps compiling, and ignored so it cannot be believed.
+   * ─────────────────────────────────────────────────────────
+   */
+  actorUserId?: string | null;
 }): Promise<ReservePoolLedgerEntry | null> {
+  // Money moves, so the actor is whoever is actually signed in.
+  const admin = await requireAdmin();
+  const actorUserId = admin.id;
   const project = await getProjectById(input.projectId);
   if (!project) return null;
   if (!project.talentBonusAmount) return null;
@@ -95,15 +114,15 @@ export async function creditReserveOnInvoiceCollection(input: {
     creditReason: "invoice_collection",
     debitReason: null,
     recipientId: null,
-    actorUserId: input.actorUserId,
+    actorUserId: actorUserId,
     rationale: `Top − bottom delta credited on external invoice payment (${amount.toFixed(2)}).`,
   });
 
-  const actor = input.actorUserId
-    ? await getUserById(input.actorUserId)
+  const actor = actorUserId
+    ? await getUserById(actorUserId)
     : null;
   await logAuditEvent({
-    actorUserId: input.actorUserId,
+    actorUserId: actorUserId,
     actorRoleSnapshot: snapshotActorRole(actor),
     action: "reserve.credited",
     resourceKind: "reserve_pool",

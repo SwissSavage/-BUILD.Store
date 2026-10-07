@@ -33,6 +33,7 @@
  */
 "use server";
 
+import { assertCronCaller } from "@/lib/cron-guard";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
@@ -223,10 +224,19 @@ export async function hideProfilePendingFix(formData: FormData) {
  */
 const AUTO_HIDE_CODES = new Set(["email", "phone", "booking_link", "external_url"]);
 
-export async function runDisclosureSweep(): Promise<{
+export async function runDisclosureSweep(
+  cronSecret?: string,
+): Promise<{
+
   scanned: number;
   hidden: number;
 }> {
+  // A sweep is not something a browser gets to run. See cron-guard.ts:
+  // this lives in a "use server" module, so it is a public POST
+  // endpoint, and the route's CRON_SECRET check protected the route
+  // rather than the work behind it.
+  assertCronCaller(cronSecret);
+
   const { users: roster } = await getAllUsers();
   const live = roster.filter((u) => u.profilePublic && !u.suspendedAt);
 

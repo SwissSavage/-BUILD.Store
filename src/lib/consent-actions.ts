@@ -81,6 +81,11 @@ async function setDataParticipation(next: boolean): Promise<void> {
 
 /** Member opts in to Tier-2 data participation. */
 export async function optInDataParticipation() {
+  // Stated here, not only in the helper below. An exported server
+  // action is a public endpoint on its own, and authorisation that
+  // is only visible one call down reads as absent to anyone
+  // auditing this file, which is how four real holes survived.
+  await getCurrentUser();
   await setDataParticipation(true);
 }
 
@@ -92,5 +97,10 @@ export async function optInDataParticipation() {
  * design).
  */
 export async function optOutDataParticipation() {
+  // Stated here, not only in the helper below. An exported server
+  // action is a public endpoint on its own, and authorisation that
+  // is only visible one call down reads as absent to anyone
+  // auditing this file, which is how four real holes survived.
+  await getCurrentUser();
   await setDataParticipation(false);
 }

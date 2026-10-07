@@ -21,6 +21,7 @@
  */
 "use server";
 
+import { assertCronCaller } from "@/lib/cron-guard";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, isNotNull, lt, sql } from "drizzle-orm";
@@ -253,7 +254,16 @@ export async function purgeProject(formData: FormData) {
  * Returns a count rather than throwing on a single bad row, so one
  * project with an unexpected reference doesn't stop the sweep.
  */
-export async function purgeExpiredProjects(): Promise<{ purged: number }> {
+export async function purgeExpiredProjects(
+  cronSecret?: string,
+): Promise<{
+ purged: number }> {
+  // A sweep is not something a browser gets to run. See cron-guard.ts:
+  // this lives in a "use server" module, so it is a public POST
+  // endpoint, and the route's CRON_SECRET check protected the route
+  // rather than the work behind it.
+  assertCronCaller(cronSecret);
+
   const cutoff = new Date(
     Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000,
   ).toISOString();

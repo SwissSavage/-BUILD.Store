@@ -210,13 +210,34 @@ export default async function AdminCooperativeQuotesPage() {
               // enforces it at insert time.
               const proposedBuilders =
                 quote.proposedBuilders as ProposedBuilder[];
-              const aggregate = deriveAggregatePricing(proposedBuilders);
-              const aggregateLine =
-                `${aggregateHeadline(aggregate)}${
-                  aggregateUnitLabel(aggregate)
-                    ? ` ${aggregateUnitLabel(aggregate)}`
-                    : ""
+
+              // ────────────────────────────────────────────────
+              // WHY TWO NUMBERS (2026-10-07)
+              //
+              // This showed one line, derived from `pricing`, which is
+              // what the BUILDER is paid. It sat under the label
+              // "billed as delivered", which is client-facing wording,
+              // so the same quote read $55/hr here and $77/hr on the
+              // client's own page and nothing on screen explained the
+              // gap.
+              //
+              // Both now, labelled. The client number first because
+              // that is the one discussed on a call, the payout beside
+              // it because that is the one an admin is accountable for.
+              // ────────────────────────────────────────────────
+              const clientAggregate = deriveAggregatePricing(
+                proposedBuilders.map((b) => ({
+                  ...b,
+                  pricing: b.clientPricing ?? b.pricing,
+                })),
+              );
+              const payoutAggregate = deriveAggregatePricing(proposedBuilders);
+              const line = (a: ReturnType<typeof deriveAggregatePricing>) =>
+                `${aggregateHeadline(a)}${
+                  aggregateUnitLabel(a) ? ` ${aggregateUnitLabel(a)}` : ""
                 }`;
+              const aggregateLine = line(clientAggregate);
+              const payoutLine = line(payoutAggregate);
 
               return (
                 <li key={quote.id}>
@@ -245,6 +266,10 @@ export default async function AdminCooperativeQuotesPage() {
                         ? "builder"
                         : "builders"}
                     </CardTitle>
+                    <p className="mt-1 text-xs text-ink-faint">
+                      Client sees {aggregateLine}. Builders are paid{" "}
+                      {payoutLine}.
+                    </p>
                     {quote.status === "draft" ? (
                       <p className="mt-3 text-xs text-ink-muted">
                         Internal draft. The client link is inactive and selected bids remain editable.

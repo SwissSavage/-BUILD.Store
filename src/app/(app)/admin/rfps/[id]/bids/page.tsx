@@ -507,11 +507,29 @@ export default async function RfpBidCompilePage({
                 <span className="text-xs uppercase tracking-wider text-ink-muted">
                   Client display name
                 </span>
+                {/* Two bugs in one line, previously
+                    `defaultValue={rfp.clientId ?? ""}`.
+
+                    It ignored the saved draft, so a name typed here
+                    was written to the quote correctly and then
+                    overwritten on screen the moment the page came
+                    back. It looked like the save had failed.
+
+                    And rfp.clientId is an internal identifier, often
+                    literally a user id like "u_jamar". It was being
+                    offered as the company name that goes at the top of
+                    the client's proposal and in the confidentiality
+                    line at the foot of it. Dropped entirely: there is
+                    no sensible guess at what a client calls
+                    themselves, and a blank field asks the question
+                    rather than inviting someone to tab past a wrong
+                    answer. */}
                 <input
                   name="clientDisplayName"
-                  defaultValue={rfp.clientId ?? ""}
+                  defaultValue={draftQuote?.clientDisplayName ?? ""}
                   required
                   minLength={2}
+                  placeholder="The client company, as they write it"
                   className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
                 />
               </label>

@@ -39,6 +39,7 @@ import {
   returnQuoteToDraft,
   retrySowDispatch,
 } from "@/lib/quote-actions";
+import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import {
   aggregateHeadline,
@@ -97,6 +98,18 @@ const STATUS_LABEL: Record<QuoteStatus, string> = {
   approved: "Approved",
   declined: "Declined",
 };
+
+/**
+ * Where this deployment lives, for links an admin copies out of the
+ * product and pastes into an email. Falls back to the production host
+ * rather than to a relative path, because a half-written URL in a
+ * client's inbox is worse than one pointing at the wrong environment.
+ */
+const siteOrigin = (
+  process.env.AUTH_URL ??
+  process.env.NEXTAUTH_URL ??
+  "https://build.afuturemodern.com"
+).replace(/\/$/, "");
 
 export default async function AdminCooperativeQuotesPage() {
   const viewer = await getCurrentUser();
@@ -238,12 +251,35 @@ export default async function AdminCooperativeQuotesPage() {
                       </p>
                     ) : (
                       <>
+                        {/* The whole URL, and a button that puts it on
+                            the clipboard or into the share sheet.
+
+                            This used to render the bare path
+                            "/quotes/q_..." in a code block: nothing to
+                            click, no origin, and an admin about to send
+                            a proposal had to know to prepend the domain
+                            by hand. The one place in the product where
+                            a URL is the deliverable was the one place
+                            it was not a URL. */}
                         <p className="mt-3 text-xs text-ink-muted">
-                          Client magic-link (production dispatches to the
-                          client contact):
+                          Client link. Send this to the client.
                         </p>
-                        <code className="mt-1 block break-all rounded-lg bg-[var(--surface-inset)] px-3 py-2 text-[11px] text-ink">
-                          /quotes/{quote.clientToken}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <CopyLinkButton
+                            url={`${siteOrigin}/quotes/${quote.clientToken}`}
+                            shareTitle={`Future Modern proposal for ${quote.clientDisplayName}`}
+                          />
+                          <a
+                            href={`/quotes/${quote.clientToken}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
+                          >
+                            Open ↗
+                          </a>
+                        </div>
+                        <code className="mt-2 block break-all rounded-lg bg-[var(--surface-inset)] px-3 py-2 text-[11px] text-ink">
+                          {siteOrigin}/quotes/{quote.clientToken}
                         </code>
                       </>
                     )}

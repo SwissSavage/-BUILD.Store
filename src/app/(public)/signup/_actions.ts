@@ -124,27 +124,41 @@ export async function handleSignup(formData: FormData) {
     derived: false,
   });
 
-  await createHubspotLead({
-    email,
-    firstName,
-    lastName,
-    company,
-    industry,
-    intent,
-    talentPortfolioUrl: talentPortfolioUrl || undefined,
-    talentSummary: talentSummary || undefined,
-    opportunityBrief: opportunityBrief || undefined,
-    teamScope: teamScope || undefined,
-    pillars: pillars.length > 0 ? pillars : undefined,
-    jdUploads: jdUploads.length > 0 ? jdUploads : undefined,
-    source: `signup_form_${intent}`,
-    // Tier-2 data participation opt-in. Captured here at signup so the
-    // production swap can persist it on the User row and write an audit
-    // entry. Tier-1 (registration T&C) is implicit via form submission
-    // since the checkbox is `required`.
-    dataParticipationOptIn:
-      String(formData.get("dataParticipation") ?? "") === "on",
-  });
+  // ──────────────────────────────────────────────────────────
+  // WHY (2026-10-07)
+  //
+  // This fired for all three intents, so somebody applying to JOIN the
+  // cooperative created a deal in the sales CRM. Talent is supply.
+  // Putting them in the pipeline inflates it with people who are never
+  // going to buy anything, and means a RevOps view of the funnel is
+  // counting the wrong population.
+  //
+  // Hire-talent and build-a-team are demand and belong in HubSpot.
+  // Join-as-talent lands in /admin/inbound and nowhere else.
+  // ──────────────────────────────────────────────────────────
+  if (intent !== "join_as_talent") {
+    await createHubspotLead({
+      email,
+      firstName,
+      lastName,
+      company,
+      industry,
+      intent,
+      talentPortfolioUrl: talentPortfolioUrl || undefined,
+      talentSummary: talentSummary || undefined,
+      opportunityBrief: opportunityBrief || undefined,
+      teamScope: teamScope || undefined,
+      pillars: pillars.length > 0 ? pillars : undefined,
+      jdUploads: jdUploads.length > 0 ? jdUploads : undefined,
+      source: `signup_form_${intent}`,
+      // Tier-2 data participation opt-in. Captured here at signup so the
+      // production swap can persist it on the User row and write an audit
+      // entry. Tier-1 (registration T&C) is implicit via form submission
+      // since the checkbox is `required`.
+        dataParticipationOptIn:
+          String(formData.get("dataParticipation") ?? "") === "on",
+    });
+  }
 
   redirect("/signup/thanks");
 }

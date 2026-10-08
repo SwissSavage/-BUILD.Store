@@ -350,3 +350,183 @@ export async function updateHubspotDealStage(
     return false;
   }
 }
+
+// ════════════════════════════════════════════════════════════════
+//  READING FROM HUBSPOT
+//
+//  Everything above writes: create a lead, move a stage, take a
+//  webhook. Nothing read, which is why onboarding an existing client
+//  meant retyping a company that HubSpot already knows about.
+//
+//  These three are the minimum for "pick the client you already have":
+//  search companies by name, fetch one, and list a company's deals so
+//  an engagement can be seen in context before a new deal is opened.
+// ════════════════════════════════════════════════════════════════
+
+export interface HubspotCompany {
+  id: string;
+  name: string;
+  domain: string | null;
+  city: string | null;
+  /** ISO. Useful for telling two similarly-named records apart. */
+  createdAt: string | null;
+}
+
+interface HubspotSearchResponse {
+  total?: number;
+  results?: Array<{
+    id: string;
+    properties?: Record<string, string | null>;
+    createdAt?: string;
+  }>;
+  status?: string;
+}
+
+/** GET-style fetch. hubspotFetch above is POST-only. */
+async function hubspotGet<T>(path: string): Promise<T> {
+  if (!HUBSPOT_ACCESS_TOKEN) {
+    throw new Error(
+      "HUBSPOT_ACCESS_TOKEN is not set in the deployment environment.",
+    );
+  }
+  const response = await fetch(`https://api.hubapi.com${path}`, {
+    headers: { Authorization: `Bearer ${HUBSPOT_ACCESS_TOKEN}` },
+  });
+  const json = (await response.json()) as T & { status?: string };
+  if (!response.ok || json.status === "error") {
+    // eslint-disable-next-line no-console
+    console.error("[crm] HubSpot read error", response.status, json);
+    throw new Error(`HubSpot API error (${response.status})`);
+  }
+  return json;
+}
+
+function toCompany(row: {
+  id: string;
+  properties?: Record<string, string | null>;
+  createdAt?: string;
+}): HubspotCompany {
+  return {
+    id: row.id,
+    name: row.properties?.name ?? "(unnamed company)",
+    domain: row.properties?.domain ?? null,
+    city: row.properties?.city ?? null,
+    createdAt: row.createdAt ?? null,
+  };
+}
+
+/**
+ * Companies whose name contains the query.
+ *
+ * CONTAINS_TOKEN rather than EQ, because an admin typing "welding"
+ * should find "Advanced Welding Solutions". Capped at 20: this feeds a
+ * picker, and a list longer than that means the query was too vague to
+ * be useful anyway.
+ *
+ * Returns an empty array rather than throwing when HubSpot is
+ * unreachable or unconfigured. The picker degrades to "type the name
+ * yourself", which is the behaviour before this existed, rather than
+ * taking the page down.
+ */
+export async function searchHubspotCompanies(
+  query: string,
+): Promise<HubspotCompany[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+  try {
+    const json = await hubspotFetch(
+      "https://api.hubapi.com/crm/v3/objects/companies/search",
+      {
+        filterGroups: [
+          {
+            filters: [
+              {
+                propertyName: "name",
+                operator: "CONTAINS_TOKEN",
+                value: trimmed,
+              },
+            ],
+          },
+        ],
+        properties: ["name", "domain", "city"],
+        limit: 20,
+      },
+    ) as unknown as HubspotSearchResponse;
+    return (json.results ?? []).map(toCompany);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[crm] company search failed", err);
+    return [];
+  }
+}
+
+/** One company by id. Null rather than throwing, same reasoning. */
+export async function getHubspotCompany(
+  companyId: string,
+): Promise<HubspotCompany | null> {
+  try {
+    const json = await hubspotGet<{
+      id: string;
+      properties?: Record<string, string | null>;
+      createdAt?: string;
+    }>(
+      `/crm/v3/objects/companies/${encodeURIComponent(companyId)}?properties=name,domain,city`,
+    );
+    return toCompany(json);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[crm] company fetch failed", companyId, err);
+    return null;
+  }
+}
+
+export interface HubspotDealSummary {
+  id: string;
+  name: string;
+  stage: string | null;
+  amount: string | null;
+  closeDate: string | null;
+}
+
+/**
+ * A company's deals, newest first.
+ *
+ * Context before opening another one: a reengagement is normally a new
+ * deal, but seeing what is already open stops a second deal being
+ * created for work that is already tracked.
+ */
+export async function listHubspotDealsForCompany(
+  companyId: string,
+): Promise<HubspotDealSummary[]> {
+  try {
+    const assoc = await hubspotGet<{
+      results?: Array<{ toObjectId?: number; id?: string }>;
+    }>(
+      `/crm/v4/objects/companies/${encodeURIComponent(companyId)}/associations/deals?limit=50`,
+    );
+    const ids = (assoc.results ?? [])
+      .map((r) => String(r.toObjectId ?? r.id ?? ""))
+      .filter(Boolean);
+    if (ids.length === 0) return [];
+
+    const batch = await hubspotFetch(
+      "https://api.hubapi.com/crm/v3/objects/deals/batch/read",
+      {
+        properties: ["dealname", "dealstage", "amount", "closedate"],
+        inputs: ids.map((id) => ({ id })),
+      },
+    ) as unknown as HubspotSearchResponse;
+
+    return (batch.results ?? []).map((row) => ({
+      id: row.id,
+      name: row.properties?.dealname ?? "(unnamed deal)",
+      stage: row.properties?.dealstage ?? null,
+      amount: row.properties?.amount ?? null,
+      closeDate: row.properties?.closedate ?? null,
+    }));
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[crm] deal list failed", companyId, err);
+    return [];
+  }
+}

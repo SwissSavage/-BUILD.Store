@@ -121,6 +121,7 @@ export const ADMIN_NAV: AdminNavEntry[] = [
   { href: "/admin/walkthrough", label: "Walkthrough / stress test", group: "governance" },
 
   // ── Create ───────────────────────────────────────────────────
+  { href: "/admin/engagements/new", label: "Start an engagement", group: "create" },
   { href: "/admin/contracts/new", label: "Post a contract", group: "create" },
   { href: "/admin/members/invite", label: "Invite someone", group: "create" },
   { href: "/admin/inbound/import", label: "Import contacts", group: "create" },

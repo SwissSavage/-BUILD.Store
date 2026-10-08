@@ -11,6 +11,7 @@ body in a v1-matching visual style:
 
 Output: docs/talent-partner-agreement-v2.pdf
 """
+import sys
 from pathlib import Path
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -23,8 +24,20 @@ from reportlab.platypus import (
 from reportlab.pdfgen import canvas
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "docs" / "loi-talent-partner-v2.md"
-OUT = ROOT / "docs" / "talent-partner-agreement-v2.pdf"
+
+# Takes a source and an output so one renderer serves every Documenso
+# template rather than a script per document. Defaults preserve the
+# original single-purpose behaviour.
+#
+#   python scripts/generate-agreement-pdf.py \
+#       docs/cooperative-quote-acceptance.md \
+#       ../deliverables/documenso-templates/template-cooperative-quote.pdf \
+#       "Cooperative Quote Acceptance"
+SRC = ROOT / (sys.argv[1] if len(sys.argv) > 1 else "docs/loi-talent-partner-v2.md")
+OUT = ROOT / (sys.argv[2] if len(sys.argv) > 2
+              else "docs/talent-partner-agreement-v2.pdf")
+DOC_TITLE = (sys.argv[3] if len(sys.argv) > 3
+             else "Talent Partner Agreement v2")
 
 PINK = HexColor("#E91E63")   # Approximates the v1 magenta title
 FM_BLUE = HexColor("#3A2D82")  # Backup accent
@@ -143,6 +156,12 @@ def render_blocks(body_md: str):
             i += 1
             continue
 
+        # Horizontal rule: breathing room, not a paragraph reading "---".
+        if line.strip() in ("---", "***", "___"):
+            yield Spacer(1, 10)
+            i += 1
+            continue
+
         # H1 — top title (FUTURE MODERN + title on next line)
         if line.startswith("# ") and not line.startswith("## "):
             heading = line[2:].strip()
@@ -233,7 +252,7 @@ def main():
         rightMargin=0.9 * inch,
         topMargin=0.9 * inch,
         bottomMargin=0.9 * inch,
-        title="Talent Partner Agreement v2 — Future Modern",
+        title=f"{DOC_TITLE} - Future Modern",
         author="Future Modern",
     )
     flowables = list(render_blocks(body_md))

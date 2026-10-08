@@ -54,7 +54,13 @@ import {
   inviteRecipientToTemplate,
 } from "@/lib/documenso";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
-import { pricingHeadline, pricingUnitLabel } from "@/lib/quote-pricing";
+import {
+  aggregateHeadline,
+  aggregateUnitLabel,
+  deriveAggregatePricing,
+  pricingHeadline,
+  pricingUnitLabel,
+} from "@/lib/quote-pricing";
 import { publicName } from "@/lib/types";
 import type {
   CooperativeQuote,
@@ -688,15 +694,37 @@ export async function approveCooperativeQuote(formData: FormData) {
     const pdf = await buildSignedQuotePdf({
       clientDisplayName: quote.clientDisplayName,
       projectTitle,
-      signerName: clientContactName,
-      signerEmail: clientContactEmail,
-      signatureTyped,
-      statement: signatureStatement,
-      signedAt,
-      signerIp,
-      leadName,
-      crew: crewForCopy,
       quoteId: quote.id,
+      preparedOn: new Date(quote.createdAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      total: aggregateHeadline(deriveAggregatePricing(proposedBuilders.map((b) => ({
+        ...b,
+        pricing: b.clientPricing ?? b.pricing,
+      })))),
+      totalBasis: aggregateUnitLabel(deriveAggregatePricing(proposedBuilders.map((b) => ({
+        ...b,
+        pricing: b.clientPricing ?? b.pricing,
+      })))),
+      lineItems: proposedBuilders.map((b) => {
+        const priced = b.clientPricing ?? b.pricing;
+        return {
+          name: builderNames.get(b.userId) ?? b.userId,
+          role: b.relevance,
+          deliverables: b.deliverables ?? [],
+          rate: pricingHeadline(priced),
+          timeline: b.timeline,
+        };
+      }),
+      leadName,
+      signature: {
+        signerName: clientContactName,
+        signerEmail: clientContactEmail,
+        signedAt,
+        signerIp,
+      },
     });
     const attachments = [
       {

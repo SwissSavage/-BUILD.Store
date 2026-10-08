@@ -68,8 +68,8 @@ export async function GET(request: Request) {
     return unauthorized();
   }
 
-  const sweep = await runMilestoneSweep();
-  const rollup = await runWeeklyProjectRollup();
+  const sweep = await runMilestoneSweep(secret);
+  const rollup = await runWeeklyProjectRollup(secret);
   // Task #55 — same daily cron also runs the agreement renewal
   // sweep. Escalating 60/30/7/day-of pings fire on the natural
   // pre-renewal cadence; bucket transitions re-fire even if a
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
   // must not take down trash retention or the MVP recompute below.
   let disclosure: { scanned: number; hidden: number } | { error: string };
   try {
-    disclosure = await runDisclosureSweep();
+    disclosure = await runDisclosureSweep(secret);
   } catch (err) {
     disclosure = { error: err instanceof Error ? err.message : String(err) };
     // eslint-disable-next-line no-console
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
 
   // Trash retention — clears projects past the restore window along
   // with their applications and milestones.
-  const trash = await purgeExpiredProjects();
+  const trash = await purgeExpiredProjects(secret);
   // MVP recompute. Scores already update the moment a peer review
   // lands, so this exists for the time-dependent half of the formula:
   // compliance penalties expire on a 90-day clock, and without a

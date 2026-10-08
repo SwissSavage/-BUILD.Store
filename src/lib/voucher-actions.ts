@@ -70,7 +70,10 @@ function isSourceType(raw: string): raw is BuildVoucherSourceType {
  * because they no longer count against the supply cap. Callers that
  * want the full-history sum can pass an explicit status list.
  */
-export async function totalIssuedSupply(
+// Not exported. Both of these are read-only helpers used inside this
+// file, and exporting them from a "use server" module published the
+// $BUILD voucher supply position as a public endpoint for no reason.
+async function totalIssuedSupply(
   statuses: readonly BuildVoucher["swapStatus"][] = [
     "unswapped",
     "pending_swap",
@@ -95,7 +98,7 @@ export async function totalIssuedSupply(
  * top of totalIssuedSupply so the admin surface can render "X of
  * 10M issued, Y remaining."
  */
-export async function remainingSupply(): Promise<number> {
+async function remainingSupply(): Promise<number> {
   const issued = await totalIssuedSupply();
   return BUILD_VOUCHER_SUPPLY_CAP - issued;
 }

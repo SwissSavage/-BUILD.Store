@@ -207,6 +207,11 @@ export async function updateProduct(formData: FormData) {
  * buyer's order history into a set of blanks.
  */
 export async function archiveProduct(formData: FormData) {
+  // Stated here, not only in the helper below. An exported server
+  // action is a public endpoint on its own, and authorisation that
+  // is only visible one call down reads as absent to anyone
+  // auditing this file, which is how four real holes survived.
+  await requireSeller();
   await setProductStatus(formData, "archived");
 }
 

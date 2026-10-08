@@ -218,6 +218,8 @@ export async function composeEngagement(
   const payoutRaw = String(formData.get("builderPayoutRate") ?? "").trim();
   const clientRateRaw = String(formData.get("engagementRate") ?? "").trim();
   const ceilingRaw = String(formData.get("engagementCeilingHours") ?? "").trim();
+  const rateException = String(formData.get("rateExceptionReason") ?? "").trim();
+  const rateOverride = formData.get("rateOverride") != null;
 
   if (title.length < 3) {
     return { ok: false, error: "Give the engagement a name the client would recognise." };
@@ -253,13 +255,31 @@ export async function composeEngagement(
     }
     const floor = suggestedClientHourlyRate(payout);
     if (!Number.isFinite(clientRate) || clientRate <= 0) clientRate = floor;
+    // Below the standing rate is allowed and has to be, because the
+    // first real engagement through this screen is a grandfathered
+    // client on a rate negotiated before the rules existed. Jamar:
+    // "We're just going with the previously negotiated arrangement.
+    // They're grandfathered in hence the pricing." Same correction the
+    // three-bid minimum needed: a standard, not a requirement.
+    //
+    // What it does ask for is a reason, in writing, once. That is the
+    // difference between a priced exception and a margin quietly
+    // eroding one deal at a time, and it is the only record of why this
+    // client pays less when somebody looks at it in a year.
     if (clientRate < floor) {
-      return {
-        ok: false,
-        error: `The client rate has to be at least $${floor}/hr. A Builder asking $${payout} is paid $${Math.round(
-          floor * 0.85,
-        )} under the standing rules, and $${floor} is what covers that with the cooperative's 15 percent.`,
-      };
+      // The override has to be turned on deliberately, here as well as
+      // in the form. A server action is a public POST endpoint whose id
+      // is a content hash: the checkbox protects the screen and nothing
+      // behind it, so a posted rate under the standard with no override
+      // flag is refused rather than quietly honoured.
+      if (!rateOverride) {
+        clientRate = floor;
+      } else if (rateException.length < 3) {
+        return {
+          ok: false,
+          error: `$${clientRate}/hr is under the $${floor} standard for a Builder asking $${payout}. Charge it if that is the deal. Say why in one line (grandfathered rate, prior arrangement, strategic) and it goes on the record.`,
+        };
+      }
     }
   } else if (!Number.isFinite(typedClientRate) || typedClientRate <= 0) {
     return { ok: false, error: "Enter the fixed price." };
@@ -357,6 +377,10 @@ export async function composeEngagement(
       basis,
       clientRate,
       builderPayout,
+      // Null on a normal deal. Present means somebody signed off on a
+      // rate under the standard and said why.
+      rateOverride,
+      rateException: rateException ? rateException.slice(0, 500) : null,
       ceilingHours: hasCeiling ? ceiling : null,
       referenceLinks: links.length,
       referenceFiles: files.length,

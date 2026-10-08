@@ -66,6 +66,8 @@ export function StartEngagementForm({
   const router = useRouter();
   const [basis, setBasis] = useState<"hourly" | "fixed">("hourly");
   const [ask, setAsk] = useState("");
+  const [clientRate, setClientRate] = useState("");
+  const [override, setOverride] = useState(false);
   const [talentId, setTalentId] = useState("");
   const [newClient, setNewClient] = useState(false);
 
@@ -86,6 +88,19 @@ export function StartEngagementForm({
   const hasAsk = Number.isFinite(askNum) && askNum > 0;
   const paid = hasAsk ? suggestedBuilderHourlyPayout(askNum) : null;
   const floor = hasAsk ? suggestedClientHourlyRate(askNum) : null;
+
+  // Below the standard is allowed. A grandfathered client on a rate
+  // agreed before the rules existed is the first real engagement
+  // through this screen, and a hard gate would have blocked it.
+  //
+  // But the override is a thing you turn on, not a mode the form puts
+  // you in because of what you typed. Jamar: "the manual override needs
+  // to be manual." Off, the rate is the standard and the field is not
+  // yours to edit. On, you type the number and say why. Nothing about
+  // the pricing changes without a deliberate act.
+  const rateNum = Number(clientRate.replace(/[$,\s]/g, ""));
+  const belowStandard =
+    override && floor !== null && Number.isFinite(rateNum) && rateNum > 0 && rateNum < floor;
 
   const selectedTalent = talent.find((t) => t.id === talentId);
   const firstName = selectedTalent?.name.split(" ")[0] ?? "the Builder";
@@ -273,14 +288,22 @@ export function StartEngagementForm({
                 <input
                   name="engagementRate"
                   inputMode="decimal"
+                  value={override ? clientRate : floor ? String(floor) : ""}
+                  onChange={(e) => setClientRate(e.target.value)}
                   placeholder={floor ? `${floor}` : "per hour"}
                   className={field}
+                  // Read-only rather than disabled: a disabled input
+                  // posts nothing, and the server would then see a
+                  // blank rate on every normal deal.
+                  readOnly={!override}
                   disabled={pending}
                 />
                 <span className="mt-1 block text-[10px] text-ink-faint">
-                  {floor
-                    ? `Blank uses $${floor}. Above it is yours to charge; below it is refused.`
-                    : "Set by the standing rules once an ask is entered."}
+                  {override
+                    ? "Yours to set."
+                    : floor
+                      ? "The standard rate. Override below to change it."
+                      : "Fills in once an ask is entered."}
                 </span>
               </label>
               <label className="block">
@@ -302,15 +325,57 @@ export function StartEngagementForm({
               </label>
             </div>
 
-            {/* The chain, in order, so the refusal is never a surprise. */}
+            {/* The chain, in order, so the standard is legible rather
+                than arriving as a refusal from the server. It is what
+                the rules produce, not what the deal has to be. */}
             {hasAsk && paid && floor && (
               <p className="mt-3 rounded-lg bg-[var(--surface-raised)] px-3 py-2 text-[11px] text-ink-muted">
                 {firstName} asks <strong className="text-ink">${askNum}</strong>{" "}
                 · paid <strong className="text-ink">${paid}</strong> (the $10
-                over their ask, floor of $50) · client pays{" "}
+                over their ask, floor of $50) · standard rate{" "}
                 <strong className="text-ink">${floor}</strong> (that payout at
                 the cooperative&rsquo;s 85 percent)
               </p>
+            )}
+
+            {/* The override itself: a switch, off by default. */}
+            {hasAsk && floor && (
+              <label className="mt-3 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="rateOverride"
+                  checked={override}
+                  onChange={(e) => {
+                    setOverride(e.target.checked);
+                    if (e.target.checked && !clientRate) {
+                      setClientRate(String(floor));
+                    }
+                  }}
+                  disabled={pending}
+                />
+                Set the client rate myself
+              </label>
+            )}
+
+            {/* The reason, only once the typed rate is actually under
+                the standard. An always-visible justification box would
+                train everyone to fill it in with nothing. */}
+            {belowStandard && floor && (
+              <label className="mt-3 block">
+                <span className={label}>
+                  Why this one is under ${floor}
+                </span>
+                <input
+                  name="rateExceptionReason"
+                  placeholder="Grandfathered rate, negotiated before the standard"
+                  className={field}
+                  disabled={pending}
+                />
+                <span className="mt-1 block text-[10px] text-ink-faint">
+                  Charge it. This just goes on the record so the exception
+                  reads as a decision and not as drift.
+                </span>
+              </label>
             )}
           </>
         ) : (

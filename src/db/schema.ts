@@ -175,7 +175,64 @@ export const projects = pgTable("projects", {
   status: text("status", {
     enum: ["open", "in_progress", "completed", "cancelled"],
   }).notNull(),
+  /**
+   * Legacy free-text client label. Kept because existing rows carry it
+   * and some are the only record of who the work was for. New code
+   * reads clientRefId; this is not written by anything new.
+   *
+   * @deprecated Use clientRefId.
+   */
   clientId: text("client_id").notNull(),
+  /** The client as a record. Nullable while the backfill settles. */
+  clientRefId: text("client_ref_id").references(() => clients.id, {
+    onDelete: "set null",
+  }),
+  /**
+   * Engagement terms, for work started directly rather than won through
+   * an RFP.
+   *
+   * ───────────────────────────────────────────────────────────
+   * WHY (2026-10-08)
+   *
+   * An engagement had a budget and nothing else. No rate, no ceiling,
+   * no scope. Most of how FM actually sells is a returning client, an
+   * hourly rate both sides already know, and a text message. That is
+   * fine for a solo shop and is a liability for an enterprise one: the
+   * only record of what was agreed is in somebody's phone.
+   *
+   * These four columns are the record. Entered once by an admin, they
+   * are what the agreement is generated from, so neither the talent nor
+   * the client fills in a form.
+   *
+   * WHY A CEILING AND NOT AN ESTIMATE
+   *
+   * This relationship has renegotiated hours twice, because both times
+   * a number was agreed that nobody could know yet. A ceiling commits
+   * to nothing about how long the work takes: come in under it and you
+   * bill what you used. It ends the negotiation in one line, protects
+   * FM from unbilled overrun, and protects the client from a surprise
+   * invoice. Same not-to-exceed mechanism FM already asks Builders for
+   * on cooperative quotes, pointed at its own operation.
+   *
+   * KNOWN LIMIT
+   *
+   * One set of terms per engagement, so this describes a single-talent
+   * or single-rate engagement. A crew at differing rates still belongs
+   * on a cooperative quote, where pricing is per Builder.
+   * ───────────────────────────────────────────────────────────
+   */
+  engagementBasis: text("engagement_basis", {
+    enum: ["hourly", "fixed"],
+  }),
+  /** Client-facing. The Builder payout is this less the cooperative share. */
+  engagementRate: numeric("engagement_rate", { precision: 12, scale: 2 }),
+  /** Not-to-exceed. Hours for hourly work; null means no cap agreed. */
+  engagementCeilingHours: numeric("engagement_ceiling_hours", {
+    precision: 8,
+    scale: 2,
+  }),
+  /** A few lines. What the client is buying, in the admin's words. */
+  engagementScope: text("engagement_scope"),
   assignedMemberIds: jsonb("assigned_member_ids")
     .$type<string[]>()
     .notNull()
@@ -1796,6 +1853,58 @@ export const quoteClientVerifications = pgTable("quote_client_verifications", {
 });
 
 
+/**
+ * A client, as a thing that exists rather than a string.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-08)
+ *
+ * projects.client_id was free text. That is why a cooperative quote
+ * offered "u_Jamar" as the company name at the top of a client-facing
+ * proposal, and why a returning client had no path through the app: a
+ * repeat engagement needs something to repeat against, and there was
+ * nothing to point at.
+ *
+ * WHY THIS IS A REFERENCE AND NOT A CRM
+ *
+ * HubSpot already holds the companies, the contacts, the deals and the
+ * history. Copying that here would create a second source of truth that
+ * drifts, and would mean retyping what already exists. So this row is a
+ * pointer plus the one field needed to render a document without a
+ * round trip to the API.
+ *
+ * hubspot_company_id is nullable on purpose. A relationship can be real
+ * before it is in the CRM, and refusing to record one until HubSpot
+ * knows about it would recreate the blank-form problem this is meant to
+ * remove.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const clients = pgTable("clients", {
+  id: text("id").primaryKey(),
+  /**
+   * As the client writes it themselves. This is what goes at the top of
+   * a quote and in the confidentiality line at the foot of it, so it is
+   * held locally rather than fetched: a proposal must render even when
+   * HubSpot is slow or down.
+   */
+  displayName: text("display_name").notNull(),
+  /** The pointer. Unique when present; absent for a relationship not yet in the CRM. */
+  hubspotCompanyId: text("hubspot_company_id"),
+  /** Who FM actually talks to. Everything else about them stays in HubSpot. */
+  primaryContactName: text("primary_contact_name"),
+  primaryContactEmail: text("primary_contact_email"),
+  status: text("status", {
+    enum: ["prospect", "active", "past"],
+  }).notNull().default("active"),
+  /** Admin-only. Context a CRM field would not hold well. */
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  createdByUserId: text("created_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+});
+
+
 export const schema = {
   users,
   accounts,
@@ -1861,4 +1970,5 @@ export const schema = {
   payoutMethods,
   profileDisclosureReviews,
   quoteClientVerifications,
+  clients,
 } as const;

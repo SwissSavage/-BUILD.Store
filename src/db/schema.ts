@@ -233,6 +233,43 @@ export const projects = pgTable("projects", {
   }),
   /** A few lines. What the client is buying, in the admin's words. */
   engagementScope: text("engagement_scope"),
+  /**
+   * Where a directly-composed engagement is in its one handshake.
+   *
+   * ───────────────────────────────────────────────────────────
+   * WHY (2026-10-08)
+   *
+   * There was a hot-start button that created the deal, set the project
+   * running and notified the Builder in one press, off terms the
+   * Builder had never seen. That is a principal-agent problem wearing a
+   * CTA: FM would have committed someone else's hours, at someone
+   * else's rate, to a ceiling they never agreed to.
+   *
+   * The fix is one review and one click. Composing sends; the Builder
+   * accepts or declines; work starts on acceptance. Null on every
+   * project that did not come through the direct motion.
+   * ───────────────────────────────────────────────────────────
+   */
+  engagementState: text("engagement_state", {
+    enum: ["awaiting_talent", "accepted", "declined"],
+  }),
+  engagementSentAt: timestamp("engagement_sent_at", { mode: "string", withTimezone: true }),
+  engagementDecidedAt: timestamp("engagement_decided_at", { mode: "string", withTimezone: true }),
+  /** The Builder's own words when declining. Shown to the admin, not the client. */
+  engagementDeclineReason: text("engagement_decline_reason"),
+  /**
+   * Reference material, as named items rather than raw URLs in the
+   * scope text. Shape: Array<{ label, url }>.
+   */
+  engagementLinks: jsonb("engagement_links")
+    .$type<{ label: string; url: string }[]>()
+    .notNull()
+    .default([]),
+  /**
+   * Same shape as rfpAttachments: base64 inline until R2 lands (#57/#58).
+   * Shape: Array<{ name, mimeType, sizeBytes, base64 }>.
+   */
+  engagementAttachments: jsonb("engagement_attachments").notNull().default([]),
   assignedMemberIds: jsonb("assigned_member_ids")
     .$type<string[]>()
     .notNull()

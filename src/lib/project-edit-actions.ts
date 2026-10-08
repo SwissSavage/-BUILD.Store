@@ -22,11 +22,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projectApplications, projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
+import { getUserById } from "@/lib/readers/users";
+import { notify as pushNotification } from "@/lib/writers/notifications";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { parseRichText, richTextPlainText } from "@/lib/rich-text";
 import type { Industry } from "@/lib/types";
@@ -324,4 +326,116 @@ export async function editProposalAsAdmin(formData: FormData) {
   revalidatePath(`/admin/rfps/${before.projectId}/bids`);
   revalidatePath(`/contracts/${before.projectId}`);
   revalidatePath(`/projects/${before.projectId}`);
+}
+
+/**
+ * Put a named member on an engagement directly, with no application.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-08)
+ *
+ * assignedMemberIds was read in seven places and written in exactly
+ * one: approving a project application. So the only way onto a team was
+ * to apply for work and be chosen, which is the right shape for a cold
+ * RFP and the wrong shape for most of how FM actually sells.
+ *
+ * A returning client asking for the person they worked with last time
+ * had no path at all. The options were to run an RFP nobody was
+ * competing in, or to have the member apply for work they had already
+ * been given so an admin could approve them into it.
+ *
+ * This is the missing primitive. It is also what issue #207 asks for
+ * from the quote side, and what a relationship-led engagement needs
+ * from the delivery side.
+ *
+ * The member is told, in the same words the application-approval path
+ * uses, because from their side the outcome is identical: they are on
+ * an engagement. What differs is that nobody asked them to compete for
+ * it.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function assignMemberToProject(formData: FormData) {
+  const admin = await requireAdmin();
+  const projectId = String(formData.get("projectId") ?? "").trim();
+  const userId = String(formData.get("userId") ?? "").trim();
+  if (!projectId || !userId) return;
+
+  const project = await getProjectById(projectId);
+  if (!project) throw new Error("Project not found.");
+  const member = await getUserById(userId);
+  if (!member) throw new Error("Member not found.");
+  // Already on it. Not an error, and not a second notification.
+  if (project.assignedMemberIds.includes(userId)) return;
+
+  const now = new Date().toISOString();
+  // Guarded on the roster we read, so two admins assigning at once
+  // cannot drop one of the two additions.
+  const claimed = await db
+    .update(projects)
+    .set({
+      assignedMemberIds: [...project.assignedMemberIds, userId],
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(projects.id, projectId),
+        sql`${projects.assignedMemberIds} = ${JSON.stringify(project.assignedMemberIds)}::jsonb`,
+      )!,
+    )
+    .returning({ id: projects.id });
+  if (claimed.length === 0) {
+    throw new Error("The team changed while you were assigning. Try again.");
+  }
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "project.member_assigned",
+    resourceKind: "project",
+    resourceId: projectId,
+    before: { assignedMemberIds: project.assignedMemberIds },
+    after: { assignedMemberIds: [...project.assignedMemberIds, userId] },
+  });
+
+  await pushNotification({
+    userId,
+    kind: "project_application_decision",
+    title: `You're on — ${project.title}`,
+    body: "An admin added you to this engagement directly. No application needed.",
+    href: `/projects/${projectId}`,
+  });
+
+  revalidatePath(`/admin/projects/${projectId}/edit`);
+  revalidatePath(`/projects/${projectId}`);
+}
+
+/** Take a member off an engagement. Same guard, no notification spam. */
+export async function unassignMemberFromProject(formData: FormData) {
+  const admin = await requireAdmin();
+  const projectId = String(formData.get("projectId") ?? "").trim();
+  const userId = String(formData.get("userId") ?? "").trim();
+  if (!projectId || !userId) return;
+
+  const project = await getProjectById(projectId);
+  if (!project) throw new Error("Project not found.");
+  if (!project.assignedMemberIds.includes(userId)) return;
+
+  const next = project.assignedMemberIds.filter((id) => id !== userId);
+  await db
+    .update(projects)
+    .set({ assignedMemberIds: next, updatedAt: new Date().toISOString() })
+    .where(eq(projects.id, projectId));
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "project.member_unassigned",
+    resourceKind: "project",
+    resourceId: projectId,
+    before: { assignedMemberIds: project.assignedMemberIds },
+    after: { assignedMemberIds: next },
+  });
+
+  revalidatePath(`/admin/projects/${projectId}/edit`);
+  revalidatePath(`/projects/${projectId}`);
 }

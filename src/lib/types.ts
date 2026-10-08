@@ -4345,6 +4345,8 @@ export type AuditLogAction =
   | "inbound.approved"
   | "inbound.rejected"
   // Contracts + compensation
+  | "project.member_assigned"
+  | "project.member_unassigned"
   | "rfp.approved"
   | "rfp.rejected"
   | "contract.base_released"
@@ -4469,6 +4471,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "profile.hidden_pending_fix": "Profile hidden from discovery pending a fix",
   "inbound.approved": "Inbound application approved",
   "inbound.rejected": "Inbound application rejected",
+  "project.member_assigned": "Member assigned to engagement directly",
+  "project.member_unassigned": "Member removed from engagement",
   "rfp.approved": "RFP approved",
   "rfp.rejected": "RFP rejected",
   "contract.base_released": "Base pay released",

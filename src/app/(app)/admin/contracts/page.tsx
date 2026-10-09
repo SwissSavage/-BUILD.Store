@@ -21,6 +21,7 @@ import {
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { HubspotStageBadge } from "@/components/HubspotStageBadge";
+import { MissingDealRepair } from "@/components/MissingDealRepair";
 import { formatBudget } from "@/lib/budget";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +78,16 @@ export default async function AdminContractsIndex() {
   const cleared = (p: Project) =>
     Boolean(p.rfpApprovedAt) || p.engagementState === "accepted";
 
+  // Accepted, running, and the CRM has no record of it. Surfaced here
+  // rather than left to somebody noticing in HubSpot.
+  const missingDeals = contracts
+    .filter((p) => p.engagementState === "accepted" && !p.hubspotDealId)
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      clientDisplayName: p.clientId,
+    }));
+
   const awaitingTalent = contracts.filter(
     (p) => p.engagementState === "awaiting_talent",
   );
@@ -108,6 +119,8 @@ export default async function AdminContractsIndex() {
           splitsBy={splitsBy}
         />
       )}
+
+      <MissingDealRepair engagements={missingDeals} />
 
       {awaitingTalent.length > 0 && (
         <Section

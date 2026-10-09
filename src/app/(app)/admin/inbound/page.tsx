@@ -55,6 +55,7 @@ import {
   isTerminalInboundStatus,
 } from "@/lib/inbound-triage";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { InboundMergeButton } from "@/components/InboundMergeButton";
 
 const KIND_OPTIONS: InboundSubmissionKind[] = [
   "hire_talent_signup",
@@ -133,12 +134,15 @@ export default async function AdminInboundPage({
             <h1 className="mt-3 font-display text-4xl font-semibold">
               Inbound
             </h1>
-            <Link
-              href="/admin/inbound/import"
-              className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta hover:bg-brand-magenta/10"
-            >
-              Import CSV →
-            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <InboundMergeButton />
+              <Link
+                href="/admin/inbound/import"
+                className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta hover:bg-brand-magenta/10"
+              >
+                Import CSV →
+              </Link>
+            </div>
           </div>
           <p className="mt-2 max-w-2xl text-ink-muted">
             Every form submission, chat inquiry, RFP, and partner ping

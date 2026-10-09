@@ -11,6 +11,36 @@
  */
 import type { Project } from "@/lib/types";
 
+/**
+ * Engagement fields for a project that did not come through the direct
+ * motion, which is all of these. Spread rather than repeated so adding
+ * a field to the handshake does not mean editing seven fixtures.
+ */
+const NO_ENGAGEMENT: Pick<
+  Project,
+  | "engagementBasis"
+  | "engagementRate"
+  | "engagementCeilingHours"
+  | "engagementScope"
+  | "engagementState"
+  | "engagementSentAt"
+  | "engagementDecidedAt"
+  | "engagementDeclineReason"
+  | "engagementLinks"
+  | "engagementAttachments"
+> = {
+  engagementBasis: null,
+  engagementRate: null,
+  engagementCeilingHours: null,
+  engagementScope: null,
+  engagementState: null,
+  engagementSentAt: null,
+  engagementDecidedAt: null,
+  engagementDeclineReason: null,
+  engagementLinks: [],
+  engagementAttachments: [],
+};
+
 export const MOCK_PROJECTS: Project[] = [
   // ──────────────────────────────────────────────────────────────────────
   //  Contracts — external client work
@@ -44,6 +74,7 @@ export const MOCK_PROJECTS: Project[] = [
     bonusDecidedAt: null,
     createdAt: "2026-04-05T00:00:00Z",
     updatedAt: "2026-04-05T00:00:00Z",
+    ...NO_ENGAGEMENT,
   },
   {
     id: "p_004",
@@ -82,6 +113,7 @@ export const MOCK_PROJECTS: Project[] = [
     bonusDecidedAt: null,
     createdAt: "2025-11-01T00:00:00Z",
     updatedAt: "2026-02-15T00:00:00Z",
+    ...NO_ENGAGEMENT,
   },
   // Pending admin vetting — won't appear on /contracts until approved.
   {
@@ -113,6 +145,7 @@ export const MOCK_PROJECTS: Project[] = [
     bonusDecidedAt: null,
     createdAt: "2026-04-19T00:00:00Z",
     updatedAt: "2026-04-19T00:00:00Z",
+    ...NO_ENGAGEMENT,
   },
   {
     id: "p_006",
@@ -143,6 +176,7 @@ export const MOCK_PROJECTS: Project[] = [
     bonusDecidedAt: null,
     createdAt: "2026-04-20T00:00:00Z",
     updatedAt: "2026-04-20T00:00:00Z",
+    ...NO_ENGAGEMENT,
   },
 
   // ──────────────────────────────────────────────────────────────────────
@@ -177,6 +211,7 @@ export const MOCK_PROJECTS: Project[] = [
     bonusDecidedAt: null,
     createdAt: "2026-04-18T00:00:00Z",
     updatedAt: "2026-04-18T00:00:00Z",
+    ...NO_ENGAGEMENT,
   },
   {
     id: "p_102",
@@ -207,6 +242,7 @@ export const MOCK_PROJECTS: Project[] = [
     bonusDecidedAt: null,
     createdAt: "2026-04-15T00:00:00Z",
     updatedAt: "2026-04-15T00:00:00Z",
+    ...NO_ENGAGEMENT,
   },
   {
     id: "p_103",
@@ -239,5 +275,6 @@ export const MOCK_PROJECTS: Project[] = [
     bonusDecidedAt: null,
     createdAt: "2026-03-20T00:00:00Z",
     updatedAt: "2026-04-22T00:00:00Z",
+    ...NO_ENGAGEMENT,
   },
 ];

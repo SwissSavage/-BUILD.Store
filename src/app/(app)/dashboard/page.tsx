@@ -168,6 +168,19 @@ export default async function DashboardPage() {
         (o) => o.sellerId === user.id,
       )
     : [];
+  // Engagements waiting on this member to accept or decline terms.
+  //
+  // A notification in the strip was not enough. Jamar: "It should be
+  // obvious she got a contract." Work has been sold with this person's
+  // name on it and their rate in it, and until they answer, nothing
+  // moves and FM is exposed on terms nobody confirmed. That earns the
+  // top of the page, above everything else here.
+  const awaitingMyTerms = allProjects.filter(
+    (p) =>
+      p.engagementState === "awaiting_talent" &&
+      (p.assignedMemberIds ?? []).includes(user.id),
+  );
+
   const actionableSellerOrders = sellerOrders.filter(
     (o) =>
       o.status === "placed" || o.status === "paid" || o.status === "fulfilling",
@@ -259,6 +272,48 @@ export default async function DashboardPage() {
             {walkthroughDoneCount === 0 ? "Start the tour" : "Resume the tour"}
           </Link>
         </div>
+      )}
+
+      {awaitingMyTerms.length > 0 && (
+        <section className="mt-8">
+          {awaitingMyTerms.map((p) => (
+            <div
+              key={p.id}
+              className="mb-3 flex flex-col gap-3 rounded-2xl border p-5 md:flex-row md:items-center md:justify-between"
+              style={{
+                borderColor: "rgba(216, 40, 160, 0.75)",
+                background:
+                  "linear-gradient(135deg, rgba(216,40,160,0.16), rgba(80,112,240,0.08))",
+              }}
+            >
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
+                  Contract waiting on you
+                </p>
+                <p className="mt-1 font-display text-xl font-semibold">
+                  {p.title}
+                </p>
+                <p className="mt-1 text-sm text-ink-muted">
+                  {p.engagementBasis === "hourly" && p.talentBaseAmount
+                    ? `$${p.talentBaseAmount}/hr to you`
+                    : p.talentBaseAmount
+                      ? `$${p.talentBaseAmount} to you`
+                      : "Terms inside"}
+                  {p.engagementCeilingHours
+                    ? `, not to exceed ${p.engagementCeilingHours} hours`
+                    : ""}
+                  . Nothing starts until you accept.
+                </p>
+              </div>
+              <Link
+                href={`/projects/${p.id}/review`}
+                className="fm-btn-primary self-start rounded-full px-5 py-2.5 text-sm font-medium md:self-auto"
+              >
+                Review the terms →
+              </Link>
+            </div>
+          ))}
+        </section>
       )}
 
       {actionableSellerOrders.length > 0 && (

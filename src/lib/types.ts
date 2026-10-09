@@ -387,6 +387,33 @@ export interface Project {
    */
   rfpAdminNote: string | null;
   /**
+   * Direct engagement terms and handshake.
+   *
+   * Null on every project that came through an RFP or is internal.
+   * These existed on the Drizzle schema from the day the direct motion
+   * shipped but never made it onto this hand-written type, so every
+   * surface that wanted to tell a placed engagement apart from an RFP
+   * contract could not see the field that says so.
+   */
+  engagementBasis: "hourly" | "fixed" | null;
+  /** Client-facing rate or total. Never shown to the Builder. */
+  engagementRate: string | null;
+  /** Not-to-exceed. Null means no cap agreed. */
+  engagementCeilingHours: string | null;
+  engagementScope: string | null;
+  /** Null unless composed through the direct motion. */
+  engagementState: "awaiting_talent" | "accepted" | "declined" | null;
+  engagementSentAt: string | null;
+  engagementDecidedAt: string | null;
+  engagementDeclineReason: string | null;
+  engagementLinks: { label: string; url: string }[];
+  engagementAttachments: {
+    name: string;
+    mimeType: string;
+    sizeBytes: number;
+    base64: string;
+  }[];
+  /**
    * Mirror of the HubSpot deal stage. Null for internal projects (no deal).
    * Updated by the webhook handler at /api/hooks/hubspot/stage.
    */
@@ -2799,6 +2826,15 @@ export type NotificationKind =
   | "booking_confirmed"
   | "quote_approved"
   | "quote_declined"
+  // Direct engagement handshake. A Builder is assigned rather than
+  // applying, so nothing in the application vocabulary fits: this is
+  // work already sold, waiting on them to agree to the terms. It had
+  // been borrowing project_application_decision, which rendered as
+  // "Project decision" and read like the outcome of something they
+  // had applied for.
+  | "engagement_terms_review"
+  | "engagement_terms_accepted"
+  | "engagement_terms_declined"
   // Documenso signature completion fanout — fires to (a) the signer and
   // (b) admins the moment an envelope reaches `completed` on the
   // webhook. Distinct from agreement_renewal_* which are anniversary
@@ -2835,6 +2871,9 @@ export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   booking_confirmed: "Booking confirmed",
   quote_approved: "Quote approved",
   quote_declined: "Quote declined",
+  engagement_terms_review: "Contract to review",
+  engagement_terms_accepted: "Terms accepted",
+  engagement_terms_declined: "Terms sent back",
   milestone_due_soon: "Milestone due soon",
   milestone_due_important: "Milestone due — important",
   milestone_due_urgent: "Milestone due — today",

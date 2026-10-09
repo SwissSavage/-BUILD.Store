@@ -27,6 +27,7 @@
 import Link from "next/link";
 import { ShieldCheck, Tags, Users } from "lucide-react";
 import { AdminObjectControls } from "@/components/AdminObjectControls";
+import { EngagementTermsPanel } from "@/components/EngagementTermsPanel";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
@@ -192,6 +193,23 @@ export default async function ProjectDetailPage({
               />
             </Card>
           </section>
+
+          {/* ── Engagement terms ────────────────────────────────
+              The contract itself. Nine columns of terms were being
+              written and none of them rendered anywhere, so after
+              acceptance the only way to read what had been agreed was
+              to query the database. */}
+          {project.engagementState && (
+            <section>
+              <EngagementTermsPanel
+                project={project}
+                clientDisplayName={project.clientId}
+                viewer={
+                  isAdmin ? "admin" : onTeam ? "talent" : "other"
+                }
+              />
+            </section>
+          )}
 
           {/* ── Milestone tracker (Domino's-style) ───── */}
           {user && (

@@ -229,7 +229,14 @@ function ContractRow({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <CardEyebrow>{INDUSTRY_LABELS[project.industry]}</CardEyebrow>
-          <CardTitle className="mt-1 truncate">{project.title}</CardTitle>
+          {/* The title was plain text on a card full of links to
+              sub-surfaces, so the one thing with no route out of it
+              was the contract itself. */}
+          <Link href={`/projects/${project.id}`}>
+            <CardTitle className="mt-1 truncate hover:text-brand-magentaText">
+              {project.title}
+            </CardTitle>
+          </Link>
         </div>
         <HubspotStageBadge stage={project.hubspotStage} />
       </div>
@@ -254,6 +261,17 @@ function ContractRow({
         <p className="mt-3 text-xs text-ink-faint">
           HubSpot deal stage: {HUBSPOT_STAGE_LABELS[project.hubspotStage]}
         </p>
+      )}
+
+      {hideActions && (
+        <div className="mt-4 border-t border-[var(--surface-border)] pt-4">
+          <Link
+            href={`/projects/${project.id}`}
+            className="text-xs text-brand-magentaText hover:underline"
+          >
+            Open the engagement →
+          </Link>
+        </div>
       )}
 
       {!hideActions && (

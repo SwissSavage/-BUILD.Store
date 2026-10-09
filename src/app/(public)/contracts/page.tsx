@@ -169,7 +169,12 @@ export default async function ContractsPage() {
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {placed.map((p) => (
-              <Card key={p.id} className="opacity-90">
+              <Link
+                key={p.id}
+                href={`/projects/${p.id}`}
+                className="block transition-opacity hover:opacity-95"
+              >
+                <Card>
                 <div className="flex items-center justify-between">
                   <CardEyebrow>{INDUSTRY_LABELS[p.industry]}</CardEyebrow>
                   <span
@@ -188,7 +193,8 @@ export default async function ContractsPage() {
                     ? "Assigned, pending the member's confirmation."
                     : "In progress with a member of the cooperative."}
                 </p>
-              </Card>
+                </Card>
+              </Link>
             ))}
           </div>
         </section>

@@ -124,7 +124,15 @@ export default async function AdminProjectsPage() {
             {allProjects.map((p) => (
               <tr key={p.id} className="border-t border-[var(--surface-border)]">
                 <td className="p-4">
-                  <div className="font-medium">{p.title}</div>
+                  {/* The row had no way into the thing it describes.
+                      Every admin list should be a route to the record,
+                      not a readout of it. */}
+                  <Link
+                    href={`/projects/${p.id}`}
+                    className="font-medium hover:text-brand-magentaText"
+                  >
+                    {p.title}
+                  </Link>
                   <div className="text-xs text-ink-muted line-clamp-1">
                     {p.description}
                   </div>

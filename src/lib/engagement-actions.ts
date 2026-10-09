@@ -54,7 +54,10 @@ import { db } from "@/db/client";
 import { clients, projects } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { getUserById } from "@/lib/readers/users";
-import { createHubspotLead, getHubspotCompany } from "@/lib/crm-stub";
+import {
+  createHubspotEngagementDeal,
+  getHubspotCompany,
+} from "@/lib/crm-stub";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { notify } from "@/lib/writers/notifications";
 import { sendTransactionalEmail } from "@/lib/email";
@@ -513,36 +516,53 @@ export async function decideEngagementTerms(
 
   // Accepted. Now the deal exists, because now there is something
   // agreed for it to represent.
+  //
+  // Associated to the company, opened at closed won, carrying the
+  // amount. The first version called createHubspotLead, which builds a
+  // contact first and is refused by HubSpot when the client row has no
+  // contact email, which is every client that came through the legacy
+  // backfill. No deal appeared and nothing said so.
   let hubspotDealId: string | null = project.hubspotDealId ?? null;
+  let dealError: string | null = null;
   if (!hubspotDealId) {
     try {
       const [clientRow] = project.clientRefId
         ? await db
             .select({
               displayName: clients.displayName,
-              contactName: clients.primaryContactName,
-              contactEmail: clients.primaryContactEmail,
+              hubspotCompanyId: clients.hubspotCompanyId,
             })
             .from(clients)
             .where(eq(clients.id, project.clientRefId))
             .limit(1)
         : [];
-      const lead = await createHubspotLead({
-        email: clientRow?.contactEmail ?? "",
-        firstName: clientRow?.contactName ?? "",
-        lastName: "",
-        company: clientRow?.displayName ?? project.clientId,
-        industry: project.industry,
-        intent: "hire_talent",
-        opportunityBrief: `${project.title}\n\n${project.engagementScope ?? project.description}`,
-        source: "direct_engagement",
-        dataParticipationOptIn: false,
+      const companyName = clientRow?.displayName ?? project.clientId;
+      const rate = Number(project.engagementRate ?? 0);
+      const ceiling = Number(project.engagementCeilingHours ?? 0);
+      // Hourly with a cap has a knowable maximum value; hourly without
+      // one does not, and a guessed amount on a closed-won deal is
+      // worse than a blank one because it goes straight into revenue
+      // reporting.
+      const amount =
+        project.engagementBasis === "fixed"
+          ? rate
+          : ceiling > 0
+            ? rate * ceiling
+            : null;
+
+      const deal = await createHubspotEngagementDeal({
+        dealName: `${companyName} — ${project.title}`,
+        amount,
+        description: project.engagementScope ?? project.description,
+        hubspotCompanyId: clientRow?.hubspotCompanyId ?? null,
       });
-      hubspotDealId = lead.dealId ?? null;
+      hubspotDealId = deal.dealId;
     } catch (err) {
-      // A CRM outage must not stop agreed work from starting. The deal
-      // can be linked afterwards; an engagement with no deal is
-      // recoverable in a way that an unrecorded agreement is not.
+      // A CRM outage must not stop agreed work from starting, so this
+      // stays best-effort. It does not stay silent: the last version
+      // logged to console and the only way anyone found out was Jamar
+      // opening HubSpot and not seeing a deal.
+      dealError = err instanceof Error ? err.message : String(err);
       // eslint-disable-next-line no-console
       console.error("[engagement] HubSpot deal creation failed", err);
     }
@@ -573,13 +593,101 @@ export async function decideEngagementTerms(
   await notifyComposingAdmins(project.adminUserIds as string[], {
     kind: "engagement_terms_accepted",
     title: `Accepted — ${project.title}`,
-    body: `${publicName(user)} accepted the terms. The client agreement can go out.`,
+    body: dealError
+      ? `${publicName(user)} accepted the terms. The HubSpot deal was NOT created: ${dealError.slice(0, 180)}. Link it by hand.`
+      : `${publicName(user)} accepted the terms. The client agreement can go out.`,
     href: `/projects/${projectId}`,
   });
 
   revalidatePath("/admin/projects");
   revalidatePath(`/projects/${projectId}`);
   return { ok: true, state: "accepted" };
+}
+
+/**
+ * Create the HubSpot deal for an engagement that does not have one.
+ *
+ * Deal creation is best-effort at acceptance, which means an engagement
+ * can be running with no deal behind it. Without this the only remedy
+ * is building the deal by hand in HubSpot and then having no link back,
+ * which is how the app and the CRM drift apart.
+ *
+ * Admin-only and idempotent on the stored id: it refuses when a deal is
+ * already linked rather than making a second one.
+ */
+export async function createMissingEngagementDeal(
+  _prev: { ok: boolean; message: string } | null,
+  formData: FormData,
+): Promise<{ ok: boolean; message: string }> {
+  const admin = await requireAdmin();
+  const projectId = String(formData.get("projectId") ?? "").trim();
+
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+  if (!project) return { ok: false, message: "No such engagement." };
+  if (project.hubspotDealId) {
+    return { ok: false, message: "A deal is already linked to this one." };
+  }
+  if (project.engagementState !== "accepted") {
+    return {
+      ok: false,
+      message: "The Builder has not accepted yet. No deal until they do.",
+    };
+  }
+
+  const [clientRow] = project.clientRefId
+    ? await db
+        .select({
+          displayName: clients.displayName,
+          hubspotCompanyId: clients.hubspotCompanyId,
+        })
+        .from(clients)
+        .where(eq(clients.id, project.clientRefId))
+        .limit(1)
+    : [];
+
+  const rate = Number(project.engagementRate ?? 0);
+  const ceiling = Number(project.engagementCeilingHours ?? 0);
+  const amount =
+    project.engagementBasis === "fixed" ? rate : ceiling > 0 ? rate * ceiling : null;
+
+  let dealId: string;
+  try {
+    const deal = await createHubspotEngagementDeal({
+      dealName: `${clientRow?.displayName ?? project.clientId} — ${project.title}`,
+      amount,
+      description: project.engagementScope ?? project.description,
+      hubspotCompanyId: clientRow?.hubspotCompanyId ?? null,
+    });
+    dealId = deal.dealId;
+  } catch (err) {
+    return {
+      ok: false,
+      message: `HubSpot refused it: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+
+  await db
+    .update(projects)
+    .set({ hubspotDealId: dealId, updatedAt: new Date().toISOString() })
+    .where(eq(projects.id, projectId));
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "project.member_assigned",
+    resourceKind: "project",
+    resourceId: projectId,
+    before: { hubspotDealId: null },
+    after: { hubspotDealId: dealId, linkedManually: true },
+  });
+
+  revalidatePath("/admin/contracts");
+  revalidatePath(`/projects/${projectId}`);
+  return { ok: true, message: `Deal ${dealId} created and linked.` };
 }
 
 async function notifyComposingAdmins(

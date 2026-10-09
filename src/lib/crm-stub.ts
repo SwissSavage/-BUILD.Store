@@ -45,6 +45,8 @@ const HUBSPOT_DEALS_ENDPOINT = `${BASE}/crm/v3/objects/deals`;
 
 /** HubSpot's default association type ID for "Deal to Contact" (HUBSPOT_DEFINED). */
 const ASSOCIATION_TYPE_DEAL_TO_CONTACT = 3;
+/** HubSpot's default association type ID for "Deal to Company" (HUBSPOT_DEFINED). */
+const ASSOCIATION_TYPE_DEAL_TO_COMPANY = 5;
 
 export interface SignupPayload {
   email: string;
@@ -198,6 +200,73 @@ export async function createHubspotLead(
   });
 
   return { contactId: contact.id, dealId: deal.id };
+}
+
+/**
+ * A deal for work that is already sold.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY THIS IS NOT createHubspotLead (2026-10-09)
+ *
+ * The direct engagement flow called createHubspotLead on acceptance and
+ * no deal appeared in HubSpot. Three things were wrong with that, and
+ * only the first one is a bug:
+ *
+ * 1. createHubspotLead creates a CONTACT first, and HubSpot rejects a
+ *    contact with no email. A returning client picked from the existing
+ *    list has no contact email on its row, because the backfill made
+ *    those rows out of a legacy client_id string and nothing else. The
+ *    400 threw, the caller caught it, and the only trace was a console
+ *    line nobody reads.
+ *
+ * 2. Creating a contact at all is wrong here. Jamar: "all of that
+ *    information is in Hubspot already." This is a company FM has
+ *    worked with before. Inventing a second contact record for them is
+ *    how a CRM turns into a pile of duplicates.
+ *
+ * 3. The stage was appointmentscheduled, which is discovery. The
+ *    Builder has accepted and the client has agreed the price. Filing
+ *    that as a new lead at the top of the funnel misreports the
+ *    pipeline in the direction that flatters it, which is the worst
+ *    direction.
+ *
+ * So: associate to the company we already hold the id for, open at
+ * closed won, carry the amount. No contact is created. When there is no
+ * company id, the deal is still created unassociated rather than
+ * refused, because a deal an admin has to link by hand beats no record
+ * of sold work.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function createHubspotEngagementDeal(input: {
+  dealName: string;
+  amount: number | null;
+  description: string;
+  hubspotCompanyId: string | null;
+}): Promise<{ dealId: string }> {
+  const deal = await hubspotFetch(HUBSPOT_DEALS_ENDPOINT, {
+    properties: {
+      dealname: input.dealName,
+      pipeline: "default",
+      dealstage: "closedwon",
+      dealtype: "existingbusiness",
+      amount: input.amount && input.amount > 0 ? String(input.amount) : undefined,
+      description: input.description,
+    },
+    associations: input.hubspotCompanyId
+      ? [
+          {
+            to: { id: input.hubspotCompanyId },
+            types: [
+              {
+                associationCategory: "HUBSPOT_DEFINED",
+                associationTypeId: ASSOCIATION_TYPE_DEAL_TO_COMPANY,
+              },
+            ],
+          },
+        ]
+      : undefined,
+  });
+  return { dealId: deal.id };
 }
 
 /**

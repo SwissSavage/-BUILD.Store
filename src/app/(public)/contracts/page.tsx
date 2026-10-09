@@ -57,6 +57,35 @@ export default async function ContractsPage() {
       (b.rfpApprovedAt ?? "").localeCompare(a.rfpApprovedAt ?? ""),
     );
 
+  // ── Work already placed ──────────────────────────────────────
+  //
+  // Engagements sold directly to a returning client. Not biddable and
+  // never were: the client asked for a named person, which is the
+  // motion working, not a gap.
+  //
+  // They are listed anyway because Jamar: "for all members, people tend
+  // to start paying attention when they see money is being made even if
+  // they're not", and "the point is also to create visibility on deal
+  // flow without giving away customer data."
+  //
+  // So the row carries the pillar, the title and that it is placed. No
+  // client name, no rate, no Builder. Those sit behind the project page
+  // and its own gates. A member seeing that the cooperative is closing
+  // work is the whole point; a member seeing who it closed with is the
+  // circumvention risk this cooperative exists to prevent.
+  const placed = projects
+    .filter(
+      (p) =>
+        p.kind === "contract" &&
+        !p.isRfp &&
+        p.engagementState !== null &&
+        p.engagementState !== "declined",
+    )
+    .sort((a, b) =>
+      (b.engagementSentAt ?? "").localeCompare(a.engagementSentAt ?? ""),
+    )
+    .slice(0, 6);
+
   return (
     <div className="mx-auto max-w-app px-6 py-12">
       <div>
@@ -126,6 +155,43 @@ export default async function ContractsPage() {
             </Link>
           ))}
         </div>
+      )}
+
+      {placed.length > 0 && (
+        <section className="mt-14">
+          <h2 className="font-display text-2xl font-semibold">
+            Recently placed
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-ink-muted">
+            Work the cooperative has already placed with a named member.
+            Not open for bidding. Here because deal flow is worth seeing
+            whether or not you are on it.
+          </p>
+          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {placed.map((p) => (
+              <Card key={p.id} className="opacity-90">
+                <div className="flex items-center justify-between">
+                  <CardEyebrow>{INDUSTRY_LABELS[p.industry]}</CardEyebrow>
+                  <span
+                    className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                    style={{
+                      backgroundColor: "rgba(0,112,72,0.15)",
+                      color: "#13A06A",
+                    }}
+                  >
+                    Placed
+                  </span>
+                </div>
+                <CardTitle className="mt-2">{p.title}</CardTitle>
+                <p className="mt-3 text-sm text-ink-muted">
+                  {p.engagementState === "awaiting_talent"
+                    ? "Assigned, pending the member's confirmation."
+                    : "In progress with a member of the cooperative."}
+                </p>
+              </Card>
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

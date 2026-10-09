@@ -143,6 +143,7 @@ export const ADMIN_DETAIL_ROUTES: string[] = [
   "/admin/members/[id]/tags",
   "/admin/mvp/[userId]",
   "/admin/portfolios/[userId]",
+  "/admin/projects/[id]/applications",
   "/admin/projects/[id]/edit",
   "/admin/rfps/[id]/bids",
   "/admin/rfps/[id]/dispatch",

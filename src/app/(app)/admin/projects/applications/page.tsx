@@ -1,81 +1,92 @@
 /**
- * Admin queue for member applications to internal projects.
+ * Which projects have proposals waiting, and how many.
  *
- * Each pending row gets approve/reject controls + an admin-note field.
- * Approving auto-adds the applicant to `Project.assignedMemberIds` and
- * fires a "you're on" notification; rejecting fires a softer "not this
- * round" notification. Either path leaves the row visible in the
- * "Decided" lane below for audit.
+ * ─────────────────────────────────────────────────────────────
+ * WHY THIS IS AN INDEX AND NOT A LOG (2026-10-08)
  *
- * REPLACE WITH: a Drizzle query joining `project_applications` +
- * `users` + `projects`. Server actions stay the same shape.
+ * This was every application to every project in one flat list, newest
+ * first. Jamar: "each project should have its own isolated application
+ * queue ... the unified log works small, that does not work at scale."
+ *
+ * The flat list is not merely untidy. Deciding on a proposal means
+ * holding it against the other proposals for the same piece of work,
+ * and interleaving six projects makes that impossible to do by reading
+ * down the page. It also degrades in exactly the direction the
+ * cooperative is trying to grow: every contract won makes this page
+ * worse.
+ *
+ * So the triage moved to /admin/projects/[id]/applications and this
+ * became the way in. It still answers the question this page was opened
+ * to answer, which is "what is waiting on me", and it answers it in one
+ * screen that stays one screen.
+ *
+ * The rows themselves live in ProjectApplicationRows so the two
+ * surfaces cannot drift apart. Three hand-maintained admin nav lists
+ * taught that lesson already.
+ * ─────────────────────────────────────────────────────────────
  */
 import Link from "next/link";
-import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth-stub";
 import { getAllApplications } from "@/lib/readers/project-applications";
-import { getAllUsers } from "@/lib/readers/users";
 import { getAllProjects } from "@/lib/readers/projects";
 import { safely } from "@/lib/readers";
-import {
-  approveProjectApplication,
-  rejectProjectApplication,
-} from "@/lib/project-application-actions";
-import {
-  editProposalAsAdmin,
-  withdrawProposalAsAdmin,
-  restoreProposalAsAdmin,
-} from "@/lib/project-edit-actions";
-import {
-  PROJECT_APPLICATION_STATUS_LABELS,
-  TIER_LABELS,
-  adminName,
-  type ProjectApplication,
-  type Project,
-  type User,
-} from "@/lib/types";
-import { Card, CardEyebrow, CardTitle } from "@/components/Card";
-import { StructuredText } from "@/components/StructuredText";
-import { AdminProposalAttachments } from "@/components/AdminProposalAttachments";
-import { formatProposalHours, formatProposalPrice } from "@/lib/proposal-terms";
-
-const STATUS_ACCENT: Record<ProjectApplication["status"], string> = {
-  pending: "#5070F0",
-  approved: "#007048",
-  rejected: "#D828A0",
-  withdrawn: "#666666",
-};
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
+import { CardEyebrow } from "@/components/Card";
+import { formatDate } from "@/components/ProjectApplicationRows";
+import type { Project } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminProjectApplicationsPage() {
+interface QueueSummary {
+  project: Project;
+  pending: number;
+  decided: number;
+  newest: string | null;
+}
+
+export default async function AdminProjectApplicationsIndexPage() {
   await requireAdmin();
 
-  // Reader swap 2026-08-29: bid triage queue read a mock array, so a
-  // real member's application never appeared for review.
-  const [applications, { users: roster }, { projects }] = await Promise.all([
+  const [applications, { projects }] = await Promise.all([
     safely(() => getAllApplications(), []),
-    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
     safely(() => getAllProjects(), {
       projects: [],
       source: "postgres" as const,
     }),
   ]);
-  const lookup = makeLookup(roster, projects);
 
-  const sorted = [...applications].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt),
-  );
-  const pending = sorted.filter((a) => a.status === "pending");
-  const decided = sorted.filter((a) => a.status !== "pending");
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+  const byProject = new Map<string, QueueSummary>();
+
+  for (const app of applications) {
+    const project = projectById.get(app.projectId);
+    // An application whose project is gone has nowhere to be triaged.
+    // Counting it here would show a number that opens an empty page.
+    if (!project) continue;
+    const entry = byProject.get(project.id) ?? {
+      project,
+      pending: 0,
+      decided: 0,
+      newest: null,
+    };
+    if (app.status === "pending") entry.pending += 1;
+    else entry.decided += 1;
+    if (!entry.newest || app.createdAt > entry.newest) {
+      entry.newest = app.createdAt;
+    }
+    byProject.set(project.id, entry);
+  }
+
+  const queues = [...byProject.values()];
+  // Anything waiting on a decision first, then by how recently someone
+  // put themselves forward. Both halves stay reachable.
+  const waiting = queues
+    .filter((q) => q.pending > 0)
+    .sort((a, b) => (b.newest ?? "").localeCompare(a.newest ?? ""));
+  const settled = queues
+    .filter((q) => q.pending === 0)
+    .sort((a, b) => (b.newest ?? "").localeCompare(a.newest ?? ""));
+
+  const totalPending = waiting.reduce((n, q) => n + q.pending, 0);
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -86,11 +97,9 @@ export default async function AdminProjectApplicationsPage() {
             Proposals
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-ink-muted">
-            Contractors who have proposed themselves for this work. Build
-            the team from who is available — selecting adds them to the
-            roster for the engagement and pings their inbox. Passing on
-            someone here is about fit for this piece, not a judgment on
-            them.
+            Each project keeps its own queue, because deciding on a
+            proposal means weighing it against the others for that same
+            work. Open a queue to triage it.
           </p>
         </div>
         <Link
@@ -103,32 +112,27 @@ export default async function AdminProjectApplicationsPage() {
 
       <section className="mt-8">
         <h2 className="text-xs uppercase tracking-wider text-ink-muted">
-          Pending ({pending.length})
+          Waiting on you ({totalPending})
         </h2>
-        {pending.length === 0 ? (
+        {waiting.length === 0 ? (
           <p className="mt-3 text-sm text-ink-faint">All caught up.</p>
         ) : (
-          <div className="mt-3 space-y-3">
-            {pending.map((a) => (
-              <PendingRow key={a.id} application={a} lookup={lookup} />
+          <div className="mt-3 space-y-2">
+            {waiting.map((q) => (
+              <QueueRow key={q.project.id} summary={q} />
             ))}
           </div>
         )}
       </section>
 
-      {decided.length > 0 && (
+      {settled.length > 0 && (
         <section className="mt-12">
           <h2 className="text-xs uppercase tracking-wider text-ink-muted">
-            Decided ({decided.length})
+            Decided ({settled.length})
           </h2>
           <div className="mt-3 space-y-2">
-            {decided.map((a) => (
-              <DecidedRow
-                key={a.id}
-                application={a}
-                lookup={lookup}
-                roster={roster}
-              />
+            {settled.map((q) => (
+              <QueueRow key={q.project.id} summary={q} />
             ))}
           </div>
         </section>
@@ -137,285 +141,31 @@ export default async function AdminProjectApplicationsPage() {
   );
 }
 
-/**
- * Build a row-lookup closure over the already-loaded roster and
- * project list. Each row would otherwise cost two queries.
- */
-type RowLookup = (application: ProjectApplication) => {
-  applicant: User | undefined;
-  project: Project | undefined;
-};
-
-function makeLookup(roster: User[], projects: Project[]): RowLookup {
-  const userById = new Map(roster.map((u) => [u.id, u]));
-  const projectById = new Map(projects.map((p) => [p.id, p]));
-  return (application) => ({
-    applicant: userById.get(application.userId),
-    project: projectById.get(application.projectId),
-  });
-}
-
-function PendingRow({
-  application,
-  lookup,
-}: {
-  application: ProjectApplication;
-  lookup: RowLookup;
-}) {
-  const { applicant, project } = lookup(application);
-
+function QueueRow({ summary }: { summary: QueueSummary }) {
+  const { project, pending, decided, newest } = summary;
   return (
-    <Card className="border-[#5070F0]/40">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <div>
-          <CardTitle>
-            {applicant ? adminName(applicant) : "Unknown member"}
-          </CardTitle>
-          <p className="mt-1 text-xs text-ink-muted">
-            {applicant ? TIER_LABELS[applicant.membershipTier] : ""} ·{" "}
-            {formatProposalHours(application.hoursPerWeek, application.hoursPerWeekMax)} · submitted{" "}
-            {formatDate(application.createdAt)}
-          </p>
-        </div>
-        <Link
-          href={project ? `/projects/${project.id}` : "/projects"}
-          className="text-xs text-brand-magentaText hover:underline"
-        >
-          {project ? project.title : "Project missing"} →
-        </Link>
-      </div>
-
-      <div className="mt-4 grid gap-4 md:grid-cols-[2fr_1fr]">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-ink-muted">
-            Proposed role
-          </p>
-          <p className="mt-1 font-medium">{application.proposedRole}</p>
-          {project?.kind === "contract" && (
-            <p className="mt-2 text-sm text-ink-muted">{formatProposalPrice(application)}</p>
-          )}
-
-          <p className="mt-4 text-xs uppercase tracking-wider text-ink-muted">
-            Pitch
-          </p>
-          <StructuredText text={application.pitch} />
-
-          {application.portfolioLink && (
-            <p className="mt-3 text-xs">
-              <span className="text-ink-muted">Reference: </span>
-              <a
-                href={application.portfolioLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand-magentaText hover:underline"
-              >
-                {application.portfolioLink}
-              </a>
-            </p>
-          )}
-        </div>
-
-        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-inset)] p-4 text-xs">
-          <p className="text-ink-muted">Member skills on file:</p>
-          <p className="mt-1 text-ink">
-            {applicant?.skills?.join(", ") || "—"}
-          </p>
-          {applicant?.bio && (
-            <p className="mt-3 italic text-ink-muted">"{applicant.bio}"</p>
-          )}
-        </div>
-      </div>
-
-      {application.clientPresentedAt ? (
-        <p className="mt-5 border-t border-[var(--surface-border)] pt-4 text-sm text-ink-muted">
-          Client quote sent {formatDate(application.clientPresentedAt)}. This proposal is locked to preserve the version the client received.
+    <Link
+      href={`/admin/projects/${project.id}/applications`}
+      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-5 py-4 hover:border-brand-magenta"
+    >
+      <div className="min-w-0">
+        <p className="truncate font-medium">{project.title}</p>
+        <p className="mt-0.5 text-xs text-ink-muted">
+          {project.kind === "contract" ? "Contract" : "Internal"}
+          {newest ? ` · latest ${formatDate(newest)}` : ""}
+          {decided > 0 ? ` · ${decided} decided` : ""}
         </p>
-      ) : (
-        <form
-          action={editProposalAsAdmin}
-          encType="multipart/form-data"
-          className="mt-5 space-y-3 border-t border-[var(--surface-border)] pt-4"
-        >
-          <input type="hidden" name="id" value={application.id} />
-          <p className="text-xs uppercase tracking-wider text-ink-muted">
-            Admin review edit
-          </p>
-          <p className="text-xs text-ink-faint">
-            Updates the pending proposal before it is presented to a client.
-          </p>
-          <AdminProposalAttachments
-            proposalId={application.id}
-            attachments={application.attachments ?? []}
-          />
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="block text-xs text-ink-muted">
-              Proposed role
-              <input name="proposedRole" defaultValue={application.proposedRole} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
-            </label>
-            <label className="block text-xs text-ink-muted">
-              Minimum hours per week
-              <input name="hoursPerWeek" type="number" required min="1" max={project?.kind === "contract" ? "80" : "60"} defaultValue={application.hoursPerWeek || ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
-            </label>
-            <label className="block text-xs text-ink-muted">
-              Maximum hours per week (optional)
-              <input name="hoursPerWeekMax" type="number" min="1" max={project?.kind === "contract" ? "80" : "60"} defaultValue={application.hoursPerWeekMax ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
-            </label>
-            {project?.kind === "contract" && (
-              <>
-                <label className="block text-xs text-ink-muted">
-                  Pricing mode
-                  <select name="priceMode" defaultValue={application.priceMode ?? "hourly"} style={{ colorScheme: "dark" }} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-3 py-2 text-sm text-ink">
-                    <option className="bg-[#1A1A1A] text-white" value="hourly">Hourly</option>
-                    <option className="bg-[#1A1A1A] text-white" value="fixed">Total project price</option>
-                    <option className="bg-[#1A1A1A] text-white" value="negotiable">Negotiable</option>
-                  </select>
-                </label>
-                <p className="self-end text-xs text-ink-faint">Fill only the price fields for the selected mode. Maximum is optional.</p>
-                <label className="block text-xs text-ink-muted">
-                  Minimum hourly rate (USD)
-                  <input name="hourlyRate" type="number" min="20" max="2500" step="0.01" defaultValue={application.hourlyRate ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
-                </label>
-                <label className="block text-xs text-ink-muted">
-                  Maximum hourly rate (optional)
-                  <input name="hourlyRateMax" type="number" min="20" max="2500" step="0.01" defaultValue={application.hourlyRateMax ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
-                </label>
-                <label className="block text-xs text-ink-muted">
-                  Minimum total project price (USD)
-                  <input name="fixedPriceMin" type="number" min="0.01" step="0.01" defaultValue={application.fixedPriceMin ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
-                </label>
-                <label className="block text-xs text-ink-muted">
-                  Maximum total project price (optional)
-                  <input name="fixedPriceMax" type="number" min="0.01" step="0.01" defaultValue={application.fixedPriceMax ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
-                </label>
-              </>
-            )}
-            <label className="block text-xs text-ink-muted">
-              Portfolio link
-              <input name="portfolioLink" type="url" defaultValue={application.portfolioLink ?? ""} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
-            </label>
-          </div>
-          <label className="block text-xs text-ink-muted">
-            Pitch
-            <textarea name="pitch" rows={4} defaultValue={application.pitch} className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-ink" />
-          </label>
-          <SubmitButton pendingLabel="Saving…" className="rounded-full border border-brand-magenta/40 px-4 py-2 text-sm text-brand-magentaText hover:bg-brand-magenta/10">
-            Save admin edit
-          </SubmitButton>
-        </form>
-      )}
-
-      <form
-        action={rejectProjectApplication}
-        className="mt-5 space-y-3 border-t border-[var(--surface-border)] pt-4"
-      >
-        <input type="hidden" name="id" value={application.id} />
-        <label
-          htmlFor={`note-${application.id}`}
-          className="block text-xs uppercase tracking-wider text-ink-muted"
-        >
-          Admin note (sent in the inbox notification)
-        </label>
-        <textarea
-          id={`note-${application.id}`}
-          name="adminNote"
-          rows={2}
-          placeholder="Optional. Pair them with another contractor, set scope, or note what this round needed instead."
-          className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
-        />
-        <div className="flex flex-wrap gap-2">
-          <SubmitButton pendingLabel="Saving…"
-            formAction={approveProjectApplication}
-            className="rounded-full px-4 py-2 text-sm font-medium text-white"
-            style={{ backgroundColor: "#007048" }}
-          >
-            Select for the team
-          </SubmitButton>
-          <SubmitButton pendingLabel="Saving…"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
-          >
-            Not this round
-          </SubmitButton>
-        </div>
-      </form>
-
-      {/* Removing is separate from deciding. "Not this round" is a
-          judgement the contractor hears about; this is queue cleanup
-          for test data and mistakes, and it is reversible. */}
-      <form action={withdrawProposalAsAdmin} className="mt-3">
-        <input type="hidden" name="id" value={application.id} />
-        <SubmitButton pendingLabel="Saving…"
-          className="text-xs text-ink-faint underline hover:text-brand-magentaText"
-        >
-          Remove from queue
-        </SubmitButton>
-      </form>
-    </Card>
-  );
-}
-
-function DecidedRow({
-  application,
-  lookup,
-  roster,
-}: {
-  application: ProjectApplication;
-  lookup: RowLookup;
-  roster: User[];
-}) {
-  const { applicant, project } = lookup(application);
-  const accent = STATUS_ACCENT[application.status];
-  const decidedDate =
-    application.reviewedAt ?? application.withdrawnAt ?? application.createdAt;
-  const decidedBy = application.reviewedBy
-    ? roster.find((u) => u.id === application.reviewedBy)
-    : undefined;
-
-  return (
-    <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-5 py-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <div className="text-sm">
-          <span className="font-medium">
-            {applicant ? adminName(applicant) : "Unknown member"}
-          </span>
-          <span className="text-ink-muted">
-            {" "}
-            · {application.proposedRole}
-          </span>
-          {project && (
-            <Link
-              href={`/projects/${project.id}`}
-              className="ml-2 text-xs text-brand-magentaText hover:underline"
-            >
-              {project.title} →
-            </Link>
-          )}
-        </div>
+      </div>
+      {pending > 0 ? (
         <span
-          className="rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider"
-          style={{ backgroundColor: accent + "22", color: accent }}
+          className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium text-white"
+          style={{ backgroundColor: "#5070F0" }}
         >
-          {PROJECT_APPLICATION_STATUS_LABELS[application.status]}
-          {application.status === "withdrawn" && (
-            <form action={restoreProposalAsAdmin} className="mt-1">
-              <input type="hidden" name="id" value={application.id} />
-              <SubmitButton pendingLabel="Saving…"
-                className="text-[11px] text-ink-faint underline hover:text-brand-magentaText"
-              >
-                Put back in the queue
-              </SubmitButton>
-            </form>
-          )}
+          {pending} pending
         </span>
-      </div>
-      <p className="mt-1 text-xs text-ink-muted">
-        Decided {formatDate(decidedDate)}
-        {decidedBy ? ` by ${adminName(decidedBy)}` : ""}
-      </p>
-      {application.adminNote && (
-        <p className="mt-2 text-xs italic" style={{ color: accent }}>
-          "{application.adminNote}"
-        </p>
+      ) : (
+        <span className="shrink-0 text-[11px] text-ink-faint">Clear</span>
       )}
-    </div>
+    </Link>
   );
 }

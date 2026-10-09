@@ -387,11 +387,15 @@ export async function composeEngagement(
     },
   });
 
+  // Its own kind. This had been borrowing project_application_decision,
+  // which renders as "Project decision" and reads like the outcome of
+  // something they applied for. Jamar: "It should be obvious she got a
+  // contract."
   await notify({
     userId: talent.id,
-    kind: "project_application_decision",
-    title: `Review the terms — ${title}`,
-    body: `${client.displayName}. ${terms} Nothing starts until you accept.`,
+    kind: "engagement_terms_review",
+    title: `${client.displayName} wants you on ${title}`,
+    body: `${terms} Read the terms and accept or decline. Nothing starts until you do.`,
     href: `/projects/${projectId}/review`,
   });
 
@@ -496,6 +500,7 @@ export async function decideEngagementTerms(
     });
 
     await notifyComposingAdmins(project.adminUserIds as string[], {
+      kind: "engagement_terms_declined",
       title: `Declined — ${project.title}`,
       body: `${publicName(user)}: ${reason.slice(0, 160)}`,
       href: `/admin/projects`,
@@ -566,6 +571,7 @@ export async function decideEngagementTerms(
   });
 
   await notifyComposingAdmins(project.adminUserIds as string[], {
+    kind: "engagement_terms_accepted",
     title: `Accepted — ${project.title}`,
     body: `${publicName(user)} accepted the terms. The client agreement can go out.`,
     href: `/projects/${projectId}`,
@@ -578,12 +584,17 @@ export async function decideEngagementTerms(
 
 async function notifyComposingAdmins(
   adminUserIds: string[],
-  input: { title: string; body: string; href: string },
+  input: {
+    kind: "engagement_terms_accepted" | "engagement_terms_declined";
+    title: string;
+    body: string;
+    href: string;
+  },
 ) {
   for (const id of adminUserIds ?? []) {
     await notify({
       userId: id,
-      kind: "project_application_decision",
+      kind: input.kind,
       title: input.title,
       body: input.body,
       href: input.href,

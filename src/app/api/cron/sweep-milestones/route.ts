@@ -68,6 +68,11 @@ export async function GET(request: Request) {
     return unauthorized();
   }
 
+  const ranAt = new Date().toISOString();
+  // Paired start/completion records make cron health auditable without
+  // logging secrets or notification content.
+  console.info("[cron] sweep-milestones started", { ranAt });
+
   const sweep = await runMilestoneSweep(secret);
   const rollup = await runWeeklyProjectRollup(secret);
   // Task #55 — same daily cron also runs the agreement renewal
@@ -117,9 +122,9 @@ export async function GET(request: Request) {
     console.error("[cron] MVP recompute failed", err);
   }
 
-  return NextResponse.json({
+  const result = {
     ok: true,
-    ranAt: new Date().toISOString(),
+    ranAt,
     milestoneSweep: sweep,
     weeklyRollup: rollup,
     agreementRenewals: renewals,
@@ -127,7 +132,17 @@ export async function GET(request: Request) {
     disclosureSweep: disclosure,
     trashPurge: trash,
     mvpRecompute: mvp,
+  };
+
+  console.info("[cron] sweep-milestones completed", {
+    ...result,
+    // Error details can contain internal context. The response keeps
+    // the existing behavior; logs need only show whether the sub-sweep ran.
+    disclosureSweep: "error" in disclosure ? { error: true } : disclosure,
+    mvpRecompute: "error" in mvp ? { error: true } : mvp,
   });
+
+  return NextResponse.json(result);
 }
 
 /**

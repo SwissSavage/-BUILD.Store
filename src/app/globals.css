@@ -372,7 +372,7 @@ html {
 
 @keyframes fm-hand-deal {
   0% {
-    transform: translate(60vw, 40vh) rotate(18deg);
+    transform: scale(0.98);
     opacity: 0;
   }
   60% {
@@ -390,9 +390,9 @@ html {
 }
 
 .fm-hand-card {
-  transform: translate(60vw, 40vh) rotate(18deg);
+  transform: scale(0.98);
   opacity: 0;
-  transition: transform 0.3s ease-out;
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
 }
 
 .fm-hand-card--dealt {

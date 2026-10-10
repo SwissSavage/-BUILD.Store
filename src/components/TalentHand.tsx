@@ -166,12 +166,22 @@ export function TalentHand({
    * paint don't animate stale content. Skip the animation flag
    * entirely when the caller opts out.
    */
-  const [dealt, setDealt] = useState(!deal);
+  const [dealState, setDealState] = useState<
+    "pending" | "animating" | "complete"
+  >(deal ? "pending" : "complete");
   useEffect(() => {
-    if (!deal) return;
+    if (!deal) {
+      setDealState("complete");
+      return;
+    }
     // Micro-timeout so the class hits after paint, not during.
-    const t = window.setTimeout(() => setDealt(true), 20);
-    return () => window.clearTimeout(t);
+    setDealState("pending");
+    const start = window.setTimeout(() => setDealState("animating"), 20);
+    const finish = window.setTimeout(() => setDealState("complete"), 900);
+    return () => {
+      window.clearTimeout(start);
+      window.clearTimeout(finish);
+    };
   }, [deal]);
 
   /**
@@ -226,7 +236,11 @@ export function TalentHand({
             key={entry.user.id}
             className={
               "fm-hand-card" +
-              (dealt ? " fm-hand-card--dealt" : "") +
+              (dealState === "animating"
+                ? " fm-hand-card--dealt"
+                : dealState === "complete"
+                  ? " fm-hand-card--settled"
+                  : "") +
               decisionClass
             }
             style={

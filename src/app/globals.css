@@ -400,9 +400,17 @@ html {
   animation-delay: calc(var(--deal-index, 0) * 120ms + 100ms);
 }
 
+/* The deal is an entrance only. Pager changes should swap a settled card
+   in place, never replay the off-screen animation. */
+.fm-hand-card--settled {
+  transform: none;
+  opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fm-hand-card,
-  .fm-hand-card--dealt {
+  .fm-hand-card--dealt,
+  .fm-hand-card--settled {
     animation: none;
     transform: none;
     opacity: 1;

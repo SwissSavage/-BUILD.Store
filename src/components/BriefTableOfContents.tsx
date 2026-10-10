@@ -76,7 +76,7 @@ export function BriefTableOfContents({
   // This grid cell always exists on desktop. Without it, a brief with no
   // headings would slide into the table-of-contents column.
   return (
-    <div className={ready && headings.length > 0 ? "" : "hidden lg:block"}>
+    <div className={ready && headings.length > 0 ? "min-w-0" : "hidden min-w-0 lg:block"}>
       {ready && headings.length > 0 && (
         // Desktop rail: keep navigation in view while the brief scrolls.
         <nav aria-label="Table of contents" className="lg:sticky lg:top-24 lg:self-start">
@@ -91,7 +91,7 @@ export function BriefTableOfContents({
               <li key={group.heading.id}>
                 <a
                   href={`#${group.heading.id}`}
-                  className="block text-ink-muted hover:text-brand-magentaText"
+                  className="block break-words text-ink-muted hover:text-brand-magentaText"
                   onClick={(event) => {
                     event.preventDefault();
                     const target = document.getElementById(group.heading.id);
@@ -108,7 +108,7 @@ export function BriefTableOfContents({
                       <li key={entry.id}>
                         <a
                           href={`#${entry.id}`}
-                          className="block text-ink-muted hover:text-brand-magentaText"
+                          className="block break-words text-ink-muted hover:text-brand-magentaText"
                           onClick={(event) => {
                             event.preventDefault();
                             const target = document.getElementById(entry.id);

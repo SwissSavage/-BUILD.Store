@@ -119,17 +119,17 @@ export default async function CaseStudyDetail({
             </span>
           }
         />
-        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+        <div className="mt-8 grid min-w-0 gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
           <BriefTableOfContents
             targetId="case-study-brief"
             headings={briefHeadings(project.description)}
           />
-          <section id="case-study-brief">
-            <Card className="p-8">
+          <section id="case-study-brief" className="min-w-0">
+            <Card className="min-w-0 p-5 sm:p-8">
               <Brief text={project.description} title={project.title} />
             </Card>
           </section>
-          <aside className="h-fit space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <aside className="h-fit min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
             <Card>
               <CardTitle>
                 <span className="flex items-center gap-2">

@@ -7,6 +7,7 @@
  */
 
 import { useState } from "react";
+import { publicName } from "@/lib/types";
 import { CardBack } from "@/components/CardBack";
 import { TradingCard3D } from "@/components/TradingCard3D";
 import type { TalentHandDecision } from "@/components/TalentHand";
@@ -24,10 +25,19 @@ export interface QuoteFlipReveaCrewMember {
     | "avatarPortraitUrl"
     | "discipline"
     | "membershipTier"
+    // publicName needs both to honour an artist's alias. Without them
+    // it silently falls back to the first-name convention, which is
+    // right for everyone else and wrong for an artist.
+    | "displayName"
+    | "profileMode"
   >;
   tier: TradingCardTier;
   relevance: string;
-  pitch?: string;
+  /** The trade-off, stated. Carries most of the weight of the sheet. */
+  strengths?: string;
+  weaknesses?: string;
+  /** Named links with a line on what the person did, not bare URLs. */
+  workSamples?: { label: string; url?: string; context: string }[];
   quoteLine: {
     pricingHeadline: string;
     pricingUnit: string;
@@ -95,7 +105,11 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
         {crew.map((member, index) => {
           const isFlipped = flippedIds.has(member.user.id);
           const isSelected = selectedUserId === member.user.id;
-          const name = `${member.user.firstName} ${member.user.lastName}`.trim() || member.user.handle;
+          // No last names on a client-facing surface, ever. The
+          // first-name convention is what stops a client routing
+          // around the cooperative to reach talent directly, and a
+          // quote is the most client-facing page there is.
+          const name = publicName(member.user);
           return (
             <button
               key={member.user.id}
@@ -155,11 +169,74 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
         <section className="mt-8 border-t border-[var(--surface-border)] pt-6" aria-live="polite">
           {selected ? (
             <>
-              <p className="text-xs uppercase tracking-wider text-brand-magentaText">Why {selected.user.firstName} fits</p>
-              <p className="mt-3 max-w-3xl whitespace-pre-line text-base leading-relaxed text-ink-muted">
-                {selected.pitch || selected.relevance}
+              {/* Strengths, weaknesses and work samples lead. The
+                  long pitch used to be the whole of this panel, and a
+                  client comparing four people does not read four
+                  blurbs: they want the trade-offs stated and enough to
+                  decide. Anyone they want to meet, they meet on a
+                  call. The pitch is still here, one click down. */}
+              <p className="text-xs uppercase tracking-wider text-brand-magentaText">
+                Why {selected.user.firstName} fits
               </p>
-              <p className="mt-4 text-sm text-ink-faint">{selected.quoteLine.timeline}</p>
+              <p className="mt-3 max-w-3xl text-base leading-relaxed text-ink">
+                {selected.relevance}
+              </p>
+
+              {(selected.strengths || selected.weaknesses) && (
+                <div className="mt-6 grid max-w-3xl gap-4 md:grid-cols-2">
+                  {selected.strengths && (
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+                        Strengths
+                      </p>
+                      <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink">
+                        {selected.strengths}
+                      </p>
+                    </div>
+                  )}
+                  {selected.weaknesses && (
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+                        Trade-offs
+                      </p>
+                      <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-muted">
+                        {selected.weaknesses}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(selected.workSamples?.length ?? 0) > 0 && (
+                <div className="mt-6 max-w-3xl">
+                  <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+                    Work samples
+                  </p>
+                  <ul className="mt-2 space-y-2">
+                    {selected.workSamples?.map((sample) => (
+                      <li key={sample.label} className="text-sm leading-relaxed">
+                        {sample.url ? (
+                          <a
+                            href={sample.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand-magentaText hover:underline"
+                          >
+                            {sample.label}
+                          </a>
+                        ) : (
+                          <span className="text-ink">{sample.label}</span>
+                        )}
+                        {sample.context && (
+                          <span className="text-ink-muted"> · {sample.context}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="mt-6 text-sm text-ink-faint">{selected.quoteLine.timeline}</p>
             </>
           ) : (
             <p className="text-sm text-ink-muted">Select a builder card to read their proposal and availability.</p>

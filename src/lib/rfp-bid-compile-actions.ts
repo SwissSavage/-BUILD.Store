@@ -35,8 +35,15 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { richTextValuePlainText } from "@/lib/rich-text";
 import { formatProposalHours } from "@/lib/proposal-terms";
+import {
+  clientPricingFromBuilderPayout,
+  formatUsdCents,
+  suggestedBuilderHourlyPayout,
+  suggestedClientHourlyRate,
+} from "@/lib/quote-pricing";
 import type {
   CooperativeQuote,
+  CooperativeQuotePricing,
   ProposedBuilder,
 } from "@/lib/types";
 
@@ -73,12 +80,15 @@ export async function compileBidsIntoQuote(formData: FormData) {
     formData.get("clientDisplayName") ?? "",
   ).trim();
   const scopeSummary = String(formData.get("scopeSummary") ?? "").trim();
-  const timeline = String(formData.get("timeline") ?? "").trim();
   const deliverablesRaw = String(formData.get("deliverables") ?? "");
 
   if (!rfpId) throw new Error("rfpId is required.");
-  if (applicationIds.length < minimumProposalCount) {
-    throw new Error(`Pick at least ${minimumProposalCount} bids for the client quote.`);
+  // Three to five is the house standard for a readable comparison, not a
+  // rule the software gets to enforce. Sometimes there are two bids
+  // worth sending and waiting for a third is worse than sending two.
+  // The form says so; it no longer refuses.
+  if (applicationIds.length === 0) {
+    throw new Error("Pick at least one bid for the client quote.");
   }
   if (applicationIds.length > maximumProposalCount) {
     throw new Error(
@@ -93,18 +103,13 @@ export async function compileBidsIntoQuote(formData: FormData) {
       "Scope summary is too thin. Write a full paragraph so the client understands what they're getting.",
     );
   }
-  if (timeline.length < 4) {
-    throw new Error("Engagement timeline is required.");
-  }
+  // Engagement-level deliverables are now optional and usually empty.
+  // What each Builder owes lives on their own entry, read per pick
+  // below. See the WHY on CooperativeQuote["scope"].
   const deliverables = deliverablesRaw
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  if (deliverables.length === 0) {
-    throw new Error(
-      "List at least one deliverable, one per line.",
-    );
-  }
 
   // Verify RFP is a compilable open contract.
   const [rfp] = await db
@@ -212,14 +217,161 @@ export async function compileBidsIntoQuote(formData: FormData) {
     } else {
       pricing = { type: "negotiable", ...split };
     }
+    // ──────────────────────────────────────────────────────────
+    // WHY (2026-10-05)
+    //
+    // clientPricingFromBuilderPayout has existed, correct, and unused.
+    // Nothing called it, so clientPricing was never written, and the
+    // quote page falls back to `builder.clientPricing ?? builder.pricing`.
+    // The client was shown the builder's own payout: a member asking
+    // $55/hr appeared on the client quote at $55/hr, with the
+    // cooperative's 15% nowhere in the number the client approves.
+    //
+    // That is a revenue bug, not a display one. A client who approves
+    // that quote has approved $55/hr, and the operations share has to
+    // come out of someone after the fact.
+    //
+    // Default is the straight gross-up. clientRate_<id> overrides it
+    // when an admin wants margin above the floor, for a bonus hedge or
+    // because the market rate for the work is higher than what the
+    // member thought to ask. The builder's payout is untouched either
+    // way: `pricing` still carries exactly what they bid.
+    // ──────────────────────────────────────────────────────────
+    const clientPricing = (() => {
+      // Hourly bids go through the standing rules: $10 over a Builder's
+      // minimum, never under a $50/hr payout, and a quoted band taken at
+      // the top already clears the hedge so nothing is added to it.
+      // Fixed and range project prices get the straight gross-up, since
+      // adding $10 to a scoped project price means nothing.
+      const grossedUp: CooperativeQuotePricing =
+        pricing.type === "hourly"
+          ? {
+              ...pricing,
+              hourlyRate: suggestedClientHourlyRate(
+                pricing.hourlyRate,
+                pricing.hourlyRateMax,
+              ),
+              hourlyRateMax: pricing.hourlyRateMax
+                ? Math.ceil(
+                    suggestedBuilderHourlyPayout(
+                      pricing.hourlyRate,
+                      pricing.hourlyRateMax,
+                    ) / 0.85,
+                  )
+                : null,
+            }
+          : clientPricingFromBuilderPayout(pricing);
+      const override = Number(
+        String(formData.get(`clientRate_${p.id}`) ?? "").replace(/[$,\s]/g, ""),
+      );
+      if (!Number.isFinite(override) || override <= 0) return grossedUp;
+
+      // Never below the gross-up. Quoting under it would pay the member
+      // out of the cooperative's share without anyone deciding to.
+      const floor = (() => {
+        switch (grossedUp.type) {
+          case "hourly":
+            return grossedUp.hourlyRate;
+          case "fixed":
+            return grossedUp.baseAmount;
+          case "range":
+            return grossedUp.baseAmountMin;
+          default:
+            return 0;
+        }
+      })();
+      if (override < floor) {
+        throw new Error(
+          `Client rate for bid ${p.id} is below the ${formatUsdCents(floor)} floor that keeps the builder's payout whole.`,
+        );
+      }
+
+      switch (grossedUp.type) {
+        case "hourly":
+          return {
+            ...grossedUp,
+            hourlyRate: override,
+            // Scale the top of the band by the same factor so an
+            // override does not quietly flatten a range into a point.
+            hourlyRateMax: grossedUp.hourlyRateMax
+              ? Math.ceil(grossedUp.hourlyRateMax * (override / grossedUp.hourlyRate))
+              : null,
+          };
+        case "fixed":
+          return { ...grossedUp, baseAmount: override };
+        case "range":
+          return {
+            ...grossedUp,
+            baseAmountMin: override,
+            baseAmountMax: Math.ceil(
+              grossedUp.baseAmountMax * (override / grossedUp.baseAmountMin),
+            ),
+          };
+        default:
+          return grossedUp;
+      }
+    })();
+
     const hoursLine = p.hoursPerWeek > 0
       ? `${formatProposalHours(p.hoursPerWeek, p.hoursPerWeekMax)} across the engagement`
       : "Availability per engagement";
+    // What this person is on the hook for. Authored per bid, because
+    // bids arrive as prose and projectApplications has no deliverables
+    // column to carry one through. Required: a Builder card with a
+    // price and no deliverables is the thing a client cannot evaluate.
+    const perBidDeliverables = String(formData.get(`deliverables_${p.id}`) ?? "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (perBidDeliverables.length === 0) {
+      throw new Error(
+        `List what each Builder is delivering, one per line. Missing for bid ${p.id}.`,
+      );
+    }
+    // The two fields that carry most of the weight in a real quote
+    // sheet. Required, because a client choosing between people needs
+    // the trade-off stated and a card with only strengths on it is
+    // marketing rather than a basis for a decision.
+    const strengths = String(formData.get(`strengths_${p.id}`) ?? "").trim();
+    const weaknesses = String(formData.get(`weaknesses_${p.id}`) ?? "").trim();
+    if (!strengths || !weaknesses) {
+      throw new Error(
+        `Write both strengths and weaknesses for every Builder. Missing for bid ${p.id}.`,
+      );
+    }
+
+    // "Label | URL | context" per line, with the URL optional, since
+    // some samples are a description of work that has no public link.
+    const workSamples = String(formData.get(`workSamples_${p.id}`) ?? "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split("|").map((part) => part.trim());
+        const [label, second, third] = parts;
+        const looksLikeUrl = /^https?:\/\//i.test(second ?? "");
+        return {
+          label: label ?? "",
+          url: looksLikeUrl ? second : undefined,
+          context: (looksLikeUrl ? third : [second, third].filter(Boolean).join(" ")) ?? "",
+        };
+      })
+      .filter((sample) => sample.label.length > 0);
+
     return {
       userId: p.userId,
       pricing,
+      clientPricing,
+      deliverables: perBidDeliverables,
       timeline: hoursLine,
       relevance,
+      strengths,
+      weaknesses,
+      workSamples: workSamples.length > 0 ? workSamples : undefined,
+      // Carried for admin reference only. The pitch never reaches a
+      // client: the price points, deliverables, strengths, trade-offs
+      // and work samples speak for themselves, and a member writing
+      // about themselves is always selling themselves.
       pitch: p.pitch,
     };
   });
@@ -234,8 +386,11 @@ export async function compileBidsIntoQuote(formData: FormData) {
     proposedBuilders,
     scope: {
       summary: scopeSummary,
-      deliverables,
-      timeline,
+      // Only what spans the whole crew. Nothing is written for
+      // `timeline`: the engagement shape is derived from the selected
+      // Builders' own timelines, because none of it is real until the
+      // client picks who is doing the work.
+      deliverables: deliverables.length > 0 ? deliverables : undefined,
     },
     status: isSending ? "sent" : "draft",
     sentAt: isSending ? now : null,

@@ -387,6 +387,33 @@ export interface Project {
    */
   rfpAdminNote: string | null;
   /**
+   * Direct engagement terms and handshake.
+   *
+   * Null on every project that came through an RFP or is internal.
+   * These existed on the Drizzle schema from the day the direct motion
+   * shipped but never made it onto this hand-written type, so every
+   * surface that wanted to tell a placed engagement apart from an RFP
+   * contract could not see the field that says so.
+   */
+  engagementBasis: "hourly" | "fixed" | null;
+  /** Client-facing rate or total. Never shown to the Builder. */
+  engagementRate: string | null;
+  /** Not-to-exceed. Null means no cap agreed. */
+  engagementCeilingHours: string | null;
+  engagementScope: string | null;
+  /** Null unless composed through the direct motion. */
+  engagementState: "awaiting_talent" | "accepted" | "declined" | null;
+  engagementSentAt: string | null;
+  engagementDecidedAt: string | null;
+  engagementDeclineReason: string | null;
+  engagementLinks: { label: string; url: string }[];
+  engagementAttachments: {
+    name: string;
+    mimeType: string;
+    sizeBytes: number;
+    base64: string;
+  }[];
+  /**
    * Mirror of the HubSpot deal stage. Null for internal projects (no deal).
    * Updated by the webhook handler at /api/hooks/hubspot/stage.
    */
@@ -2785,6 +2812,13 @@ export type NotificationKind =
   | "agreement_renewal_day_of"
   | "agreement_renewal_overdue"
   | "portfolio_fraud_flag"
+  // Circumvention review. profile_disclosure_fix is an admin asking a
+  // member to edit their own words; profile_hidden_pending_fix is what
+  // the member is told when the profile comes out of discovery, either
+  // because an admin did it or because the daily sweep found contact
+  // details sitting in a live bio.
+  | "profile_disclosure_fix"
+  | "profile_hidden_pending_fix"
   | "rfp_quote_request"
   | "booking_request_received"
   | "booking_request_approved"
@@ -2792,6 +2826,15 @@ export type NotificationKind =
   | "booking_confirmed"
   | "quote_approved"
   | "quote_declined"
+  // Direct engagement handshake. A Builder is assigned rather than
+  // applying, so nothing in the application vocabulary fits: this is
+  // work already sold, waiting on them to agree to the terms. It had
+  // been borrowing project_application_decision, which rendered as
+  // "Project decision" and read like the outcome of something they
+  // had applied for.
+  | "engagement_terms_review"
+  | "engagement_terms_accepted"
+  | "engagement_terms_declined"
   // Documenso signature completion fanout — fires to (a) the signer and
   // (b) admins the moment an envelope reaches `completed` on the
   // webhook. Distinct from agreement_renewal_* which are anniversary
@@ -2828,6 +2871,9 @@ export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   booking_confirmed: "Booking confirmed",
   quote_approved: "Quote approved",
   quote_declined: "Quote declined",
+  engagement_terms_review: "Contract to review",
+  engagement_terms_accepted: "Terms accepted",
+  engagement_terms_declined: "Terms sent back",
   milestone_due_soon: "Milestone due soon",
   milestone_due_important: "Milestone due — important",
   milestone_due_urgent: "Milestone due — today",
@@ -2844,6 +2890,8 @@ export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   rfp_quote_request: "Quote request from admin",
   agreement_signature_completed: "Agreement signed",
   documenso_account_ready: "Documenso account ready",
+  profile_disclosure_fix: "Profile text needs an edit",
+  profile_hidden_pending_fix: "Profile hidden pending a fix",
 };
 
 /* ------------------------------------------------------------------ */
@@ -3628,13 +3676,76 @@ export interface ProposedBuilder {
    */
   timeline: string;
   /**
+   * What this Builder is on the hook for, carried from their own bid.
+   *
+   * Each person on a cooperative quote is quoting something different.
+   * A single engagement-level list could not say who owed what, and
+   * the detail survived only as prose buried in `pitch`.
+   */
+  deliverables?: string[];
+  /**
    * "Why this person for this project" one-liner. Admin-authored,
    * first-name basis, no jargon. Shown under the Builder's card in
    * the TalentHand.
+   *
+   * Maps to the positioning line in the Service Provider cell of the
+   * quote sheet, e.g. "Extensive portfolio supporting clients from SMB
+   * to Enterprise."
    */
   relevance: string;
-  /** Full proposal text when a quote is compiled from an RFP bid. Older and
-   * manually composed quotes omit this and use the curated relevance line. */
+  /**
+   * What this person is good at, and what they are not.
+   *
+   * ───────────────────────────────────────────────────────────
+   * WHY (2026-10-05)
+   *
+   * These carry most of the weight in a real $BUILD quote sheet and
+   * the app had nowhere to put them. The client is choosing between
+   * people and wants the trade-offs stated, not a blurb per candidate.
+   * Weaknesses are written plainly and honestly — real examples from
+   * sent quotes include "Does not code, would need to pair with a web
+   * developer" and "No real UX/UI experience" — because a client who
+   * cannot see the trade-off cannot make an informed decision, and
+   * finds out after they have hired.
+   *
+   * Admin-authored, like the rest of the framing. A member cannot
+   * reasonably be asked to write their own weaknesses for a document
+   * that decides whether they get the work.
+   * ───────────────────────────────────────────────────────────
+   */
+  strengths?: string;
+  weaknesses?: string;
+  /**
+   * The "Work Sample(s)" column. A named link plus one line on what it
+   * is and what this person did on it, because a bare URL makes the
+   * client do the work of figuring out why they are looking at it.
+   *
+   * Admin-curated rather than carried straight from the bid: most
+   * members do not present their own portfolio effectively, which is
+   * the same reason the framing is admin-authored.
+   */
+  workSamples?: { label: string; url?: string; context: string }[];
+  /**
+   * The member's proposal text, as submitted or as edited on the
+   * compile form. Admin-facing reference only.
+   *
+   * ───────────────────────────────────────────────────────────
+   * WHY IT IS NOT CLIENT-FACING (2026-10-05)
+   *
+   * Neither sent $BUILD quote sheet has a column for a proposal. What
+   * the client reads is the extraction: relevance, strengths,
+   * trade-offs, deliverables and work samples.
+   *
+   * The reason is not length. A member writing about themselves is
+   * selling themselves, and some of what they write points away from
+   * the cooperative: a real bid argued at length for hiring an agency
+   * over a solo consultant, complete with a bench and a replacement
+   * guarantee. On that firm's own site it is good positioning. Printed
+   * inside an FM quote sheet it is an argument for the client to go
+   * straight to them. Nobody does this carelessly; everybody pitching
+   * does it, and noticing is the job.
+   * ───────────────────────────────────────────────────────────
+   */
   pitch?: string;
 }
 
@@ -3664,18 +3775,36 @@ export interface CooperativeQuote {
   proposedBuilders: ProposedBuilder[];
   /** Scope block — what the crew delivers. */
   scope: {
-    /** One-paragraph scope summary. */
+    /** One-paragraph scope summary. The engagement in prose. */
     summary: string;
-    /** Enumerated deliverables. */
-    deliverables: string[];
     /**
-     * Engagement-level timeline rhythm — e.g. "8 weeks from kickoff.
-     * 2 weeks pre-production, 3 weeks production, 3 weeks post."
-     * Distinct from per-Builder timeline on each `proposedBuilders`
-     * entry — this is the phase story, that is the individual
-     * availability window.
+     * Deliverables that belong to the engagement rather than to any one
+     * Builder. Optional, and usually empty.
+     *
+     * ───────────────────────────────────────────────────────────
+     * WHY (2026-10-05)
+     *
+     * This was the only place deliverables existed, and it was
+     * required. Four Builders each bid their own scope and compiling
+     * flattened all of it into one hand-typed list, which lost the
+     * thing a client most wants to know: who owes what. Deliverables
+     * now live on each ProposedBuilder, carried from what that person
+     * actually bid. This field is what is left over for anything that
+     * genuinely spans the whole crew.
+     * ───────────────────────────────────────────────────────────
      */
-    timeline: string;
+    deliverables?: string[];
+    /**
+     * Engagement-level timeline. REMOVED — see the comment above and
+     * `quoteTimelineComponents`. Nothing about the shape of the work is
+     * real until the client picks their crew, so the engagement
+     * timeline is derived from the selected Builders' own timelines
+     * rather than authored up front. Kept optional only so quotes
+     * compiled before 2026-10-05 still parse.
+     *
+     * @deprecated Do not write. Read only for historical rows.
+     */
+    timeline?: string;
   };
   /**
    * Status lifecycle:
@@ -4242,9 +4371,21 @@ export type AuditLogAction =
   | "quote.draft_saved"
   | "quote.sent"
   | "quote.removed"
+  | "quote.returned_to_draft"
   | "quote.approved"
   | "quote.declined"
+  // Circumvention review
+  | "profile.disclosure_reviewed"
+  | "profile.disclosure_fix_requested"
+  | "profile.hidden_pending_fix"
+  // Inbound admission decisions. Applies to every kind that is a
+  // request to be let in (talent, partner, store), not to demand
+  // inbound, which is a pipeline rather than a yes or no.
+  | "inbound.approved"
+  | "inbound.rejected"
   // Contracts + compensation
+  | "project.member_assigned"
+  | "project.member_unassigned"
   | "rfp.approved"
   | "rfp.rejected"
   | "contract.base_released"
@@ -4361,8 +4502,16 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "quote.draft_saved": "Cooperative Quote draft saved",
   "quote.sent": "Cooperative Quote sent to client",
   "quote.removed": "Cooperative Quote removed",
+  "quote.returned_to_draft": "Cooperative Quote pulled back to draft",
   "quote.approved": "Cooperative Quote approved by client",
   "quote.declined": "Cooperative Quote declined by client",
+  "profile.disclosure_reviewed": "Profile disclosure reviewed, no action",
+  "profile.disclosure_fix_requested": "Member asked to fix their profile text",
+  "profile.hidden_pending_fix": "Profile hidden from discovery pending a fix",
+  "inbound.approved": "Inbound application approved",
+  "inbound.rejected": "Inbound application rejected",
+  "project.member_assigned": "Member assigned to engagement directly",
+  "project.member_unassigned": "Member removed from engagement",
   "rfp.approved": "RFP approved",
   "rfp.rejected": "RFP rejected",
   "contract.base_released": "Base pay released",
@@ -4444,6 +4593,9 @@ export type AuditLogResourceKind =
   | "triangulated_composite"
   | "partner_referral"
   | "notification_rule"
+  // Inbound queue rows, so an admission decision has a resource to
+  // hang off rather than being logged against config.
+  | "inbound_submission"
   | "config"
   // Payments hub (task #63)
   | "payout_method"

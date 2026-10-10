@@ -32,6 +32,14 @@ import { revalidatePath } from "next/cache";
 import { notify } from "@/lib/writers/notifications";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
+import {
+  isPlausibleSignature,
+  quoteSignatureStatement,
+  signedCopy,
+} from "@/lib/quote-signature";
+import { buildSignedQuotePdf } from "@/lib/quote-signed-pdf";
+import { sendTransactionalEmail } from "@/lib/email";
+import { headers } from "next/headers";
 import { secureToken } from "@/lib/secure-token";
 import {
   cooperativeQuotes,
@@ -46,6 +54,14 @@ import {
   inviteRecipientToTemplate,
 } from "@/lib/documenso";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import {
+  aggregateHeadline,
+  aggregateUnitLabel,
+  deriveAggregatePricing,
+  pricingHeadline,
+  pricingUnitLabel,
+} from "@/lib/quote-pricing";
+import { publicName } from "@/lib/types";
 import type {
   CooperativeQuote,
   CooperativeQuotePricing,
@@ -385,6 +401,81 @@ export async function createCooperativeQuote(formData: FormData) {
  * should soft-delete so the magic-link stops resolving without
  * losing the historical record.
  */
+/**
+ * Pull a sent quote back to draft so it can be rebuilt.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-05)
+ *
+ * compileBidsIntoQuote refuses to touch a quote that is no longer a
+ * draft, and tells you to "create a revised draft instead of changing
+ * the version the client received." Nothing in the application created
+ * one. A sent quote was frozen permanently and the only way out was
+ * deleting it, which takes the client token with it and breaks any link
+ * already in their inbox.
+ *
+ * That gap mattered the moment the client-pricing bug was fixed, since
+ * every quote compiled before it carries the Builder's payout as the
+ * client price and has to be rebuilt to be correct.
+ *
+ * Only from sent or viewed. A quote the client has approved or declined
+ * is a decision, and reversing a decision is undoCooperativeQuoteDecision,
+ * which has its own verification gate. This cannot be used to reach
+ * around that.
+ *
+ * The client token survives. The same URL keeps working and shows the
+ * draft state, so a client who reloads sees that it is being revised
+ * rather than a dead link.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function returnQuoteToDraft(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Quote id is required.");
+
+  const [quote] = await db
+    .select()
+    .from(cooperativeQuotes)
+    .where(eq(cooperativeQuotes.id, id))
+    .limit(1);
+  if (!quote) throw new Error("Quote not found.");
+  if (quote.status === "draft") return;
+  if (quote.status === "approved" || quote.status === "declined") {
+    throw new Error(
+      `This quote has been ${quote.status}. Reopen the decision on the client page first, which asks the client to confirm their email.`,
+    );
+  }
+
+  // Guarded on the status we read, so two admins pressing this at once
+  // cannot both write an audit row claiming they did it.
+  const claimed = await db
+    .update(cooperativeQuotes)
+    .set({ status: "draft", sentAt: null, viewedAt: null })
+    .where(
+      and(
+        eq(cooperativeQuotes.id, id),
+        eq(cooperativeQuotes.status, quote.status),
+      )!,
+    )
+    .returning({ id: cooperativeQuotes.id });
+  if (claimed.length === 0) return;
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "quote.returned_to_draft",
+    resourceKind: "cooperative_quote",
+    resourceId: quote.id,
+    before: { status: quote.status, sentAt: quote.sentAt, viewedAt: quote.viewedAt },
+    after: { status: "draft" },
+    reason: null,
+  });
+
+  revalidatePath("/admin/cooperative-quotes");
+  revalidatePath(`/admin/rfps/${quote.projectId}/bids`);
+  revalidatePath(`/quotes/${quote.clientToken}`);
+}
+
 export async function removeCooperativeQuote(formData: FormData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();
@@ -440,38 +531,60 @@ export async function approveCooperativeQuote(formData: FormData) {
   const selectedLeadUserId = String(
     formData.get("selectedLeadUserId") ?? "",
   ).trim();
-  // Task #45 — client contact info captured on approve so the dual-
-  // envelope SOW dispatch has an address. Magic-link viewing is
-  // anonymous, so this is the first point where the client identifies.
-  const clientContactEmail = String(
-    formData.get("clientContactEmail") ?? "",
-  )
-    .trim()
-    .toLowerCase();
-  const clientContactName = String(
-    formData.get("clientContactName") ?? "",
-  ).trim();
+  // Task #45 captured the SOW address from the form, because viewing
+  // was anonymous and approve was the first point the client said who
+  // they were. Saying is not proving: anyone with the link could put
+  // any address on the agreement. Both now come from the verified
+  // session below and the form fields are ignored.
 
   if (!token) throw new Error("Quote token is required.");
   if (!selectedLeadUserId) {
     throw new Error("Select a lead builder before approving.");
   }
-  if (
-    !clientContactEmail ||
-    !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clientContactEmail)
-  ) {
-    throw new Error("A valid contact email is required to send you the SOW.");
-  }
-  if (clientContactName.length < 2) {
-    throw new Error("Your name is required so we can address the SOW to you.");
-  }
-
   const [quote] = await db
     .select()
     .from(cooperativeQuotes)
     .where(eq(cooperativeQuotes.clientToken, token))
     .limit(1);
   if (!quote) throw new Error("Quote not found.");
+
+  // ──────────────────────────────────────────────────────────
+  // WHY A SIGNATURE AND NOT A CODE (2026-10-07)
+  //
+  // This used to require a one-time code emailed to the signer. That
+  // was the right answer to "anyone with the link can approve" and the
+  // wrong answer for this product: the link only ever reaches a
+  // decision maker or someone beside one, the close happens on a call,
+  // and a verification step in front of a signature protects against a
+  // case that does not occur while taxing every case that does.
+  //
+  // The signature is the accountability. Someone who signs without the
+  // authority to sign is answerable for having signed, which is how
+  // every e-signature product works.
+  //
+  // The statement is stored with it, not referenced, so the record says
+  // what this person was shown rather than that a flag went true.
+  // ──────────────────────────────────────────────────────────
+  const clientContactName = String(formData.get("clientContactName") ?? "").trim();
+  const clientContactEmail = String(formData.get("clientContactEmail") ?? "")
+    .trim()
+    .toLowerCase();
+  const signatureTyped = String(formData.get("signatureTyped") ?? "").trim();
+
+  if (clientContactName.length < 2) {
+    throw new Error("Enter the name this agreement should be addressed to.");
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clientContactEmail)) {
+    throw new Error("Enter a valid email so both sides get a signed copy.");
+  }
+  if (!isPlausibleSignature(signatureTyped, clientContactName)) {
+    throw new Error("Sign by typing your name in the signature field.");
+  }
+  const signatureStatement = quoteSignatureStatement(quote.clientDisplayName);
+  const signedAt = new Date().toISOString();
+  const signerIp =
+    (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
   if (quote.status === "approved" || quote.status === "declined") {
     throw new Error(
       `This quote has already been ${quote.status}. Contact your Future Modern account owner if you need to change the decision.`,
@@ -497,6 +610,11 @@ export async function approveCooperativeQuote(formData: FormData) {
       selectedLeadUserId,
       clientContactEmail,
       clientContactName,
+      // The signature and what it was given against, recorded together.
+      clientSignatureTyped: signatureTyped,
+      clientSignatureStatement: signatureStatement,
+      clientSignatureIp: signerIp,
+      clientSignedAt: signedAt,
     })
     .where(eq(cooperativeQuotes.id, quote.id));
   // Reflect changes in the in-memory object for notification helper.
@@ -505,6 +623,14 @@ export async function approveCooperativeQuote(formData: FormData) {
   quote.selectedLeadUserId = selectedLeadUserId;
   quote.clientContactEmail = clientContactEmail;
   quote.clientContactName = clientContactName;
+
+  // Names for the signed copy. publicName, because the document goes to
+  // the client and the first-name convention holds there too.
+  const builderNames = new Map<string, string>();
+  for (const b of proposedBuilders) {
+    const u = await getUserById(b.userId);
+    if (u) builderNames.set(b.userId, publicName(u));
+  }
 
   const leadUser = await getUserById(selectedLeadUserId);
   const leadName = leadUser
@@ -530,6 +656,93 @@ export async function approveCooperativeQuote(formData: FormData) {
       "contractsent",
       `Client ${quote.clientDisplayName} selected ${leadName} as lead. Awaiting LOI + SOW signatures.`,
     );
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // The signed copy, to the client and to FM.
+  //
+  // A PDF rather than an email body: a signed quote gets forwarded to a
+  // finance team, filed, and read back months later. An email body
+  // loses its formatting on forward and nobody treats it as a document.
+  //
+  // Wrapped and awaited-but-not-fatal. The quote is already approved in
+  // the database by this point, and a mail failure must not make the
+  // client think their signature did not land. It is logged loudly
+  // instead, because a missing signed copy is a real problem, just not
+  // one to solve by throwing at the person who signed.
+  // ──────────────────────────────────────────────────────────
+  try {
+    const crewForCopy = proposedBuilders.map((b) => {
+      const priced = b.clientPricing ?? b.pricing;
+      return {
+        name: builderNames.get(b.userId) ?? b.userId,
+        rate: `${pricingHeadline(priced)} ${pricingUnitLabel(priced)}`.trim(),
+        timeline: b.timeline,
+      };
+    });
+    const copy = signedCopy({
+      clientDisplayName: quote.clientDisplayName,
+      projectTitle,
+      signerName: clientContactName,
+      signerEmail: clientContactEmail,
+      signatureTyped,
+      statement: signatureStatement,
+      signedAt,
+      leadName,
+      crew: crewForCopy,
+    });
+    const pdf = await buildSignedQuotePdf({
+      clientDisplayName: quote.clientDisplayName,
+      projectTitle,
+      quoteId: quote.id,
+      preparedOn: new Date(quote.createdAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      total: aggregateHeadline(deriveAggregatePricing(proposedBuilders.map((b) => ({
+        ...b,
+        pricing: b.clientPricing ?? b.pricing,
+      })))),
+      totalBasis: aggregateUnitLabel(deriveAggregatePricing(proposedBuilders.map((b) => ({
+        ...b,
+        pricing: b.clientPricing ?? b.pricing,
+      })))),
+      lineItems: proposedBuilders.map((b) => {
+        const priced = b.clientPricing ?? b.pricing;
+        return {
+          name: builderNames.get(b.userId) ?? b.userId,
+          role: b.relevance,
+          deliverables: b.deliverables ?? [],
+          rate: pricingHeadline(priced),
+          timeline: b.timeline,
+        };
+      }),
+      leadName,
+      signature: {
+        signerName: clientContactName,
+        signerEmail: clientContactEmail,
+        signedAt,
+        signerIp,
+      },
+    });
+    const attachments = [
+      {
+        filename: `signed-proposal-${quote.clientDisplayName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`,
+        content: pdf,
+        contentType: "application/pdf",
+      },
+    ];
+    const fmInbox = process.env.EMAIL_FROM;
+    await Promise.all([
+      sendTransactionalEmail({ to: clientContactEmail, ...copy, attachments }),
+      ...(fmInbox
+        ? [sendTransactionalEmail({ to: fmInbox, ...copy, attachments })]
+        : []),
+    ]);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[quote] signed copy failed to send", quote.id, err);
   }
 
   await logAuditEvent({
@@ -759,6 +972,7 @@ export async function declineCooperativeQuote(formData: FormData) {
     .where(eq(cooperativeQuotes.clientToken, token))
     .limit(1);
   if (!quote) throw new Error("Quote not found.");
+
   if (quote.status === "approved" || quote.status === "declined") {
     throw new Error(
       `This quote has already been ${quote.status}. Contact your Future Modern account owner if you need to change the decision.`,
@@ -868,6 +1082,7 @@ export async function undoCooperativeQuoteDecision(formData: FormData) {
     .where(eq(cooperativeQuotes.clientToken, token))
     .limit(1);
   if (!quote) throw new Error("Quote not found.");
+
   if (quote.status !== "approved" && quote.status !== "declined") {
     throw new Error(
       "Only approved or declined quotes can be reopened.",

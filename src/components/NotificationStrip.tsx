@@ -23,6 +23,11 @@ const KIND_ACCENT: Record<NotificationKind, string> = {
   contract_stage: "#5070F0",
   invoice_received: "#007048",
   rfp_status: "#D828A0",
+  // Magenta, the loudest accent available. A contract waiting on you
+  // is the highest-consequence thing in a member's inbox.
+  engagement_terms_review: "#D828A0",
+  engagement_terms_accepted: "#007048",
+  engagement_terms_declined: "#D828A0",
   membership_decision: "#D828A0",
   seller_application: "#D828A0",
   whitelist_decision: "#007048",
@@ -60,6 +65,8 @@ const KIND_ACCENT: Record<NotificationKind, string> = {
   quote_declined: "#D828A0",
   agreement_signature_completed: "#007048",
   documenso_account_ready: "#007048",
+  profile_disclosure_fix: "#B4740F",
+  profile_hidden_pending_fix: "#B4740F",
 };
 
 export async function NotificationStrip({

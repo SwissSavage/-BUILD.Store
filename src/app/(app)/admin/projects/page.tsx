@@ -9,6 +9,7 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { db } from "@/db/client";
 import { projects as projectsTable } from "@/db/schema";
 import { getAllProjects } from "@/lib/readers/projects";
+import { getAllApplications } from "@/lib/readers/project-applications";
 import { trashProject } from "@/lib/project-trash-actions";
 import { INDUSTRY_LABELS, type Project } from "@/lib/types";
 import { prospectiveContributionReader, safely } from "@/lib/readers";
@@ -32,6 +33,10 @@ export const dynamic = "force-dynamic";
  */
 async function advance(formData: FormData) {
   "use server";
+  // The page gate does not reach this. A server action is a public
+  // POST endpoint, and without this anyone holding the action id could
+  // move any project to completed or cancelled.
+  await requireAdmin();
   const id = String(formData.get("id"));
   const next = String(formData.get("status")) as Project["status"];
   const now = new Date().toISOString();
@@ -63,6 +68,17 @@ export default async function AdminProjectsPage() {
     await safely(() => prospectiveContributionReader.all(), [])
   ).filter((c) => c.status === "new").length;
   const { projects: allProjects } = await getAllProjects();
+
+  // Pending proposals per project, so the count is on the row rather
+  // than behind a click. One read for the whole table.
+  const pendingByProject = new Map<string, number>();
+  for (const app of await safely(() => getAllApplications(), [])) {
+    if (app.status !== "pending") continue;
+    pendingByProject.set(
+      app.projectId,
+      (pendingByProject.get(app.projectId) ?? 0) + 1,
+    );
+  }
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -100,6 +116,7 @@ export default async function AdminProjectsPage() {
               <th className="p-4 text-left">Pillar</th>
               <th className="p-4 text-left">Budget</th>
               <th className="p-4 text-left">Status</th>
+              <th className="p-4 text-left">Proposals</th>
               <th className="p-4 text-left">Action</th>
             </tr>
           </thead>
@@ -107,7 +124,15 @@ export default async function AdminProjectsPage() {
             {allProjects.map((p) => (
               <tr key={p.id} className="border-t border-[var(--surface-border)]">
                 <td className="p-4">
-                  <div className="font-medium">{p.title}</div>
+                  {/* The row had no way into the thing it describes.
+                      Every admin list should be a route to the record,
+                      not a readout of it. */}
+                  <Link
+                    href={`/projects/${p.id}`}
+                    className="font-medium hover:text-brand-magentaText"
+                  >
+                    {p.title}
+                  </Link>
                   <div className="text-xs text-ink-muted line-clamp-1">
                     {p.description}
                   </div>
@@ -117,6 +142,20 @@ export default async function AdminProjectsPage() {
                 </td>
                 <td className="p-4">{formatBudget(p.budget)}</td>
                 <td className="p-4 capitalize">{p.status.replace("_", " ")}</td>
+                <td className="p-4">
+                  {/* Straight into this project's own queue. The
+                      cross-cutting list is an index now, so the count
+                      here is the only place the number is visible
+                      without opening something. */}
+                  <Link
+                    href={`/admin/projects/${p.id}/applications`}
+                    className="text-xs text-brand-magentaText hover:underline"
+                  >
+                    {pendingByProject.get(p.id)
+                      ? `${pendingByProject.get(p.id)} pending`
+                      : "Proposals"}
+                  </Link>
+                </td>
                 <td className="p-4">
                   <form action={advance} className="flex items-center gap-2">
                     <input type="hidden" name="id" value={p.id} />

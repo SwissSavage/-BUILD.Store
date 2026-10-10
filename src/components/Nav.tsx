@@ -16,6 +16,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { viewAsUser } from "@/lib/auth-actions";
 import { cn } from "@/lib/cn";
+import { adminNavGroups } from "@/lib/admin-nav";
 import { HoverDropdown } from "@/components/HoverDropdown";
 import { getAllUsers } from "@/lib/readers/users";
 import { safely } from "@/lib/readers";
@@ -204,55 +205,29 @@ async function AdminDropdown({ self }: { self: User }) {
           Admin home
         </Link>
 
-        {/* Sections consolidate 20+ admin links so the dropdown stays
-            scannable. Native <details> per section — same progressive-
-            enhancement pattern as JobsDropdown/StoreDropdown. Each
-            summary shows the count of items inside so admin can tell
-            what's under the fold. */}
-        <AdminSection label="People">
-          <AdminLink href="/admin/team">Team</AdminLink>
-          <AdminLink href="/admin/members">Members</AdminLink>
-          <AdminLink href="/admin/projects/applications">
-            Project applications
-          </AdminLink>
-          <AdminLink href="/admin/jobs/applications">
-            Job applications
-          </AdminLink>
-          <AdminLink href="/admin/projects/contributions">
-            Outside contributors
-          </AdminLink>
-          <AdminLink href="/admin/epk">EPK approvals</AdminLink>
-        </AdminSection>
+        {/* Rendered from ADMIN_NAV in src/lib/admin-nav.ts, which the
+            admin home tiles and the mobile menu also read. These three
+            used to be separate hand-kept lists and had drifted far
+            enough apart that /admin/inbound, where every signup lands,
+            appeared in none of them.
 
-        <AdminSection label="Deals & projects">
-          <AdminLink href="/admin/projects">All projects</AdminLink>
-          <AdminLink href="/admin/cooperative-quotes">
-            Cooperative quotes
-          </AdminLink>
-          <AdminLink href="/admin/clients">Client patterns</AdminLink>
-          <AdminLink href="/admin/referrals">Partner referrals</AdminLink>
-        </AdminSection>
-
-        <AdminSection label="Money & agreements">
-          <AdminLink href="/admin/agreements">Agreements</AdminLink>
-          <AdminLink href="/admin/receipts">Cooperative receipts</AdminLink>
-          <AdminLink href="/admin/invoices">Invoices + receipts</AdminLink>
-          <AdminLink href="/admin/reserve">Contract reserves</AdminLink>
-          <AdminLink href="/admin/vouchers">$BUILD vouchers</AdminLink>
-          <AdminLink href="/admin/pools">Structural pools</AdminLink>
-        </AdminSection>
-
-        <AdminSection label="Content & moderation">
-          <AdminLink href="/admin/chat">Live chat</AdminLink>
-          <AdminLink href="/admin/cohort">Cohort spotlights</AdminLink>
-          <AdminLink href="/admin/testimonials">
-            Customer testimonials
-          </AdminLink>
-          <AdminLink href="/admin/feedback">Beta feedback</AdminLink>
-          <AdminLink href="/admin/peer-reviews">Peer reviews</AdminLink>
-          <AdminLink href="/admin/categories">Store categories</AdminLink>
-          <AdminLink href="/admin/locker">Locker moderation</AdminLink>
-        </AdminSection>
+            Native <details> per section — same progressive-enhancement
+            pattern as JobsDropdown/StoreDropdown. Each summary shows
+            the count of items inside so admin can tell what's under
+            the fold. */}
+        {adminNavGroups().map((section) => (
+          <AdminSection
+            key={section.group}
+            label={section.label}
+            count={section.entries.length}
+          >
+            {section.entries.map((entry) => (
+              <AdminLink key={entry.href} href={entry.href}>
+                {entry.label}
+              </AdminLink>
+            ))}
+          </AdminSection>
+        ))}
 
         <div className="my-2 border-t border-[var(--surface-border)]" />
         <p className="px-3 pt-1 text-[10px] uppercase tracking-wider text-ink-muted">
@@ -311,12 +286,13 @@ function ViewAsButton({ target, label }: { target: string; label: string }) {
  */
 function AdminSection({
   label,
+  count,
   children,
 }: {
   label: string;
+  count: number;
   children: React.ReactNode;
 }) {
-  const count = Array.isArray(children) ? children.length : 1;
   return (
     <details className="group">
       <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 text-[11px] uppercase tracking-wider text-ink-muted hover:bg-[var(--surface-inset)]">

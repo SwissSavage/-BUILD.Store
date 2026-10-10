@@ -23,7 +23,12 @@ import {
   updateInboundSubmission,
 } from "@/lib/writers/inbound-submissions-update";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
-import type { InboundSubmissionStatus } from "@/lib/types";
+import type { InboundSubmissionKind, InboundSubmissionStatus } from "@/lib/types";
+import {
+  INBOUND_APPROVED,
+  INBOUND_REJECTED,
+  isAdmissionKind,
+} from "@/lib/inbound-triage";
 
 const ALLOWED_STATUSES = new Set<InboundSubmissionStatus>([
   "new",
@@ -84,6 +89,69 @@ export async function setInboundStatus(formData: FormData) {
       });
     }
   }
+
+  revalidatePath("/admin/inbound");
+}
+
+/**
+ * Approve or reject an admission submission.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-05)
+ *
+ * Rejecting was possible before this, by choosing "Closed" from the
+ * status dropdown, which is not how anybody reads a page. The yes was a
+ * magenta button that created an invite; the no was the fifth option in
+ * a select. The decision now has two controls that say what they do.
+ *
+ * Audited for every admission kind. setInboundStatus only ever wrote an
+ * audit row when the kind was rfp_intake, so a talent application could
+ * be closed with no record of who did it or when.
+ *
+ * The applicant is told nothing, deliberately. FM does not reply to
+ * every applicant, and a decline email would commit it to that forever.
+ * If that changes, this is the one place to add it.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function decideInboundAdmission(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const decisionRaw = String(formData.get("decision") ?? "").trim();
+  if (decisionRaw !== "approved" && decisionRaw !== "rejected") return;
+
+  const row = await getStoredSubmission(id);
+  if (!row) {
+    throw new Error(
+      isDerivedSubmission(id)
+        ? "This entry is derived from an RFP, chat or application and cannot be decided here."
+        : "Submission not found.",
+    );
+  }
+
+  // A decision belongs to kinds that are asking to be let in. Demand
+  // inbound runs on the pipeline statuses and has no yes/no to make.
+  if (!isAdmissionKind(row.kind as InboundSubmissionKind)) {
+    throw new Error("This submission is a pipeline entry, not an application.");
+  }
+
+  const next = decisionRaw === "approved" ? INBOUND_APPROVED : INBOUND_REJECTED;
+  const previous = row.status;
+  // Idempotent: deciding the same way twice is a no-op rather than a
+  // second audit row. Reversing a decision is still allowed, and is
+  // recorded as its own entry with the previous state in `before`.
+  if (previous === next) return;
+
+  await updateInboundSubmission(id, { status: next });
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: decisionRaw === "approved" ? "inbound.approved" : "inbound.rejected",
+    resourceKind: "inbound_submission",
+    resourceId: row.id,
+    before: { status: previous },
+    after: { status: next, kind: row.kind },
+  });
 
   revalidatePath("/admin/inbound");
 }

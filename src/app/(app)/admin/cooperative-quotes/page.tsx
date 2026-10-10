@@ -26,7 +26,7 @@
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { notInArray, desc, eq, and, inArray } from "drizzle-orm";
+import { notInArray, desc, eq, and, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   cooperativeQuotes as cooperativeQuotesTable,
@@ -36,8 +36,10 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { type ProposedBuilder } from "@/lib/types";
 import {
   removeCooperativeQuote,
+  returnQuoteToDraft,
   retrySowDispatch,
 } from "@/lib/quote-actions";
+import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import {
   aggregateHeadline,
@@ -67,12 +69,14 @@ async function eligibleProjects() {
             eq(projectsTable.kind, "contract"),
             eq(projectsTable.isRfp, true),
             eq(projectsTable.status, "open"),
+            isNotNull(projectsTable.rfpApprovedAt),
             notInArray(projectsTable.id, takenIds),
           )
         : and(
             eq(projectsTable.kind, "contract"),
             eq(projectsTable.isRfp, true),
             eq(projectsTable.status, "open"),
+            isNotNull(projectsTable.rfpApprovedAt),
           ),
     );
 }
@@ -94,6 +98,18 @@ const STATUS_LABEL: Record<QuoteStatus, string> = {
   approved: "Approved",
   declined: "Declined",
 };
+
+/**
+ * Where this deployment lives, for links an admin copies out of the
+ * product and pastes into an email. Falls back to the production host
+ * rather than to a relative path, because a half-written URL in a
+ * client's inbox is worse than one pointing at the wrong environment.
+ */
+const siteOrigin = (
+  process.env.AUTH_URL ??
+  process.env.NEXTAUTH_URL ??
+  "https://build.afuturemodern.com"
+).replace(/\/$/, "");
 
 export default async function AdminCooperativeQuotesPage() {
   const viewer = await getCurrentUser();
@@ -134,7 +150,7 @@ export default async function AdminCooperativeQuotesPage() {
             Pre-project client proposals
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-ink-muted">
-            Start with an RFP's actual applicants, then curate up to three
+            Start with an RFP&apos;s actual applicants, then curate three to five
             builders into the interactive quote a client receives. The
             client visits <code>/quotes/[clientToken]</code>, reviews the
             portrait cards, and chooses a lead.
@@ -151,7 +167,7 @@ export default async function AdminCooperativeQuotesPage() {
           <Card className="mt-4">
             <p className="text-sm text-ink-muted">
               No approved RFP without a quote is ready for compilation.
-              Approve an RFP and collect applications first.
+              Approve an RFP, then collect applications before returning here.
             </p>
           </Card>
         ) : (
@@ -164,7 +180,7 @@ export default async function AdminCooperativeQuotesPage() {
                 >
                   <CardTitle>{project.title}</CardTitle>
                   <p className="mt-2 text-sm text-ink-muted">
-                    Review this RFP&apos;s applicants and curate up to three
+                    Review this RFP&apos;s applicants and curate three to five
                     people for the client quote.
                   </p>
                 </Link>
@@ -194,13 +210,34 @@ export default async function AdminCooperativeQuotesPage() {
               // enforces it at insert time.
               const proposedBuilders =
                 quote.proposedBuilders as ProposedBuilder[];
-              const aggregate = deriveAggregatePricing(proposedBuilders);
-              const aggregateLine =
-                `${aggregateHeadline(aggregate)}${
-                  aggregateUnitLabel(aggregate)
-                    ? ` ${aggregateUnitLabel(aggregate)}`
-                    : ""
+
+              // ────────────────────────────────────────────────
+              // WHY TWO NUMBERS (2026-10-07)
+              //
+              // This showed one line, derived from `pricing`, which is
+              // what the BUILDER is paid. It sat under the label
+              // "billed as delivered", which is client-facing wording,
+              // so the same quote read $55/hr here and $77/hr on the
+              // client's own page and nothing on screen explained the
+              // gap.
+              //
+              // Both now, labelled. The client number first because
+              // that is the one discussed on a call, the payout beside
+              // it because that is the one an admin is accountable for.
+              // ────────────────────────────────────────────────
+              const clientAggregate = deriveAggregatePricing(
+                proposedBuilders.map((b) => ({
+                  ...b,
+                  pricing: b.clientPricing ?? b.pricing,
+                })),
+              );
+              const payoutAggregate = deriveAggregatePricing(proposedBuilders);
+              const line = (a: ReturnType<typeof deriveAggregatePricing>) =>
+                `${aggregateHeadline(a)}${
+                  aggregateUnitLabel(a) ? ` ${aggregateUnitLabel(a)}` : ""
                 }`;
+              const aggregateLine = line(clientAggregate);
+              const payoutLine = line(payoutAggregate);
 
               return (
                 <li key={quote.id}>
@@ -229,18 +266,45 @@ export default async function AdminCooperativeQuotesPage() {
                         ? "builder"
                         : "builders"}
                     </CardTitle>
+                    <p className="mt-1 text-xs text-ink-faint">
+                      Client sees {aggregateLine}. Builders are paid{" "}
+                      {payoutLine}.
+                    </p>
                     {quote.status === "draft" ? (
                       <p className="mt-3 text-xs text-ink-muted">
                         Internal draft. The client link is inactive and selected bids remain editable.
                       </p>
                     ) : (
                       <>
+                        {/* The whole URL, and a button that puts it on
+                            the clipboard or into the share sheet.
+
+                            This used to render the bare path
+                            "/quotes/q_..." in a code block: nothing to
+                            click, no origin, and an admin about to send
+                            a proposal had to know to prepend the domain
+                            by hand. The one place in the product where
+                            a URL is the deliverable was the one place
+                            it was not a URL. */}
                         <p className="mt-3 text-xs text-ink-muted">
-                          Client magic-link (production dispatches to the
-                          client contact):
+                          Client link. Send this to the client.
                         </p>
-                        <code className="mt-1 block break-all rounded-lg bg-[var(--surface-inset)] px-3 py-2 text-[11px] text-ink">
-                          /quotes/{quote.clientToken}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <CopyLinkButton
+                            url={`${siteOrigin}/quotes/${quote.clientToken}`}
+                            shareTitle={`Future Modern proposal for ${quote.clientDisplayName}`}
+                          />
+                          <a
+                            href={`/quotes/${quote.clientToken}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
+                          >
+                            Open ↗
+                          </a>
+                        </div>
+                        <code className="mt-2 block break-all rounded-lg bg-[var(--surface-inset)] px-3 py-2 text-[11px] text-ink">
+                          {siteOrigin}/quotes/{quote.clientToken}
                         </code>
                       </>
                     )}
@@ -302,12 +366,39 @@ export default async function AdminCooperativeQuotesPage() {
                           Continue editing draft →
                         </Link>
                       ) : (
-                        <Link
-                          href={`/quotes/${quote.clientToken}`}
-                          className="text-xs text-brand-magentaText hover:underline"
-                        >
-                          Preview client view →
-                        </Link>
+                        <>
+                          <Link
+                            href={`/quotes/${quote.clientToken}`}
+                            className="text-xs text-brand-magentaText hover:underline"
+                          >
+                            Preview client view →
+                          </Link>
+                          {/* compileBidsIntoQuote refuses to touch a
+                              quote that is no longer a draft and tells
+                              you to make a revised one. Nothing made
+                              one, so a sent quote was frozen and the
+                              only way out was deleting it, which takes
+                              the client token with it and breaks the
+                              link already in their inbox.
+
+                              Not offered on approved or declined. That
+                              is a decision, and reversing it goes
+                              through the client page, which asks them
+                              to confirm their email first. */}
+                          {(quote.status === "sent" ||
+                            quote.status === "viewed") && (
+                            <form action={returnQuoteToDraft}>
+                              <input type="hidden" name="id" value={quote.id} />
+                              <button
+                                type="submit"
+                                className="text-xs text-ink-muted hover:text-brand-magentaText hover:underline"
+                                title="Pulls this back to draft so you can rebuild it from the bids. The client link keeps working and shows the draft state."
+                              >
+                                Pull back to draft
+                              </button>
+                            </form>
+                          )}
+                        </>
                       )}
                       <form action={removeCooperativeQuote}>
                         <input

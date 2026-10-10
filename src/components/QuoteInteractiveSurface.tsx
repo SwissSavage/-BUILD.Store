@@ -51,14 +51,21 @@ import {
   aggregateUnitLabel,
   deriveAggregatePricing,
 } from "@/lib/quote-pricing";
-import type { ProposedBuilder } from "@/lib/types";
+import { publicName, type ProposedBuilder } from "@/lib/types";
+import { quoteSignatureStatement } from "@/lib/quote-signature";
 
 interface QuoteInteractiveSurfaceProps {
   clientToken: string;
+  /** For the signature statement, which names who is being signed for. */
+  clientDisplayName: string;
   scope: {
     summary: string;
-    deliverables: string[];
-    timeline: string;
+    /** Only what spans the whole crew. Per-Builder lists live on
+        proposedBuilders. Usually absent. */
+    deliverables?: string[];
+    /** @deprecated Pre-2026-10-05 quotes only. The engagement timeline
+        is read off the Builders the client picks. */
+    timeline?: string;
   };
   /**
    * Raw per-Builder pricing shapes — used to derive the aggregate
@@ -73,6 +80,7 @@ interface QuoteInteractiveSurfaceProps {
 
 export function QuoteInteractiveSurface({
   clientToken,
+  clientDisplayName,
   scope,
   proposedBuilders,
   crew,
@@ -82,13 +90,17 @@ export function QuoteInteractiveSurface({
   const [selectedLeadUserId, setSelectedLeadUserId] = useState<string | null>(
     null,
   );
+  const [signerName, setSignerName] = useState("");
+  const [signerEmail, setSignerEmail] = useState("");
+  const [signatureTyped, setSignatureTyped] = useState("");
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
-  // Task #45 — client contact captured on approve so we can dispatch
-  // the client SOW envelope. Magic-link viewing is anonymous, so this
-  // is the first (and only) point where the client identifies.
-  const [clientContactEmail, setClientContactEmail] = useState("");
-  const [clientContactName, setClientContactName] = useState("");
+  // Task #45 captured the SOW contact as free text, then a code-verified
+  // session replaced it, then a signature replaced that. See the WHY in
+  // approveCooperativeQuote: the link only reaches a decision maker, the
+  // close happens on a call, and a verification step in front of a
+  // signature taxes every real case to guard against one that does not
+  // occur. The signature is the accountability.
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   // Optimistic post-decision state. Once the server action returns,
@@ -124,27 +136,28 @@ export function QuoteInteractiveSurface({
     }
   }
 
+  // Rendered from the same function the action stores, so the wording
+  // on screen and the wording on record cannot drift apart.
+  const statement = quoteSignatureStatement(clientDisplayName);
+
+  const signatureReady =
+    signerName.trim().length >= 2 &&
+    /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(signerEmail.trim()) &&
+    signatureTyped.trim().length >= 3;
+
   function handleApprove() {
     if (!selectedLeadUserId || pending) return;
-    // Task #45 — client email + name are required on approve so
-    // the dual-envelope SOW dispatch has a target. Cheap client-side
-    // guard; the server action also validates.
-    const trimmedEmail = clientContactEmail.trim();
-    const trimmedName = clientContactName.trim();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmedEmail)) {
-      setError("Enter a valid email so we can send you the SOW.");
-      return;
-    }
-    if (trimmedName.length < 2) {
-      setError("Enter your name so we can address the SOW to you.");
+    if (!signatureReady) {
+      setError("Add your name, email and signature before approving.");
       return;
     }
     setError(null);
     const formData = new FormData();
     formData.set("token", clientToken);
     formData.set("selectedLeadUserId", selectedLeadUserId);
-    formData.set("clientContactEmail", trimmedEmail);
-    formData.set("clientContactName", trimmedName);
+    formData.set("clientContactName", signerName.trim());
+    formData.set("clientContactEmail", signerEmail.trim());
+    formData.set("signatureTyped", signatureTyped.trim());
     startTransition(async () => {
       try {
         await approveCooperativeQuote(formData);
@@ -182,7 +195,7 @@ export function QuoteInteractiveSurface({
     if (!selectedLeadUserId) return null;
     const found = crew.find((c) => c.user.id === selectedLeadUserId);
     if (!found) return null;
-    return `${found.user.firstName} ${found.user.lastName}`.trim();
+    return publicName(found.user);
   })();
 
   // Optimistic post-decision UI. Runs the moment the server action
@@ -262,25 +275,83 @@ export function QuoteInteractiveSurface({
         </h2>
         <StructuredText text={scope.summary} className="mt-4 text-ink-muted" />
 
-        <ul className="mt-8 space-y-3">
-          {scope.deliverables.map((deliverable) => (
-            <li
-              key={deliverable}
-              className="flex items-start gap-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-5 py-4 text-sm"
-            >
-              <span
-                aria-hidden
-                className="fm-btn-primary mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full"
-              />
-              <span className="text-ink">{deliverable}</span>
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-6 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-5 py-4">
-          <CardEyebrow>Timeline</CardEyebrow>
-          <p className="mt-2 text-sm text-ink-muted">{scope.timeline}</p>
+        {/* Who owes what. Each Builder bid their own scope, so the
+            deliverables sit with the person doing them rather than in
+            one flattened list that could not say whose was whose. */}
+        <div className="mt-8 space-y-4">
+          {crew.map((member) => {
+            const builder = proposedBuilders.find(
+              (b) => b.userId === member.user.id,
+            );
+            const items = builder?.deliverables ?? [];
+            if (items.length === 0) return null;
+            return (
+              <div
+                key={member.user.id}
+                className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-5 py-4"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-sm font-medium text-ink">
+                    {publicName(member.user)}
+                  </p>
+                  {builder?.timeline && (
+                    <p className="text-xs text-ink-muted">{builder.timeline}</p>
+                  )}
+                </div>
+                <ul className="mt-3 space-y-2">
+                  {items.map((deliverable) => (
+                    <li
+                      key={deliverable}
+                      className="flex items-start gap-3 text-sm"
+                    >
+                      <span
+                        aria-hidden
+                        className="fm-btn-primary mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+                      />
+                      <span className="text-ink">{deliverable}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </div>
+
+        {/* Anything the crew owes jointly. Usually empty. */}
+        {(scope.deliverables?.length ?? 0) > 0 && (
+          <div className="mt-6 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-5 py-4">
+            <CardEyebrow>Across the engagement</CardEyebrow>
+            <ul className="mt-3 space-y-2">
+              {scope.deliverables?.map((deliverable) => (
+                <li key={deliverable} className="flex items-start gap-3 text-sm">
+                  <span
+                    aria-hidden
+                    className="fm-btn-primary mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+                  />
+                  <span className="text-ink">{deliverable}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Timeline is the sum of its parts, not a number written
+            before anyone knew who was doing the work. Pre-2026-10-05
+            quotes carry an authored one; those still show it. */}
+        {scope.timeline ? (
+          <div className="mt-6 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-5 py-4">
+            <CardEyebrow>Timeline</CardEyebrow>
+            <p className="mt-2 text-sm text-ink-muted">{scope.timeline}</p>
+          </div>
+        ) : (
+          <div className="mt-6 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-5 py-4">
+            <CardEyebrow>Timeline</CardEyebrow>
+            <p className="mt-2 text-sm text-ink-muted">
+              Each Builder&apos;s commitment is listed on their card above.
+              The engagement takes its shape from the ones you pick.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Aggregate pricing block. Derived from sum of per-Builder
@@ -328,19 +399,29 @@ export function QuoteInteractiveSurface({
           </p>
         )}
 
-        {/* Task #45 — capture client contact so we can send the SOW.
-            Displayed alongside the approve button so it's clearly the
-            same action, not an extra step. */}
-        {selectedLeadUserId && (
-          <div className="mt-6 grid gap-3 md:grid-cols-2">
+        {/* Who the agreement will be addressed to. Not editable here:
+            it is the mailbox that answered the code, which is the only
+            reason the name on a signed SOW means anything. */}
+        {/* Sign here. One screen: who you are, where the copy goes,
+            and the signature itself, with the statement shown in full
+            above it rather than hidden behind a checkbox. */}
+        <div className="mt-6 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
+          <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+            Sign to approve
+          </p>
+          <p className="mt-2 max-w-prose text-sm leading-relaxed text-ink-muted">
+            {statement}
+          </p>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
             <label className="block">
               <span className="text-[11px] uppercase tracking-wider text-ink-muted">
-                Your name (for the SOW)
+                Your name
               </span>
               <input
                 type="text"
-                value={clientContactName}
-                onChange={(e) => setClientContactName(e.target.value)}
+                value={signerName}
+                onChange={(e) => setSignerName(e.target.value)}
                 placeholder="Full name"
                 disabled={pending}
                 className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none disabled:opacity-60"
@@ -348,19 +429,38 @@ export function QuoteInteractiveSurface({
             </label>
             <label className="block">
               <span className="text-[11px] uppercase tracking-wider text-ink-muted">
-                Email to send the SOW to
+                Email for the signed copy
               </span>
               <input
                 type="email"
-                value={clientContactEmail}
-                onChange={(e) => setClientContactEmail(e.target.value)}
+                value={signerEmail}
+                onChange={(e) => setSignerEmail(e.target.value)}
                 placeholder="name@company.com"
                 disabled={pending}
                 className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none disabled:opacity-60"
               />
             </label>
           </div>
-        )}
+
+          <label className="mt-3 block">
+            <span className="text-[11px] uppercase tracking-wider text-ink-muted">
+              Signature
+            </span>
+            <input
+              type="text"
+              value={signatureTyped}
+              onChange={(e) => setSignatureTyped(e.target.value)}
+              placeholder="Type your name to sign"
+              disabled={pending}
+              autoComplete="off"
+              className="mt-1 w-full rounded-lg border-b-2 border-[var(--surface-border)] bg-transparent px-1 py-2 font-display text-2xl italic text-ink placeholder:text-base placeholder:not-italic placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none disabled:opacity-60"
+            />
+          </label>
+          <p className="mt-2 text-[11px] text-ink-faint">
+            Both you and Future Modern receive a signed PDF copy of this
+            proposal, including the terms above, as soon as you approve.
+          </p>
+        </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
           <button

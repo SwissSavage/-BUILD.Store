@@ -22,6 +22,7 @@
  */
 "use server";
 
+import { assertCronCaller } from "@/lib/cron-guard";
 import { notify, notifyMany } from "@/lib/writers/notifications";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
@@ -369,11 +370,20 @@ export async function sweepDeadlines() {
  * though the current body runs synchronously against MOCK data —
  * the real Drizzle swap will introduce awaited queries.
  */
-export async function runMilestoneSweep(): Promise<{
+export async function runMilestoneSweep(
+  cronSecret?: string,
+): Promise<{
+
   preDuePings: number;
   overduePings: number;
   scanned: number;
 }> {
+  // A sweep is not something a browser gets to run. See cron-guard.ts:
+  // this lives in a "use server" module, so it is a public POST
+  // endpoint, and the route's CRON_SECRET check protected the route
+  // rather than the work behind it.
+  assertCronCaller(cronSecret);
+
   const now = Date.now();
   const debounceMs = 20 * 60 * 60 * 1000; // 20h — avoids double-fire on same day
   let preDuePings = 0;
@@ -468,9 +478,18 @@ export async function runMilestoneSweep(): Promise<{
  * as part of the same cron entry point but only fires when today
  * is a Monday.
  */
-export async function runWeeklyProjectRollup(): Promise<{
+export async function runWeeklyProjectRollup(
+  cronSecret?: string,
+): Promise<{
+
   digestsSent: number;
 }> {
+  // A sweep is not something a browser gets to run. See cron-guard.ts:
+  // this lives in a "use server" module, so it is a public POST
+  // endpoint, and the route's CRON_SECRET check protected the route
+  // rather than the work behind it.
+  assertCronCaller(cronSecret);
+
   const now = new Date();
   if (now.getUTCDay() !== 1) return { digestsSent: 0 }; // Monday = 1
 

@@ -21,6 +21,7 @@ import {
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { HubspotStageBadge } from "@/components/HubspotStageBadge";
+import { MissingDealRepair } from "@/components/MissingDealRepair";
 import { formatBudget } from "@/lib/budget";
 
 export const dynamic = "force-dynamic";
@@ -61,10 +62,41 @@ export default async function AdminContractsIndex() {
   const collectedUnsettled = contracts.filter(
     (p) => p.collectedRevenue && !settled.includes(p),
   );
-  const inFlight = contracts.filter(
-    (p) => p.rfpApprovedAt && !p.collectedRevenue && p.status !== "completed",
+
+  // ── Buckets ──────────────────────────────────────────────────
+  //
+  // These keyed off rfpApprovedAt alone, which assumed every contract
+  // arrived through RFP intake. A directly-composed engagement never
+  // had an RFP, so it filed under "In RFP intake" and stayed there
+  // after the Builder accepted and the work started, because in-flight
+  // required rfpApprovedAt too. The page would have reported a running
+  // engagement as awaiting approval until it was marked completed.
+  //
+  // An engagement is cleared for flight when its Builder accepts, the
+  // same way an RFP contract is cleared when an admin approves it.
+  // Different gate, same meaning, so they belong in the same bucket.
+  const cleared = (p: Project) =>
+    Boolean(p.rfpApprovedAt) || p.engagementState === "accepted";
+
+  // Accepted, running, and the CRM has no record of it. Surfaced here
+  // rather than left to somebody noticing in HubSpot.
+  const missingDeals = contracts
+    .filter((p) => p.engagementState === "accepted" && !p.hubspotDealId)
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      clientDisplayName: p.clientId,
+    }));
+
+  const awaitingTalent = contracts.filter(
+    (p) => p.engagementState === "awaiting_talent",
   );
-  const pending = contracts.filter((p) => !p.rfpApprovedAt);
+  const inFlight = contracts.filter(
+    (p) => cleared(p) && !p.collectedRevenue && p.status !== "completed",
+  );
+  const pending = contracts.filter(
+    (p) => !cleared(p) && p.engagementState !== "awaiting_talent",
+  );
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -85,6 +117,20 @@ export default async function AdminContractsIndex() {
           contracts={collectedUnsettled}
           attributionsBy={attributionsBy}
           splitsBy={splitsBy}
+        />
+      )}
+
+      <MissingDealRepair engagements={missingDeals} />
+
+      {awaitingTalent.length > 0 && (
+        <Section
+          title={`Awaiting the Builder (${awaitingTalent.length})`}
+          subtitle="Composed and sent. The work starts when they accept the terms, not before."
+          accent="#D828A0"
+          contracts={awaitingTalent}
+          attributionsBy={attributionsBy}
+          splitsBy={splitsBy}
+          hideActions
         />
       )}
 
@@ -183,7 +229,14 @@ function ContractRow({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <CardEyebrow>{INDUSTRY_LABELS[project.industry]}</CardEyebrow>
-          <CardTitle className="mt-1 truncate">{project.title}</CardTitle>
+          {/* The title was plain text on a card full of links to
+              sub-surfaces, so the one thing with no route out of it
+              was the contract itself. */}
+          <Link href={`/projects/${project.id}`}>
+            <CardTitle className="mt-1 truncate hover:text-brand-magentaText">
+              {project.title}
+            </CardTitle>
+          </Link>
         </div>
         <HubspotStageBadge stage={project.hubspotStage} />
       </div>
@@ -208,6 +261,17 @@ function ContractRow({
         <p className="mt-3 text-xs text-ink-faint">
           HubSpot deal stage: {HUBSPOT_STAGE_LABELS[project.hubspotStage]}
         </p>
+      )}
+
+      {hideActions && (
+        <div className="mt-4 border-t border-[var(--surface-border)] pt-4">
+          <Link
+            href={`/projects/${project.id}`}
+            className="text-xs text-brand-magentaText hover:underline"
+          >
+            Open the engagement →
+          </Link>
+        </div>
       )}
 
       {!hideActions && (

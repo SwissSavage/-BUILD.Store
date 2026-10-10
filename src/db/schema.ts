@@ -175,7 +175,101 @@ export const projects = pgTable("projects", {
   status: text("status", {
     enum: ["open", "in_progress", "completed", "cancelled"],
   }).notNull(),
+  /**
+   * Legacy free-text client label. Kept because existing rows carry it
+   * and some are the only record of who the work was for. New code
+   * reads clientRefId; this is not written by anything new.
+   *
+   * @deprecated Use clientRefId.
+   */
   clientId: text("client_id").notNull(),
+  /** The client as a record. Nullable while the backfill settles. */
+  clientRefId: text("client_ref_id").references(() => clients.id, {
+    onDelete: "set null",
+  }),
+  /**
+   * Engagement terms, for work started directly rather than won through
+   * an RFP.
+   *
+   * ───────────────────────────────────────────────────────────
+   * WHY (2026-10-08)
+   *
+   * An engagement had a budget and nothing else. No rate, no ceiling,
+   * no scope. Most of how FM actually sells is a returning client, an
+   * hourly rate both sides already know, and a text message. That is
+   * fine for a solo shop and is a liability for an enterprise one: the
+   * only record of what was agreed is in somebody's phone.
+   *
+   * These four columns are the record. Entered once by an admin, they
+   * are what the agreement is generated from, so neither the talent nor
+   * the client fills in a form.
+   *
+   * WHY A CEILING AND NOT AN ESTIMATE
+   *
+   * This relationship has renegotiated hours twice, because both times
+   * a number was agreed that nobody could know yet. A ceiling commits
+   * to nothing about how long the work takes: come in under it and you
+   * bill what you used. It ends the negotiation in one line, protects
+   * FM from unbilled overrun, and protects the client from a surprise
+   * invoice. Same not-to-exceed mechanism FM already asks Builders for
+   * on cooperative quotes, pointed at its own operation.
+   *
+   * KNOWN LIMIT
+   *
+   * One set of terms per engagement, so this describes a single-talent
+   * or single-rate engagement. A crew at differing rates still belongs
+   * on a cooperative quote, where pricing is per Builder.
+   * ───────────────────────────────────────────────────────────
+   */
+  engagementBasis: text("engagement_basis", {
+    enum: ["hourly", "fixed"],
+  }),
+  /** Client-facing. The Builder payout is this less the cooperative share. */
+  engagementRate: numeric("engagement_rate", { precision: 12, scale: 2 }),
+  /** Not-to-exceed. Hours for hourly work; null means no cap agreed. */
+  engagementCeilingHours: numeric("engagement_ceiling_hours", {
+    precision: 8,
+    scale: 2,
+  }),
+  /** A few lines. What the client is buying, in the admin's words. */
+  engagementScope: text("engagement_scope"),
+  /**
+   * Where a directly-composed engagement is in its one handshake.
+   *
+   * ───────────────────────────────────────────────────────────
+   * WHY (2026-10-08)
+   *
+   * There was a hot-start button that created the deal, set the project
+   * running and notified the Builder in one press, off terms the
+   * Builder had never seen. That is a principal-agent problem wearing a
+   * CTA: FM would have committed someone else's hours, at someone
+   * else's rate, to a ceiling they never agreed to.
+   *
+   * The fix is one review and one click. Composing sends; the Builder
+   * accepts or declines; work starts on acceptance. Null on every
+   * project that did not come through the direct motion.
+   * ───────────────────────────────────────────────────────────
+   */
+  engagementState: text("engagement_state", {
+    enum: ["awaiting_talent", "accepted", "declined"],
+  }),
+  engagementSentAt: timestamp("engagement_sent_at", { mode: "string", withTimezone: true }),
+  engagementDecidedAt: timestamp("engagement_decided_at", { mode: "string", withTimezone: true }),
+  /** The Builder's own words when declining. Shown to the admin, not the client. */
+  engagementDeclineReason: text("engagement_decline_reason"),
+  /**
+   * Reference material, as named items rather than raw URLs in the
+   * scope text. Shape: Array<{ label, url }>.
+   */
+  engagementLinks: jsonb("engagement_links")
+    .$type<{ label: string; url: string }[]>()
+    .notNull()
+    .default([]),
+  /**
+   * Same shape as rfpAttachments: base64 inline until R2 lands (#57/#58).
+   * Shape: Array<{ name, mimeType, sizeBytes, base64 }>.
+   */
+  engagementAttachments: jsonb("engagement_attachments").notNull().default([]),
   assignedMemberIds: jsonb("assigned_member_ids")
     .$type<string[]>()
     .notNull()
@@ -348,6 +442,35 @@ export const cooperativeQuotes = pgTable("cooperative_quotes", {
   // right addresses. Nullable because pre-#45 rows won't have these.
   clientContactEmail: text("client_contact_email"),
   clientContactName: text("client_contact_name"),
+  /**
+   * The signature, and what it was given against.
+   *
+   * ───────────────────────────────────────────────────────────
+   * WHY (2026-10-07)
+   *
+   * Approving used to need a one-time code emailed to the signer. That
+   * was the right answer to "anyone with the link can approve" and the
+   * wrong answer for this product: the link only ever reaches a
+   * decision maker or someone next to one, the close happens on a
+   * call, and a verification step in front of a signature is friction
+   * protecting against a case that does not occur.
+   *
+   * A signature is the accountability instead, which is how every
+   * e-signature product works and how Jamar already described it:
+   * someone who signs without the authority to sign is answerable for
+   * having signed.
+   *
+   * The statement is stored alongside the name, not just referenced,
+   * because the evidence that matters later is what the person was
+   * shown and agreed to, not that a boolean went true. If the wording
+   * changes next quarter, old signatures still carry the words their
+   * signer actually read.
+   * ───────────────────────────────────────────────────────────
+   */
+  clientSignatureTyped: text("client_signature_typed"),
+  clientSignatureStatement: text("client_signature_statement"),
+  clientSignatureIp: text("client_signature_ip"),
+  clientSignedAt: timestamp("client_signed_at", { mode: "string", withTimezone: true }),
   clientSowDocumensoId: text("client_sow_documenso_id"),
   talentEngagementDocumensoId: text("talent_engagement_documenso_id"),
   sowDispatchedAt: timestamp("sow_dispatched_at", { mode: "string", withTimezone: true }),
@@ -1668,6 +1791,157 @@ export const payoutMethods = pgTable("payout_methods", {
 //  Full schema re-export bundle (drizzle-kit + client entry)
 // ──────────────────────────────────────────────────────────────────────
 
+/**
+ * A judgement call an admin made about one piece of member-authored
+ * text on /admin/disclosure.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-05)
+ *
+ * The review page re-ran the guard on every load and listed everything
+ * it found, with no way to record that a human had looked. A bio you
+ * read and judged acceptable came back on the list every time, so after
+ * one pass the page stopped being worth opening.
+ *
+ * Keyed on a hash of the exact text that was cleared, not on the user.
+ * Clearing a member rather than a sentence would whitelist them
+ * permanently and the next thing they wrote would go unreviewed.
+ * Editing the bio changes the hash and the row returns to the queue,
+ * which is the behaviour you want.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const profileDisclosureReviews = pgTable("profile_disclosure_reviews", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** "bio" or "tagline". */
+  field: text("field").notNull(),
+  /** SHA-256 of the exact text that was cleared. */
+  textHash: text("text_hash").notNull(),
+  /**
+   * Nullable with ON DELETE SET NULL. Deleting the admin who cleared
+   * something must not fail on a foreign key, and must not take the
+   * decision with it. Who actually did it lives in the audit log,
+   * which is the record that is supposed to outlive the account.
+   */
+  reviewedBy: text("reviewed_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  reviewedAt: timestamp("reviewed_at", { mode: "string", withTimezone: true }).notNull(),
+  /** Admin-only. Why this text was acceptable. */
+  note: text("note"),
+});
+
+
+/**
+ * Proving that whoever is approving a quote controls the mailbox they
+ * are approving as.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-05)
+ *
+ * approveCooperativeQuote, declineCooperativeQuote and
+ * undoCooperativeQuoteDecision each took the client token and nothing
+ * else. Anyone holding the URL could approve a six-figure engagement,
+ * choose which builder led it, and type any name and address, which
+ * then became the address the SOW envelope was dispatched to. The code
+ * described this as the client identifying themselves. It was the
+ * client asserting something, which is not the same word.
+ *
+ * Reading the quote stays open on the token, deliberately. A champion
+ * forwarding the proposal up the ladder is the motion working, and
+ * putting a sign-in wall in front of the CFO kills the forward you
+ * wanted. It is the decision that needs an identity, not the read.
+ *
+ * WHAT THIS DOES AND DOES NOT CHECK
+ *
+ * It checks that the signer controls the mailbox. It does not check
+ * who they are or whether they were on a list, because that was the
+ * call: a quote only ever goes to people close to the deal, plenty of
+ * real buyers sign from a personal address, and someone who signs
+ * without the authority to sign is answerable for having signed. Same
+ * standard every e-signature product uses. The point is that the
+ * address on the agreement is real and reachable.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const quoteClientVerifications = pgTable("quote_client_verifications", {
+  id: text("id").primaryKey(),
+  quoteId: text("quote_id")
+    .notNull()
+    .references(() => cooperativeQuotes.id, { onDelete: "cascade" }),
+  /** Lowercased. What the signature will be attributed to. */
+  email: text("email").notNull(),
+  /** How they asked to be addressed on the SOW. */
+  name: text("name").notNull(),
+  /** SHA-256 of the one-time code. The code itself is never stored. */
+  codeHash: text("code_hash").notNull(),
+  /**
+   * Random secret handed to the browser in an httpOnly cookie once the
+   * code checks out. Server-side session rather than a signed claim,
+   * so revoking is a DELETE.
+   */
+  sessionToken: text("session_token"),
+  /** Wrong guesses. Five and the row is spent. */
+  attempts: integer("attempts").notNull().default(0),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  expiresAt: timestamp("expires_at", { mode: "string", withTimezone: true }).notNull(),
+  verifiedAt: timestamp("verified_at", { mode: "string", withTimezone: true }),
+});
+
+
+/**
+ * A client, as a thing that exists rather than a string.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-08)
+ *
+ * projects.client_id was free text. That is why a cooperative quote
+ * offered "u_Jamar" as the company name at the top of a client-facing
+ * proposal, and why a returning client had no path through the app: a
+ * repeat engagement needs something to repeat against, and there was
+ * nothing to point at.
+ *
+ * WHY THIS IS A REFERENCE AND NOT A CRM
+ *
+ * HubSpot already holds the companies, the contacts, the deals and the
+ * history. Copying that here would create a second source of truth that
+ * drifts, and would mean retyping what already exists. So this row is a
+ * pointer plus the one field needed to render a document without a
+ * round trip to the API.
+ *
+ * hubspot_company_id is nullable on purpose. A relationship can be real
+ * before it is in the CRM, and refusing to record one until HubSpot
+ * knows about it would recreate the blank-form problem this is meant to
+ * remove.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const clients = pgTable("clients", {
+  id: text("id").primaryKey(),
+  /**
+   * As the client writes it themselves. This is what goes at the top of
+   * a quote and in the confidentiality line at the foot of it, so it is
+   * held locally rather than fetched: a proposal must render even when
+   * HubSpot is slow or down.
+   */
+  displayName: text("display_name").notNull(),
+  /** The pointer. Unique when present; absent for a relationship not yet in the CRM. */
+  hubspotCompanyId: text("hubspot_company_id"),
+  /** Who FM actually talks to. Everything else about them stays in HubSpot. */
+  primaryContactName: text("primary_contact_name"),
+  primaryContactEmail: text("primary_contact_email"),
+  status: text("status", {
+    enum: ["prospect", "active", "past"],
+  }).notNull().default("active"),
+  /** Admin-only. Context a CRM field would not hold well. */
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  createdByUserId: text("created_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+});
+
+
 export const schema = {
   users,
   accounts,
@@ -1731,4 +2005,7 @@ export const schema = {
   partnerReferrals,
   communityMessages,
   payoutMethods,
+  profileDisclosureReviews,
+  quoteClientVerifications,
+  clients,
 } as const;

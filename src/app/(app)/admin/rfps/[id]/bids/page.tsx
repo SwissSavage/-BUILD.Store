@@ -28,10 +28,17 @@ import {
   users,
 } from "@/db/schema";
 import { formatProposalHours, formatProposalPrice } from "@/lib/proposal-terms";
+import {
+  formatUsdCents,
+  suggestedBuilderHourlyPayout,
+  suggestedClientHourlyRate,
+} from "@/lib/quote-pricing";
+import type { CooperativeQuotePricing } from "@/lib/types";
 import { compileBidsIntoQuote } from "@/lib/rfp-bid-compile-actions";
 import { scrubForClient } from "@/lib/pii-scrub";
 import { StructuredText } from "@/components/StructuredText";
 import { RichTextEditor } from "@/components/RichTextEditor";
+import type { ProposalAttachment } from "@/lib/proposal-attachments";
 import { QuoteCompileRequirements } from "@/components/BidSelectionRequirement";
 import { richTextValuePlainText } from "@/lib/rich-text";
 import type { CooperativeQuote, ProposedBuilder } from "@/lib/types";
@@ -92,6 +99,7 @@ export default async function RfpBidCompilePage({
       fixedPriceMin: projectApplications.fixedPriceMin,
       fixedPriceMax: projectApplications.fixedPriceMax,
       portfolioLink: projectApplications.portfolioLink,
+      attachments: projectApplications.attachments,
       status: projectApplications.status,
       createdAt: projectApplications.createdAt,
       firstName: users.firstName,
@@ -201,7 +209,7 @@ export default async function RfpBidCompilePage({
           className="mt-6 space-y-6"
         >
           <input type="hidden" name="rfpId" value={id} />
-          <QuoteCompileRequirements />
+          <QuoteCompileRequirements draftKey={id} />
 
           {draftQuote && (
             <Card className="border-brand-magenta/40 bg-brand-magenta/5">
@@ -268,13 +276,187 @@ export default async function RfpBidCompilePage({
                             </span>
                           )}
                         </div>
-                        <StructuredText
-                          text={
-                            scrub.hits.length > 0
-                              ? scrub.scrubbed.slice(0, 400) + (scrub.scrubbed.length > 400 ? "…" : "")
-                              : b.pitch
-                          }
-                        />
+                        {/* ───────────────────────────────────────
+                            What the client pays, as distinct from what
+                            the Builder is paid.
+
+                            clientPricingFromBuilderPayout had existed,
+                            correct and uncalled, so clientPricing was
+                            never written and the client quote fell back
+                            to the Builder's own payout. A member asking
+                            $55/hr appeared on the client quote at
+                            $55/hr, with the cooperative's 15% nowhere
+                            in the number the client approves.
+
+                            Blank means the straight gross-up, shown
+                            below the field. Fill it in when the work is
+                            worth more than the member thought to ask,
+                            or to leave room for a bonus. Their payout
+                            does not move either way.
+                            ─────────────────────────────────────── */}
+                        <label className="mt-3 block">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                            Client rate (optional override)
+                          </span>
+                          <input
+                            name={`clientRate_${b.id}`}
+                            inputMode="decimal"
+                            defaultValue={
+                              draftBuilderByUserId.get(b.userId)?.clientPricing
+                                ? clientRateOf(
+                                    draftBuilderByUserId.get(b.userId)!.clientPricing!,
+                                  )
+                                : ""
+                            }
+                            placeholder={`Default ${formatUsdCents(
+                              suggestedClientRate(b),
+                            )}${b.priceMode === "hourly" ? "/hr" : ""}`}
+                            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
+                          />
+                          <span className="mt-1 block text-[10px] text-ink-faint">
+                            They bid {formatProposalPrice(b)}. Rules give them{" "}
+                            {formatUsdCents(suggestedPayout(b))}
+                            {b.priceMode === "hourly" ? "/hr" : ""} and the
+                            client {formatUsdCents(suggestedClientRate(b))}
+                            {b.priceMode === "hourly" ? "/hr" : ""}. Leave blank
+                            to use that. Below it is refused.
+                          </span>
+                        </label>
+
+                        {/* Strengths and weaknesses carry most of the
+                            weight in a real $BUILD quote sheet, and
+                            the app had nowhere to put them. The client
+                            is choosing between people and wants the
+                            trade-offs stated, not a blurb each.
+
+                            Write weaknesses plainly. "Does not code,
+                            would need to pair with a web developer"
+                            and "No real UX/UI experience" are both
+                            from quotes that went out and won work. A
+                            client who cannot see the trade-off cannot
+                            decide, and finds out after they hire. */}
+                        <div className="mt-3 grid gap-2 md:grid-cols-2">
+                          <label className="block">
+                            <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                              Strengths
+                            </span>
+                            <textarea
+                              name={`strengths_${b.id}`}
+                              data-quote-strengths={b.id}
+                              data-quote-owner={b.firstName ?? b.handle ?? "this Builder"}
+                              defaultValue={draftBuilderByUserId.get(b.userId)?.strengths ?? ""}
+                              rows={3}
+                              placeholder="What they are genuinely good at, for this scope."
+                              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                              Weaknesses
+                            </span>
+                            <textarea
+                              name={`weaknesses_${b.id}`}
+                              data-quote-weaknesses={b.id}
+                              data-quote-owner={b.firstName ?? b.handle ?? "this Builder"}
+                              defaultValue={draftBuilderByUserId.get(b.userId)?.weaknesses ?? ""}
+                              rows={3}
+                              placeholder="The honest trade-off. What they will need paired with them."
+                              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
+                            />
+                          </label>
+                        </div>
+
+                        {/* The "Work Sample(s)" column. One per line as
+                            "Label | context", optionally "Label | URL |
+                            context". A bare link makes the client work
+                            out why they are looking at it; the line of
+                            context is what the quote sheet has always
+                            carried. Curated here rather than taken from
+                            the bid, because most members do not present
+                            their own portfolio effectively. */}
+                        <label className="mt-3 block">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                            Work samples (one per line: Label | URL | what they did on it)
+                          </span>
+                          <textarea
+                            name={`workSamples_${b.id}`}
+                            defaultValue={(draftBuilderByUserId.get(b.userId)?.workSamples ?? [])
+                              .map((w) => [w.label, w.url, w.context].filter(Boolean).join(" | "))
+                              .join("\n")}
+                            rows={3}
+                            placeholder={"Ontraport | https://... | Engineering manager and primary engineer on this platform"}
+                            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
+                          />
+                        </label>
+
+                        {/* Source material, and nothing more. The
+                            pitch does not reach the client at all: the
+                            price points, deliverables, strengths,
+                            trade-offs and work samples speak for
+                            themselves, and neither sent $BUILD quote
+                            sheet has a column for a proposal.
+
+                            So there is nothing to edit here. This is
+                            where you read what they claimed, pull out
+                            the facts worth repeating, and write the
+                            cells above. Always the unedited original,
+                            never the scrubbed copy, because judging
+                            whether a claim is theirs to make means
+                            reading what they actually wrote. */}
+                        <details className="mt-3 group">
+                          <summary className="cursor-pointer list-none text-[10px] uppercase tracking-wider text-ink-faint hover:text-brand-magentaText">
+                            What they wrote
+                            <span className="ml-1 group-open:hidden">▸</span>
+                            <span className="ml-1 hidden group-open:inline">▾</span>
+                          </summary>
+                          <div className="mt-2 rounded-lg border border-dashed border-[var(--surface-border)] px-3 py-2">
+                            <StructuredText text={b.pitch} />
+                          </div>
+                        </details>
+
+                        {/* Portfolio and attachments. These are on the
+                            bid row and were selected but never rendered
+                            here, so the one page where you decide who
+                            goes to the client showed none of their
+                            work. */}
+                        {(b.portfolioLink ||
+                          (b.attachments as ProposalAttachment[] | null)?.length) && (
+                          <div className="mt-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2">
+                            <p className="text-[10px] uppercase tracking-wider text-ink-muted">
+                              Their work
+                            </p>
+                            <ul className="mt-2 space-y-1">
+                              {b.portfolioLink && (
+                                <li>
+                                  <a
+                                    href={b.portfolioLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-brand-magentaText hover:underline"
+                                  >
+                                    Portfolio link →
+                                  </a>
+                                </li>
+                              )}
+                              {((b.attachments as ProposalAttachment[] | null) ?? []).map(
+                                (file) => (
+                                  <li key={file.name}>
+                                    <a
+                                      href={`data:${file.mimeType};base64,${file.base64}`}
+                                      download={file.name}
+                                      className="text-xs text-brand-magentaText hover:underline"
+                                    >
+                                      {file.name}
+                                    </a>
+                                    <span className="ml-2 text-[10px] text-ink-faint">
+                                      {(file.sizeBytes / 1024).toFixed(0)} KB
+                                    </span>
+                                  </li>
+                                ),
+                              )}
+                            </ul>
+                          </div>
+                        )}
                         <label className="mt-3 block">
                           <span className="text-[10px] uppercase tracking-wider text-ink-muted">
                             Relevance line (shown on client card)
@@ -284,6 +466,25 @@ export default async function RfpBidCompilePage({
                             defaultValue={draftBuilderByUserId.get(b.userId)?.relevance ?? ""}
                             placeholder="Why this person for this scope. One sentence."
                             className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
+                          />
+                        </label>
+                        {/* What this person owes. Everyone on the quote
+                            is bidding something different, so a single
+                            engagement-level list could never say who
+                            owed what. The bid itself carries this only
+                            as prose, which is why it is authored here. */}
+                        <label className="mt-3 block">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                            Deliverables (one per line, shown on client card)
+                          </span>
+                          <textarea
+                            name={`deliverables_${b.id}`}
+                            data-quote-deliverables={b.id}
+                            data-quote-owner={b.firstName ?? b.handle ?? "this Builder"}
+                            defaultValue={(draftBuilderByUserId.get(b.userId)?.deliverables ?? []).join("\n")}
+                            rows={3}
+                            placeholder={"What this person hands over.\nOne line each."}
+                            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
                           />
                         </label>
                       </div>
@@ -306,11 +507,29 @@ export default async function RfpBidCompilePage({
                 <span className="text-xs uppercase tracking-wider text-ink-muted">
                   Client display name
                 </span>
+                {/* Two bugs in one line, previously
+                    `defaultValue={rfp.clientId ?? ""}`.
+
+                    It ignored the saved draft, so a name typed here
+                    was written to the quote correctly and then
+                    overwritten on screen the moment the page came
+                    back. It looked like the save had failed.
+
+                    And rfp.clientId is an internal identifier, often
+                    literally a user id like "u_jamar". It was being
+                    offered as the company name that goes at the top of
+                    the client's proposal and in the confidentiality
+                    line at the foot of it. Dropped entirely: there is
+                    no sensible guess at what a client calls
+                    themselves, and a blank field asks the question
+                    rather than inviting someone to tab past a wrong
+                    answer. */}
                 <input
                   name="clientDisplayName"
-                  defaultValue={rfp.clientId ?? ""}
+                  defaultValue={draftQuote?.clientDisplayName ?? ""}
                   required
                   minLength={2}
+                  placeholder="The client company, as they write it"
                   className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
                 />
               </label>
@@ -332,31 +551,25 @@ export default async function RfpBidCompilePage({
                 </span>
               </section>
 
+              {/* Only what belongs to the whole crew rather than to one
+                  person. Each Builder's own deliverables are authored
+                  on their card above. Usually left empty.
+
+                  There is no engagement timeline field. Nothing about
+                  the shape of the work is settled until the client
+                  picks who is doing it, so the quote shows each
+                  Builder's own timeline and the client reads the
+                  engagement off those. */}
               <label className="block">
                 <span className="text-xs uppercase tracking-wider text-ink-muted">
-                  Deliverables (one per line)
+                  Shared deliverables (optional, one per line)
                 </span>
                 <textarea
                   name="deliverables"
-                  defaultValue={draftScope?.deliverables.join("\n") ?? ""}
-                  rows={4}
-                  required
-                  placeholder={"Weekly deliverable\nMilestone 1: …\nMilestone 2: …"}
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-xs uppercase tracking-wider text-ink-muted">
-                  Engagement timeline
-                </span>
-                <input
-                  name="timeline"
-                  defaultValue={draftScope?.timeline ?? ""}
-                  required
-                  minLength={4}
-                  placeholder="8 weeks from kickoff — 2 discovery, 4 build, 2 polish"
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm data-[invalid=true]:border-red-500 data-[invalid=true]:ring-1 data-[invalid=true]:ring-red-500"
+                  defaultValue={(draftScope?.deliverables ?? []).join("\n")}
+                  rows={3}
+                  placeholder={"Anything the whole crew owes jointly.\nLeave empty if each Builder's own list covers it."}
+                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 />
               </label>
             </div>
@@ -367,6 +580,7 @@ export default async function RfpBidCompilePage({
               type="submit"
               name="intent"
               value="draft"
+              data-quote-submit
               className="rounded-full border border-[var(--surface-border)] px-6 py-2 text-sm font-medium hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Save &amp; see draft
@@ -375,6 +589,7 @@ export default async function RfpBidCompilePage({
               type="submit"
               name="intent"
               value="send"
+              data-quote-submit
               className="fm-btn-primary rounded-full px-6 py-2 text-sm font-medium"
             >
               Send client quote
@@ -387,4 +602,58 @@ export default async function RfpBidCompilePage({
       )}
     </div>
   );
+}
+
+/**
+ * The client rate the standing rules produce for this bid, shown beside
+ * the override field so an admin sees what they are departing from.
+ *
+ * Hourly only. A fixed or range project price is quoted against a
+ * scope, so the $10 hedge and the $50 floor do not apply to it; those
+ * fall back to the straight gross-up.
+ */
+function suggestedClientRate(bid: {
+  priceMode?: string | null;
+  hourlyRate?: string | null;
+  hourlyRateMax?: string | null;
+  fixedPriceMin?: string | null;
+}): number {
+  if (bid.priceMode === "hourly") {
+    return suggestedClientHourlyRate(
+      Number(bid.hourlyRate ?? 0),
+      bid.hourlyRateMax ? Number(bid.hourlyRateMax) : null,
+    );
+  }
+  const raw = Number(bid.fixedPriceMin ?? 0);
+  return raw > 0 ? Math.ceil(raw / 0.85) : 0;
+}
+
+/** What the Builder takes home under the same rules. */
+function suggestedPayout(bid: {
+  priceMode?: string | null;
+  hourlyRate?: string | null;
+  hourlyRateMax?: string | null;
+  fixedPriceMin?: string | null;
+}): number {
+  if (bid.priceMode === "hourly") {
+    return suggestedBuilderHourlyPayout(
+      Number(bid.hourlyRate ?? 0),
+      bid.hourlyRateMax ? Number(bid.hourlyRateMax) : null,
+    );
+  }
+  return Number(bid.fixedPriceMin ?? 0);
+}
+
+/** The headline number out of a stored client price, for the field default. */
+function clientRateOf(pricing: CooperativeQuotePricing): string {
+  switch (pricing.type) {
+    case "hourly":
+      return String(pricing.hourlyRate);
+    case "fixed":
+      return String(pricing.baseAmount);
+    case "range":
+      return String(pricing.baseAmountMin);
+    default:
+      return "";
+  }
 }

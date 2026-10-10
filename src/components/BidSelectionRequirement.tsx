@@ -1,60 +1,270 @@
 "use client";
 
+/**
+ * Stops an incomplete quote reaching the server, and stops a long form
+ * being lost when something goes wrong anyway.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY THIS WAS REWRITTEN (2026-10-06)
+ *
+ * Three failures, found by using it.
+ *
+ * 1. THE FORM WAS DESTROYED ON A FAILED SAVE. compileBidsIntoQuote
+ *    throws when a picked bid is missing deliverables or strengths and
+ *    weaknesses. Next redacts server action errors in production, the
+ *    page re-renders from server state, and every word typed into the
+ *    form is gone. An admin lost an afternoon of authored copy across
+ *    three Builders this way.
+ *
+ *    The guard here was supposed to prevent that by calling
+ *    preventDefault on submit, but React 19 dispatches a form `action`
+ *    through its own path and a native submit listener does not
+ *    reliably beat it. So the buttons are now DISABLED while anything
+ *    is incomplete. A disabled button cannot be clicked, which does not
+ *    depend on winning a race.
+ *
+ * 2. THE WRONG FIELDS TURNED RED. Each rule had one `target` selector
+ *    like "[data-quote-deliverables]" with no value, and querySelector
+ *    returns the first match on the page. So a missing field on the
+ *    third Builder reddened the first Builder's filled-in box. The red
+ *    was true about the form and a lie about the field.
+ *
+ *    Rules now return the exact elements at fault, and the message
+ *    names whose card to look at.
+ *
+ * 3. NOTHING SURVIVED A RELOAD. Belt and braces for the above: every
+ *    authored field is mirrored to localStorage as it is typed, keyed
+ *    on the form's RFP, and restored if the page comes back empty.
+ *    Cleared once a save succeeds. This is the backstop for the failure
+ *    nobody predicted, not a replacement for the two fixes above.
+ * ─────────────────────────────────────────────────────────────
+ */
+
 import { useEffect, useState } from "react";
 
 const minimumProposalCount = 3;
 const maximumProposalCount = 5;
 
-const requirements = [
-  {
-    message: "Select three to five proposals for the client comparison.",
-    valid: (form: HTMLFormElement) => {
-      const count = form.querySelectorAll('input[name="applicationIds"]:checked').length;
-      return count >= minimumProposalCount && count <= maximumProposalCount;
-    },
-    target: 'input[name="applicationIds"]',
-  },
-  { message: "Enter the client display name.", valid: (form: HTMLFormElement) => ((form.elements.namedItem("clientDisplayName") as HTMLInputElement | null)?.value.trim().length ?? 0) >= 2, target: '[name="clientDisplayName"]' },
-  { message: "Write a scope summary of at least 20 characters.", valid: (form: HTMLFormElement) => ((form.querySelector('[data-quote-field="scopeSummary"]') as HTMLTextAreaElement | null)?.value.trim().length ?? 0) >= 20, target: '[data-quote-focus="scopeSummary"] [contenteditable="true"]' },
-  { message: "Add at least one deliverable.", valid: (form: HTMLFormElement) => ((form.elements.namedItem("deliverables") as HTMLTextAreaElement | null)?.value.trim().length ?? 0) > 0, target: '[name="deliverables"]' },
-  { message: "Enter an engagement timeline (at least 4 characters).", valid: (form: HTMLFormElement) => ((form.elements.namedItem("timeline") as HTMLInputElement | null)?.value.trim().length ?? 0) >= 4, target: '[name="timeline"]' },
-] as const;
+/**
+ * A rule returns the elements that fail it, so only those get marked.
+ * An empty array means the rule passes.
+ */
+interface Requirement {
+  message: (form: HTMLFormElement) => string;
+  offenders: (form: HTMLFormElement) => HTMLElement[];
+}
 
-/** Stops incomplete quote compilation before the server action is called. */
-export function QuoteCompileRequirements() {
+function pickedIds(form: HTMLFormElement): string[] {
+  return Array.from(
+    form.querySelectorAll<HTMLInputElement>('input[name="applicationIds"]:checked'),
+  ).map((input) => input.value);
+}
+
+function value(el: Element | null): string {
+  return (el as HTMLInputElement | HTMLTextAreaElement | null)?.value?.trim() ?? "";
+}
+
+/** Who a field belongs to, for an error message that names a card. */
+function ownerOf(el: HTMLElement | undefined): string {
+  return el?.dataset.quoteOwner ?? "a picked Builder";
+}
+
+const requirements: Requirement[] = [
+  {
+    // Three to five is the house standard for a readable comparison, and
+    // it is advice rather than a gate. Sometimes two bids are the two
+    // worth sending and holding the quote for a third is the worse
+    // call. Only an empty selection actually blocks, because a quote
+    // with nobody on it is not a quote.
+    message: () => "Pick at least one bid for the client quote.",
+    offenders: (form) => {
+      if (pickedIds(form).length > 0) return [];
+      const first = form.querySelector<HTMLElement>('input[name="applicationIds"]');
+      return first ? [first] : [];
+    },
+  },
+  {
+    message: () => "Enter the client display name.",
+    offenders: (form) => {
+      const el = form.querySelector<HTMLElement>('[name="clientDisplayName"]');
+      return el && value(el).length >= 2 ? [] : el ? [el] : [];
+    },
+  },
+  {
+    message: () => "Write a scope summary of at least 20 characters.",
+    offenders: (form) => {
+      const field = form.querySelector('[data-quote-field="scopeSummary"]');
+      if (value(field).length >= 20) return [];
+      const focus = form.querySelector<HTMLElement>(
+        '[data-quote-focus="scopeSummary"] [contenteditable="true"]',
+      );
+      return focus ? [focus] : [];
+    },
+  },
+  {
+    // Deliverables are per Builder. A card with a price and no
+    // deliverables is the one thing a client cannot evaluate.
+    message: (form) => {
+      const missing = pickedIds(form)
+        .map((id) =>
+          form.querySelector<HTMLElement>(`[data-quote-deliverables="${id}"]`),
+        )
+        .filter((el): el is HTMLElement => !!el && value(el).length === 0);
+      const names = [...new Set(missing.map((el) => ownerOf(el)))];
+      return `Add at least one deliverable for ${names.join(" and ")}.`;
+    },
+    offenders: (form) =>
+      pickedIds(form)
+        .map((id) =>
+          form.querySelector<HTMLElement>(`[data-quote-deliverables="${id}"]`),
+        )
+        .filter((el): el is HTMLElement => !!el && value(el).length === 0),
+  },
+  {
+    // Both, not either. A card listing only what someone is good at is
+    // marketing; the client is choosing between people and needs the
+    // trade-off to decide.
+    message: (form) => {
+      const missing = pickedIds(form).flatMap((id) =>
+        [
+          form.querySelector<HTMLElement>(`[data-quote-strengths="${id}"]`),
+          form.querySelector<HTMLElement>(`[data-quote-weaknesses="${id}"]`),
+        ].filter((el): el is HTMLElement => !!el && value(el).length === 0),
+      );
+      const names = [...new Set(missing.map((el) => ownerOf(el)))];
+      return `Write both strengths and weaknesses for ${names.join(" and ")}.`;
+    },
+    offenders: (form) =>
+      pickedIds(form).flatMap((id) =>
+        [
+          form.querySelector<HTMLElement>(`[data-quote-strengths="${id}"]`),
+          form.querySelector<HTMLElement>(`[data-quote-weaknesses="${id}"]`),
+        ].filter((el): el is HTMLElement => !!el && value(el).length === 0),
+      ),
+  },
+];
+
+/** Every field whose text an admin authored and must not lose. */
+const AUTHORED_SELECTOR = [
+  "[data-quote-deliverables]",
+  "[data-quote-strengths]",
+  "[data-quote-weaknesses]",
+  '[name="clientDisplayName"]',
+  '[name="deliverables"]',
+  '[name^="relevance_"]',
+  '[name^="workSamples_"]',
+  '[name^="clientRate_"]',
+].join(",");
+
+export function QuoteCompileRequirements({ draftKey }: { draftKey?: string }) {
   const [errors, setErrors] = useState<string[]>([]);
+  const [notes, setNotes] = useState<string[]>([]);
+  const [restored, setRestored] = useState(false);
 
   useEffect(() => {
     const form = document.getElementById("compile-bids-form");
     if (!(form instanceof HTMLFormElement)) return;
-    const validate = () => requirements.filter((requirement) => !requirement.valid(form));
-    const setFieldStates = (invalid: readonly (typeof requirements)[number][]) => {
-      for (const requirement of requirements) {
-        const target = form.querySelector<HTMLElement>(requirement.target);
-        if (target) target.dataset.invalid = String(invalid.includes(requirement));
+    const storageKey = `fm-quote-draft:${draftKey ?? form.dataset.rfpId ?? "rfp"}`;
+
+    const authored = () =>
+      Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+        AUTHORED_SELECTOR,
+      )).filter((el) => el.name);
+
+    // ── restore ────────────────────────────────────────────────
+    // Only into fields the server left empty, so a saved draft coming
+    // back from the database always wins over a stale local copy.
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, string>;
+        let touched = 0;
+        for (const el of authored()) {
+          const value = parsed[el.name];
+          if (value && el.value.trim().length === 0) {
+            el.value = value;
+            touched += 1;
+          }
+        }
+        if (touched > 0) setRestored(true);
+      }
+    } catch {
+      // A corrupt or unavailable store must never stop the page working.
+    }
+
+    const persist = () => {
+      try {
+        const payload: Record<string, string> = {};
+        for (const el of authored()) {
+          if (el.value.trim().length > 0) payload[el.name] = el.value;
+        }
+        window.localStorage.setItem(storageKey, JSON.stringify(payload));
+      } catch {
+        // Quota or private mode. Not worth breaking the form over.
       }
     };
+
+    // ── validation ─────────────────────────────────────────────
     const sync = () => {
-      const invalid = validate();
-      const choices = form.querySelectorAll<HTMLInputElement>('input[name="applicationIds"]');
+      const failing = requirements
+        .map((requirement) => ({
+          requirement,
+          offenders: requirement.offenders(form),
+        }))
+        .filter((entry) => entry.offenders.length > 0);
+
+      // Clear every field first, then mark only the real offenders.
+      for (const el of form.querySelectorAll<HTMLElement>("[data-invalid]")) {
+        delete el.dataset.invalid;
+      }
+      for (const entry of failing) {
+        for (const el of entry.offenders) el.dataset.invalid = "true";
+      }
+
+      // Disabled rather than preventDefault: React 19 runs a form
+      // action through its own dispatch and a native submit listener
+      // does not reliably beat it. A disabled button cannot be clicked.
+      const messages = failing.map((entry) => entry.requirement.message(form));
+      for (const button of form.querySelectorAll<HTMLButtonElement>(
+        "[data-quote-submit]",
+      )) {
+        button.disabled = messages.length > 0;
+        button.title =
+          messages.length > 0 ? messages.join(" ") : "";
+      }
+
+      const choices = form.querySelectorAll<HTMLInputElement>(
+        'input[name="applicationIds"]',
+      );
       const selectedCount = [...choices].filter((choice) => choice.checked).length;
       choices.forEach((choice) => {
         choice.disabled = !choice.checked && selectedCount >= maximumProposalCount;
       });
-      setFieldStates(invalid);
-      setErrors((current) => current.length ? invalid.map((item) => item.message) : current);
+
+      setErrors(messages);
+
+      // Advice. Shown, never enforced, never disables anything.
+      const count = pickedIds(form).length;
+      setNotes(
+        count > 0 && count < minimumProposalCount
+          ? [
+              `${count} bid${count === 1 ? "" : "s"} selected. Three to five is the house standard for a comparison the client can read, but send what is worth sending.`,
+            ]
+          : [],
+      );
+      persist();
     };
-    const onSubmit = (event: SubmitEvent) => {
-      const invalid = validate();
-      setFieldStates(invalid);
-      if (invalid.length === 0) return;
-      event.preventDefault();
-      setErrors(invalid.map((item) => item.message));
-      const first = form.querySelector<HTMLElement>(invalid[0].target);
-      first?.closest("details")?.setAttribute("open", "");
-      first?.scrollIntoView({ block: "center" });
-      first?.focus();
+
+    // A successful save navigates away or re-renders with the draft
+    // loaded from the database, so the local copy has done its job.
+    const onSubmit = () => {
+      try {
+        window.localStorage.removeItem(storageKey);
+      } catch {
+        /* ignore */
+      }
     };
+
     form.addEventListener("input", sync);
     form.addEventListener("change", sync);
     form.addEventListener("submit", onSubmit);
@@ -64,14 +274,37 @@ export function QuoteCompileRequirements() {
       form.removeEventListener("change", sync);
       form.removeEventListener("submit", onSubmit);
     };
-  }, []);
+  }, [draftKey]);
 
-  return errors.length > 0 ? (
-    <section role="alert" className="rounded-xl border border-red-500/70 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-      <p className="font-semibold">Finish the required fields before saving.</p>
-      <ul className="mt-2 list-disc space-y-1 pl-5">
-        {errors.map((error) => <li key={error}>{error}</li>)}
-      </ul>
-    </section>
-  ) : null;
+  if (errors.length === 0 && notes.length === 0 && !restored) return null;
+
+  return (
+    <div className="space-y-2">
+      {restored && (
+        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] px-4 py-3 text-xs text-ink-muted">
+          Restored text you had typed here earlier but not saved. Check it
+          before saving.
+        </div>
+      )}
+      {notes.length > 0 && (
+        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] px-4 py-3 text-xs text-ink-muted">
+          {notes.map((note) => (
+            <p key={note}>{note}</p>
+          ))}
+        </div>
+      )}
+      {errors.length > 0 && (
+        <div className="rounded-xl border border-red-500/60 bg-red-500/5 px-4 py-3 text-xs text-ink">
+          <p className="font-medium">
+            Finish these before saving:
+          </p>
+          <ul className="mt-2 space-y-1">
+            {errors.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
 }

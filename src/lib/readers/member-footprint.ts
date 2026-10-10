@@ -71,6 +71,7 @@ import {
   portfolioItems,
   sessions,
   walkthroughProgress,
+  profileDisclosureReviews,
 } from "@/db/schema";
 
 export interface FootprintEntry {
@@ -130,6 +131,7 @@ export async function getMemberFootprint(
     availabilityCount,
     blockCount,
     walkthroughCount,
+    disclosureReviewCount,
   ] = await Promise.all([
     countRows(agreements, agreements.userId, uid),
     countRows(payoutMethods, payoutMethods.userId, uid),
@@ -149,6 +151,7 @@ export async function getMemberFootprint(
     countRows(calendarAvailability, calendarAvailability.userId, uid),
     countRows(calendarBlocks, calendarBlocks.userId, uid),
     countRows(walkthroughProgress, walkthroughProgress.userId, uid),
+    countRows(profileDisclosureReviews, profileDisclosureReviews.userId, uid),
   ]);
 
   const balance = Number(buildTokenBalance ?? 0);
@@ -198,6 +201,14 @@ export async function getMemberFootprint(
       table: "walkthrough_progress",
       label: "Walkthrough progress",
       count: walkthroughCount,
+    },
+    {
+      // A cleared circumvention finding. It describes text that is
+      // going away with the account, so there is nothing to preserve
+      // and nothing that should stop a delete.
+      table: "profile_disclosure_reviews",
+      label: "Circumvention reviews cleared",
+      count: disclosureReviewCount,
     },
   ].filter((e) => e.count > 0);
 

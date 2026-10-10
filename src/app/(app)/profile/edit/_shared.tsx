@@ -70,102 +70,11 @@ import { MvpCard } from "@/components/MvpCard";
 
 export const ALL_INDUSTRIES: Industry[] = ["stem", "creative-media", "professional-services"];
 
-export async function saveProfile(formData: FormData) {
-  "use server";
-  // Always resolve the writer from the actual session, not from a
-  // hidden form field. Fixes the bug Rob hit: real Auth.js users
-  // (like Rob, invited via Track A) weren't in the fixture array, so
-  // the old lookup returned undefined and threw
-  // "User not found" — everyone saw a broken save.
-  const currentUser = await getCurrentUser();
-  if (!currentUser) throw new Error("Sign in required");
-  const uid = currentUser.id;
-
-  // Compose the update patch from the form. Blank strings become
-  // null for nullable columns; primaries fall back to current
-  // values when empty so we don't clobber good data with a whitespace
-  // submit.
-  const firstName =
-    String(formData.get("firstName") ?? "").trim() || currentUser.firstName;
-  const lastName =
-    String(formData.get("lastName") ?? "").trim() || currentUser.lastName;
-  // The alias is artist-only, and the rule lives here rather than only
-  // in the markup: a contributor has no alias field on the form, and a
-  // hand-posted one is ignored. Their stored value is preserved rather
-  // than cleared, so it comes back intact if they are recognised as an
-  // artist later.
-  //
-  // For an artist, empty clears it and falls back to the first-name
-  // convention, so someone can undo an alias without an admin.
-  const displayName =
-    currentUser.profileMode === "epk"
-      ? String(formData.get("displayName") ?? "").trim() || null
-      : (currentUser.displayName ?? null);
-  const bio = String(formData.get("bio") ?? "").trim() || null;
-  const rawTagline = String(formData.get("tagline") ?? "").trim();
-  const tagline = rawTagline ? rawTagline.slice(0, 120) : null;
-  const portfolioUrl =
-    String(formData.get("portfolioUrl") ?? "").trim() || null;
-  const profileImageUrl =
-    String(formData.get("profileImageUrl") ?? "").trim() || null;
-
-  const primaryRaw = String(formData.get("primaryIndustry") ?? "") as Industry;
-  const primaryIndustry: Industry | null = ALL_INDUSTRIES.includes(primaryRaw)
-    ? primaryRaw
-    : currentUser.primaryIndustry;
-
-  // Secondary pillars are checkbox values. Exclude the primary so
-  // we never double-count.
-  const rawSecondaries = formData.getAll("secondaryIndustries").map(String);
-  const secondaryIndustries = rawSecondaries
-    .filter((v): v is Industry => ALL_INDUSTRIES.includes(v as Industry))
-    .filter((v) => v !== primaryIndustry);
-
-  const skillsRaw = String(formData.get("skills") ?? "");
-  const skills = skillsRaw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const updatedAt = new Date().toISOString();
-
-  // Real Postgres write. Wrapped in try so mock-only users
-  // (view-as / seeded sandbox accounts that don't have a
-  // Postgres row) still get their profile updated via the mock
-  // path fallback — no regression for the dev/demo flow.
-  // Writes straight to Postgres. No in-memory fallback: silently
-  // "succeeding" into a mock array meant a member could edit their
-  // profile, see a success state, and have nothing persist. Better to
-  // surface the failure than to lie about it.
-  const res = await db
-    .update(usersTable)
-    .set({
-      firstName,
-      displayName,
-      lastName,
-      bio,
-      tagline,
-      portfolioUrl,
-      profileImageUrl,
-      primaryIndustry,
-      secondaryIndustries,
-      skills,
-      updatedAt,
-    })
-    .where(eq(usersTable.id, uid))
-    .returning({ id: usersTable.id });
-
-  if (res.length === 0) {
-    throw new Error(
-      "Could not save your profile — no matching account was found.",
-    );
-  }
-
-  revalidatePath("/profile");
-  revalidatePath("/dashboard");
-  revalidatePath(`/u/${currentUser.handle}`);
-}
-
+// saveProfile moved to lib/profile-actions.ts so the identity form can
+// be a client component and surface the guard's findings inline. This
+// file imports db/client, so a client component importing from here
+// would drag Postgres into the browser bundle.
+export { saveProfile } from "@/lib/profile-actions";
 
 /** Everything the edit sections read. One pass, shared by all of them. */
 export async function loadProfileEditData() {

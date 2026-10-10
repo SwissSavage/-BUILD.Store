@@ -178,6 +178,11 @@ export async function updateStoreCategory(formData: FormData) {
  * categorySlugs reference for audit.
  */
 export async function archiveStoreCategory(formData: FormData) {
+  // Stated here, not only in the helper below. An exported server
+  // action is a public endpoint on its own, and authorisation that
+  // is only visible one call down reads as absent to anyone
+  // auditing this file, which is how four real holes survived.
+  await requireAdmin();
   await setActive(formData, false);
 }
 

@@ -35,6 +35,7 @@ import { getAllUsers } from "@/lib/readers/users";
 import { mvpScoreReader, safely } from "@/lib/readers";
 import { championsCourtMembers } from "@/lib/mvp-score";
 import { deriveTradingCardTier } from "@/components/TradingCard";
+import { publicName } from "@/lib/types";
 import { CardEyebrow, CardTitle } from "@/components/Card";
 import type { QuoteFlipReveaCrewMember } from "@/components/QuoteFlipReveal";
 import { QuoteInteractiveSurface } from "@/components/QuoteInteractiveSurface";
@@ -43,7 +44,6 @@ import {
   pricingHeadline,
   pricingUnitLabel,
 } from "@/lib/quote-pricing";
-import { richTextValuePlainText } from "@/lib/rich-text";
 import { getCurrentUser } from "@/lib/auth-stub";
 
 /**
@@ -111,6 +111,7 @@ export default async function CooperativeQuotePage({
     notFound();
   }
 
+
   // Cast jsonb → canonical types. The DB column is typed unknown by
   // Drizzle; the runtime shape is enforced by the authoring flow.
   const quote: CooperativeQuote = {
@@ -170,10 +171,23 @@ export default async function CooperativeQuotePage({
           avatarPortraitUrl: user.avatarPortraitUrl,
           discipline: user.discipline,
           membershipTier: user.membershipTier,
+          // publicName honours an artist's alias only when both are
+          // present. Omitting them silently downgrades an artist to
+          // the first-name convention.
+          displayName: user.displayName,
+          profileMode: user.profileMode,
         },
         tier,
         relevance: b.relevance,
-        pitch: b.pitch ? richTextValuePlainText(b.pitch) : undefined,
+        strengths: b.strengths,
+        weaknesses: b.weaknesses,
+        workSamples: b.workSamples,
+        // The pitch is deliberately not projected to the client.
+        // What goes out is the extraction: relevance, strengths,
+        // trade-offs, deliverables and work samples. Neither sent
+        // $BUILD quote sheet has a column for a proposal, and a member
+        // writing about themselves is always selling themselves, which
+        // on a cooperative quote points the client the wrong way.
         quoteLine: {
           pricingHeadline: pricingHeadline(b.pricing),
           pricingUnit: pricingUnitLabel(b.pricing),
@@ -216,6 +230,7 @@ export default async function CooperativeQuotePage({
       {!decided && (
         <QuoteInteractiveSurface
           clientToken={quote.clientToken}
+          clientDisplayName={quote.clientDisplayName}
           scope={quote.scope}
           crew={crew}
           proposedBuilders={clientFacingBuilders}
@@ -234,7 +249,7 @@ export default async function CooperativeQuotePage({
             <p className="mt-4 max-w-xl text-ink-muted">
               Your lead builder is{" "}
               <strong className="text-ink">
-                {selectedLead.user.firstName} {selectedLead.user.lastName}
+                {publicName(selectedLead.user)}
               </strong>
               . We&apos;re kicking off contracts and calendar within one
               business day. You&apos;ll hear from Future Modern on

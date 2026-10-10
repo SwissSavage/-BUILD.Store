@@ -40,6 +40,7 @@ import {
   sendDocument,
 } from "@/lib/documenso";
 import { dispatchInviteEmail } from "@/lib/invite-email";
+import { reconcileInboundForNewMember } from "@/lib/inbound-reconcile";
 import { adminSenderName, countersignerEmail } from "@/lib/countersigner";
 
 // Default invite lifetime — 14 days from issue.
@@ -625,6 +626,17 @@ export async function completeInviteSignup(formData: FormData): Promise<void> {
     })
     .where(eq(inviteLinks.id, invite.id));
 
+  // If this person also applied through the public form, that
+  // application is now a duplicate of a decision already made. It would
+  // otherwise sit in triage offering Promote to invite and Reject for
+  // somebody who is already a member, which is what happened to
+  // Sahtyre.
+  await reconcileInboundForNewMember({
+    email: invite.targetEmail,
+    userId,
+    reason: `Joined by invite ${code} on ${now.slice(0, 10)}. Application and invite merged.`,
+  });
+
   // The paperwork this ceremony produced. Both rows land here: the
   // Documenso-signed LOI or covenant, and the Tier-2 data opt-in that
   // used to be read off the form and thrown away.
@@ -651,6 +663,7 @@ export async function completeInviteSignup(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/agreements");
   revalidatePath("/admin/members");
+  revalidatePath("/admin/inbound");
   // Land them on the contract they were invited for, when the invite
   // named one. Someone brought in for a specific piece of work should
   // arrive at that work rather than a generic welcome page and a hunt.

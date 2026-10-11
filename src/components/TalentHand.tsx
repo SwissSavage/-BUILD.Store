@@ -6,13 +6,14 @@
  * Every time the cooperative surfaces people to clients (RFP quote
  * responses, team selection options, "who was on this" retro views on
  * projects/jobs/contracts feeds), it should read as a curated hand,
- * not a résumé stack. The dealing animation, the horizontal scroll,
+ * not a résumé stack. The dealing animation, the card pager,
  * and the TradingCard3D per member all reinforce the same brand
  * language: not marketplace, boutique cooperative.
  *
  * Design posture:
- *   - Horizontal scroll with mandatory scroll-snap on each card.
- *     Keyboard + trackpad + touch all work natively.
+ *   - Explicit previous/next controls page through one card at a time.
+ *     Keyboard, touch, and assistive technology do not have to discover
+ *     a horizontal scrollbar.
  *   - Cards deal in on mount with staggered timing — first card lands
  *     at 100ms, each subsequent card +120ms. Slight rotation wobble
  *     as they land, matching how a physical dealt card settles.
@@ -31,6 +32,7 @@
  */
 
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { TradingCard3D } from "@/components/TradingCard3D";
 import { TierBadge } from "@/components/TierBadge";
@@ -164,12 +166,22 @@ export function TalentHand({
    * paint don't animate stale content. Skip the animation flag
    * entirely when the caller opts out.
    */
-  const [dealt, setDealt] = useState(!deal);
+  const [dealState, setDealState] = useState<
+    "pending" | "animating" | "complete"
+  >(deal ? "pending" : "complete");
   useEffect(() => {
-    if (!deal) return;
+    if (!deal) {
+      setDealState("complete");
+      return;
+    }
     // Micro-timeout so the class hits after paint, not during.
-    const t = window.setTimeout(() => setDealt(true), 20);
-    return () => window.clearTimeout(t);
+    setDealState("pending");
+    const start = window.setTimeout(() => setDealState("animating"), 20);
+    const finish = window.setTimeout(() => setDealState("complete"), 900);
+    return () => {
+      window.clearTimeout(start);
+      window.clearTimeout(finish);
+    };
   }, [deal]);
 
   /**
@@ -181,6 +193,13 @@ export function TalentHand({
   const [decisions, setDecisions] = useState<
     Record<string, TalentHandDecision>
   >({});
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // A refreshed roster can be shorter than the previous hand. Keep the
+  // pager on an actual person instead of leaving it beyond the last card.
+  useEffect(() => {
+    setActiveIndex((index) => Math.min(index, Math.max(0, entries.length - 1)));
+  }, [entries.length]);
 
   function setDecision(userId: string, decision: TalentHandDecision) {
     setDecisions((prev) => ({ ...prev, [userId]: decision }));
@@ -197,13 +216,14 @@ export function TalentHand({
         </p>
       )}
 
-      {/* Horizontal-scroll hand. Scroll-snap ensures each card lands
-          centered when the user swipes / arrow-keys through. */}
+      {/* One card at a time: the rest of the team is reachable by clear
+          controls, not by a hidden horizontal scrollbar. */}
       <ol
-        className="fm-hand-track flex snap-x snap-mandatory gap-6 overflow-x-auto pb-6 pt-2"
+        className="fm-hand-track mx-auto w-full max-w-[260px] pb-4 pt-2"
         aria-label={contextLabel ?? "Builders presented as a hand of cards"}
       >
         {entries.map((entry, idx) => {
+          if (idx !== activeIndex) return null;
           const decision = decisions[entry.user.id] ?? null;
           const decisionClass =
             decision === "choose"
@@ -215,17 +235,21 @@ export function TalentHand({
           <li
             key={entry.user.id}
             className={
-              "fm-hand-card snap-start" +
-              (dealt ? " fm-hand-card--dealt" : "") +
+              "fm-hand-card" +
+              (dealState === "animating"
+                ? " fm-hand-card--dealt"
+                : dealState === "complete"
+                  ? " fm-hand-card--settled"
+                  : "") +
               decisionClass
             }
             style={
               {
-                "--deal-index": idx,
+                "--deal-index": 0,
               } as React.CSSProperties
             }
           >
-            <div className="w-[240px] shrink-0">
+            <div className="w-full min-w-0">
               <Link
                 href={entry.href ?? `/u/${entry.user.handle}`}
                 className="block"
@@ -238,14 +262,14 @@ export function TalentHand({
               </Link>
 
               <div className="mt-3">
-                <div className="flex items-baseline gap-2">
-                  <p className="truncate font-display text-base font-semibold">
+                <div className="flex min-w-0 items-baseline gap-2">
+                  <p className="min-w-0 break-words font-display text-base font-semibold">
                     {publicName(entry.user)}
                   </p>
                   <OnChainBadge count={entry.canonCount ?? 0} size="sm" />
                 </div>
                 {memberLabel(entry.user, engagement) && (
-                  <p className="mt-0.5 text-xs text-ink-muted">
+                  <p className="mt-0.5 break-words text-xs text-ink-muted">
                     {memberLabel(entry.user, engagement)}
                   </p>
                 )}
@@ -334,6 +358,54 @@ export function TalentHand({
           );
         })}
       </ol>
+
+      {entries.length > 1 && (
+        <div
+          className="mx-auto flex max-w-[260px] items-center justify-between gap-3"
+          aria-label="Team member navigation"
+        >
+          <button
+            type="button"
+            onClick={() => setActiveIndex((index) => Math.max(0, index - 1))}
+            disabled={activeIndex === 0}
+            className="inline-flex size-11 items-center justify-center rounded-full border border-[var(--surface-border)] text-ink-muted transition-colors hover:border-brand-magenta hover:text-brand-magentaText disabled:cursor-not-allowed disabled:opacity-35"
+            aria-label="Previous team member"
+          >
+            <ChevronLeft aria-hidden="true" size={18} strokeWidth={1.75} />
+          </button>
+          <div
+            className="flex items-center gap-2"
+            aria-label={`Team member ${activeIndex + 1} of ${entries.length}`}
+          >
+            {entries.map((member, index) => (
+              <button
+                key={member.user.id}
+                type="button"
+                onClick={() => setActiveIndex(index)}
+                className={
+                  "size-2.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-magenta " +
+                  (index === activeIndex
+                    ? "bg-brand-magenta"
+                    : "bg-[var(--surface-border)] hover:bg-ink-faint")
+                }
+                aria-label={`Show ${publicName(member.user)}`}
+                aria-current={index === activeIndex ? "true" : undefined}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              setActiveIndex((index) => Math.min(entries.length - 1, index + 1))
+            }
+            disabled={activeIndex === entries.length - 1}
+            className="inline-flex size-11 items-center justify-center rounded-full border border-[var(--surface-border)] text-ink-muted transition-colors hover:border-brand-magenta hover:text-brand-magentaText disabled:cursor-not-allowed disabled:opacity-35"
+            aria-label="Next team member"
+          >
+            <ChevronRight aria-hidden="true" size={18} strokeWidth={1.75} />
+          </button>
+        </div>
+      )}
 
       {/* Reversibility affordance. Selectable mode is non-destructive —
           Skip and Choose both toggle back to null on a second click, and

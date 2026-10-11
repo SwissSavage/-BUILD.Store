@@ -372,7 +372,7 @@ html {
 
 @keyframes fm-hand-deal {
   0% {
-    transform: translate(60vw, 40vh) rotate(18deg);
+    transform: scale(0.98);
     opacity: 0;
   }
   60% {
@@ -390,9 +390,9 @@ html {
 }
 
 .fm-hand-card {
-  transform: translate(60vw, 40vh) rotate(18deg);
+  transform: scale(0.98);
   opacity: 0;
-  transition: transform 0.3s ease-out;
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
 }
 
 .fm-hand-card--dealt {
@@ -400,9 +400,17 @@ html {
   animation-delay: calc(var(--deal-index, 0) * 120ms + 100ms);
 }
 
+/* The deal is an entrance only. Pager changes should swap a settled card
+   in place, never replay the off-screen animation. */
+.fm-hand-card--settled {
+  transform: none;
+  opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fm-hand-card,
-  .fm-hand-card--dealt {
+  .fm-hand-card--dealt,
+  .fm-hand-card--settled {
     animation: none;
     transform: none;
     opacity: 1;

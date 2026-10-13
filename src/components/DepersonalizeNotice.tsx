@@ -26,7 +26,19 @@
  *      The example does the real work here: the result stays, the
  *      name goes.
  *
- * WHY THE TWO CONTEXTS NOW SAY DIFFERENT THINGS (2026-10-08)
+ * WHY BOTH CONTEXTS NOW SAY THE SAME THING (2026-10-13)
+ *
+ * The portfolio half kept the old scrub-the-client-name rule for five
+ * days after the bid half was corrected. Jamar, on the portfolio
+ * guidance: "Naming a client is not an issue, we don't care about that.
+ * We don't want them naming their own companies."
+ *
+ * So the distinction drawn below between the two surfaces was wrong:
+ * the exposure is identical on both, and it was never the client's name.
+ * Both contexts now carry the same rule and the Context type is kept
+ * only because callers pass it.
+ *
+ * WHAT THE TWO CONTEXTS USED TO SAY (2026-10-08)
  *
  * The bid form was given the portfolio's rule and it was the wrong
  * rule. Jamar: "This is also not accurate for the RFP flow. We don't
@@ -142,66 +154,68 @@ export function DepersonalizeNotice({
   return (
     <div className={wrapper}>
       <p className="text-sm font-semibold text-brand-magentaText">
-        Scrub client details before you submit
+        Name your clients. Leave out your own shop.
       </p>
       <p className="mt-1 text-sm text-ink-muted">
-        Work samples that name a client get sent back. This is the most common
-        reason a piece does not make it onto your profile.
+        Past clients are the evidence that wins work, so use them. What gets a
+        piece sent back is presenting yourself as a company, or giving a reader
+        a way to reach you directly.
       </p>
 
-      <p className="mt-3 text-sm text-ink-muted">Keep the result. Lose the name.</p>
-      <div className="mt-2 space-y-1 rounded-lg bg-[var(--surface)] p-3 text-xs">
+      <div className="mt-3 space-y-1 rounded-lg bg-[var(--surface)] p-3 text-xs">
         <p className="text-ink-faint">
           <span className="font-semibold uppercase tracking-wider">
             Sent back:
           </span>{" "}
-          &ldquo;Rebuilt checkout for Acme Foods, cut cart abandonment
-          22%.&rdquo;
+          &ldquo;Rebuilt checkout for Acme Foods. My studio takes retainers,
+          reach me at me@mystudio.com.&rdquo;
         </p>
         <p className="text-ink-muted">
           <span className="font-semibold uppercase tracking-wider text-brand-magentaText">
             Works:
           </span>{" "}
-          &ldquo;Rebuilt checkout for a regional grocery chain, cut cart
-          abandonment 22%.&rdquo;
+          &ldquo;Rebuilt checkout for Acme Foods, cut cart abandonment
+          22%.&rdquo;
         </p>
       </div>
 
       <details className="mt-3 text-sm">
         <summary className="cursor-pointer text-ink-muted hover:text-brand-magentaText">
-          What counts as a client detail
+          What gets a piece sent back
         </summary>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-muted">
           <li>
-            Client and brand names, including in the filename and inside the
-            document, not only in the description you type here.
+            Your own company, agency or studio name, presented as the party
+            doing the work.
           </li>
           <li>
-            Logos, letterheads and watermarks on slides, mockups and
-            screenshots.
+            Your email, phone, calendar link, DMs or any other direct line to
+            you, including inside a file and in its filename.
           </li>
           <li>
-            Names, emails and phone numbers for anyone at the client, and for
-            you.
+            Links to your own site that sell rather than show. A case study or
+            project page is fine when it carries no services pitch, no rates
+            and no contact details. A booking page, rate card, shop or contact
+            page is not.
           </li>
           <li>
-            Live links to client sites, portals, staging environments or shared
-            drives.
+            Offers of work outside the cooperative: retainers, discounts for
+            going direct, anything you would do on the side.
           </li>
           <li>
-            Figures the client would not publish themselves: budgets, headcount,
-            roadmaps, contract terms.
+            Live links into a client&rsquo;s portal, staging environment or
+            shared drive, and figures that client would not publish themselves.
           </li>
         </ul>
         <p className="mt-3 text-sm text-ink-muted">
-          Percentages, timelines, your role, the craft and the outcome all stay.
-          Those are what win the next engagement.
+          Client names, logos in your samples, percentages, timelines, your role
+          and the outcome all stay. Lead with them.
         </p>
         <p className="mt-3 text-sm text-ink-faint">
-          A public profile is read without an admin in between. Future Modern
-          places the work and holds the client relationship, so a portfolio that
-          names clients is also a list of people to approach around the
-          cooperative.
+          Future Modern holds the client relationship and carries the contract,
+          the collection risk and the guarantee. A profile that hands a reader a
+          way around that is taking the upside off the people who took the risk,
+          which is why this one is firm.
         </p>
       </details>
     </div>

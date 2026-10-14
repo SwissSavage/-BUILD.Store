@@ -734,3 +734,189 @@ export async function suggestClients(
     .filter((r) => r.displayName.toLowerCase().includes(q))
     .slice(0, 10);
 }
+
+export type UpdateEngagementResult =
+  | { ok: true; reAccepted: boolean; message: string }
+  | { ok: false; error: string };
+
+/**
+ * Change an engagement after it has been sent.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-14)
+ *
+ * Once composed, the only way to change a term was for the Builder to
+ * decline it. That is wrong for the most common case in this motion,
+ * and the first live engagement proved it: the ceiling is deliberately
+ * left blank until the Builder says how long the work takes, so filling
+ * that number in is the normal next step, not an exception. Having the
+ * only route be "decline and resend" means the record either stays
+ * wrong or the Builder has to reject terms they already agreed to.
+ *
+ * WHY TERMS AND MATERIAL ARE TREATED DIFFERENTLY
+ *
+ * Reference links and attachments are supporting material. The second
+ * document on the live engagement arrived after it was sent, and adding
+ * it changes nothing about what was agreed. Those edit freely.
+ *
+ * Rate, payout, basis and ceiling are the agreement. Changing one after
+ * acceptance means the Builder is now on terms they never saw, and a
+ * ceiling in particular only ever constrains them. So a term change on
+ * an accepted engagement sends it back for re-acceptance rather than
+ * applying silently. The record always reflects something the Builder
+ * actually agreed to, which is the entire point of the review gate.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function updateEngagement(
+  _prev: UpdateEngagementResult | null,
+  formData: FormData,
+): Promise<UpdateEngagementResult> {
+  const admin = await requireAdmin();
+  const projectId = String(formData.get("projectId") ?? "").trim();
+
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+  if (!project) return { ok: false, error: "That engagement no longer exists." };
+  if (!project.engagementState) {
+    return { ok: false, error: "That project did not come through the direct motion." };
+  }
+  if (project.engagementState === "declined") {
+    return {
+      ok: false,
+      error: "This one was sent back. Compose a new engagement rather than editing a declined record.",
+    };
+  }
+
+  const title = String(formData.get("title") ?? "").trim();
+  const scope = String(formData.get("engagementScope") ?? "").trim();
+  const basis = String(formData.get("engagementBasis") ?? "hourly").trim();
+  const clientRateRaw = String(formData.get("engagementRate") ?? "").trim();
+  const ceilingRaw = String(formData.get("engagementCeilingHours") ?? "").trim();
+
+  if (title.length < 3) {
+    return { ok: false, error: "Give the engagement a name the client would recognise." };
+  }
+  if (scope.length < 10) {
+    return { ok: false, error: "Write a line or two of scope." };
+  }
+  if (basis !== "hourly" && basis !== "fixed") {
+    return { ok: false, error: "Pick hourly or fixed." };
+  }
+
+  const clientRate = Number(clientRateRaw.replace(/[$,\s]/g, ""));
+  if (!Number.isFinite(clientRate) || clientRate <= 0) {
+    return { ok: false, error: "Enter what the client pays." };
+  }
+  const ceiling = Number(ceilingRaw.replace(/[,\s]/g, ""));
+  const hasCeiling = Number.isFinite(ceiling) && ceiling > 0;
+
+  // The Builder's number follows the client rate on the same 85/15
+  // split the composer applies, so the two cannot drift apart.
+  const builderPayout = Math.round(clientRate * 0.85);
+
+  const { links, error: linkError } = readEngagementLinks(formData);
+  if (linkError) return { ok: false, error: linkError };
+  const { files, error: fileError } = await readEngagementFiles(formData);
+  if (fileError) return { ok: false, error: fileError };
+
+  // Files are replaced wholesale only when the form actually carried
+  // some. An edit that touches the ceiling must not silently drop the
+  // attachments that were already there.
+  const keepExistingFiles = files.length === 0;
+
+  const before = {
+    basis: project.engagementBasis,
+    clientRate: project.engagementRate,
+    ceilingHours: project.engagementCeilingHours,
+    payout: project.talentBaseAmount,
+    scope: project.engagementScope,
+  };
+
+  const termsChanged =
+    basis !== project.engagementBasis ||
+    String(clientRate) !== String(Number(project.engagementRate ?? 0)) ||
+    String(hasCeiling ? ceiling : "") !==
+      String(project.engagementCeilingHours ? Number(project.engagementCeilingHours) : "") ||
+    scope !== (project.engagementScope ?? "");
+
+  const wasAccepted = project.engagementState === "accepted";
+  const needsReAcceptance = wasAccepted && termsChanged;
+
+  const now = new Date().toISOString();
+  await db
+    .update(projects)
+    .set({
+      title,
+      description: scope,
+      engagementScope: scope,
+      engagementBasis: basis,
+      engagementRate: String(clientRate),
+      engagementCeilingHours: hasCeiling ? String(ceiling) : null,
+      talentBaseAmount: String(builderPayout),
+      engagementLinks: links,
+      ...(keepExistingFiles ? {} : { engagementAttachments: files }),
+      ...(needsReAcceptance
+        ? {
+            engagementState: "awaiting_talent" as const,
+            engagementSentAt: now,
+            engagementDecidedAt: null,
+            status: "open" as const,
+          }
+        : {}),
+      updatedAt: now,
+    } as Partial<typeof projects.$inferInsert>)
+    .where(eq(projects.id, projectId));
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "project.member_assigned",
+    resourceKind: "project",
+    resourceId: projectId,
+    before,
+    after: {
+      basis,
+      clientRate,
+      ceilingHours: hasCeiling ? ceiling : null,
+      payout: builderPayout,
+      scope,
+      termsChanged,
+      sentBackForReAcceptance: needsReAcceptance,
+    },
+  });
+
+  // The Builder hears about it whenever the terms moved. Silent edits
+  // to an agreement somebody else is working under are how trust goes.
+  const talentId = (project.assignedMemberIds ?? [])[0] as string | undefined;
+  if (talentId && termsChanged) {
+    await notify({
+      userId: talentId,
+      kind: needsReAcceptance ? "engagement_terms_review" : "engagement_terms_accepted",
+      title: needsReAcceptance
+        ? `Terms changed — ${title}`
+        : `Updated — ${title}`,
+      body: needsReAcceptance
+        ? "The terms moved after you accepted, so it needs your confirmation again."
+        : "The engagement was updated before you responded. Have another look.",
+      href: `/projects/${projectId}/review`,
+    });
+  }
+
+  revalidatePath("/admin/contracts");
+  revalidatePath("/admin/projects");
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}/review`);
+
+  return {
+    ok: true,
+    reAccepted: needsReAcceptance,
+    message: needsReAcceptance
+      ? "Saved. The terms changed after acceptance, so it has gone back to the Builder to confirm."
+      : termsChanged
+        ? "Saved. The Builder has been notified."
+        : "Saved.",
+  };
+}

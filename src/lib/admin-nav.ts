@@ -139,6 +139,7 @@ export const ADMIN_DETAIL_ROUTES: string[] = [
   "/admin/contracts/[id]/ledger",
   "/admin/contracts/[id]/settle",
   "/admin/contracts/[id]/tracker",
+  "/admin/engagements/[id]/edit",
   "/admin/members/[id]",
   "/admin/members/[id]/tags",
   "/admin/mvp/[userId]",

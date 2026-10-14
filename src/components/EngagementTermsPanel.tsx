@@ -197,6 +197,12 @@ export function EngagementTermsPanel({
               No HubSpot deal linked. Create it →
             </Link>
           )}
+          <Link
+            href={`/admin/engagements/${project.id}/edit`}
+            className="text-brand-magentaText hover:underline"
+          >
+            Edit terms →
+          </Link>
           {state === "awaiting_talent" && (
             <Link
               href={`/projects/${project.id}/review`}

@@ -177,15 +177,15 @@ export default async function ProjectDetailPage({
         }
       />
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+      <div className="mt-8 grid min-w-0 gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
         <BriefTableOfContents
           targetId="project-brief"
           headings={briefHeadings(project.description)}
         />
-        <div className="space-y-6">
-          <section id="project-brief">
+        <div className="min-w-0 space-y-6">
+          <section id="project-brief" className="min-w-0">
             {/* Editorial reading surface, deliberately quieter than the action cards in the right rail. */}
-            <Card className="p-8">
+            <Card className="min-w-0 p-5 sm:p-8">
               <Brief text={project.description} title={project.title} />
               <AdminObjectControls
                 editHref={`/admin/projects/${project.id}/edit`}
@@ -272,7 +272,7 @@ export default async function ProjectDetailPage({
         </div>
 
         {/* Desktop rail: project controls remain reachable alongside the brief. */}
-        <aside className="h-fit space-y-4 lg:sticky lg:top-24 lg:self-start">
+        <aside className="h-fit min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
           <Card>
             <CardTitle>
               <span className="flex items-center gap-2">

@@ -363,7 +363,7 @@ function BriefBody({ blocks }: { blocks: BriefBlock[] }) {
                     aria-hidden
                     className="fm-btn-primary mt-[7px] h-1 w-1 shrink-0 rounded-full"
                   />
-                  <span>{renderInline(item)}</span>
+                  <span className="min-w-0 break-words">{renderInline(item)}</span>
                 </li>
               ))}
             </ul>
@@ -438,7 +438,7 @@ export function Brief({
   if (richText) {
     return (
       <div
-        className={`${className ?? ""} text-sm leading-relaxed text-ink-muted [&_h2]:mt-8 [&_h2:first-child]:mt-0 [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-ink [&_h3]:mt-6 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-wider [&_h3]:text-ink [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:space-y-1.5 [&_ol]:pl-5 [&_blockquote]:my-5 [&_blockquote]:border-l-2 [&_blockquote]:border-brand-magenta [&_blockquote]:pl-4 [&_blockquote]:italic [&_a]:text-brand-magentaText [&_a]:underline`}
+        className={`${className ?? ""} min-w-0 break-words text-sm leading-relaxed text-ink-muted [&_h2]:mt-8 [&_h2:first-child]:mt-0 [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-ink [&_h3]:mt-6 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-wider [&_h3]:text-ink [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:space-y-1.5 [&_ol]:pl-5 [&_blockquote]:my-5 [&_blockquote]:border-l-2 [&_blockquote]:border-brand-magenta [&_blockquote]:pl-4 [&_blockquote]:italic [&_a]:text-brand-magentaText [&_a]:underline`}
       >
         {renderToReactElement({
           content: richText,
@@ -453,14 +453,14 @@ export function Brief({
 
   if (!hasHeadings) {
     return (
-      <div className={className}>
+      <div className={`${className ?? ""} min-w-0 break-words`}>
         <BriefBody blocks={blocks} />
       </div>
     );
   }
 
   return (
-    <div className={className}>
+    <div className={`${className ?? ""} min-w-0 break-words`}>
       {sections.map((section, i) => {
         if (!section.heading) {
           // Lead-in prose above the first heading. Always visible —

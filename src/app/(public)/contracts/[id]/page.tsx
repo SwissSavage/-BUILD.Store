@@ -153,15 +153,15 @@ export default async function ContractDetailPage({
           title={project.title}
           postedAt={project.rfpApprovedAt}
         />
-        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+        <div className="mt-8 grid min-w-0 gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
           <BriefTableOfContents
             targetId="contract-brief"
             headings={briefHeadings(project.description)}
           />
-          <div>
-            <section id="contract-brief">
+          <div className="min-w-0">
+            <section id="contract-brief" className="min-w-0">
               {/* Editorial reading surface, deliberately quieter than the action cards in the right rail. */}
-              <Card className="p-8">
+              <Card className="min-w-0 p-5 sm:p-8">
                 <Brief text={project.description} title={project.title} />
                 <AdminObjectControls
                   editHref={`/admin/projects/${project.id}/edit`}
@@ -172,7 +172,7 @@ export default async function ContractDetailPage({
 
           </div>
           {/* Desktop rail: opportunity details stay visible while a long RFP is read. */}
-          <aside className="h-fit space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <aside className="h-fit min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
             <Card className="flex min-h-56 flex-col">
               <CardTitle>
                 <span className="flex items-center gap-2">
@@ -231,9 +231,9 @@ export default async function ContractDetailPage({
           </aside>
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
+        <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
           <div className="hidden lg:block" aria-hidden="true" />
-          <section id="your-proposal" className="scroll-mt-24">
+          <section id="your-proposal" className="min-w-0 scroll-mt-24">
             {existingProposal?.clientPresentedAt ? (
               <Card>
                 <p className="text-lg font-medium">Proposal sent to client</p>

@@ -22,6 +22,7 @@ import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import { notify } from "@/lib/writers/notifications";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 
@@ -142,17 +143,16 @@ export default async function NewInitiativePage() {
         <form action={createInitiative} className="mt-4 space-y-5">
           <Field name="title" label="Title" required />
 
-          <label className="block">
+          <div className="block">
             <span className="text-xs uppercase tracking-wider text-ink-muted">
               What needs to happen
             </span>
-            <textarea
+            <RichTextEditor
               name="description"
-              rows={5}
+              initialValue=""
               required
-              className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
             />
-          </label>
+          </div>
 
           <label className="block">
             <span className="text-xs uppercase tracking-wider text-ink-muted">Pillar</span>

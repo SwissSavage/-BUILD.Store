@@ -10,6 +10,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth-stub";
 import { postContract } from "@/lib/contract-post-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { RichTextEditor } from "@/components/RichTextEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -51,16 +52,14 @@ export default async function AdminNewContractPage() {
             />
           </label>
 
-          <label className={labelClass}>
-            Description
-            <textarea
+          <div className={labelClass}>
+            <span>Description</span>
+            <RichTextEditor
               name="description"
-              rows={6}
+              initialValue=""
               required
-              placeholder="Scope, deliverables, timeline. This is what people decide to bid on."
-              className={inputClass}
             />
-          </label>
+          </div>
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className={labelClass}>

@@ -16,6 +16,7 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { createHubspotLead } from "@/lib/crm-stub";
 import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow } from "@/components/Card";
+import { RichTextEditor } from "@/components/RichTextEditor";
 
 // Task #29 — attachment caps enforced here + at the schema comment.
 // Server-side validation is authoritative; client-side accept="" is
@@ -171,17 +172,16 @@ export default async function NewContractPage() {
 
           <Field name="title" label="Title" required />
 
-          <label className="block">
+          <div className="block">
             <span className="text-xs uppercase tracking-wider text-ink-muted">
               Description
             </span>
-            <textarea
+            <RichTextEditor
               name="description"
-              rows={5}
+              initialValue=""
               required
-              className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
             />
-          </label>
+          </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block">

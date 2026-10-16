@@ -21,7 +21,6 @@
  */
 "use server";
 
-import { assertCronCaller } from "@/lib/cron-guard";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, isNotNull, lt, sql } from "drizzle-orm";
@@ -246,66 +245,4 @@ export async function purgeProject(formData: FormData) {
   });
 
   revalidateProjectSurfaces();
-}
-
-/**
- * Clear anything past the retention window. Called by the daily cron.
- *
- * Returns a count rather than throwing on a single bad row, so one
- * project with an unexpected reference doesn't stop the sweep.
- */
-export async function purgeExpiredProjects(
-  cronSecret?: string,
-): Promise<{
- purged: number }> {
-  // A sweep is not something a browser gets to run. See cron-guard.ts:
-  // this lives in a "use server" module, so it is a public POST
-  // endpoint, and the route's CRON_SECRET check protected the route
-  // rather than the work behind it.
-  assertCronCaller(cronSecret);
-
-  const cutoff = new Date(
-    Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000,
-  ).toISOString();
-
-  const expired = await db
-    .select({ id: projectsTable.id, title: projectsTable.title })
-    .from(projectsTable)
-    .where(
-      and(
-        isNotNull(projectsTable.deletedAt),
-        lt(projectsTable.deletedAt, cutoff),
-      ),
-    );
-
-  let purged = 0;
-  for (const row of expired) {
-    try {
-      await logAuditEvent({
-        actorUserId: null,
-        actorRoleSnapshot: "system",
-        action: "project.purged",
-        resourceKind: "project",
-        resourceId: row.id,
-        before: { title: row.title },
-        after: null,
-        reason: `Auto-purged after ${RETENTION_DAYS} days in trash.`,
-      });
-      await db.transaction(async (tx) => {
-        await tx
-          .delete(projectApplications)
-          .where(eq(projectApplications.projectId, row.id));
-        await tx
-          .delete(projectMilestones)
-          .where(eq(projectMilestones.projectId, row.id));
-        await tx.delete(projectsTable).where(eq(projectsTable.id, row.id));
-      });
-      purged += 1;
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(`[trash] purge failed for ${row.id}`, err);
-    }
-  }
-
-  return { purged };
 }

@@ -29,11 +29,11 @@ import { NextResponse } from "next/server";
 import {
   runMilestoneSweep,
   runWeeklyProjectRollup,
-} from "@/lib/milestone-actions";
+} from "@/lib/milestone-core";
 import { runAgreementRenewalSweep } from "@/lib/agreement-renewal-actions";
 import { runFraudScan } from "@/lib/fraud-scan";
-import { runDisclosureSweep } from "@/lib/disclosure-review-actions";
-import { purgeExpiredProjects } from "@/lib/project-trash-actions";
+import { runDisclosureSweep } from "@/lib/disclosure-sweep";
+import { purgeExpiredProjects } from "@/lib/project-retention-sweep";
 import { recomputeAllMvpScores } from "@/lib/writers/mvp-score";
 
 export const runtime = "nodejs";
@@ -73,8 +73,8 @@ export async function GET(request: Request) {
   // logging secrets or notification content.
   console.info("[cron] sweep-milestones started", { ranAt });
 
-  const sweep = await runMilestoneSweep(secret);
-  const rollup = await runWeeklyProjectRollup(secret);
+  const sweep = await runMilestoneSweep();
+  const rollup = await runWeeklyProjectRollup();
   // Task #55 — same daily cron also runs the agreement renewal
   // sweep. Escalating 60/30/7/day-of pings fire on the natural
   // pre-renewal cadence; bucket transitions re-fire even if a
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
   // must not take down trash retention or the MVP recompute below.
   let disclosure: { scanned: number; hidden: number } | { error: string };
   try {
-    disclosure = await runDisclosureSweep(secret);
+    disclosure = await runDisclosureSweep();
   } catch (err) {
     disclosure = { error: err instanceof Error ? err.message : String(err) };
     // eslint-disable-next-line no-console
@@ -103,7 +103,7 @@ export async function GET(request: Request) {
 
   // Trash retention — clears projects past the restore window along
   // with their applications and milestones.
-  const trash = await purgeExpiredProjects(secret);
+  const trash = await purgeExpiredProjects();
   // MVP recompute. Scores already update the moment a peer review
   // lands, so this exists for the time-dependent half of the formula:
   // compliance penalties expire on a 90-day clock, and without a

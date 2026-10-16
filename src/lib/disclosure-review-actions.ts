@@ -33,7 +33,6 @@
  */
 "use server";
 
-import { assertCronCaller } from "@/lib/cron-guard";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
@@ -222,81 +221,3 @@ export async function hideProfilePendingFix(formData: FormData) {
  * no second scheduled task to configure in Dokploy.
  * ─────────────────────────────────────────────────────────────
  */
-const AUTO_HIDE_CODES = new Set(["email", "phone", "booking_link", "external_url"]);
-
-export async function runDisclosureSweep(
-  cronSecret?: string,
-): Promise<{
-
-  scanned: number;
-  hidden: number;
-}> {
-  // A sweep is not something a browser gets to run. See cron-guard.ts:
-  // this lives in a "use server" module, so it is a public POST
-  // endpoint, and the route's CRON_SECRET check protected the route
-  // rather than the work behind it.
-  assertCronCaller(cronSecret);
-
-  const { users: roster } = await getAllUsers();
-  const live = roster.filter((u) => u.profilePublic && !u.suspendedAt);
-
-  const reviews = await db.select().from(profileDisclosureReviews);
-  const cleared = new Map(
-    reviews.map((r) => [`${r.userId}:${r.field}`, r.textHash]),
-  );
-
-  let hidden = 0;
-  for (const user of live) {
-    const fields: { field: DisclosureField; text: string | null | undefined }[] = [
-      { field: "bio", text: user.bio },
-      { field: "tagline", text: user.tagline },
-    ];
-
-    const offending = fields.filter(({ field, text }) => {
-      if (cleared.get(`${user.id}:${field}`) === hashDisclosureText(text)) {
-        return false;
-      }
-      return findSelfDisclosure(text, user).some((f) =>
-        AUTO_HIDE_CODES.has(f.code),
-      );
-    });
-    if (offending.length === 0) continue;
-
-    // Guarded on still being public, so two overlapping cron runs
-    // cannot both notify the same member.
-    const claimed = await db
-      .update(users)
-      .set({ profilePublic: false, updatedAt: new Date().toISOString() })
-      .where(and(eq(users.id, user.id), eq(users.profilePublic, true)))
-      .returning({ id: users.id });
-    if (claimed.length === 0) continue;
-
-    hidden += 1;
-
-    await notify({
-      userId: user.id,
-      kind: "profile_hidden_pending_fix",
-      title: "Your profile is hidden for now",
-      body: `Your public profile carries a direct way to contact you, in your ${offending
-        .map((o) => o.field)
-        .join(" and ")}. Clients reach talent through the cooperative, so the profile is out of discovery until that text changes. Edit it and it goes back up.`,
-      href: "/profile/edit/identity",
-    });
-
-    await logAuditEvent({
-      actorUserId: user.id,
-      actorRoleSnapshot: snapshotActorRole(null),
-      action: "profile.hidden_pending_fix",
-      resourceKind: "user",
-      resourceId: user.id,
-      before: { profilePublic: true },
-      after: {
-        profilePublic: false,
-        by: "daily_sweep",
-        fields: offending.map((o) => o.field),
-      },
-    });
-  }
-
-  return { scanned: live.length, hidden };
-}

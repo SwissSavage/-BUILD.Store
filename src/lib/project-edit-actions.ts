@@ -79,6 +79,18 @@ export async function editProject(formData: FormData) {
     .map((s) => s.trim())
     .filter(Boolean);
 
+  // Owning admins. Only read when the form says it carried the field,
+  // so a surface that does not render AdminOwnerField cannot silently
+  // clear the owners by not submitting them. Present-with-none-checked
+  // is a real choice and does clear them.
+  const ownersSubmitted = formData.get("adminUserIdsPresent") !== null;
+  const adminUserIds = ownersSubmitted
+    ? formData
+        .getAll("adminUserIds")
+        .map((v) => String(v).trim())
+        .filter(Boolean)
+    : before.adminUserIds;
+
   if (!title) throw new Error("Title is required.");
   if (descriptionText.trim().length < 30) {
     throw new Error(
@@ -111,6 +123,7 @@ export async function editProject(formData: FormData) {
       industry: industryRaw as Industry,
       status: statusRaw as ProjectStatus,
       skillsRequired,
+      adminUserIds,
       updatedAt: new Date().toISOString(),
     })
     .where(eq(projects.id, id));
@@ -127,8 +140,16 @@ export async function editProject(formData: FormData) {
       industry: before.industry,
       skillsRequired: before.skillsRequired,
       featuredImageUrl: before.featuredImageUrl ?? null,
+      adminUserIds: before.adminUserIds,
     },
-    after: { title, status: statusRaw, industry: industryRaw, skillsRequired, featuredImageUrl: featuredImageUrl || null },
+    after: {
+      title,
+      status: statusRaw,
+      industry: industryRaw,
+      skillsRequired,
+      featuredImageUrl: featuredImageUrl || null,
+      adminUserIds,
+    },
     reason: "Listing edited by admin.",
   });
 

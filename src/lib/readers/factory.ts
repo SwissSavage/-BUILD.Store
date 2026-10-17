@@ -19,9 +19,65 @@
  * throws, and the caller decides how to degrade.
  * ─────────────────────────────────────────────────────────────
  */
-import { asc, desc, eq, type SQL } from "drizzle-orm";
+import { asc, desc, eq, getTableColumns, type SQL } from "drizzle-orm";
 import type { PgTable, PgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
+
+/**
+ * Postgres returns `numeric` as a STRING, and Drizzle keeps it that way
+ * (columnType PgNumeric, dataType "string"). Every domain type in
+ * types.ts declares these fields as `number`, and the factory casts
+ * `rows as Row[]`, so the cast was lying: `weight` was typed number and
+ * was "0.500" at runtime.
+ *
+ * Nothing caught it. Not tsc — the cast silences it. Not the guard
+ * scripts — it is a runtime shape, not a call graph. It only surfaced
+ * when a page did arithmetic instead of coercing defensively:
+ *
+ *   /admin/contracts/[id]/attribution — 2026-10-16
+ *   entries.reduce((sum, e) => sum + e.weight, 0)  →  "00.500"
+ *   totalWeight.toFixed(2)  →  TypeError, route 500
+ *
+ * The page rendered fine with zero entries and broke the moment the
+ * first one existed, so logging an entry appeared to be what failed.
+ * The insert had already succeeded.
+ *
+ * Coercing here rather than at each call site, because there are 40+
+ * numeric columns and the alternative is remembering Number() forever
+ * at every read. Call sites that already wrap in Number() keep working
+ * — Number(0.5) is a no-op.
+ *
+ * PRECISION CEILING: a JS number carries ~15-16 significant digits.
+ * numeric(18,8) token columns can in principle exceed that, which
+ * would need a balance above ~90 million tokens to reach. Money
+ * columns are numeric(12,2) and nowhere near it. If token balances
+ * ever get that large, those columns need a decimal type end to end,
+ * not a wider cast here.
+ */
+function numericColumnNames(table: PgTable): string[] {
+  const out: string[] = [];
+  for (const [prop, col] of Object.entries(getTableColumns(table))) {
+    if ((col as PgColumn).columnType === "PgNumeric") out.push(prop);
+  }
+  return out;
+}
+
+/** Convert this table's numeric columns from string to number, in place. */
+function coerceNumerics(rows: unknown[], fields: string[]): unknown[] {
+  if (fields.length === 0) return rows;
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    for (const f of fields) {
+      const v = r[f];
+      // null stays null: a nullable numeric means "not set", and 0 is
+      // a different claim than nothing. Only strings are converted,
+      // so this is idempotent.
+      if (typeof v === "string") r[f] = Number(v);
+    }
+  }
+  return rows;
+}
 
 export interface ReaderOptions<T extends PgTable> {
   /** Column to order by. Omit for unordered reads. */
@@ -60,6 +116,8 @@ export function makeReader<Row>(
   options: ReaderOptions<PgTable> = {},
 ): TableReader<Row> {
   const { orderBy, direction = "desc", idColumn } = options;
+  // Computed once per reader, not per query.
+  const numericFields = numericColumnNames(table);
 
   const applyOrder = <Q extends { orderBy: (...args: SQL[]) => unknown }>(
     query: Q,
@@ -74,7 +132,7 @@ export function makeReader<Row>(
       const rows = await (applyOrder(
         base as unknown as { orderBy: (...a: SQL[]) => unknown },
       ) as Promise<unknown[]>);
-      return rows as Row[];
+      return coerceNumerics(rows, numericFields) as Row[];
     },
 
     async where(predicate: SQL): Promise<Row[]> {
@@ -82,7 +140,7 @@ export function makeReader<Row>(
       const rows = await (applyOrder(
         base as unknown as { orderBy: (...a: SQL[]) => unknown },
       ) as Promise<unknown[]>);
-      return rows as Row[];
+      return coerceNumerics(rows, numericFields) as Row[];
     },
 
     async byId(id: string): Promise<Row | null> {
@@ -94,7 +152,7 @@ export function makeReader<Row>(
         .from(table)
         .where(eq(idColumn, id))
         .limit(1)) as unknown[];
-      return (rows[0] as Row) ?? null;
+      return (coerceNumerics(rows, numericFields)[0] as Row) ?? null;
     },
 
     async one(predicate: SQL): Promise<Row | null> {
@@ -103,7 +161,7 @@ export function makeReader<Row>(
         .from(table)
         .where(predicate)
         .limit(1)) as unknown[];
-      return (rows[0] as Row) ?? null;
+      return (coerceNumerics(rows, numericFields)[0] as Row) ?? null;
     },
 
     async count(predicate?: SQL): Promise<number> {

@@ -13,11 +13,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth-stub";
+import { getAllUsers } from "@/lib/readers/users";
 import { getProjectById } from "@/lib/readers/projects";
 import { editProject } from "@/lib/project-edit-actions";
 import { trashProject } from "@/lib/project-trash-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { RichTextEditor } from "@/components/RichTextEditor";
+import { AdminOwnerField } from "@/components/AdminOwnerField";
 import { SubmitButton } from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
@@ -31,10 +33,13 @@ export default async function EditProjectPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const { id } = await params;
   const project = await getProjectById(id);
   if (!project) notFound();
+
+  const { users: roster } = await getAllUsers();
+  const admins = roster.filter((u) => u.isAdmin && !u.suspendedAt);
 
   const backHref =
     project.kind === "contract" ? `/contracts/${id}` : `/projects/${id}`;
@@ -126,6 +131,12 @@ export default async function EditProjectPage({
               className={inputClass}
             />
           </label>
+
+          <AdminOwnerField
+            admins={admins}
+            selected={project.adminUserIds ?? []}
+            currentAdminId={admin.id}
+          />
 
           <SubmitButton
             pendingLabel="Saving…"

@@ -22,6 +22,8 @@ import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { updateHubspotDealStage } from "@/lib/crm-stub";
 import { formatBudget } from "@/lib/budget";
+import { getAllUsers } from "@/lib/readers/users";
+import { AdminOwnerField } from "@/components/AdminOwnerField";
 
 const ALL_INDUSTRIES: Industry[] = ["stem", "creative-media", "professional-services"];
 
@@ -35,6 +37,13 @@ async function approveRfp(formData: FormData) {
   const budget = String(formData.get("budget") ?? "").trim();
   const industry = String(formData.get("industry") ?? "") as Industry;
   const adminNote = String(formData.get("adminNote") ?? "").trim() || null;
+  // Who owns this once it is live. Approval is the moment the work
+  // becomes real, so it is the moment to say whose it is — before
+  // today nothing ever set this and every approved RFP ran ownerless.
+  const adminUserIds = formData
+    .getAll("adminUserIds")
+    .map((v) => String(v).trim())
+    .filter(Boolean);
 
   if (!id) return;
 
@@ -42,6 +51,7 @@ async function approveRfp(formData: FormData) {
   const patch: Record<string, unknown> = {
     rfpAdminNote: adminNote,
     rfpApprovedAt: now,
+    adminUserIds,
     updatedAt: now,
   };
   if (title) patch.title = title;
@@ -114,7 +124,9 @@ async function rejectRfp(formData: FormData) {
 }
 
 export default async function AdminRfpQueuePage() {
-  await requireAdmin();
+  const viewer = await requireAdmin();
+  const { users: roster } = await getAllUsers();
+  const adminRoster = roster.filter((u) => u.isAdmin && !u.suspendedAt);
 
   const queue = await db
     .select()
@@ -279,6 +291,13 @@ export default async function AdminRfpQueuePage() {
                         className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                       />
                     </label>
+
+                    <AdminOwnerField
+                      admins={adminRoster}
+                      selected={p.adminUserIds ?? []}
+                      currentAdminId={viewer.id}
+                      hint="Whoever is on this gets the admin share at settlement, can open reference files, and hears about overdue milestones. Usually you."
+                    />
 
                     <div className="flex flex-wrap gap-3 pt-2">
                       <button

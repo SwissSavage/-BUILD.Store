@@ -307,12 +307,11 @@ export default async function PublicProfilePage({
                   {memberLabel(user)}
                 </p>
               )}
-              <p className="mt-1 font-display text-lg font-semibold leading-tight text-white">
-                {displayName}
-              </p>
-              <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/70">
-                {CARD_TIER_LABEL[cardTier]}
-              </p>
+              {mvpSnapshot && !mvpSnapshot.isProvisional && (
+                <p className="mt-1 text-[10px] uppercase tracking-wider text-white/70">
+                  Current standing · {CARD_TIER_LABEL[cardTier]}
+                </p>
+              )}
             </div>
           </div>
         </TradingCard3D>
@@ -368,16 +367,21 @@ export default async function PublicProfilePage({
             <StructuredText text={user.bio} className="text-ink-muted" />
           )}
           {user.skills.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {user.skills.map((s) => (
-                <span
-                  key={s}
-                  className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
+            <section className="mt-4" aria-labelledby="profile-skills">
+              <h2 id="profile-skills" className="sr-only">
+                Skills
+              </h2>
+              <ul className="flex flex-wrap gap-1.5">
+                {user.skills.map((s) => (
+                  <li
+                    key={s}
+                    className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted"
+                  >
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
           <div className="mt-5">
             <ProfileShareButton handle={user.handle} />
@@ -662,11 +666,23 @@ export default async function PublicProfilePage({
             <EditPencil href="/profile/portfolio" label="Add or manage work" />
           )}
         </div>
-        <p className="mt-1 text-sm text-ink-muted">
-          {items.length === 0
-            ? `No published work from ${publicName(user)} yet.`
-            : `${items.length} published ${items.length === 1 ? "piece" : "pieces"}.`}
-        </p>
+        {items.length === 0 ? (
+          <div className="mt-1 text-sm text-ink-muted">
+            <p>No published work from {publicName(user)} yet.</p>
+            {owner && (
+              <Link
+                href="/profile/portfolio"
+                className="mt-3 inline-flex rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-brand-magenta hover:text-brand-magentaText"
+              >
+                Add work
+              </Link>
+            )}
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-ink-muted">
+            {items.length} published {items.length === 1 ? "piece" : "pieces"}.
+          </p>
+        )}
 
         {items.length > 0 && (
           <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">

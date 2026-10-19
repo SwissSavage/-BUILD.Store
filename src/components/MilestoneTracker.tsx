@@ -21,10 +21,36 @@ const STATUS_COLOR: Record<MilestoneStatus, string> = {
   completed: "#007048",
 };
 
+/**
+ * Month and day, plus the year whenever it is not this year.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-19)
+ *
+ * Jamar, on a milestone reading "Overdue by 730 days (Oct 19)" on
+ * October 19th: "something is wrong with the timing system on the
+ * site... this is a false report."
+ *
+ * The arithmetic was right and the date was lying. 730 days is exactly
+ * two years, so the milestone was due 19 October 2024 — but this
+ * formatter printed month and day only, so a date two years gone
+ * rendered as today's date sitting next to a two-year overdue count.
+ * The two halves of the same sentence contradicted each other, and the
+ * believable one looked wrong.
+ *
+ * Omitting the year is fine for dates in the current year and actively
+ * misleading for any other, which is precisely the case where being
+ * overdue matters. The year appears only when it carries information,
+ * so the common case stays short.
+ * ─────────────────────────────────────────────────────────────
+ */
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  const d = new Date(iso);
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
   });
 }
 

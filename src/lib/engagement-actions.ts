@@ -55,6 +55,7 @@ import { clients, projects } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { getUserById } from "@/lib/readers/users";
 import {
+  getHubspotDeal,
   createHubspotEngagementDeal,
   getHubspotCompany,
 } from "@/lib/crm-stub";
@@ -64,6 +65,7 @@ import { sendTransactionalEmail } from "@/lib/email";
 import { suggestedClientHourlyRate } from "@/lib/quote-pricing";
 import {
   parseHubspotCompanyId,
+  parseHubspotDealId,
   readEngagementFiles,
   readEngagementLinks,
   type EngagementFile,
@@ -688,6 +690,114 @@ export async function createMissingEngagementDeal(
   revalidatePath("/admin/contracts");
   revalidatePath(`/projects/${projectId}`);
   return { ok: true, message: `Deal ${dealId} created and linked.` };
+}
+
+
+/**
+ * Attach a deal that already exists in HubSpot.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-19)
+ *
+ * Jamar, looking at the repair surface: "I made a deal for this one in
+ * Hubspot, but it's asking me to create one instead."
+ *
+ * Deal creation at acceptance is best-effort by design — a CRM outage
+ * must not stop agreed work from starting — and the first engagement
+ * found the cost of that: no deal, so he made one by hand. The repair
+ * surface then offered exactly one action, "Create the deal", which
+ * would have produced a second one for the same work and split the
+ * revenue across two records in the CRM.
+ *
+ * WHY THE ID IS VERIFIED AND NOT JUST STORED
+ *
+ * A pasted id is a typed string, and a wrong one fails silently: the
+ * engagement reads as linked, the link 404s, and nobody notices until
+ * someone goes looking for the revenue. One read confirms the deal is
+ * real and lets the admin see its name before it is written down.
+ *
+ * WHY THE SAME DEAL CANNOT BE ATTACHED TWICE
+ *
+ * Two engagements pointing at one deal quietly merges two pieces of
+ * work in the CRM, and the error shows up as a number that is too big
+ * rather than as a failure. Checked here because nothing downstream
+ * would catch it.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function linkExistingEngagementDeal(
+  _prev: { ok: boolean; message: string } | null,
+  formData: FormData,
+): Promise<{ ok: boolean; message: string }> {
+  const admin = await requireAdmin();
+  const projectId = String(formData.get("projectId") ?? "").trim();
+  const pasted = String(formData.get("hubspotDeal") ?? "").trim();
+
+  if (!pasted) {
+    return { ok: false, message: "Paste the HubSpot deal link or its id." };
+  }
+  const dealId = parseHubspotDealId(pasted);
+  if (!dealId) {
+    return {
+      ok: false,
+      message:
+        "No deal id in that. Paste the whole HubSpot URL, or just the number from the end of it.",
+    };
+  }
+
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+  if (!project) return { ok: false, message: "No such engagement." };
+  if (project.hubspotDealId) {
+    return {
+      ok: false,
+      message: `Already linked to deal ${project.hubspotDealId}.`,
+    };
+  }
+
+  // Not on another engagement. See the WHY above: this is the failure
+  // that reads as a plausible number rather than as an error.
+  const [taken] = await db
+    .select({ id: projects.id, title: projects.title })
+    .from(projects)
+    .where(eq(projects.hubspotDealId, dealId))
+    .limit(1);
+  if (taken) {
+    return {
+      ok: false,
+      message: `Deal ${dealId} is already on "${taken.title}". One deal per engagement.`,
+    };
+  }
+
+  const deal = await getHubspotDeal(dealId);
+  if (!deal) {
+    return {
+      ok: false,
+      message: `HubSpot has no deal with id ${dealId}, or the token cannot read it.`,
+    };
+  }
+
+  await db
+    .update(projects)
+    .set({ hubspotDealId: dealId, updatedAt: new Date().toISOString() })
+    .where(eq(projects.id, projectId));
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "project.member_assigned",
+    resourceKind: "project",
+    resourceId: projectId,
+    before: { hubspotDealId: null },
+    after: { hubspotDealId: dealId, dealName: deal.name, linkedExisting: true },
+    reason: "Existing HubSpot deal attached by an admin.",
+  });
+
+  revalidatePath("/admin/contracts");
+  revalidatePath(`/projects/${projectId}`);
+  return { ok: true, message: `Linked to "${deal.name}".` };
 }
 
 async function notifyComposingAdmins(

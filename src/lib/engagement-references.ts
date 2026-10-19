@@ -183,3 +183,19 @@ export function parseHubspotCompanyId(input: string): string {
   const digitRuns = value.match(/\d{4,}/g);
   return digitRuns ? digitRuns[digitRuns.length - 1] : "";
 }
+
+/**
+ * A HubSpot deal id out of whatever an admin pasted.
+ *
+ * Same shapes as parseHubspotCompanyId above — a bare id, or a record
+ * URL. Deals are object type 0-3, so the live URL looks like
+ *
+ *   https://app.hubspot.com/contacts/39608246/record/0-3/12345678901
+ *
+ * and the id is the last long digit run either way. Kept as its own
+ * function rather than an alias because the two are different kinds of
+ * thing and a future HubSpot URL change may not move them together.
+ */
+export function parseHubspotDealId(input: string): string {
+  return parseHubspotCompanyId(input);
+}

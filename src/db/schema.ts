@@ -421,6 +421,161 @@ export const clientProposals = pgTable("client_proposals", {
  * Per-Builder pricing (Tier 21) lives inside `proposed_builders` jsonb
  * as ProposedBuilder[] entries; scope is a nested jsonb block.
  */
+/**
+ * Statements of Work, and every version of each one.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-19)
+ *
+ * The SOW dispatch has been failing silently since it was written:
+ * approveCooperativeQuote asks Documenso for the CLIENT_SOW template,
+ * DOCUMENSO_TEMPLATE_CLIENT_SOW is empty, the error is caught into a
+ * failures[] array, and approval still reports success. Nobody has
+ * ever been told that an approved quote sent no SOW.
+ *
+ * A Documenso template could not have worked regardless. Jamar: "The
+ * SOW changes with every project." A fillable form with eight
+ * placeholders cannot carry a scope that differs every time. So the
+ * SOW is authored here and rendered to PDF, and the PDF is what goes
+ * to Documenso — per engagement rather than per template.
+ *
+ * NOT A PROJECTION OF A QUOTE. A direct engagement has no quote at
+ * all: existing client, named talent, agreed rate, no RFP. Deriving
+ * the SOW from a quote would have left exactly that motion without
+ * one. quoteId is nullable; projectId is the spine.
+ * ─────────────────────────────────────────────────────────────
+ */
+/**
+ * One row per quote version, mirroring sowVersions.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-19)
+ *
+ * Jamar: "make quotes versioned, no real purpose right now, but as we
+ * scale into paid positions we'll need it for proof of work."
+ *
+ * The cooperativeQuotes row is mutable. Revise a quote and the
+ * revision overwrites what was approved — the approval, the signature
+ * and the statement survive, attached to a row that no longer says
+ * what the client saw. Survivable while the close happens on a call;
+ * not once a Builder's pay depends on which scope was agreed.
+ *
+ * A snapshot rather than a diff chain, because reconstructing the
+ * record from diffs makes it depend on the replay being right. A
+ * snapshot is just true.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const cooperativeQuoteVersions = pgTable("cooperative_quote_versions", {
+  id: text("id").primaryKey(),
+  quoteId: text("quote_id")
+    .notNull()
+    .references(() => cooperativeQuotes.id, { onDelete: "cascade" }),
+  /** 1, 2, 3… Unique per quote. */
+  versionNumber: integer("version_number").notNull(),
+  /**
+   * The client-safe Quote Sheet as sent: per builder, relevance,
+   * strengths, trade-offs, work samples, deliverables, timeline and
+   * final client price. NEVER payout basis, bid ranges or any Future
+   * Modern fee — admin-only on every client surface, and it must not
+   * leak into the record either.
+   */
+  snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull().default({}),
+  scopeSummary: text("scope_summary"),
+  clientTotalLine: text("client_total_line"),
+  pdfBase64: text("pdf_base64"),
+  pdfBytes: integer("pdf_bytes"),
+  documensoId: text("documenso_id"),
+  signatureStatus: text("signature_status", {
+    enum: ["draft", "sent", "viewed", "signed", "declined", "voided"],
+  })
+    .notNull()
+    .default("draft"),
+  /** The signature as given against THIS version, with the statement
+   *  it was given against. The parent keeps a copy of the latest for
+   *  back-compat; this is the one answerable years later. */
+  clientSignatureTyped: text("client_signature_typed"),
+  clientSignatureStatement: text("client_signature_statement"),
+  clientSignatureIp: text("client_signature_ip"),
+  clientSignedAt: timestamp("client_signed_at", { mode: "string", withTimezone: true }),
+  selectedLeadUserId: text("selected_lead_user_id"),
+  sentAt: timestamp("sent_at", { mode: "string", withTimezone: true }),
+  supersededAt: timestamp("superseded_at", { mode: "string", withTimezone: true }),
+  changeNote: text("change_note"),
+  createdByUserId: text("created_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+
+export const sows = pgTable("sows", {
+  id: text("id").primaryKey(),
+  /** The engagement this governs. Every SOW has one. */
+  projectId: text("project_id").notNull().references(() => projects.id),
+  /** Set when the SOW came out of a cooperative quote; null for a
+   *  direct engagement or a from-scratch draft. */
+  quoteId: text("quote_id"),
+  clientRefId: text("client_ref_id"),
+  /** Whichever version is current. */
+  currentVersionId: text("current_version_id"),
+  createdByUserId: text("created_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
+/**
+ * One row per version. A superseded version is never edited and never
+ * deleted, so "what did they actually sign" has an answer years later.
+ *
+ * The PDF is stored rather than regenerated on demand, because a
+ * signed document has to stay byte-identical to what was signed even
+ * after the renderer changes.
+ */
+export const sowVersions = pgTable("sow_versions", {
+  id: text("id").primaryKey(),
+  sowId: text("sow_id").notNull().references(() => sows.id, {
+    onDelete: "cascade",
+  }),
+  /** 1, 2, 3… Shown to the client as "v2" so both sides can refer to
+   *  the same document out loud. Unique per SOW. */
+  versionNumber: integer("version_number").notNull(),
+  /**
+   * The nine sections FM's real SOWs have agreed on for four years —
+   * overview, objectives, providers, deliverables, timeline, roles,
+   * compensation, terms, acceptance. Fixed keys, free content. The
+   * skeleton keeps every rendered PDF consistent and guarantees the
+   * signature block; the contents differ every time.
+   */
+  sections: jsonb("sections").$type<Record<string, string>>().notNull().default({}),
+  /** "authored" | "imported" — so an uploaded SOW and a generated one
+   *  stay distinguishable on the record. */
+  origin: text("origin", { enum: ["authored", "imported"] })
+    .notNull()
+    .default("authored"),
+  pdfBase64: text("pdf_base64"),
+  pdfBytes: integer("pdf_bytes"),
+  /** Documenso envelope for this version specifically. A new version
+   *  gets a new envelope; the old one is left alone. */
+  documensoId: text("documenso_id"),
+  signatureStatus: text("signature_status", {
+    enum: ["draft", "sent", "viewed", "signed", "declined", "voided"],
+  })
+    .notNull()
+    .default("draft"),
+  sentAt: timestamp("sent_at", { mode: "string", withTimezone: true }),
+  signedAt: timestamp("signed_at", { mode: "string", withTimezone: true }),
+  /** Set when a later version replaces this one. */
+  supersededAt: timestamp("superseded_at", { mode: "string", withTimezone: true }),
+  /** Why a new version was cut. Admin-written. */
+  changeNote: text("change_note"),
+  createdByUserId: text("created_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+});
+
 export const cooperativeQuotes = pgTable("cooperative_quotes", {
   id: text("id").primaryKey(),
   clientToken: text("client_token").notNull().unique(),
@@ -471,6 +626,10 @@ export const cooperativeQuotes = pgTable("cooperative_quotes", {
   clientSignatureStatement: text("client_signature_statement"),
   clientSignatureIp: text("client_signature_ip"),
   clientSignedAt: timestamp("client_signed_at", { mode: "string", withTimezone: true }),
+  /** Whichever quote version is current. Null for quotes that predate
+   *  versioning — backfilling one would invent a record of something
+   *  that was never sent as a version. */
+  currentVersionId: text("current_version_id"),
   clientSowDocumensoId: text("client_sow_documenso_id"),
   talentEngagementDocumensoId: text("talent_engagement_documenso_id"),
   sowDispatchedAt: timestamp("sow_dispatched_at", { mode: "string", withTimezone: true }),
@@ -2008,4 +2167,7 @@ export const schema = {
   profileDisclosureReviews,
   quoteClientVerifications,
   clients,
+  sows,
+  sowVersions,
+  cooperativeQuoteVersions,
 } as const;

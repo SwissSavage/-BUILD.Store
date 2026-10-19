@@ -69,9 +69,16 @@ export async function Nav() {
   const user = await getCurrentUser();
   const isLoggedIn = !!user;
   const unread = isLoggedIn ? await unreadNotificationCount(user!.id) : 0;
+  const isDevelopmentBuild =
+    process.env.DEV_BUILD?.trim().toLowerCase() === "true";
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-[var(--surface-border)] bg-[var(--surface)]/90 backdrop-blur-sm">
+    <header
+      className={cn(
+        "sticky z-40 w-full border-b border-[var(--surface-border)] bg-[var(--surface)]/90 backdrop-blur-sm",
+        isDevelopmentBuild ? "top-7" : "top-0",
+      )}
+    >
       <div className="mx-auto flex max-w-app items-center justify-between gap-4 px-6 py-4">
         <Link
           href="/"

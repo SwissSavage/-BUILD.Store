@@ -61,6 +61,36 @@ html {
   animation: marquee 26s linear infinite;
 }
 
+/* Development deployment notice. The two matching copies make the
+   translation loop seamless, while the opacity pulse keeps the status visible
+   without turning the app chrome into a flashing alert. */
+@keyframes fm-development-build-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes fm-development-build-fade {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.fm-development-build-marquee {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  animation: fm-development-build-marquee 22s linear infinite;
+}
+
+.fm-development-build-marquee-copy {
+  display: inline-flex;
+  min-width: 50vw;
+  flex: 0 0 50%;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  animation: fm-development-build-fade 2.8s ease-in-out infinite;
+}
+
 /* ============================================================ */
 /* Trading card visuals — RPG rarity ladder                      */
 /*                                                               */
@@ -261,6 +291,10 @@ html {
     animation: none;
   }
   .marquee {
+    animation: none;
+  }
+  .fm-development-build-marquee,
+  .fm-development-build-marquee-copy {
     animation: none;
   }
 }

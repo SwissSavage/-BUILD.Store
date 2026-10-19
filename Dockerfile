@@ -23,6 +23,40 @@ WORKDIR /app
 # Only copy manifest files first so this layer stays cached across
 # code changes that don't touch dependencies.
 COPY package.json package-lock.json ./
+
+# ────────────────────────────────────────────────────────────────
+# WHY THE NPM VERSION IS PINNED (2026-10-19)
+#
+# node:22-alpine ships npm 10.9.9. The lockfile in this repo is
+# written by a developer machine running npm 11. The two majors
+# disagree about peerOptional resolution, and that disagreement is
+# not cosmetic — it stops the build:
+#
+#   npm error `npm ci` can only install packages when your
+#   package.json and package-lock.json are in sync.
+#   npm error Missing: nodemailer@8.0.11 from lock file
+#
+# Nothing was out of sync. The root declares nodemailer ^6.9.16 and
+# the lock pins 6.10.1, consistently. But @auth/drizzle-adapter
+# floated to 1.11.3, which brings @auth/core 0.41.3, which declares
+#
+#   peerOptional nodemailer: "^7.0.7 || ^8.0.5"
+#
+# npm 11 writes a tree that treats that optional peer as satisfied
+# and records no nested entry. npm 10 reads the same tree, decides it
+# needs nodemailer 8.0.11 nested under the adapter, finds no entry
+# for it, and refuses.
+#
+# A lockfile is only deterministic for the npm that wrote it. Pinning
+# the version here is what makes `npm ci` mean the same thing on a
+# laptop, in CI and in Dokploy — which is the entire reason to use ci
+# rather than install.
+#
+# Keep this aligned with whatever the team's npm is. If it drifts
+# again the symptom will be another "Missing: <something> from lock
+# file" on a package nobody touched.
+# ────────────────────────────────────────────────────────────────
+RUN npm install -g npm@11.12.1
 RUN npm ci
 
 # ────────────────────────────────────────────────────────────────

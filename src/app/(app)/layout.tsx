@@ -18,6 +18,7 @@
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { ViewingAsBanner } from "@/components/ViewingAsBanner";
+import { DevelopmentBuildBanner } from "@/components/DevelopmentBuildBanner";
 
 export default function AppLayout({
   children,
@@ -25,6 +26,7 @@ export default function AppLayout({
   return (
     <>
       <ViewingAsBanner />
+      <DevelopmentBuildBanner />
       <Nav />
       <main>{children}</main>
       <Footer />

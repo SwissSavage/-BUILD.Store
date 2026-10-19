@@ -20,12 +20,14 @@
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { ChatWidgetLoader } from "@/components/ChatWidgetLoader";
+import { DevelopmentBuildBanner } from "@/components/DevelopmentBuildBanner";
 
 export default function PublicLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <>
+      <DevelopmentBuildBanner />
       <Nav />
       <main>{children}</main>
       <Footer />

@@ -307,8 +307,11 @@ export default async function PublicProfilePage({
                   {memberLabel(user)}
                 </p>
               )}
+              <p className="mt-1 font-display text-lg font-semibold leading-tight text-white">
+                {displayName}
+              </p>
               {mvpSnapshot && !mvpSnapshot.isProvisional && (
-                <p className="mt-1 text-[10px] uppercase tracking-wider text-white/70">
+                <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/70">
                   Current standing · {CARD_TIER_LABEL[cardTier]}
                 </p>
               )}

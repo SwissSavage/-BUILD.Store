@@ -121,8 +121,8 @@ export interface User {
    */
   handle: string;
   /**
-   * Member-chosen public name. Overrides the first-name plus
-   * last-initial convention when set; null means use the convention.
+   * Artist alias. It overrides the first-name plus last-initial
+   * convention only while the member is in EPK (artist) mode.
    */
   displayName?: string | null;
   firstName: string | null;

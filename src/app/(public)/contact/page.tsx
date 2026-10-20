@@ -8,6 +8,7 @@
  */
 import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { PUBLIC_BOOKING_CTA, PUBLIC_BOOKING_URL } from "@/lib/public-booking";
 
 /** Static-rendered. Sandbox contact stub — no dynamic reads. */
 
@@ -33,12 +34,12 @@ export default function ContactPage() {
             two weeks of back-and-forth.
           </p>
           <a
-            href="https://calendly.com/properpreparationism"
+            href={PUBLIC_BOOKING_URL}
             target="_blank"
             rel="noreferrer"
             className="mt-3 inline-block text-sm text-brand-magentaText hover:underline"
           >
-            Schedule a call →
+            {PUBLIC_BOOKING_CTA} →
           </a>
         </Card>
 

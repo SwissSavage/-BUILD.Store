@@ -21,6 +21,7 @@ import { TaglineRare } from "@/components/TaglineRare";
 import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
 import { DefinedTermSchema } from "@/components/DefinedTermSchema";
 import { getEntriesForPage } from "@/lib/glossary";
+import { PUBLIC_BOOKING_CTA, PUBLIC_BOOKING_URL } from "@/lib/public-booking";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://buildstore.example";
@@ -1216,12 +1217,12 @@ function CTA() {
             See membership tiers
           </Link>
           <a
-            href="https://calendly.com/properpreparationism"
+            href={PUBLIC_BOOKING_URL}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center justify-center rounded-full border border-[var(--surface-border)] px-8 py-3 font-medium text-ink transition-colors hover:bg-[var(--surface-elevated)]"
           >
-            Talk to us
+            {PUBLIC_BOOKING_CTA}
           </a>
         </div>
         <p className="mt-8 text-xs text-ink-faint">

@@ -653,3 +653,178 @@ export function getPayloadTarget(
 
 // Re-export DocumensoError for typed catch handling upstream.
 export { DocumensoError };
+
+// ────────────────────────────────────────────────────────────────
+//  Per-document upload — a quote or SOW that cannot be a template
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Put a PDF we generated in front of a signer, with a drawn signature.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY THIS EXISTS (2026-10-20)
+ *
+ * Everything else in this module goes through a template:
+ * /api/v1/templates/:id/generate-document, with the signer's name and
+ * email mapped onto placeholder recipients. That works for documents
+ * whose wording is fixed — the LOI, the NCNDA, the talent agreement.
+ *
+ * It cannot work for a quote. The Builders, their rates, their
+ * deliverables and their timelines differ on every one, so a template
+ * could only accept by reference and leave the numbers on a web page.
+ * buildSignedQuotePdf already exists for exactly that reason. The
+ * missing half was a way to hand Documenso a PDF we made rather than
+ * one it holds.
+ *
+ * The same shape serves the SOW, which changes with every project.
+ *
+ * WHY THE SIGNATURE IS DRAWN AND NOT TYPED
+ *
+ * Quote approval currently records a typed name, a statement and an
+ * IP. That is real accountability and it was the right call when every
+ * close happened on a call. It stops being enough once approvals
+ * arrive asynchronously from someone nobody has spoken to, which is
+ * what the platform changed. typedSignatureEnabled is off here
+ * deliberately; drawSignatureEnabled is on.
+ *
+ * THE FOUR CALLS, IN ORDER
+ *
+ *   POST /api/v1/documents              returns uploadUrl, documentId,
+ *                                       and the recipient signingUrl
+ *   PUT  <uploadUrl>                    the PDF bytes, S3-presigned,
+ *                                       no Documenso auth header
+ *   POST /api/v1/documents/:id/fields   place the signature box
+ *   POST /api/v1/documents/:id/send     move DRAFT to PENDING so the
+ *                                       signing URL goes live
+ *
+ * The signing URL comes back from the first call but does nothing
+ * until the fourth. Returning it before sending would hand the client
+ * a dead link.
+ * ─────────────────────────────────────────────────────────────
+ */
+export interface UploadedDocumentResult {
+  documentId: number;
+  /** Where to send the signer. Live only after the send step. */
+  signingUrl: string;
+  recipientId: number;
+}
+
+export async function createDocumentFromPdf(input: {
+  title: string;
+  /** Raw PDF bytes. buildSignedQuotePdf returns these. */
+  pdf: Uint8Array;
+  recipient: DocumensoRecipient;
+  /** Ties the document back to the row it came from, e.g. "quote:abc". */
+  externalId: string;
+  /** Where the signer lands when they finish. */
+  redirectUrl?: string;
+  subject?: string;
+  message?: string;
+  /**
+   * Where the signature box sits, as a percentage of the page. The
+   * generator puts the signature block at the foot of the last page;
+   * these defaults match it. Page numbering is 1-based.
+   */
+  signatureField?: {
+    pageNumber: number;
+    pageX: number;
+    pageY: number;
+    pageWidth: number;
+    pageHeight: number;
+  };
+}): Promise<UploadedDocumentResult> {
+  const created = await documensoFetch<{
+    uploadUrl: string;
+    documentId: number;
+    recipients?: Array<{
+      recipientId: number;
+      email: string;
+      signingUrl?: string;
+    }>;
+  }>("/api/v1/documents", {
+    method: "POST",
+    body: JSON.stringify({
+      title: input.title,
+      externalId: input.externalId,
+      recipients: [
+        {
+          name: input.recipient.name,
+          email: input.recipient.email,
+          role: input.recipient.role ?? "SIGNER",
+          signingOrder: 1,
+        },
+      ],
+      meta: {
+        subject: input.subject,
+        message: input.message,
+        redirectUrl: input.redirectUrl,
+        // The point of the exercise. A typed name is what we already
+        // had; it is not what was asked for.
+        drawSignatureEnabled: true,
+        typedSignatureEnabled: false,
+        uploadSignatureEnabled: false,
+      },
+    }),
+  });
+
+  const recipient =
+    created.recipients?.find(
+      (r) => r.email?.toLowerCase() === input.recipient.email.toLowerCase(),
+    ) ?? created.recipients?.[0];
+  if (!recipient) {
+    throw new DocumensoError(
+      "Documenso created the document but returned no recipient to sign it.",
+      500,
+      null,
+    );
+  }
+
+  // The upload URL is S3-presigned. It carries its own credentials in
+  // the query string, so sending the Documenso API key with it is
+  // wrong and some backends reject the request for it.
+  const upload = await fetch(created.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": "application/pdf" },
+    body: Buffer.from(input.pdf),
+  });
+  if (!upload.ok) {
+    throw new DocumensoError(
+      `Uploading the PDF failed (${upload.status} ${upload.statusText}). The document exists but has no file behind it.`,
+      upload.status,
+      null,
+    );
+  }
+
+  const field = input.signatureField ?? {
+    pageNumber: 1,
+    pageX: 8,
+    pageY: 78,
+    pageWidth: 40,
+    pageHeight: 10,
+  };
+  await documensoFetch(`/api/v1/documents/${created.documentId}/fields`, {
+    method: "POST",
+    body: JSON.stringify({
+      recipientId: recipient.recipientId,
+      type: "SIGNATURE",
+      ...field,
+    }),
+  });
+
+  // DRAFT to PENDING. Until this runs the signing URL resolves to
+  // nothing, so it must happen before the caller is handed the link.
+  await sendDocument(created.documentId, { sendEmail: true });
+
+  if (!recipient.signingUrl) {
+    throw new DocumensoError(
+      "Documenso returned no signing URL for the recipient.",
+      500,
+      null,
+    );
+  }
+  return {
+    documentId: created.documentId,
+    signingUrl: recipient.signingUrl,
+    recipientId: recipient.recipientId,
+  };
+}

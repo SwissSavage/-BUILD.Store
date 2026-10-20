@@ -38,6 +38,7 @@ import {
   signedCopy,
 } from "@/lib/quote-signature";
 import { buildSignedQuotePdf } from "@/lib/quote-signed-pdf";
+import { createDocumentFromPdf } from "@/lib/documenso";
 import { sendTransactionalEmail } from "@/lib/email";
 import { headers } from "next/headers";
 import { secureToken } from "@/lib/secure-token";
@@ -600,6 +601,8 @@ export async function approveCooperativeQuote(formData: FormData) {
     );
   }
 
+  // Handed back so the client surface can send them straight to sign.
+  let quoteSigningUrl: string | null = null;
   const previousStatus = quote.status;
   const now = new Date().toISOString();
   await db
@@ -726,6 +729,57 @@ export async function approveCooperativeQuote(formData: FormData) {
         signerIp,
       },
     });
+    // ──────────────────────────────────────────────────────────
+    // THE DRAWN SIGNATURE (2026-10-20)
+    //
+    // Jamar: "Quotes are still surfacing typed signatures instead of
+    // drawn ones."
+    //
+    // The typed name above is the approval record — who chose, what
+    // they were shown, from which IP. That was right while every
+    // close happened on a call. It stops being enough once approvals
+    // arrive at 11pm from someone nobody has spoken to, which is what
+    // the platform changed.
+    //
+    // So the same PDF that goes out as the record also goes to
+    // Documenso as a document to actually sign, with drawn signatures
+    // on and typed ones off. The client is sent straight there rather
+    // than waiting for mail.
+    //
+    // Best-effort, like the HubSpot deal: a signing outage must not
+    // unwind an approval the client already gave. The gap is visible
+    // rather than silent — clientSowDocumensoId stays null and the
+    // repair surface can see it.
+    //
+    // No template, deliberately. The Builders, rates, deliverables
+    // and timelines differ on every quote, so a fixed template could
+    // only accept by reference and leave the numbers on a web page.
+    // ──────────────────────────────────────────────────────────
+    try {
+      const signing = await createDocumentFromPdf({
+        title: `Quote — ${quote.clientDisplayName}`,
+        pdf,
+        recipient: {
+          name: clientContactName,
+          email: clientContactEmail,
+          role: "SIGNER",
+        },
+        externalId: `quote:${quote.id}:signature`,
+        redirectUrl: `${process.env.AUTH_URL ?? ""}/quotes/${token}`,
+        subject: `Signature requested — ${quote.clientDisplayName}`,
+        message:
+          "Your approved proposal, ready to sign. The terms are the ones you selected.",
+      });
+      await db
+        .update(cooperativeQuotes)
+        .set({ clientSowDocumensoId: String(signing.documentId) })
+        .where(eq(cooperativeQuotes.id, quote.id));
+      quoteSigningUrl = signing.signingUrl;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[quote] signature dispatch failed", quote.id, err);
+    }
+
     const attachments = [
       {
         filename: `signed-proposal-${quote.clientDisplayName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`,
@@ -791,6 +845,11 @@ export async function approveCooperativeQuote(formData: FormData) {
 
   revalidatePath("/admin/cooperative-quotes");
   revalidatePath(`/quotes/${quote.clientToken}`);
+
+  // The client surface redirects here so they sign immediately rather
+  // than waiting on an email. Null when the dispatch failed, in which
+  // case the approval stands and the signature is chased separately.
+  return quoteSigningUrl;
 }
 
 /**

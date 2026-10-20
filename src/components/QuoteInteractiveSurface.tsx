@@ -160,7 +160,21 @@ export function QuoteInteractiveSurface({
     formData.set("signatureTyped", signatureTyped.trim());
     startTransition(async () => {
       try {
-        await approveCooperativeQuote(formData);
+        const signingUrl = await approveCooperativeQuote(formData);
+        // Straight to the signature. The typed name above records who
+        // approved and what they were shown; the drawn signature on
+        // the document is the executed copy. Sending them now rather
+        // than waiting on an email is the whole point — an approval
+        // at 11pm should not stall until somebody opens their inbox.
+        //
+        // A null URL means the signature dispatch failed. The approval
+        // itself stood, so the client still sees the confirmation and
+        // the signature gets chased separately rather than the page
+        // appearing to have done nothing.
+        if (signingUrl) {
+          window.location.assign(signingUrl);
+          return;
+        }
         // Flip optimistic state immediately so the client sees the
         // confirmation without waiting on server-side revalidation.
         // Also call router.refresh() so the parent server component

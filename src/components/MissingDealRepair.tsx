@@ -19,7 +19,10 @@
  */
 
 import { useActionState } from "react";
-import { createMissingEngagementDeal } from "@/lib/engagement-actions";
+import {
+  createMissingEngagementDeal,
+  linkExistingEngagementDeal,
+} from "@/lib/engagement-actions";
 
 export interface MissingDeal {
   id: string;
@@ -32,6 +35,14 @@ export function MissingDealRepair({ engagements }: { engagements: MissingDeal[] 
     { ok: boolean; message: string } | null,
     FormData
   >(async (prev, formData) => createMissingEngagementDeal(prev, formData), null);
+
+  // Separate action, separate pending state. Creating a deal and
+  // attaching one that exists are different decisions, and a shared
+  // spinner would make the wrong one look busy.
+  const [linkState, linkAction, linkPending] = useActionState<
+    { ok: boolean; message: string } | null,
+    FormData
+  >(async (prev, formData) => linkExistingEngagementDeal(prev, formData), null);
 
   if (engagements.length === 0) return null;
 
@@ -50,6 +61,13 @@ export function MissingDealRepair({ engagements }: { engagements: MissingDeal[] 
           className={`mt-3 text-xs ${state.ok ? "text-[#13A06A]" : "text-brand-magentaText"}`}
         >
           {state.message}
+        </p>
+      )}
+      {linkState && (
+        <p
+          className={`mt-3 text-xs ${linkState.ok ? "text-[#13A06A]" : "text-brand-magentaText"}`}
+        >
+          {linkState.message}
         </p>
       )}
 
@@ -74,6 +92,44 @@ export function MissingDealRepair({ engagements }: { engagements: MissingDeal[] 
             </button>
           </form>
         ))}
+      </div>
+
+      {/* The other half. Creating a second deal for work that already
+          has one splits the revenue across two records in HubSpot,
+          and the error shows up as a number that looks plausible
+          rather than as a failure. */}
+      <div className="mt-4 border-t border-[var(--surface-border)] pt-4">
+        <p className="text-xs text-ink-muted">
+          Already made it in HubSpot? Attach that one instead — paste the
+          deal link or its id.
+        </p>
+        <div className="mt-2 space-y-2">
+          {engagements.map((e) => (
+            <form
+              key={`link:${e.id}`}
+              action={linkAction}
+              className="flex flex-wrap items-center gap-2"
+            >
+              <input type="hidden" name="projectId" value={e.id} />
+              <span className="min-w-0 flex-1 truncate text-xs text-ink-faint">
+                {e.title}
+              </span>
+              <input
+                name="hubspotDeal"
+                placeholder="app.hubspot.com/…/record/0-3/123…"
+                disabled={linkPending}
+                className="w-full min-w-0 flex-[2] rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none disabled:opacity-60 md:w-auto"
+              />
+              <button
+                type="submit"
+                disabled={linkPending}
+                className="shrink-0 rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs text-ink-muted hover:text-ink disabled:opacity-60"
+              >
+                {linkPending ? "Checking…" : "Attach"}
+              </button>
+            </form>
+          ))}
+        </div>
       </div>
     </section>
   );

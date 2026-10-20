@@ -599,3 +599,49 @@ export async function listHubspotDealsForCompany(
     return [];
   }
 }
+
+/**
+ * One deal by id, so a pasted link can be checked rather than trusted.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-19)
+ *
+ * Deal creation at engagement acceptance is best-effort on purpose: a
+ * CRM outage must not stop agreed work from starting. The cost is that
+ * an engagement can run with no deal, and the first one did — Jamar
+ * went and made it in HubSpot by hand.
+ *
+ * At which point the repair surface offered him exactly one action,
+ * "Create the deal", which would have made a second one. This is the
+ * missing half: attach the deal that already exists.
+ *
+ * Verified rather than accepted. A pasted id is a typed string and a
+ * wrong one is silent — the engagement would look linked, the link
+ * would 404, and nobody would find out until someone clicked it
+ * looking for revenue. Returning null on a miss lets the caller say
+ * "HubSpot has no deal with that id" instead of writing it down.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function getHubspotDeal(
+  dealId: string,
+): Promise<HubspotDealSummary | null> {
+  try {
+    const json = await hubspotGet<{
+      id: string;
+      properties?: Record<string, string | null>;
+    }>(
+      `/crm/v3/objects/deals/${encodeURIComponent(dealId)}?properties=dealname,dealstage,amount,closedate`,
+    );
+    return {
+      id: json.id,
+      name: json.properties?.dealname ?? "(unnamed deal)",
+      stage: json.properties?.dealstage ?? null,
+      amount: json.properties?.amount ?? null,
+      closeDate: json.properties?.closedate ?? null,
+    };
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[crm] deal fetch failed", dealId, err);
+    return null;
+  }
+}

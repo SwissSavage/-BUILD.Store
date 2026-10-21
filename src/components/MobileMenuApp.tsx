@@ -30,6 +30,8 @@ interface MobileMenuAppProps {
   isAdmin: boolean;
   isEpk: boolean;
   unread: number;
+  projectActivityCount: number;
+  projectApplicationCount: number;
 }
 
 const memberLinks = [
@@ -82,6 +84,8 @@ export function MobileMenuApp({
   isAdmin,
   isEpk,
   unread,
+  projectActivityCount,
+  projectApplicationCount,
 }: MobileMenuAppProps) {
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -169,9 +173,16 @@ export function MobileMenuApp({
                       <Link
                         href={item.href}
                         onClick={closeMenu}
-                        className="block rounded-lg px-4 py-3 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
+                        className="flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                       >
-                        {item.label}
+                        <span>{item.label}</span>
+                        {item.href === "/projects" && projectActivityCount > 0 && (
+                          <NavCount
+                            count={projectActivityCount}
+                            singularLabel="unread project update"
+                            pluralLabel="unread project updates"
+                          />
+                        )}
                       </Link>
                     </li>
                   ))}
@@ -252,9 +263,16 @@ export function MobileMenuApp({
                               <Link
                                 href={entry.href}
                                 onClick={closeMenu}
-                                className="block rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
+                                className="flex items-center justify-between gap-3 rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                               >
-                                {entry.label}
+                                <span>{entry.label}</span>
+                                {entry.href === "/admin/projects/applications" && projectApplicationCount > 0 && (
+                                  <NavCount
+                                    count={projectApplicationCount}
+                                    singularLabel="proposal needs review"
+                                    pluralLabel="proposals need review"
+                                  />
+                                )}
                               </Link>
                             </li>
                           ))}
@@ -330,5 +348,25 @@ export function MobileMenuApp({
           document.body,
         )}
     </>
+  );
+}
+
+function NavCount({
+  count,
+  singularLabel,
+  pluralLabel,
+}: {
+  count: number;
+  singularLabel: string;
+  pluralLabel: string;
+}) {
+  const label = count === 1 ? singularLabel : pluralLabel;
+  return (
+    <span
+      className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand-magenta px-1.5 py-0.5 text-[10px] font-semibold leading-none text-black"
+      aria-label={`${count} ${label}`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
   );
 }

@@ -20,7 +20,11 @@ import { adminNavGroups } from "@/lib/admin-nav";
 import { HoverDropdown } from "@/components/HoverDropdown";
 import { getAllUsers } from "@/lib/readers/users";
 import { safely } from "@/lib/readers";
-import { unreadNotificationCount } from "@/lib/readers/notifications";
+import {
+  unreadNotificationCount,
+  unreadNotificationCountByKind,
+} from "@/lib/readers/notifications";
+import { getPendingApplicationCount } from "@/lib/readers/project-applications";
 import {
   TIER_LABELS,
   adminName,
@@ -68,7 +72,15 @@ function pickViewAsTargets(self: User, roster: User[]): {
 export async function Nav() {
   const user = await getCurrentUser();
   const isLoggedIn = !!user;
-  const unread = isLoggedIn ? await unreadNotificationCount(user!.id) : 0;
+  const [unread, projectActivityCount, projectApplicationCount] = isLoggedIn
+    ? await Promise.all([
+        unreadNotificationCount(user!.id),
+        user!.isAdmin
+          ? Promise.resolve(0)
+          : unreadNotificationCountByKind(user!.id, ["project_application_decision"]),
+        user!.isAdmin ? getPendingApplicationCount() : Promise.resolve(0),
+      ])
+    : [0, 0, 0];
   const isDevelopmentBuild =
     process.env.DEV_BUILD?.trim().toLowerCase() === "true";
 
@@ -108,6 +120,12 @@ export async function Nav() {
               <Link href="/dashboard" className={navLink}>Dashboard</Link>
               <JobsDropdown />
               <StoreDropdown />
+              <NavLinkWithCount
+                href="/projects"
+                label="Projects"
+                count={projectActivityCount}
+                countLabel="unread project update"
+              />
               <Link href="/orders" className={navLink}>Orders</Link>
               <Link href="/portfolio" className={navLink}>Portfolio</Link>
               <Link href="/community" className={navLink}>Community</Link>
@@ -118,7 +136,12 @@ export async function Nav() {
               {!user!.isAdmin && user!.profileMode === "epk" && (
                 <Link href="/profile/epk" className={navLink}>EPK</Link>
               )}
-              {user!.isAdmin && <AdminDropdown self={user!} />}
+              {user!.isAdmin && (
+                <AdminDropdown
+                  self={user!}
+                  projectApplicationCount={projectApplicationCount}
+                />
+              )}
               {/* Personal-scope surfaces (profile, notifications, locker,
                   wallet, agreements, jobs status, sign out) live inside
                   the avatar dropdown per Rob's beta note #2 / task #60.
@@ -165,6 +188,8 @@ export async function Nav() {
             isAdmin={!!user?.isAdmin}
             isEpk={user?.profileMode === "epk"}
             unread={unread}
+            projectActivityCount={projectActivityCount}
+            projectApplicationCount={projectApplicationCount}
           />
         </div>
       </div>
@@ -174,6 +199,51 @@ export async function Nav() {
 
 const navLink = "text-ink-muted hover:text-ink transition-colors";
 
+function NavLinkWithCount({
+  href,
+  label,
+  count,
+  countLabel,
+}: {
+  href: string;
+  label: string;
+  count: number;
+  countLabel: string;
+}) {
+  return (
+    <Link href={href} className={`${navLink} inline-flex items-center gap-1.5`}>
+      <span>{label}</span>
+      {count > 0 && (
+        <NavCount
+          count={count}
+          singularLabel={countLabel}
+          pluralLabel={`${countLabel}s`}
+        />
+      )}
+    </Link>
+  );
+}
+
+function NavCount({
+  count,
+  singularLabel,
+  pluralLabel,
+}: {
+  count: number;
+  singularLabel: string;
+  pluralLabel: string;
+}) {
+  const label = count === 1 ? singularLabel : pluralLabel;
+  return (
+    <span
+      className="inline-flex min-w-4 items-center justify-center rounded-full bg-brand-magenta px-1.5 py-0.5 text-[10px] font-semibold leading-none text-black"
+      aria-label={`${count} ${label}`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 /**
  * Admin nav button + view-as dropdown. Opens on hover
  * so it works without client JS. Submitting a "View as" button posts
@@ -181,7 +251,13 @@ const navLink = "text-ink-muted hover:text-ink transition-colors";
  * and redirects to /. The persistent ViewingAsBanner (above this nav)
  * handles the flip-back affordance.
  */
-async function AdminDropdown({ self }: { self: User }) {
+async function AdminDropdown({
+  self,
+  projectApplicationCount,
+}: {
+  self: User;
+  projectApplicationCount: number;
+}) {
   const { users: roster } = await safely(() => getAllUsers(), {
     users: [],
     source: "postgres" as const,
@@ -229,7 +305,15 @@ async function AdminDropdown({ self }: { self: User }) {
             count={section.entries.length}
           >
             {section.entries.map((entry) => (
-              <AdminLink key={entry.href} href={entry.href}>
+              <AdminLink
+                key={entry.href}
+                href={entry.href}
+                count={
+                  entry.href === "/admin/projects/applications"
+                    ? projectApplicationCount
+                    : 0
+                }
+              >
                 {entry.label}
               </AdminLink>
             ))}
@@ -320,16 +404,25 @@ function AdminSection({
 function AdminLink({
   href,
   children,
+  count = 0,
 }: {
   href: string;
   children: React.ReactNode;
+  count?: number;
 }) {
   return (
     <Link
       href={href}
-      className="block rounded-lg px-3 py-1.5 text-sm hover:bg-[var(--surface-inset)]"
+      className="flex items-center justify-between gap-3 rounded-lg px-3 py-1.5 text-sm hover:bg-[var(--surface-inset)]"
     >
-      {children}
+      <span>{children}</span>
+      {count > 0 && (
+        <NavCount
+          count={count}
+          singularLabel="proposal needs review"
+          pluralLabel="proposals need review"
+        />
+      )}
     </Link>
   );
 }

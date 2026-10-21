@@ -44,6 +44,7 @@ export async function markNotificationRead(formData: FormData) {
 
   revalidatePath("/notifications");
   revalidatePath("/dashboard");
+  revalidatePath("/", "layout");
 
   if (next && next !== "/notifications") {
     redirect(next);
@@ -66,4 +67,5 @@ export async function markAllNotificationsRead() {
 
   revalidatePath("/notifications");
   revalidatePath("/dashboard");
+  revalidatePath("/", "layout");
 }

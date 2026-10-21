@@ -115,8 +115,8 @@ async function main() {
   for (const u of present) {
     const { rows } = await pool.query(
       `SELECT
-         (SELECT count(*)::int FROM accounts WHERE "userId" = $1) AS accounts,
-         (SELECT count(*)::int FROM sessions WHERE "userId" = $1) AS sessions`,
+         (SELECT count(*)::int FROM accounts WHERE user_id = $1) AS accounts,
+         (SELECT count(*)::int FROM sessions WHERE user_id = $1) AS sessions`,
       [u.id],
     );
     const { accounts, sessions } = rows[0];

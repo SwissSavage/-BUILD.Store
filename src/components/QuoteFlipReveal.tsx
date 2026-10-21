@@ -6,7 +6,8 @@
  * surface mounted avoids the old deal-in replacement and its layout shift.
  */
 
-import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
 import { publicName } from "@/lib/types";
 import { CardBack } from "@/components/CardBack";
 import { TradingCard3D } from "@/components/TradingCard3D";
@@ -68,6 +69,11 @@ const TIER_LABEL_CLASS: Record<TradingCardTier, string> = {
 export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
   const [flippedIds, setFlippedIds] = useState<Set<string>>(new Set());
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveIndex((index) => Math.min(index, Math.max(0, crew.length - 1)));
+  }, [crew.length]);
 
   if (crew.length === 0) {
     return <p className="text-sm text-ink-muted">No builders proposed on this quote yet.</p>;
@@ -99,61 +105,107 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
     setFlippedIds(new Set(crew.map((member) => member.user.id)));
   }
 
-  return (
-    <section>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {crew.map((member, index) => {
-          const isFlipped = flippedIds.has(member.user.id);
-          const isSelected = selectedUserId === member.user.id;
-          // No last names on a client-facing surface, ever. The
-          // first-name convention is what stops a client routing
-          // around the cooperative to reach talent directly, and a
-          // quote is the most client-facing page there is.
-          const name = publicName(member.user);
-          return (
-            <button
-              key={member.user.id}
-              type="button"
-              onClick={() => handleCardClick(member.user.id)}
-              aria-label={
-                !isFlipped
-                  ? `Reveal card ${index + 1} of ${crew.length}`
-                  : isSelected
-                    ? `${name} selected. Click to clear selection.`
-                    : `Select ${name} and read their proposal.`
-              }
-              aria-pressed={isFlipped ? isSelected : undefined}
-              className={
-                "fm-card-flipper fm-quote-card-option block w-full cursor-pointer border-0 bg-transparent p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-magenta focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]" +
-                (isFlipped ? " fm-card-flipper--revealed" : "") +
-                (isSelected ? " fm-quote-card-option--selected" : "")
-              }
-              style={{ "--flip-index": index } as React.CSSProperties}
-            >
-              <div className="fm-card-flipper-inner aspect-[3/4]">
-                <div className="fm-card-face fm-card-face--back">
-                  <CardBack tier={member.tier} />
+  function renderCard(member: QuoteFlipReveaCrewMember, index: number) {
+    const isFlipped = flippedIds.has(member.user.id);
+    const isSelected = selectedUserId === member.user.id;
+    // No last names on a client-facing surface, ever. The
+    // first-name convention is what stops a client routing around
+    // the cooperative to reach talent directly, and a quote is the
+    // most client-facing page there is.
+    const name = publicName(member.user);
+
+    return (
+      <button
+        key={member.user.id}
+        type="button"
+        onClick={() => handleCardClick(member.user.id)}
+        aria-label={
+          !isFlipped
+            ? `Reveal card ${index + 1} of ${crew.length}`
+            : isSelected
+              ? `${name} selected. Click to clear selection.`
+              : `Select ${name} and read their proposal.`
+        }
+        aria-pressed={isFlipped ? isSelected : undefined}
+        className={
+          "fm-card-flipper fm-quote-card-option block w-full cursor-pointer border-0 bg-transparent p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-magenta focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]" +
+          (isFlipped ? " fm-card-flipper--revealed" : "") +
+          (isSelected ? " fm-quote-card-option--selected" : "")
+        }
+        style={{ "--flip-index": index } as React.CSSProperties}
+      >
+        <div className="fm-card-flipper-inner aspect-[3/4]">
+          <div className="fm-card-face fm-card-face--back">
+            <CardBack tier={member.tier} />
+          </div>
+          <div className="fm-card-face fm-card-face--front">
+            <TradingCard3D user={member.user} tier={member.tier}>
+              <div className="mt-auto flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-display text-xl font-semibold text-white">{name}</p>
+                  <p className={`mt-1 line-clamp-2 text-[10px] font-medium uppercase tracking-wider ${TIER_LABEL_CLASS[member.tier]}`}>
+                    {membershipLabel(member)}
+                  </p>
                 </div>
-                <div className="fm-card-face fm-card-face--front">
-                  <TradingCard3D user={member.user} tier={member.tier}>
-                    <div className="mt-auto flex items-end justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-display text-xl font-semibold text-white">{name}</p>
-                        <p className={`mt-1 line-clamp-2 text-[10px] font-medium uppercase tracking-wider ${TIER_LABEL_CLASS[member.tier]}`}>
-                          {membershipLabel(member)}
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="font-display text-base font-semibold text-white">{member.quoteLine.pricingHeadline}</p>
-                        <p className="mt-1 text-[9px] uppercase tracking-wider text-white/65">{member.quoteLine.pricingUnit}</p>
-                      </div>
-                    </div>
-                  </TradingCard3D>
+                <div className="shrink-0 text-right">
+                  <p className="font-display text-base font-semibold text-white">{member.quoteLine.pricingHeadline}</p>
+                  <p className="mt-1 text-[9px] uppercase tracking-wider text-white/65">{member.quoteLine.pricingUnit}</p>
                 </div>
               </div>
+            </TradingCard3D>
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <section>
+      <div className="mx-auto max-w-[280px] sm:hidden">
+        {renderCard(crew[activeIndex], activeIndex)}
+        {crew.length > 1 && (
+          <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Proposed builder navigation">
+            <button
+              type="button"
+              onClick={() => setActiveIndex((index) => Math.max(0, index - 1))}
+              disabled={activeIndex === 0}
+              className="inline-flex size-11 items-center justify-center rounded-full border border-[var(--surface-border)] text-ink-muted transition-colors hover:border-brand-magenta hover:text-brand-magentaText disabled:cursor-not-allowed disabled:opacity-35"
+              aria-label="Previous proposed builder"
+            >
+              <ChevronLeft aria-hidden="true" size={18} strokeWidth={1.75} />
             </button>
-          );
-        })}
+            <div className="flex items-center gap-2" aria-label={`Proposed builder ${activeIndex + 1} of ${crew.length}`}>
+              {crew.map((member, index) => (
+                <button
+                  key={member.user.id}
+                  type="button"
+                  onClick={() => setActiveIndex(index)}
+                  className={
+                    "size-2.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-magenta " +
+                    (index === activeIndex
+                      ? "bg-brand-magenta"
+                      : "bg-[var(--surface-border)] hover:bg-ink-faint")
+                  }
+                  aria-label={`Show ${publicName(member.user)}`}
+                  aria-current={index === activeIndex ? "true" : undefined}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveIndex((index) => Math.min(crew.length - 1, index + 1))}
+              disabled={activeIndex === crew.length - 1}
+              className="inline-flex size-11 items-center justify-center rounded-full border border-[var(--surface-border)] text-ink-muted transition-colors hover:border-brand-magenta hover:text-brand-magentaText disabled:cursor-not-allowed disabled:opacity-35"
+              aria-label="Next proposed builder"
+            >
+              <ChevronRight aria-hidden="true" size={18} strokeWidth={1.75} />
+            </button>
+          </nav>
+        )}
+      </div>
+
+      <div className="hidden gap-6 sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {crew.map(renderCard)}
       </div>
 
       {!allFlipped && (

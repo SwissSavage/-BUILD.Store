@@ -76,6 +76,98 @@ interface DependentColumn {
   column_name: string;
 }
 
+/**
+ * References to users that Postgres does not know about.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY THIS CHECK EXISTS (2026-10-21)
+ *
+ * The delete below clears every column information_schema reports as
+ * pointing at users.id, which was the whole safety story until Jamar
+ * sent a screenshot of /admin/members and I looked at Sunny Su.
+ *
+ * Sunny is a real designer. She is named in the URL Media quote sheet.
+ * Her row here is a fixture with an @example.com address, so she is
+ * unclaimed and would have been deleted — and cooperative_quotes
+ * stores its Builders in `proposed_builders`, which is JSONB. Not a
+ * foreign key. Postgres would not have refused, the catalogue would
+ * not have reported it, and the quote would have been left pointing
+ * at a user id that resolves to nothing. Silently.
+ *
+ * That is the failure this whole page was built to avoid, reintroduced
+ * one layer down.
+ *
+ * Six columns hold user ids outside the FK graph:
+ *
+ *   projects.admin_user_ids           jsonb array
+ *   projects.assigned_member_ids      jsonb array
+ *   cooperative_quotes.proposed_builders  jsonb, userId per entry
+ *   quote_sheets.admin_user_ids       jsonb array
+ *   revenue_splits.recipient_id       text — "user id OR sentinel
+ *                                     string", per its own comment,
+ *                                     which is why it has no FK
+ *   cooperative_receipts.recipient_id same
+ *
+ * Found rather than assumed: a reference here refuses the delete and
+ * names what holds it. Refusing is right. A fixture row that real work
+ * points at is not a fixture any more, whatever its email says, and
+ * the person who needs to know is whoever is about to click the
+ * button.
+ * ─────────────────────────────────────────────────────────────
+ */
+async function softReferences(ids: string[]): Promise<string[]> {
+  const found: string[] = [];
+
+  const jsonbArray: Array<[string, string]> = [
+    ["projects", "admin_user_ids"],
+    ["projects", "assigned_member_ids"],
+    ["quote_sheets", "admin_user_ids"],
+  ];
+  for (const [table, column] of jsonbArray) {
+    const r = (await db.execute(sql`
+      SELECT count(*)::int AS n
+      FROM ${sql.identifier(table)} t
+      WHERE EXISTS (
+        SELECT 1 FROM jsonb_array_elements_text(t.${sql.identifier(column)}) AS e(v)
+        WHERE e.v = ANY(${ids})
+      )
+    `)) as unknown as { rows: Array<{ n: number }> };
+    const n = r.rows[0]?.n ?? 0;
+    if (n > 0) found.push(`${table}.${column} (${n} row${n === 1 ? "" : "s"})`);
+  }
+
+  // proposed_builders is an array of objects carrying userId, not an
+  // array of strings, so it needs the object form.
+  const quotes = (await db.execute(sql`
+    SELECT count(*)::int AS n
+    FROM cooperative_quotes q
+    WHERE EXISTS (
+      SELECT 1 FROM jsonb_array_elements(q.proposed_builders) AS b
+      WHERE b->>'userId' = ANY(${ids})
+    )
+  `)) as unknown as { rows: Array<{ n: number }> };
+  const qn = quotes.rows[0]?.n ?? 0;
+  if (qn > 0) {
+    found.push(`cooperative_quotes.proposed_builders (${qn} quote${qn === 1 ? "" : "s"})`);
+  }
+
+  const textRefs: Array<[string, string]> = [
+    ["revenue_splits", "recipient_id"],
+    ["cooperative_receipts", "recipient_id"],
+  ];
+  for (const [table, column] of textRefs) {
+    const r = (await db.execute(sql`
+      SELECT count(*)::int AS n
+      FROM ${sql.identifier(table)}
+      WHERE ${sql.identifier(column)} = ANY(${ids})
+    `)) as unknown as { rows: Array<{ n: number }> };
+    const n = r.rows[0]?.n ?? 0;
+    if (n > 0) found.push(`${table}.${column} (${n} row${n === 1 ? "" : "s"})`);
+  }
+
+  return found;
+}
+
 export async function purgeUnclaimedSeedUsers(): Promise<SeedPurgeResult> {
   const admin = await requireAdmin();
 
@@ -99,6 +191,21 @@ export async function purgeUnclaimedSeedUsers(): Promise<SeedPurgeResult> {
     };
   }
   const ids = candidates.rows.map((r) => r.id);
+
+  // Soft references first. Postgres cannot refuse these, so if the
+  // delete runs with one outstanding it corrupts quietly rather than
+  // failing loudly — which is the one outcome this page exists to
+  // prevent.
+  const soft = await softReferences(ids);
+  if (soft.length > 0) {
+    return {
+      ok: false,
+      message:
+        `Refusing. Real work still references ${soft.length === 1 ? "one of these rows" : "these rows"}: ` +
+        `${soft.join(", ")}. None of those are foreign keys, so the database would have ` +
+        `allowed the delete and left the reference dangling. Reassign or clear them first.`,
+    };
+  }
 
   // Every column pointing at users.id, read from the live catalogue.
   const deps = (await db.execute(sql`

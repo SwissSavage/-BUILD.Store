@@ -118,6 +118,7 @@ export const ADMIN_NAV: AdminNavEntry[] = [
   { href: "/admin/audit-log", label: "Audit log", group: "governance" },
   { href: "/admin/access-review", label: "Access review", group: "governance" },
   { href: "/admin/trash", label: "Trash", group: "governance" },
+  { href: "/admin/seed-residue", label: "Seed residue", group: "governance" },
   { href: "/admin/walkthrough", label: "Walkthrough / stress test", group: "governance" },
 
   // ── Create ───────────────────────────────────────────────────

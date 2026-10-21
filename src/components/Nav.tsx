@@ -118,14 +118,15 @@ export async function Nav() {
           {isLoggedIn ? (
             <>
               <Link href="/dashboard" className={navLink}>Dashboard</Link>
-              <JobsDropdown />
-              <StoreDropdown />
-              <NavLinkWithCount
-                href="/projects"
-                label="Projects"
-                count={projectActivityCount}
-                countLabel="unread project update"
+              <JobsDropdown
+                projectCount={
+                  user!.isAdmin ? projectApplicationCount : projectActivityCount
+                }
+                projectCountLabel={
+                  user!.isAdmin ? "proposals need review" : "unread project updates"
+                }
               />
+              <StoreDropdown />
               <Link href="/orders" className={navLink}>Orders</Link>
               <Link href="/portfolio" className={navLink}>Portfolio</Link>
               <Link href="/community" className={navLink}>Community</Link>
@@ -198,31 +199,6 @@ export async function Nav() {
 }
 
 const navLink = "text-ink-muted hover:text-ink transition-colors";
-
-function NavLinkWithCount({
-  href,
-  label,
-  count,
-  countLabel,
-}: {
-  href: string;
-  label: string;
-  count: number;
-  countLabel: string;
-}) {
-  return (
-    <Link href={href} className={`${navLink} inline-flex items-center gap-1.5`}>
-      <span>{label}</span>
-      {count > 0 && (
-        <NavCount
-          count={count}
-          singularLabel={countLabel}
-          pluralLabel={`${countLabel}s`}
-        />
-      )}
-    </Link>
-  );
-}
 
 function NavCount({
   count,

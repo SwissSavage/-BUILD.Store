@@ -42,7 +42,13 @@ const ITEMS: JobsDropdownItem[] = [
   },
 ];
 
-export function JobsDropdown() {
+export function JobsDropdown({
+  projectCount = 0,
+  projectCountLabel = "unread project updates",
+}: {
+  projectCount?: number;
+  projectCountLabel?: string;
+}) {
   return (
     <HoverDropdown label="Jobs" href="/jobs" triggerClassName={navLink}>
       {ITEMS.map((item) => (
@@ -51,7 +57,17 @@ export function JobsDropdown() {
           href={item.href}
           className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
         >
-          <span className="font-medium">{item.label}</span>
+          <span className="flex items-center justify-between gap-3 font-medium">
+            {item.label}
+            {item.href === "/projects" && projectCount > 0 && (
+              <span
+                className="inline-flex min-w-4 items-center justify-center rounded-full bg-brand-magenta px-1.5 py-0.5 text-[10px] font-semibold leading-none text-black"
+                aria-label={`${projectCount} ${projectCountLabel}`}
+              >
+                {projectCount > 99 ? "99+" : projectCount}
+              </span>
+            )}
+          </span>
           <span className="mt-0.5 block text-[11px] text-ink-faint">
             {item.blurb}
           </span>

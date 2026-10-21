@@ -68,10 +68,7 @@ export const users = pgTable("users", {
     .$type<string[]>()
     .notNull()
     .default([]),
-  /**
-   * Member-chosen public name. Overrides the first-name plus
-   * last-initial convention when set. Null means use the convention.
-   */
+  /** Artist alias, used only while the member is in EPK mode. */
   displayName: text("display_name"),
   dataParticipation: boolean("data_participation").notNull().default(false),
   skills: jsonb("skills").$type<string[]>().notNull().default([]),

@@ -65,16 +65,26 @@ export async function saveProfile(
   const lastName =
     String(formData.get("lastName") ?? "").trim() || currentUser.lastName;
   // The alias is artist-only, and the rule lives here rather than only
-  // in the markup: a contributor has no alias field on the form, and a
-  // hand-posted one is ignored. Their stored value is preserved rather
-  // than cleared, so it comes back intact if they are recognised as an
-  // artist later.
-  //
-  // For an artist, empty clears it and falls back to the first-name
-  // convention, so someone can undo an alias without an admin.
+  // in the markup: a contributor has no alias control on the form, and
+  // a hand-posted value is ignored. An artist must opt into the alias
+  // explicitly; unchecking the control clears it and restores the
+  // first-name-plus-initial convention.
+  const useArtistAlias =
+    currentUser.profileMode === "epk" &&
+    formData.get("useArtistAlias") === "true";
+  const requestedAlias = String(formData.get("displayName") ?? "").trim();
+  if (useArtistAlias && !requestedAlias) {
+    return {
+      ok: false,
+      blocked: [],
+      message: "Enter an artist alias or uncheck “Use an artist alias”.",
+    };
+  }
   const displayName =
     currentUser.profileMode === "epk"
-      ? String(formData.get("displayName") ?? "").trim() || null
+      ? useArtistAlias
+        ? requestedAlias
+        : null
       : (currentUser.displayName ?? null);
   const bio = String(formData.get("bio") ?? "").trim() || null;
   const rawTagline = String(formData.get("tagline") ?? "").trim();

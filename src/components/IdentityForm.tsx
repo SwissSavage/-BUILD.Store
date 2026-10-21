@@ -12,7 +12,7 @@
  * Same pattern as ApplyToJobForm.
  */
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { saveProfile, type SaveProfileResult } from "@/lib/profile-actions";
 import { INDUSTRY_LABELS, type Industry } from "@/lib/types";
 
@@ -74,6 +74,9 @@ export interface IdentityFormUser {
 
 export function IdentityForm({ user }: { user: IdentityFormUser }) {
   const [state, formAction, isPending] = useActionState(action, null);
+  const [useArtistAlias, setUseArtistAlias] = useState(
+    Boolean(user.displayName?.trim()),
+  );
 
   const conventionName =
     [user.firstName, user.lastName?.[0] ? `${user.lastName[0]}.` : null]
@@ -137,23 +140,46 @@ export function IdentityForm({ user }: { user: IdentityFormUser }) {
       </div>
 
       {user.isArtist ? (
-        <label className="block">
-          <span className="text-xs uppercase tracking-wider text-brand-magentaText">
-            Alias
-          </span>
-          <input
-            name="displayName"
-            defaultValue={user.displayName ?? ""}
-            placeholder="e.g. Sahtyre"
-            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink"
-          />
-          <span className="mt-1 block text-[11px] text-ink-faint">
-            The name you work under. It replaces your name everywhere
-            public: your profile, your press kit, the portfolio, credits
-            on work you ship. Leave it empty to use &ldquo;
-            {conventionName}&rdquo; instead.
-          </span>
-        </label>
+        <fieldset className="rounded-lg border border-[var(--surface-border)] p-4">
+          <legend className="px-2 text-xs uppercase tracking-wider text-ink-muted">
+            Public name
+          </legend>
+          <label className="flex cursor-pointer items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              name="useArtistAlias"
+              value="true"
+              checked={useArtistAlias}
+              onChange={(event) => setUseArtistAlias(event.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-[var(--surface-border)]"
+            />
+            <span>
+              <span className="block font-medium text-ink">Use an artist alias</span>
+              <span className="mt-1 block text-xs text-ink-faint">
+                You appear publicly as &ldquo;{conventionName}&rdquo; by default.
+                Check this if you work under a different name.
+              </span>
+            </span>
+          </label>
+          {useArtistAlias && (
+            <label className="mt-4 block">
+              <span className="text-xs uppercase tracking-wider text-brand-magentaText">
+                Artist alias
+              </span>
+              <input
+                name="displayName"
+                defaultValue={user.displayName ?? ""}
+                placeholder="e.g. Sahtyre"
+                required
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink"
+              />
+              <span className="mt-1 block text-[11px] text-ink-faint">
+                Your alias replaces your name on public profiles, press kits,
+                portfolio credits, and work you ship.
+              </span>
+            </label>
+          )}
+        </fieldset>
       ) : (
         <p className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-[11px] text-ink-faint">
           You appear publicly as{" "}

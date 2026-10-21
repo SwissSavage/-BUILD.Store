@@ -21,6 +21,7 @@ import {
 } from "@/components/TradingCard";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { Avatar } from "@/components/Avatar";
+import { PUBLIC_BOOKING_CTA, PUBLIC_BOOKING_URL } from "@/lib/public-booking";
 
 /**
  * Rendered per request.
@@ -154,12 +155,12 @@ function Hero() {
             Get started
           </Link>
           <a
-            href="https://calendly.com/properpreparationism"
+            href={PUBLIC_BOOKING_URL}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center justify-center rounded-full border border-brand-blue/60 px-8 py-3 font-medium text-brand-blue transition-colors hover:bg-brand-blue/10"
           >
-            Schedule a call
+            {PUBLIC_BOOKING_CTA}
           </a>
         </div>
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PUBLIC_BOOKING_CTA, PUBLIC_BOOKING_URL } from "@/lib/public-booking";
 
 export function Footer() {
   return (
@@ -65,12 +66,12 @@ export function Footer() {
           <ul className="mt-3 space-y-1.5 text-sm">
             <li>
               <a
-                href="https://calendly.com/properpreparationism"
+                href={PUBLIC_BOOKING_URL}
                 className="hover:text-brand-magentaText"
                 target="_blank"
                 rel="noreferrer"
               >
-                Schedule a call
+                {PUBLIC_BOOKING_CTA}
               </a>
             </li>
             <li>

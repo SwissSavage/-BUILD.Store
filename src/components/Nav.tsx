@@ -16,7 +16,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { viewAsUser } from "@/lib/auth-actions";
 import { cn } from "@/lib/cn";
-import { adminNavGroups } from "@/lib/admin-nav";
+import { adminNavGroups, type AdminQueueCounts } from "@/lib/admin-nav";
 import { HoverDropdown } from "@/components/HoverDropdown";
 import { getAllUsers } from "@/lib/readers/users";
 import { safely } from "@/lib/readers";
@@ -24,7 +24,9 @@ import {
   unreadNotificationCount,
   unreadNotificationCountByKind,
 } from "@/lib/readers/notifications";
-import { getPendingApplicationCount } from "@/lib/readers/project-applications";
+import { CONTEXTUAL_NOTIFICATION_KINDS } from "@/lib/contextual-notifications";
+import { getAdminQueueCounts } from "@/lib/readers/admin-queue-counts";
+import { ContextualNotificationLink } from "@/components/ContextualNotificationLink";
 import {
   TIER_LABELS,
   adminName,
@@ -72,15 +74,20 @@ function pickViewAsTargets(self: User, roster: User[]): {
 export async function Nav() {
   const user = await getCurrentUser();
   const isLoggedIn = !!user;
-  const [unread, projectActivityCount, projectApplicationCount] = isLoggedIn
+  const [unread, projectActivityCount, orderActivityCount, walletActivityCount, communityActivityCount, adminQueueCounts] = isLoggedIn
     ? await Promise.all([
         unreadNotificationCount(user!.id),
         user!.isAdmin
           ? Promise.resolve(0)
-          : unreadNotificationCountByKind(user!.id, ["project_application_decision"]),
-        user!.isAdmin ? getPendingApplicationCount() : Promise.resolve(0),
+          : unreadNotificationCountByKind(user!.id, CONTEXTUAL_NOTIFICATION_KINDS.projects),
+        unreadNotificationCountByKind(user!.id, CONTEXTUAL_NOTIFICATION_KINDS.orders),
+        unreadNotificationCountByKind(user!.id, CONTEXTUAL_NOTIFICATION_KINDS.wallet),
+        unreadNotificationCountByKind(user!.id, CONTEXTUAL_NOTIFICATION_KINDS.community),
+        user!.isAdmin ? getAdminQueueCounts() : Promise.resolve({}),
       ])
-    : [0, 0, 0];
+    : [0, 0, 0, 0, 0, {} as AdminQueueCounts];
+  const adminQueueCount = (Object.values(adminQueueCounts) as Array<number | undefined>)
+    .reduce<number>((total, count) => total + (count ?? 0), 0);
   const isDevelopmentBuild =
     process.env.DEV_BUILD?.trim().toLowerCase() === "true";
 
@@ -119,17 +126,21 @@ export async function Nav() {
             <>
               <Link href="/dashboard" className={navLink}>Dashboard</Link>
               <JobsDropdown
-                projectCount={
-                  user!.isAdmin ? projectApplicationCount : projectActivityCount
-                }
+                projectCount={user!.isAdmin ? 0 : projectActivityCount}
                 projectCountLabel={
-                  user!.isAdmin ? "proposals need review" : "unread project updates"
+                  "unread project updates"
                 }
               />
               <StoreDropdown />
-              <Link href="/orders" className={navLink}>Orders</Link>
+              <ContextualNotificationLink href="/orders" area="orders" className={cn(navLink, "inline-flex items-center gap-1.5")}>
+                Orders
+                {orderActivityCount > 0 && <NavCount count={orderActivityCount} singularLabel="unread order update" pluralLabel="unread order updates" />}
+              </ContextualNotificationLink>
               <Link href="/portfolio" className={navLink}>Portfolio</Link>
-              <Link href="/community" className={navLink}>Community</Link>
+              <ContextualNotificationLink href="/community" area="community" className={cn(navLink, "inline-flex items-center gap-1.5")}>
+                Community
+                {communityActivityCount > 0 && <NavCount count={communityActivityCount} singularLabel="unread community update" pluralLabel="unread community updates" />}
+              </ContextualNotificationLink>
               {/* Artists (profileMode "epk") get a dedicated EPK editor
                   link — separate from the profile dropdown because EPK
                   is a distinct authoring surface, not a personal-scope
@@ -140,7 +151,8 @@ export async function Nav() {
               {user!.isAdmin && (
                 <AdminDropdown
                   self={user!}
-                  projectApplicationCount={projectApplicationCount}
+                  queueCounts={adminQueueCounts}
+                  queueCount={adminQueueCount}
                 />
               )}
               {/* Personal-scope surfaces (profile, notifications, locker,
@@ -148,7 +160,7 @@ export async function Nav() {
                   the avatar dropdown per Rob's beta note #2 / task #60.
                   Keeps the top nav focused on discovery + platform-wide
                   surfaces. */}
-              <ProfileMenu user={user!} unreadNotificationCount={unread} />
+              <ProfileMenu user={user!} unreadNotificationCount={unread} walletNotificationCount={walletActivityCount} />
             </>
           ) : (
             <>
@@ -190,7 +202,11 @@ export async function Nav() {
             isEpk={user?.profileMode === "epk"}
             unread={unread}
             projectActivityCount={projectActivityCount}
-            projectApplicationCount={projectApplicationCount}
+            orderActivityCount={orderActivityCount}
+            walletActivityCount={walletActivityCount}
+            communityActivityCount={communityActivityCount}
+            adminQueueCounts={adminQueueCounts}
+            adminQueueCount={adminQueueCount}
           />
         </div>
       </div>
@@ -229,10 +245,12 @@ function NavCount({
  */
 async function AdminDropdown({
   self,
-  projectApplicationCount,
+  queueCounts,
+  queueCount,
 }: {
   self: User;
-  projectApplicationCount: number;
+  queueCounts: AdminQueueCounts;
+  queueCount: number;
 }) {
   const { users: roster } = await safely(() => getAllUsers(), {
     users: [],
@@ -245,11 +263,11 @@ async function AdminDropdown({
       label={
         <>
           <span>Admin</span>
-          {projectApplicationCount > 0 && (
+          {queueCount > 0 && (
             <NavCount
-              count={projectApplicationCount}
-              singularLabel="proposal needs review"
-              pluralLabel="proposals need review"
+              count={queueCount}
+              singularLabel="admin item needs review"
+              pluralLabel="admin items need review"
             />
           )}
         </>
@@ -295,11 +313,7 @@ async function AdminDropdown({
               <AdminLink
                 key={entry.href}
                 href={entry.href}
-                count={
-                  entry.href === "/admin/projects/applications"
-                    ? projectApplicationCount
-                    : 0
-                }
+                count={queueCounts[entry.href] ?? 0}
               >
                 {entry.label}
               </AdminLink>
@@ -406,8 +420,8 @@ function AdminLink({
       {count > 0 && (
         <NavCount
           count={count}
-          singularLabel="proposal needs review"
-          pluralLabel="proposals need review"
+          singularLabel="item needs review"
+          pluralLabel="items need review"
         />
       )}
     </Link>

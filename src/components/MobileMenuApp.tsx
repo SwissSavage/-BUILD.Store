@@ -24,6 +24,9 @@ import Link from "next/link";
 import { Bell, Menu, X } from "lucide-react";
 import { adminNavGroups } from "@/lib/admin-nav";
 import { signOut } from "@/lib/auth-actions";
+import { ContextualNotificationLink } from "@/components/ContextualNotificationLink";
+import type { ContextualNotificationArea } from "@/lib/contextual-notifications";
+import type { AdminQueueCounts } from "@/lib/admin-nav";
 
 interface MobileMenuAppProps {
   isLoggedIn: boolean;
@@ -31,7 +34,11 @@ interface MobileMenuAppProps {
   isEpk: boolean;
   unread: number;
   projectActivityCount: number;
-  projectApplicationCount: number;
+  orderActivityCount: number;
+  walletActivityCount: number;
+  communityActivityCount: number;
+  adminQueueCounts: AdminQueueCounts;
+  adminQueueCount: number;
 }
 
 const memberLinks = [
@@ -85,7 +92,11 @@ export function MobileMenuApp({
   isEpk,
   unread,
   projectActivityCount,
-  projectApplicationCount,
+  orderActivityCount,
+  walletActivityCount,
+  communityActivityCount,
+  adminQueueCounts,
+  adminQueueCount,
 }: MobileMenuAppProps) {
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -170,20 +181,29 @@ export function MobileMenuApp({
                 <ul className="space-y-1 text-lg">
                   {memberLinks.map((item) => (
                     <li key={item.href}>
-                      <Link
+                      <ContextualNotificationLink
                         href={item.href}
+                        area={contextualAreaForHref(item.href)}
                         onClick={closeMenu}
                         className="flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                       >
                         <span>{item.label}</span>
-                        {item.href === "/projects" && projectActivityCount > 0 && (
+                        {contextualCountForHref(item.href, {
+                          projectActivityCount,
+                          orderActivityCount,
+                          communityActivityCount,
+                        }) > 0 && (
                           <NavCount
-                            count={projectActivityCount}
-                            singularLabel="unread project update"
-                            pluralLabel="unread project updates"
+                            count={contextualCountForHref(item.href, {
+                              projectActivityCount,
+                              orderActivityCount,
+                              communityActivityCount,
+                            })}
+                            singularLabel="unread update"
+                            pluralLabel="unread updates"
                           />
                         )}
-                      </Link>
+                      </ContextualNotificationLink>
                     </li>
                   ))}
                   <li>
@@ -212,13 +232,23 @@ export function MobileMenuApp({
                 <ul className="space-y-1 text-base">
                   {accountLinks.map((item) => (
                     <li key={item.label}>
-                      <Link
+                      <ContextualNotificationLink
                         href={item.href}
+                        area={item.href === "/wallet" ? "wallet" : undefined}
                         onClick={closeMenu}
                         className="block rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                       >
-                        {item.label}
-                      </Link>
+                        <span className="flex items-center justify-between gap-3">
+                          <span>{item.label}</span>
+                          {item.href === "/wallet" && walletActivityCount > 0 && (
+                            <NavCount
+                              count={walletActivityCount}
+                              singularLabel="unread wallet update"
+                              pluralLabel="unread wallet updates"
+                            />
+                          )}
+                        </span>
+                      </ContextualNotificationLink>
                     </li>
                   ))}
                   {isEpk && (
@@ -248,7 +278,16 @@ export function MobileMenuApp({
                           onClick={closeMenu}
                           className="block rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                         >
-                          Admin home
+                          <span className="flex items-center gap-2">
+                            Admin
+                            {adminQueueCount > 0 && (
+                              <NavCount
+                                count={adminQueueCount}
+                                singularLabel="admin item needs review"
+                                pluralLabel="admin items need review"
+                              />
+                            )}
+                          </span>
                         </Link>
                       </li>
                     </ul>
@@ -266,11 +305,11 @@ export function MobileMenuApp({
                                 className="flex items-center justify-between gap-3 rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                               >
                                 <span>{entry.label}</span>
-                                {entry.href === "/admin/projects/applications" && projectApplicationCount > 0 && (
+                                {(adminQueueCounts[entry.href] ?? 0) > 0 && (
                                   <NavCount
-                                    count={projectApplicationCount}
-                                    singularLabel="proposal needs review"
-                                    pluralLabel="proposals need review"
+                                    count={adminQueueCounts[entry.href] ?? 0}
+                                    singularLabel="item needs review"
+                                    pluralLabel="items need review"
                                   />
                                 )}
                               </Link>
@@ -349,6 +388,27 @@ export function MobileMenuApp({
         )}
     </>
   );
+}
+
+function contextualAreaForHref(href: string): ContextualNotificationArea | undefined {
+  if (href === "/projects") return "projects";
+  if (href === "/orders") return "orders";
+  if (href === "/community") return "community";
+  return undefined;
+}
+
+function contextualCountForHref(
+  href: string,
+  counts: {
+    projectActivityCount: number;
+    orderActivityCount: number;
+    communityActivityCount: number;
+  },
+): number {
+  if (href === "/projects") return counts.projectActivityCount;
+  if (href === "/orders") return counts.orderActivityCount;
+  if (href === "/community") return counts.communityActivityCount;
+  return 0;
 }
 
 function NavCount({

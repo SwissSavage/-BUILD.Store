@@ -60,6 +60,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { requireAdmin } from "@/lib/auth-stub";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { SeedPurgeButton } from "@/components/SeedPurgeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -104,7 +105,6 @@ export default async function SeedResiduePage() {
   const claimed = rows.filter((r) => r.accounts > 0 || r.sessions > 0);
   const unclaimed = rows.filter((r) => r.accounts === 0 && r.sessions === 0);
 
-  const label = "text-[11px] uppercase tracking-wider text-ink-muted";
   const name = (r: SeedRow) =>
     [r.first_name, r.last_name].filter(Boolean).join(" ") || "(no name)";
 
@@ -117,7 +117,8 @@ export default async function SeedResiduePage() {
       <p className="mt-2 text-ink-muted">
         Rows with hand-written ids, left by the seed run on 22 September.
         Anyone who has signed in is a real person and is listed as
-        untouchable, whatever their id looks like.
+        untouchable, whatever their id looks like. The rest can be
+        removed from here.
       </p>
 
       {rows.length === 0 && (
@@ -190,12 +191,7 @@ export default async function SeedResiduePage() {
               </li>
             ))}
           </ul>
-          <p className={`${label} mt-5`}>Not deletable here yet</p>
-          <p className="mt-1 text-xs text-ink-muted">
-            Deliberately. Read this first, then the delete lands in its
-            own change. A surface that reports and a surface that
-            destroys should not arrive in the same deploy.
-          </p>
+          <SeedPurgeButton count={unclaimed.length} />
         </Card>
       )}
 

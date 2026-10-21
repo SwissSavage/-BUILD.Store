@@ -51,7 +51,23 @@ export function JobsDropdown({
   projectCountLabel?: string;
 }) {
   return (
-    <HoverDropdown label="Jobs" href="/jobs" triggerClassName={navLink}>
+    <HoverDropdown
+      label={
+        <>
+          <span>Jobs</span>
+          {projectCount > 0 && (
+            <span
+              className="inline-flex min-w-4 items-center justify-center rounded-full bg-brand-magenta px-1.5 py-0.5 text-[10px] font-semibold leading-none text-black"
+              aria-label={`${projectCount} ${projectCountLabel}`}
+            >
+              {projectCount > 99 ? "99+" : projectCount}
+            </span>
+          )}
+        </>
+      }
+      href="/jobs"
+      triggerClassName={navLink}
+    >
       {ITEMS.map((item) => (
         item.href === "/projects" ? (
           <ContextualNotificationLink

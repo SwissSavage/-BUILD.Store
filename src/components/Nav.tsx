@@ -266,7 +266,18 @@ async function AdminDropdown({
 
   return (
     <HoverDropdown
-      label="Admin"
+      label={
+        <>
+          <span>Admin</span>
+          {projectApplicationCount > 0 && (
+            <NavCount
+              count={projectApplicationCount}
+              singularLabel="proposal needs review"
+              pluralLabel="proposals need review"
+            />
+          )}
+        </>
+      }
       href="/admin"
       width="w-72"
       triggerClassName={cn(navLink, "hover:opacity-80")}

@@ -17,15 +17,17 @@
  * StoreDropdown / JobsDropdown so we don't need client JS for the
  * open/close behavior.
  */
-import Link from "next/link";
 import { signOut } from "@/lib/auth-actions";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/Avatar";
+import { ContextualNotificationLink } from "@/components/ContextualNotificationLink";
+import type { ContextualNotificationArea } from "@/lib/contextual-notifications";
 import type { User } from "@/lib/types";
 
 interface ProfileMenuProps {
   user: User;
   unreadNotificationCount: number;
+  walletNotificationCount: number;
 }
 
 interface MenuItem {
@@ -34,11 +36,13 @@ interface MenuItem {
   blurb?: string;
   icon?: string; // simple emoji/glyph — Rob asked for a bell on notifications
   badge?: number;
+  area?: ContextualNotificationArea;
 }
 
 export function ProfileMenu({
   user,
   unreadNotificationCount,
+  walletNotificationCount,
 }: ProfileMenuProps) {
   const items: MenuItem[] = [
     {
@@ -62,6 +66,8 @@ export function ProfileMenu({
       href: "/wallet",
       label: "Wallet",
       blurb: "$BUILD balance, payout method, transaction ledger.",
+      badge: walletNotificationCount > 0 ? walletNotificationCount : undefined,
+      area: "wallet",
     },
     {
       href: "/profile/edit/paperwork",
@@ -133,9 +139,10 @@ export function ProfileMenu({
         </div>
 
         {items.map((item) => (
-          <Link
+          <ContextualNotificationLink
             key={item.href}
             href={item.href}
+            area={item.area}
             className="block rounded-lg px-3 py-2 hover:bg-[var(--surface-inset)]"
           >
             <span className="flex items-center gap-2 font-medium">
@@ -152,7 +159,7 @@ export function ProfileMenu({
                 {item.blurb}
               </span>
             )}
-          </Link>
+          </ContextualNotificationLink>
         ))}
 
         <div className="my-1 border-t border-[var(--surface-border)]" />

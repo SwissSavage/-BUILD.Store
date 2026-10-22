@@ -26,6 +26,23 @@ export async function getAllApplications(): Promise<ProjectApplication[]> {
   }
 }
 
+/**
+ * The live number an admin can act on. This deliberately follows the
+ * application status rather than notification read state: approving,
+ * rejecting, or withdrawing an application clears the queue immediately.
+ */
+export async function getPendingApplicationCount(): Promise<number> {
+  try {
+    const rows = await db
+      .select({ id: projectApplications.id })
+      .from(projectApplications)
+      .where(eq(projectApplications.status, "pending"));
+    return rows.length;
+  } catch {
+    return MOCK_PROJECT_APPLICATIONS.filter((app) => app.status === "pending").length;
+  }
+}
+
 /** Applications on one project. */
 export async function getApplicationsForProject(
   projectId: string,

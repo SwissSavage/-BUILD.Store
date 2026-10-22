@@ -5,7 +5,7 @@
  * (user_id, created_at DESC) index added in drizzle/0012, which is
  * what makes the unread-count query on every page render cheap.
  */
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { notifications as notificationsTable } from "@/db/schema";
 import type { Notification } from "@/lib/types";
@@ -76,6 +76,35 @@ export async function unreadNotificationCount(
   userId: string,
 ): Promise<number> {
   return getUnreadCount(userId);
+}
+
+/**
+ * Unread total for one navigation area. Unlike unreadByKind this keeps
+ * navbar renders to a narrow database query instead of loading a preview
+ * list that may be capped or grow over time.
+ */
+export async function unreadNotificationCountByKind(
+  userId: string,
+  kinds: Notification["kind"][],
+): Promise<number> {
+  if (kinds.length === 0) return 0;
+
+  try {
+    const rows = await db
+      .select({ id: notificationsTable.id })
+      .from(notificationsTable)
+      .where(
+        and(
+          eq(notificationsTable.userId, userId),
+          isNull(notificationsTable.readAt),
+          inArray(notificationsTable.kind, kinds),
+        ),
+      );
+    return rows.length;
+  } catch (err) {
+    console.error(`NOTIFICATION_UNREAD_KIND_COUNT_FAILED user=${userId}`, err);
+    return 0;
+  }
 }
 
 /**

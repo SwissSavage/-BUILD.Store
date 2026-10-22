@@ -157,6 +157,7 @@ export async function applyToProject(formData: FormData) {
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/admin/projects/applications");
   revalidatePath("/notifications");
+  revalidatePath("/", "layout");
 }
 
 async function decideProjectApplication(
@@ -259,6 +260,7 @@ async function decideProjectApplication(
   revalidatePath(`/projects/${project.id}`);
   revalidatePath("/admin/projects/applications");
   revalidatePath("/notifications");
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -313,6 +315,7 @@ export async function withdrawProjectApplication(formData: FormData) {
   revalidatePath("/projects");
   revalidatePath(`/projects/${app.projectId}`);
   revalidatePath("/admin/projects/applications");
+  revalidatePath("/", "layout");
 
   // If form posted with a "next" target, follow it.
   const next = String(formData.get("next") ?? "");

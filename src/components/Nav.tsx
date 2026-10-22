@@ -16,11 +16,17 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { viewAsUser } from "@/lib/auth-actions";
 import { cn } from "@/lib/cn";
-import { adminNavGroups } from "@/lib/admin-nav";
+import { adminNavGroups, type AdminQueueCounts } from "@/lib/admin-nav";
 import { HoverDropdown } from "@/components/HoverDropdown";
 import { getAllUsers } from "@/lib/readers/users";
 import { safely } from "@/lib/readers";
-import { unreadNotificationCount } from "@/lib/readers/notifications";
+import {
+  unreadNotificationCount,
+  unreadNotificationCountByKind,
+} from "@/lib/readers/notifications";
+import { CONTEXTUAL_NOTIFICATION_KINDS } from "@/lib/contextual-notifications";
+import { getAdminQueueCounts } from "@/lib/readers/admin-queue-counts";
+import { ContextualNotificationLink } from "@/components/ContextualNotificationLink";
 import {
   TIER_LABELS,
   adminName,
@@ -68,7 +74,20 @@ function pickViewAsTargets(self: User, roster: User[]): {
 export async function Nav() {
   const user = await getCurrentUser();
   const isLoggedIn = !!user;
-  const unread = isLoggedIn ? await unreadNotificationCount(user!.id) : 0;
+  const [unread, projectActivityCount, orderActivityCount, walletActivityCount, communityActivityCount, adminQueueCounts] = isLoggedIn
+    ? await Promise.all([
+        unreadNotificationCount(user!.id),
+        user!.isAdmin
+          ? Promise.resolve(0)
+          : unreadNotificationCountByKind(user!.id, CONTEXTUAL_NOTIFICATION_KINDS.projects),
+        unreadNotificationCountByKind(user!.id, CONTEXTUAL_NOTIFICATION_KINDS.orders),
+        unreadNotificationCountByKind(user!.id, CONTEXTUAL_NOTIFICATION_KINDS.wallet),
+        unreadNotificationCountByKind(user!.id, CONTEXTUAL_NOTIFICATION_KINDS.community),
+        user!.isAdmin ? getAdminQueueCounts() : Promise.resolve({}),
+      ])
+    : [0, 0, 0, 0, 0, {} as AdminQueueCounts];
+  const adminQueueCount = (Object.values(adminQueueCounts) as Array<number | undefined>)
+    .reduce<number>((total, count) => total + (count ?? 0), 0);
   const isDevelopmentBuild =
     process.env.DEV_BUILD?.trim().toLowerCase() === "true";
 
@@ -106,11 +125,22 @@ export async function Nav() {
           {isLoggedIn ? (
             <>
               <Link href="/dashboard" className={navLink}>Dashboard</Link>
-              <JobsDropdown />
+              <JobsDropdown
+                projectCount={user!.isAdmin ? 0 : projectActivityCount}
+                projectCountLabel={
+                  "unread project updates"
+                }
+              />
               <StoreDropdown />
-              <Link href="/orders" className={navLink}>Orders</Link>
+              <ContextualNotificationLink href="/orders" area="orders" className={cn(navLink, "inline-flex items-center gap-1.5")}>
+                Orders
+                {orderActivityCount > 0 && <NavCount count={orderActivityCount} singularLabel="unread order update" pluralLabel="unread order updates" />}
+              </ContextualNotificationLink>
               <Link href="/portfolio" className={navLink}>Portfolio</Link>
-              <Link href="/community" className={navLink}>Community</Link>
+              <ContextualNotificationLink href="/community" area="community" className={cn(navLink, "inline-flex items-center gap-1.5")}>
+                Community
+                {communityActivityCount > 0 && <NavCount count={communityActivityCount} singularLabel="unread community update" pluralLabel="unread community updates" />}
+              </ContextualNotificationLink>
               {/* Artists (profileMode "epk") get a dedicated EPK editor
                   link — separate from the profile dropdown because EPK
                   is a distinct authoring surface, not a personal-scope
@@ -118,13 +148,19 @@ export async function Nav() {
               {!user!.isAdmin && user!.profileMode === "epk" && (
                 <Link href="/profile/epk" className={navLink}>EPK</Link>
               )}
-              {user!.isAdmin && <AdminDropdown self={user!} />}
+              {user!.isAdmin && (
+                <AdminDropdown
+                  self={user!}
+                  queueCounts={adminQueueCounts}
+                  queueCount={adminQueueCount}
+                />
+              )}
               {/* Personal-scope surfaces (profile, notifications, locker,
                   wallet, agreements, jobs status, sign out) live inside
                   the avatar dropdown per Rob's beta note #2 / task #60.
                   Keeps the top nav focused on discovery + platform-wide
                   surfaces. */}
-              <ProfileMenu user={user!} unreadNotificationCount={unread} />
+              <ProfileMenu user={user!} unreadNotificationCount={unread} walletNotificationCount={walletActivityCount} />
             </>
           ) : (
             <>
@@ -165,6 +201,12 @@ export async function Nav() {
             isAdmin={!!user?.isAdmin}
             isEpk={user?.profileMode === "epk"}
             unread={unread}
+            projectActivityCount={projectActivityCount}
+            orderActivityCount={orderActivityCount}
+            walletActivityCount={walletActivityCount}
+            communityActivityCount={communityActivityCount}
+            adminQueueCounts={adminQueueCounts}
+            adminQueueCount={adminQueueCount}
           />
         </div>
       </div>
@@ -174,6 +216,26 @@ export async function Nav() {
 
 const navLink = "text-ink-muted hover:text-ink transition-colors";
 
+function NavCount({
+  count,
+  singularLabel,
+  pluralLabel,
+}: {
+  count: number;
+  singularLabel: string;
+  pluralLabel: string;
+}) {
+  const label = count === 1 ? singularLabel : pluralLabel;
+  return (
+    <span
+      className="inline-flex min-w-4 items-center justify-center rounded-full bg-brand-magenta px-1.5 py-0.5 text-[10px] font-semibold leading-none text-black"
+      aria-label={`${count} ${label}`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 /**
  * Admin nav button + view-as dropdown. Opens on hover
  * so it works without client JS. Submitting a "View as" button posts
@@ -181,7 +243,15 @@ const navLink = "text-ink-muted hover:text-ink transition-colors";
  * and redirects to /. The persistent ViewingAsBanner (above this nav)
  * handles the flip-back affordance.
  */
-async function AdminDropdown({ self }: { self: User }) {
+async function AdminDropdown({
+  self,
+  queueCounts,
+  queueCount,
+}: {
+  self: User;
+  queueCounts: AdminQueueCounts;
+  queueCount: number;
+}) {
   const { users: roster } = await safely(() => getAllUsers(), {
     users: [],
     source: "postgres" as const,
@@ -190,7 +260,18 @@ async function AdminDropdown({ self }: { self: User }) {
 
   return (
     <HoverDropdown
-      label="Admin"
+      label={
+        <>
+          <span>Admin</span>
+          {queueCount > 0 && (
+            <NavCount
+              count={queueCount}
+              singularLabel="admin item needs review"
+              pluralLabel="admin items need review"
+            />
+          )}
+        </>
+      }
       href="/admin"
       width="w-72"
       triggerClassName={cn(navLink, "hover:opacity-80")}
@@ -229,7 +310,11 @@ async function AdminDropdown({ self }: { self: User }) {
             count={section.entries.length}
           >
             {section.entries.map((entry) => (
-              <AdminLink key={entry.href} href={entry.href}>
+              <AdminLink
+                key={entry.href}
+                href={entry.href}
+                count={queueCounts[entry.href] ?? 0}
+              >
                 {entry.label}
               </AdminLink>
             ))}
@@ -320,16 +405,25 @@ function AdminSection({
 function AdminLink({
   href,
   children,
+  count = 0,
 }: {
   href: string;
   children: React.ReactNode;
+  count?: number;
 }) {
   return (
     <Link
       href={href}
-      className="block rounded-lg px-3 py-1.5 text-sm hover:bg-[var(--surface-inset)]"
+      className="flex items-center justify-between gap-3 rounded-lg px-3 py-1.5 text-sm hover:bg-[var(--surface-inset)]"
     >
-      {children}
+      <span>{children}</span>
+      {count > 0 && (
+        <NavCount
+          count={count}
+          singularLabel="item needs review"
+          pluralLabel="items need review"
+        />
+      )}
     </Link>
   );
 }

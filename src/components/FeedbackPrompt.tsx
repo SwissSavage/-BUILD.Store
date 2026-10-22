@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Inline feedback prompt — drop on any member surface to give beta
  * users a one-click way to flag a confusing thing or call out something
@@ -122,7 +123,7 @@ export function FeedbackPrompt({
         />
       )}
 
-      <button
+      <Button
         type="submit"
         className={cn(
           "rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-black",
@@ -130,7 +131,7 @@ export function FeedbackPrompt({
         )}
       >
         Send feedback
-      </button>
+      </Button>
     </form>
   );
 }

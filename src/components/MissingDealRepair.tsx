@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Accepted engagements with no HubSpot deal behind them.
@@ -83,13 +84,13 @@ export function MissingDealRepair({ engagements }: { engagements: MissingDeal[] 
               <p className="truncate text-sm font-medium">{e.title}</p>
               <p className="text-xs text-ink-muted">{e.clientDisplayName}</p>
             </div>
-            <button
+            <Button
               type="submit"
               disabled={pending}
               className="shrink-0 rounded-full border border-brand-magenta/50 px-4 py-1.5 text-xs text-brand-magentaText hover:border-brand-magenta disabled:opacity-60"
             >
               {pending ? "Creating…" : "Create the deal"}
-            </button>
+            </Button>
           </form>
         ))}
       </div>
@@ -120,13 +121,13 @@ export function MissingDealRepair({ engagements }: { engagements: MissingDeal[] 
                 disabled={linkPending}
                 className="w-full min-w-0 flex-[2] rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none disabled:opacity-60 md:w-auto"
               />
-              <button
+              <Button
                 type="submit"
                 disabled={linkPending}
                 className="shrink-0 rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs text-ink-muted hover:text-ink disabled:opacity-60"
               >
                 {linkPending ? "Checking…" : "Attach"}
-              </button>
+              </Button>
             </form>
           ))}
         </div>

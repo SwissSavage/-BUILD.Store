@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/inbound/import — one-shot CSV importer for Google-form
  * talent-roster exports (task #47).
@@ -54,12 +55,12 @@ export default async function InboundCsvImportPage() {
             />
           </label>
 
-          <button
+          <Button
             type="submit"
             className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
           >
             Import to inbound queue
-          </button>
+          </Button>
           <p className="text-[11px] text-ink-faint">
             After import, review the new rows at{" "}
             <Link

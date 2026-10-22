@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/reserve — Contract Reserve Pool state + graduated bonus
  * release + rebate issuance across all contracts.
@@ -379,12 +380,12 @@ async function ReserveCard({
                             name="projectId"
                             value={project.id}
                           />
-                          <button
+                          <Button
                             type="submit"
                             className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[10px] font-medium text-brand-magentaText hover:bg-brand-magenta/10"
                           >
                             Nudge PM
-                          </button>
+                          </Button>
                         </form>
                       )}
                       {item.kind === "peer" && (
@@ -399,12 +400,12 @@ async function ReserveCard({
                             name="contributorId"
                             value={item.contributorId}
                           />
-                          <button
+                          <Button
                             type="submit"
                             className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[10px] font-medium text-brand-magentaText hover:bg-brand-magenta/10"
                           >
                             Nudge peers
-                          </button>
+                          </Button>
                         </form>
                       )}
                       {item.kind === "client" && (
@@ -424,12 +425,12 @@ async function ReserveCard({
                             required
                             className="w-32 rounded border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-[10px]"
                           />
-                          <button
+                          <Button
                             type="submit"
                             className="rounded-full border border-brand-magenta/40 px-3 py-1 text-[10px] font-medium text-brand-magentaText hover:bg-brand-magenta/10"
                           >
                             Send link
-                          </button>
+                          </Button>
                         </form>
                       )}
                     </li>
@@ -541,12 +542,12 @@ async function ReserveCard({
                     />
                   </label>
                   <div className="flex justify-end">
-                    <button
+                    <Button
                       type="submit"
                       className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
                     >
                       Capture + send confirmation link
-                    </button>
+                    </Button>
                   </div>
                 </form>
               </details>
@@ -605,12 +606,12 @@ async function ReserveCard({
               ))}
             </ul>
             <div className="mt-4 flex justify-end">
-              <button
+              <Button
                 type="submit"
                 className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
               >
                 Execute graduated release
-              </button>
+              </Button>
             </div>
           </form>
         );
@@ -663,12 +664,12 @@ async function ReserveCard({
               />
             </label>
             <div className="flex justify-end">
-              <button
+              <Button
                 type="submit"
                 className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
               >
                 Issue rebate
-              </button>
+              </Button>
             </div>
           </form>
         </details>

@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /community — public cooperative-wide message board (task #64).
  *
@@ -106,12 +107,12 @@ export default async function CommunityChatPage() {
                 1000 char max. 30s cooldown between posts. Contact
                 info gets scrubbed automatically.
               </p>
-              <button
+              <Button
                 type="submit"
                 className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
               >
                 Post
-              </button>
+              </Button>
             </div>
           </form>
         </Card>
@@ -204,14 +205,14 @@ export default async function CommunityChatPage() {
                               className="mr-2 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-2 py-1 text-[11px] md:w-auto"
                             />
                           )}
-                          <button
+                          <Button
                             type="submit"
                             className="text-[11px] text-ink-faint hover:text-brand-magentaText"
                           >
                             {isAdmin && user?.id !== r.userId
                               ? "Moderate → remove"
                               : "Delete"}
-                          </button>
+                          </Button>
                         </form>
                       )}
                     </div>

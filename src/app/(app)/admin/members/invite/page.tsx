@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/members/invite — admin-issued signup invite generator.
  *
@@ -241,12 +242,12 @@ export default async function InviteMemberPage({
               placeholder="Which lens they cover · why now · anything relevant for the record"
             />
           </label>
-          <button
+          <Button
             type="submit"
             className="fm-btn-primary rounded-full px-5 py-2 text-sm"
           >
             Generate invite link
-          </button>
+          </Button>
           <p className="text-[11px] text-ink-faint">
             Default lifetime: 14 days. Cannot be edited after issue —
             revoke and reissue if the target hasn&apos;t redeemed and

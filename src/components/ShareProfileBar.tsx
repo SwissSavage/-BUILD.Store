@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * View + share your own public profile.
@@ -49,13 +50,13 @@ export function ShareProfileBar({ handle }: { handle: string }) {
       >
         View my public profile
       </a>
-      <button
+      <Button
         type="button"
         onClick={copy}
         className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
       >
         {copied ? "Link copied" : "Copy share link"}
-      </button>
+      </Button>
       <span className="text-xs text-ink-faint">
         This is what clients see. Safe to share anywhere.
       </span>

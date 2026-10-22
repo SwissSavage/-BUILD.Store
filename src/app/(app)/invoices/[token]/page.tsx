@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Client-facing invoice view (Phase 1.5).
  *
@@ -236,14 +237,14 @@ export default async function ClientInvoicePage({
                 </a>{" "}
                 and we&apos;ll re-issue without the markup.
               </p>
-              <button
+              <Button
                 disabled
                 className="rounded-full px-5 py-2 text-sm font-medium text-white opacity-60"
                 style={{ backgroundColor: "#5070F0" }}
                 title="Stripe Checkout is wired in production"
               >
                 Pay ${Number(invoice.total).toLocaleString()} by card
-              </button>
+              </Button>
               <p className="text-[11px] italic text-ink-faint">
                 Sandbox note: in production this opens a Stripe Checkout
                 session tied to the contract&apos;s Connect account.

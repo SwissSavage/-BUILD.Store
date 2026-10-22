@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin fraud-review queue for portfolio duplicates (task #56).
  *
@@ -117,12 +118,12 @@ export default async function FraudReviewPage() {
 
       <div className="mt-6 flex items-center gap-3">
         <form action={runScanNow}>
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Run scan now
-          </button>
+          </Button>
         </form>
         <span className="text-[11px] text-ink-faint">
           {pending.length} pending · {reviewed.length} reviewed
@@ -201,22 +202,22 @@ export default async function FraudReviewPage() {
                       className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-2 py-1.5 text-xs"
                     />
                     <div className="flex gap-2">
-                      <button
+                      <Button
                         type="submit"
                         name="disposition"
                         value="confirmed_fraud"
                         className="rounded-full bg-[#d84343] px-3 py-1 text-[11px] font-medium text-white hover:opacity-90"
                       >
                         Confirm fraud
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="submit"
                         name="disposition"
                         value="false_positive"
                         className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-[#007048] hover:text-[#007048]"
                       >
                         False positive
-                      </button>
+                      </Button>
                     </div>
                   </form>
                 </li>

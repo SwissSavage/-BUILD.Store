@@ -33,6 +33,10 @@ counts—not general-purpose buttons.
 
 ## Interaction
 
+- All action controls use `Button` from `@/components/Button`; do not create
+  bespoke button class strings for new work.
+- `primary`, `secondary`, and `ghost` are the only standard button variants.
+  `compact`, `default`, `large`, and `icon` are sizes, not additional styles.
 - Primary actions use the existing accessible magenta-to-blue gradient.
 - Primary buttons use a short brightness hover and 1px press response.
 - Keyboard focus is a visible, high-contrast outline with a 3px offset.
@@ -41,3 +45,6 @@ counts—not general-purpose buttons.
 - Animated conic outlines are reserved for rare, high-commitment actions. They
   must respect `prefers-reduced-motion` and should not appear on routine Save
   or Edit actions.
+
+Status pills, filter chips, counts, progress indicators, and avatars are not
+buttons and may remain rounded. Button geometry is consistently 8px.

@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Shared presentational bits for the three signup-intent pages.
  *
@@ -164,12 +165,12 @@ export function SignupHeader({
 export function SubmitRow() {
   return (
     <>
-      <button
+      <Button
         type="submit"
         className="w-full rounded-full bg-ink py-3 font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-black"
       >
         Submit
-      </button>
+      </Button>
       <p className="mt-4 text-xs text-ink-faint">
         Submission is logged to the CRM stub (server console). Production
         wires this to HubSpot with the correct pipeline per intent.

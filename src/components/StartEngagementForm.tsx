@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * One screen: client, Builder, terms, references. Save and the terms go
@@ -133,13 +134,13 @@ export function StartEngagementForm({
                 ))}
               </select>
             </label>
-            <button
+            <Button
               type="button"
               onClick={() => setNewClient(true)}
               className="mt-2 text-[11px] text-brand-magentaText hover:underline"
             >
               Not listed? Add them
-            </button>
+            </Button>
           </>
         ) : (
           <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -181,13 +182,13 @@ export function StartEngagementForm({
                 disabled={pending}
               />
             </label>
-            <button
+            <Button
               type="button"
               onClick={() => setNewClient(false)}
               className="text-left text-[11px] text-brand-magentaText hover:underline"
             >
               Pick an existing client instead
-            </button>
+            </Button>
           </div>
         )}
       </section>
@@ -405,7 +406,7 @@ export function StartEngagementForm({
       </section>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
+        <Button
           type="submit"
           disabled={pending}
           className="fm-btn-primary rounded-full px-6 py-2.5 text-sm font-medium disabled:opacity-60"
@@ -415,7 +416,7 @@ export function StartEngagementForm({
             : selectedTalent
               ? `Send to ${firstName} for review`
               : "Send for review"}
-        </button>
+        </Button>
         <span className="text-[11px] text-ink-faint">
           {firstName} reads the terms and accepts or declines. Nothing is
           created in HubSpot and nothing is said to the client until they

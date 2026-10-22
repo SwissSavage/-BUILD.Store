@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Wallet connect card.
@@ -124,21 +125,21 @@ export function WalletConnectCard({
             )}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <button
+            <Button
               type="button"
               onClick={handleConnect}
               disabled={!hasInjected || connecting}
               className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText disabled:opacity-50"
             >
               {connecting ? "Reconnecting…" : "Reconnect / switch"}
-            </button>
+            </Button>
             <form action={disconnectWallet}>
-              <button
+              <Button
                 type="submit"
                 className="fm-btn-primary rounded-full px-3 py-1.5 text-xs font-medium"
               >
                 Disconnect
-              </button>
+              </Button>
             </form>
           </div>
         </div>
@@ -150,7 +151,7 @@ export function WalletConnectCard({
             swap upgrades this to a Sign-In With Ethereum (SIWE)
             signature round trip.
           </p>
-          <button
+          <Button
             type="button"
             onClick={handleConnect}
             disabled={connecting}
@@ -162,7 +163,7 @@ export function WalletConnectCard({
               : hasInjected
                 ? "Connect wallet"
                 : "Install a wallet to connect"}
-          </button>
+          </Button>
           {!hasInjected && (
             <p className="text-[11px] text-ink-faint">
               WalletConnect deep-link path lands in the production swap

@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * QuoteInteractiveSurface — the client-side shell for /quotes/[token]
@@ -477,7 +478,7 @@ export function QuoteInteractiveSurface({
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <button
+          <Button
             type="button"
             onClick={handleApprove}
             disabled={!selectedLeadUserId || pending}
@@ -488,15 +489,15 @@ export function QuoteInteractiveSurface({
               : selectedLeadUserId
                 ? `Approve · ${leadName}`
                 : "Pick a lead first"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => setShowDeclineForm((v) => !v)}
             disabled={pending}
             className="inline-flex items-center rounded-full border border-[var(--surface-border)] px-6 py-2.5 text-sm font-medium text-ink transition-colors hover:border-ink hover:bg-[var(--surface-elevated)] disabled:opacity-60"
           >
             {showDeclineForm ? "Cancel decline" : "Decline"}
-          </button>
+          </Button>
           <a
             href="mailto:hello@buildstore.example"
             className="inline-flex items-center rounded-full border border-brand-blue/60 px-6 py-2.5 text-sm font-medium text-brand-blue transition-colors hover:bg-brand-blue/10"
@@ -522,14 +523,14 @@ export function QuoteInteractiveSurface({
               className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none"
             />
             <div className="mt-3 flex justify-end">
-              <button
+              <Button
                 type="button"
                 onClick={handleDeclineSubmit}
                 disabled={pending}
                 className="inline-flex items-center rounded-full bg-ink px-5 py-2 text-xs font-medium text-[var(--surface)] transition-colors hover:opacity-90 disabled:opacity-60"
               >
                 {pending ? "Sending…" : "Send decline"}
-              </button>
+              </Button>
             </div>
           </div>
         )}

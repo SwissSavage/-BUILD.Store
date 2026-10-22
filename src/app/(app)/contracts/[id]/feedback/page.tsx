@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * External client feedback questionnaire (Phase 2.7 magic-link rail).
  *
@@ -211,12 +212,12 @@ export default async function ContractFeedbackPage({
               uses your feedback in the way you consented to above.
             </p>
 
-            <button
+            <Button
               type="submit"
               className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
             >
               Submit feedback
-            </button>
+            </Button>
           </form>
         </Card>
       )}

@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/access-review — quarterly admin access review surface.
  *
@@ -208,12 +209,12 @@ export default async function AccessReviewPage() {
                             placeholder="Left the cooperative / role changed / never actioned / …"
                           />
                         </label>
-                        <button
+                        <Button
                           type="submit"
                           className="fm-btn-primary w-full rounded-full px-4 py-2 text-xs"
                         >
                           Revoke admin flag
-                        </button>
+                        </Button>
                       </form>
                     </details>
                   )}
@@ -245,12 +246,12 @@ export default async function AccessReviewPage() {
               placeholder="e.g. 'Confirmed all 3 admin flags in place. Revoked X's access following role transition to Partner.'"
             />
           </label>
-          <button
+          <Button
             type="submit"
             className="fm-btn-primary rounded-full px-5 py-2 text-sm"
           >
             Record review complete
-          </button>
+          </Button>
         </form>
       </section>
 

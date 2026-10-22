@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * The Builder's one screen.
@@ -156,7 +157,7 @@ export function EngagementReviewCard(props: EngagementReviewProps) {
       {/* ── decision ───────────────────────────────────────── */}
       {!declining ? (
         <div className="flex flex-wrap items-center gap-3">
-          <button
+          <Button
             type="submit"
             name="decision"
             value="accept"
@@ -164,15 +165,15 @@ export function EngagementReviewCard(props: EngagementReviewProps) {
             className="fm-btn-primary rounded-full px-6 py-2.5 text-sm font-medium disabled:opacity-60"
           >
             {pending ? "Accepting…" : "Accept these terms"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => setDeclining(true)}
             disabled={pending}
             className="rounded-full border border-[var(--surface-border)] px-6 py-2.5 text-sm text-ink-muted hover:text-ink disabled:opacity-60"
           >
             Something is wrong
-          </button>
+          </Button>
           <span className="text-[11px] text-ink-faint">
             Accepting starts the work. The client has not been told anything
             yet.
@@ -191,7 +192,7 @@ export function EngagementReviewCard(props: EngagementReviewProps) {
             disabled={pending}
           />
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <button
+            <Button
               type="submit"
               name="decision"
               value="decline"
@@ -199,15 +200,15 @@ export function EngagementReviewCard(props: EngagementReviewProps) {
               className="rounded-full border border-red-500/60 px-6 py-2.5 text-sm text-ink disabled:opacity-50"
             >
               {pending ? "Sending…" : "Send this back"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setDeclining(false)}
               disabled={pending}
               className="text-[11px] text-ink-faint hover:text-ink"
             >
               Never mind
-            </button>
+            </Button>
             <span className="text-[11px] text-ink-faint">
               Goes to whoever composed it. Nothing is said to the client.
             </span>

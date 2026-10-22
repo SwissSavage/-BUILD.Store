@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/invoices — invoice + receipt registry across all four flows.
  *
@@ -170,12 +171,12 @@ export default async function AdminInvoicesPage() {
                     </div>
                     <form action={approveInternalInvoice}>
                       <input type="hidden" name="id" value={inv.id} />
-                      <button
+                      <Button
                         type="submit"
                         className="fm-btn-primary rounded-full px-4 py-1.5 text-xs font-medium"
                       >
                         Approve
-                      </button>
+                      </Button>
                     </form>
                   </div>
                   {inv.notes && (
@@ -255,12 +256,12 @@ export default async function AdminInvoicesPage() {
                           className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-xs"
                         />
                       </div>
-                      <button
+                      <Button
                         type="submit"
                         className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
                       >
                         Generate external
-                      </button>
+                      </Button>
                     </form>
                   </Card>
                 </li>
@@ -357,12 +358,12 @@ export default async function AdminInvoicesPage() {
                             className="mt-1 rounded border border-ink-muted/30 bg-transparent px-2 py-1 text-sm text-ink-dark"
                           />
                         </label>
-                        <button
+                        <Button
                           type="submit"
                           className="fm-btn-primary rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider"
                         >
                           Log payment
-                        </button>
+                        </Button>
                       </form>
                     </Card>
                   )}
@@ -490,12 +491,12 @@ export default async function AdminInvoicesPage() {
               />
             </div>
             <div className="flex justify-end">
-              <button
+              <Button
                 type="submit"
                 className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
               >
                 Create retroactive receipt
-              </button>
+              </Button>
             </div>
           </form>
         </Card>
@@ -619,12 +620,12 @@ function InvoiceRow({
                   className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
                 />
               </div>
-              <button
+              <Button
                 type="submit"
                 className="rounded-full border border-brand-magenta px-3 py-1.5 text-[11px] font-medium text-brand-magentaText hover:bg-brand-magenta hover:text-black"
               >
                 Send for signature
-              </button>
+              </Button>
             </form>
           )}
         </div>

@@ -709,6 +709,13 @@ html {
     box-shadow var(--motion-standard) ease;
 }
 
+/* One geometry rule for every actual action control. Legacy class strings
+   may still describe colour or spacing while routes are simplified, but they
+   cannot turn an action back into a pill. */
+.fm-button {
+  border-radius: var(--control-radius);
+}
+
 .fm-btn-primary:hover:not(:disabled) {
   filter: brightness(1.08);
 }

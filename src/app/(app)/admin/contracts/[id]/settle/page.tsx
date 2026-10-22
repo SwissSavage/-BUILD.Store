@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Revenue split engine settlement page (Phase 1.6).
  *
@@ -564,12 +565,12 @@ export default async function SettlePage({
               </code>
               . Failure on any single transfer doesn&apos;t block the others.
             </p>
-            <button
+            <Button
               type="submit"
               className="fm-btn-primary mt-4 rounded-full px-6 py-2.5 text-sm font-medium"
             >
               Settle and dispatch payouts
-            </button>
+            </Button>
           </Card>
         </form>
       )}
@@ -871,12 +872,12 @@ async function BonusReleasePanel({
           )}
           <form action={issueFeedbackLink} className="mt-2">
             <input type="hidden" name="projectId" value={project.id} />
-            <button
+            <Button
               type="submit"
               className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs text-ink hover:border-brand-magenta"
             >
               {liveLink ? "Issue a fresh link" : "Issue questionnaire link"}
-            </button>
+            </Button>
           </form>
           {liveLink && (
             <p className="mt-2 text-[11px] text-ink-faint">
@@ -957,17 +958,17 @@ async function BonusReleasePanel({
                 ))}
               </select>
             </label>
-            <button
+            <Button
               type="submit"
               className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Capture PM rating
-            </button>
+            </Button>
           </form>
 
           <form action={executeBonusDecision} className="mt-3">
             <input type="hidden" name="projectId" value={project.id} />
-            <button
+            <Button
               type="submit"
               className="rounded-full px-5 py-2 text-sm font-medium text-white"
               style={{ backgroundColor: wouldRelease ? "#007048" : "#D828A0" }}
@@ -975,7 +976,7 @@ async function BonusReleasePanel({
               {wouldRelease
                 ? `Execute decision: release $${bonusAmount.toLocaleString()} to talent`
                 : `Execute decision: reclaim $${bonusAmount.toLocaleString()} to recovery pool`}
-            </button>
+            </Button>
             <p className="mt-2 text-[11px] text-ink-faint">
               Decision is recorded against this contract. Client never sees
               the bonus gate; talent sees the conditioning + outcome on

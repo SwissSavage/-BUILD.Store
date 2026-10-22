@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Member-facing marketplace application (Phase 2.1 sandbox preview).
  *
@@ -239,12 +240,12 @@ export default async function SellerApplicationPage() {
             </span>
           </label>
 
-          <button
+          <Button
             type="submit"
             className="w-full rounded-full bg-ink py-3 font-medium text-[var(--surface)] transition-colors hover:bg-brand-magenta hover:text-black"
           >
             Submit for review
-          </button>
+          </Button>
         </form>
       )}
 

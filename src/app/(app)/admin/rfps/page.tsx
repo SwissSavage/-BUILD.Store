@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: incoming RFP vetting queue.
  *
@@ -300,13 +301,13 @@ export default async function AdminRfpQueuePage() {
                     />
 
                     <div className="flex flex-wrap gap-3 pt-2">
-                      <button
+                      <Button
                         type="submit"
                         className="rounded-full px-5 py-2 text-sm font-medium text-white"
                         style={{ backgroundColor: "#007048" }}
                       >
                         Approve &amp; broadcast
-                      </button>
+                      </Button>
                     </div>
                   </form>
 
@@ -325,13 +326,13 @@ export default async function AdminRfpQueuePage() {
                         className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                       />
                     </label>
-                    <button
+                    <Button
                       type="submit"
                       className="text-xs"
                       style={{ color: "var(--fm-red-text)" }}
                     >
                       Decline
-                    </button>
+                    </Button>
                   </form>
                 </div>
               </div>

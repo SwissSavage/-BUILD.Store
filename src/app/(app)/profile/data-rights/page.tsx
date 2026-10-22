@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /profile/data-rights — data subject rights surface.
  *
@@ -69,12 +70,12 @@ export default async function DataRightsPage() {
                 placeholder="Anything you want us to know about the request…"
               />
             </label>
-            <button
+            <Button
               type="submit"
               className="fm-btn-primary rounded-full px-5 py-2 text-sm"
             >
               Request export
-            </button>
+            </Button>
           </form>
         </Card>
       </section>
@@ -113,12 +114,12 @@ export default async function DataRightsPage() {
                 placeholder="ERASE MY ACCOUNT"
               />
             </label>
-            <button
+            <Button
               type="submit"
               className="rounded-full border border-brand-magenta px-5 py-2 text-sm text-brand-magentaText hover:bg-brand-magenta hover:text-black"
             >
               Begin erasure (30-day window)
-            </button>
+            </Button>
           </form>
         </Card>
       </section>

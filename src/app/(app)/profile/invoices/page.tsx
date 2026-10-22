@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /profile/invoices — talent-side internal-invoice surface.
  *
@@ -151,12 +152,12 @@ export default async function ProfileInvoicesPage() {
             </div>
 
             <div className="flex justify-end">
-              <button
+              <Button
                 type="submit"
                 className="fm-btn-primary rounded-full px-4 py-2 text-sm font-medium"
               >
                 Submit invoice
-              </button>
+              </Button>
             </div>
           </form>
         )}

@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin team management (sandbox).
  *
@@ -156,7 +157,7 @@ export default async function AdminTeamPage() {
               )}
               <form action={revokeAdmin} className="mt-4">
                 <input type="hidden" name="userId" value={u.id} />
-                <button
+                <Button
                   type="submit"
                   disabled={u.id === current.id}
                   className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:bg-[var(--surface-inset)] disabled:cursor-not-allowed disabled:opacity-40"
@@ -167,7 +168,7 @@ export default async function AdminTeamPage() {
                   }
                 >
                   Revoke admin
-                </button>
+                </Button>
               </form>
             </Card>
           ))}
@@ -215,12 +216,12 @@ export default async function AdminTeamPage() {
                   <td className="p-4 text-right">
                     <form action={grantAdmin}>
                       <input type="hidden" name="userId" value={u.id} />
-                      <button
+                      <Button
                         type="submit"
                         className="fm-btn-primary rounded-full px-3 py-1.5 text-xs font-medium"
                       >
                         Grant admin
-                      </button>
+                      </Button>
                     </form>
                   </td>
                 </tr>

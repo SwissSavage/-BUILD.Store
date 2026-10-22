@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Peer review section (Phase 2.7 sandbox).
  *
@@ -175,13 +176,13 @@ function ReviewForm({
         />
       </div>
 
-      <button
+      <Button
         type="submit"
         className="rounded-full px-4 py-1.5 text-xs font-medium text-white"
         style={{ backgroundColor: "#5070F0" }}
       >
         Submit review
-      </button>
+      </Button>
     </form>
   );
 }

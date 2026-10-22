@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 import { useEffect, useState } from "react";
 import { ArrowUp, Check, Link2, ListTree, Mail, Share2 } from "lucide-react";
@@ -163,7 +164,7 @@ export function BriefTableOfContents({
                 >
                   <FacebookIcon />
                 </a>
-                <button
+                <Button
                   type="button"
                   onClick={copyLink}
                   aria-label={copied ? "Link copied" : "Copy link"}
@@ -171,7 +172,7 @@ export function BriefTableOfContents({
                   className="inline-flex size-8 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-[var(--surface-inset)] hover:text-brand-magentaText focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-magenta"
                 >
                   {copied ? <Check aria-hidden="true" size={16} strokeWidth={1.75} /> : <Link2 aria-hidden="true" size={16} strokeWidth={1.75} />}
-                </button>
+                </Button>
                 <span className="sr-only" aria-live="polite">
                   {copied ? "Link copied to clipboard" : ""}
                 </span>
@@ -186,14 +187,14 @@ export function BriefTableOfContents({
                 />
               </div>
             </div>
-            <button
+            <Button
               type="button"
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-ink-muted hover:text-brand-magentaText"
             >
               <ArrowUp aria-hidden="true" size={14} strokeWidth={1.75} />
               Back to top
-            </button>
+            </Button>
           </div>
         </nav>
       )}

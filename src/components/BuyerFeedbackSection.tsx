@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Buyer feedback section (Phase 2.7 sandbox).
  *
@@ -72,12 +73,12 @@ export async function BuyerFeedbackSection({ orderId }: { orderId: string }) {
           placeholder="Packaging, item quality, fulfillment speed. Anything worth flagging."
         />
 
-        <button
+        <Button
           type="submit"
           className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
         >
           Submit feedback
-        </button>
+        </Button>
       </form>
     </Card>
   );

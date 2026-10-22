@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/walkthrough — Jamar's personal step-by-step guided tour.
  *
@@ -543,12 +544,12 @@ function TourSection({ section }: { section: TourSection }) {
         {section.viewAsTarget && (
           <form action={viewAsUser} className="mt-4">
             <input type="hidden" name="target" value={section.viewAsTarget} />
-            <button
+            <Button
               type="submit"
               className="fm-btn-primary rounded-full px-5 py-2 text-sm"
             >
               {section.viewAsLabel} →
-            </button>
+            </Button>
             <p className="mt-2 text-[11px] text-ink-faint">
               Session flips to this tier. Use the &ldquo;Return to your
               admin account&rdquo; affordance to come back before the

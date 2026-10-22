@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Member portfolio editor.
  *
@@ -193,12 +194,12 @@ export default async function PortfolioEditorPage() {
                       </span>
                       <form action={deleteItem} className="mt-3">
                         <input type="hidden" name="id" value={item.id} />
-                        <button
+                        <Button
                           type="submit"
                           className="text-xs text-ink-faint hover:text-ink"
                         >
                           Delete
-                        </button>
+                        </Button>
                       </form>
                     </div>
                   </div>
@@ -253,13 +254,13 @@ export default async function PortfolioEditorPage() {
           <Field name="imageUrl" label="Image URL (optional)" />
           <Field name="projectUrl" label="Project URL (optional)" />
 
-          <button
+          <Button
             type="submit"
             className="rounded-full px-6 py-2.5 text-sm font-medium text-white"
             style={{ backgroundColor: "#5070F0" }}
           >
             Submit for review
-          </button>
+          </Button>
           <p className="text-xs text-ink-faint">
             Goes into the admin queue. You&apos;ll see status updates here.
             Pieces that still name a client come back as &ldquo;needs

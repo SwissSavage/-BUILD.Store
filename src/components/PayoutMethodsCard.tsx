@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Task #63 — Contributor payout method registry UI.
  *
@@ -82,33 +83,33 @@ function MethodRow({ method }: { method: PayoutMethod }) {
         {!verified && (
           <form action={verifyMyPayoutMethod}>
             <input type="hidden" name="methodId" value={method.id} />
-            <button
+            <Button
               type="submit"
               className="rounded-lg border border-[var(--surface-border)] px-3 py-1.5 text-sm hover:bg-[var(--surface-muted)]"
             >
               Verify
-            </button>
+            </Button>
           </form>
         )}
         {verified && !method.isDefault && (
           <form action={setDefaultPayoutMethod}>
             <input type="hidden" name="methodId" value={method.id} />
-            <button
+            <Button
               type="submit"
               className="rounded-lg border border-[var(--surface-border)] px-3 py-1.5 text-sm hover:bg-[var(--surface-muted)]"
             >
               Make default
-            </button>
+            </Button>
           </form>
         )}
         <form action={removePayoutMethod}>
           <input type="hidden" name="methodId" value={method.id} />
-          <button
+          <Button
             type="submit"
             className="rounded-lg px-3 py-1.5 text-sm text-ink-muted hover:text-ink"
           >
             Remove
-          </button>
+          </Button>
         </form>
       </div>
     </li>
@@ -192,12 +193,12 @@ function AddRailForm({ rail }: { rail: PayoutRail }) {
           </label>
         )}
 
-        <button
+        <Button
           type="submit"
           className="rounded-lg bg-[var(--brand-magenta)] px-4 py-2 text-sm font-medium text-white"
         >
           Add {PAYOUT_RAIL_LABELS[rail]}
-        </button>
+        </Button>
       </form>
     </details>
   );

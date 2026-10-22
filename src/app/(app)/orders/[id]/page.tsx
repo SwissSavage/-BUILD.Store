@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Order detail (Phase 2.1 sandbox).
  *
@@ -271,7 +272,7 @@ export default async function OrderDetailPage({
           <form action={advanceOrderStatus} className="mt-3 flex flex-wrap gap-2">
             <input type="hidden" name="id" value={order.id} />
             {validNext.map((status) => (
-              <button
+              <Button
                 key={status}
                 type="submit"
                 name="status"
@@ -279,7 +280,7 @@ export default async function OrderDetailPage({
                 className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
               >
                 Move to {ORDER_STATUS_LABELS[status]}
-              </button>
+              </Button>
             ))}
           </form>
 
@@ -304,12 +305,12 @@ export default async function OrderDetailPage({
                 className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm normal-case tracking-normal text-ink"
               />
             </label>
-            <button
+            <Button
               type="submit"
               className="rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
             >
               Save
-            </button>
+            </Button>
           </form>
         </Card>
       )}

@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * TalentHand — builders presented as a dealt hand of cards.
@@ -314,7 +315,7 @@ export function TalentHand({
                     back to null so a client can revise a call. */}
                 {selectable && (
                   <div className="mt-4 flex items-center gap-2 text-[11px]">
-                    <button
+                    <Button
                       type="button"
                       onClick={() =>
                         setDecision(
@@ -331,8 +332,8 @@ export function TalentHand({
                       aria-pressed={decision === "skip"}
                     >
                       Skip
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       onClick={() =>
                         setDecision(
@@ -349,7 +350,7 @@ export function TalentHand({
                       aria-pressed={decision === "choose"}
                     >
                       Choose
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -364,7 +365,7 @@ export function TalentHand({
           className="mx-auto flex max-w-[260px] items-center justify-between gap-3"
           aria-label="Team member navigation"
         >
-          <button
+          <Button
             type="button"
             onClick={() => setActiveIndex((index) => Math.max(0, index - 1))}
             disabled={activeIndex === 0}
@@ -372,13 +373,13 @@ export function TalentHand({
             aria-label="Previous team member"
           >
             <ChevronLeft aria-hidden="true" size={18} strokeWidth={1.75} />
-          </button>
+          </Button>
           <div
             className="flex items-center gap-2"
             aria-label={`Team member ${activeIndex + 1} of ${entries.length}`}
           >
             {entries.map((member, index) => (
-              <button
+              <Button
                 key={member.user.id}
                 type="button"
                 onClick={() => setActiveIndex(index)}
@@ -393,7 +394,7 @@ export function TalentHand({
               />
             ))}
           </div>
-          <button
+          <Button
             type="button"
             onClick={() =>
               setActiveIndex((index) => Math.min(entries.length - 1, index + 1))
@@ -403,7 +404,7 @@ export function TalentHand({
             aria-label="Next team member"
           >
             <ChevronRight aria-hidden="true" size={18} strokeWidth={1.75} />
-          </button>
+          </Button>
         </div>
       )}
 

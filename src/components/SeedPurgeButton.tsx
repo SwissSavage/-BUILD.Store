@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Remove the unclaimed seed rows.
@@ -62,13 +63,13 @@ export function SeedPurgeButton({ count }: { count: number }) {
       )}
 
       {!armed ? (
-        <button
+        <Button
           type="button"
           onClick={() => setArmed(true)}
           className="rounded-full border border-brand-magenta/50 px-5 py-2 text-xs text-brand-magentaText hover:border-brand-magenta"
         >
           Remove {count} unclaimed row{count === 1 ? "" : "s"}
-        </button>
+        </Button>
       ) : (
         <form action={action}>
           <p className="text-xs text-ink-muted">
@@ -79,22 +80,22 @@ export function SeedPurgeButton({ count }: { count: number }) {
             nothing. Nobody on this list has ever signed in.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <button
+            <Button
               type="submit"
               disabled={pending}
               className="rounded-full px-5 py-2 text-xs font-medium text-white disabled:opacity-60"
               style={{ backgroundColor: "#B4245A" }}
             >
               {pending ? "Removing…" : "Yes, remove them"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setArmed(false)}
               disabled={pending}
               className="text-xs text-ink-muted hover:text-ink disabled:opacity-60"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       )}

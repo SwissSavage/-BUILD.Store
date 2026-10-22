@@ -58,26 +58,23 @@ const config: Config = {
         // Use these in components instead of raw brand.* so the layer
         // remains swappable if the palette ever shifts.
         surface: {
-          DEFAULT: "#000000",
+          DEFAULT: "#0D0D0D",
           elevated: "#1A1A1A",
-          inset: "#0A0A0A",
-          border: "#2A2A2A",
+          inset: "#111111",
+          border: "#2A2825",
         },
         ink: {
-          DEFAULT: "#FFFFFF",
-          muted: "#A3A3A3",
-          faint: "#666666",
+          DEFAULT: "#E8E5E0",
+          muted: "#AFAAA3",
+          faint: "#827E77",
         },
       },
       fontFamily: {
-        // Abel — FM's platform typeface (locked 2026-07-03). Applies to
-        // everything except brand logos. Wired via next/font in
-        // src/app/layout.tsx → CSS variable `--font-abel`. Both `sans`
-        // and `display` resolve to it so any existing `font-display` or
-        // `font-sans` usage in components picks up the new type
-        // automatically.
-        sans: ["var(--font-abel)", "system-ui", "sans-serif"],
+        // Landing-page type roles. Keep display copy expressive while task
+        // surfaces, controls, and long reading use Inter's denser rhythm.
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
         display: ["var(--font-abel)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       maxWidth: {
         app: "1280px",

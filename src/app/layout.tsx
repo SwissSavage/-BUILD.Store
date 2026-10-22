@@ -1,18 +1,29 @@
 import type { Metadata } from "next";
-import { Abel } from "next/font/google";
+import { Abel, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 /**
- * FM's platform typeface — Abel via next/font (self-hosted, no CLS).
- * Applies to everything except brand logos (which stay as image
- * assets). CSS variable `--font-abel` is available across the tree;
- * Tailwind's `font-sans` and `font-display` tokens both resolve to it
- * per `tailwind.config.ts`.
+ * The landing-page type roles, self-hosted via next/font: Abel carries
+ * display moments, Inter keeps task-heavy prose readable, and JetBrains
+ * Mono is reserved for metadata and values. The CSS variables are shared
+ * by Tailwind and the global type rules.
  */
 const abel = Abel({
   subsets: ["latin"],
   weight: "400",
   variable: "--font-abel",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
   display: "swap",
 });
 
@@ -237,7 +248,11 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en" className={abel.variable} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${abel.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script
           type="application/ld+json"

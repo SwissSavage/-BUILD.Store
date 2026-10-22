@@ -58,15 +58,15 @@ const config: Config = {
         // Use these in components instead of raw brand.* so the layer
         // remains swappable if the palette ever shifts.
         surface: {
-          DEFAULT: "#0D0D0D",
+          DEFAULT: "#000000",
           elevated: "#1A1A1A",
-          inset: "#111111",
-          border: "#2A2825",
+          inset: "#0A0A0A",
+          border: "#2A2A2A",
         },
         ink: {
-          DEFAULT: "#E8E5E0",
-          muted: "#AFAAA3",
-          faint: "#827E77",
+          DEFAULT: "#FFFFFF",
+          muted: "#A3A3A3",
+          faint: "#666666",
         },
       },
       fontFamily: {

@@ -80,92 +80,128 @@ interface DependentColumn {
  * References to users that Postgres does not know about.
  *
  * ─────────────────────────────────────────────────────────────
- * WHY THIS CHECK EXISTS (2026-10-21)
+ * WHY THIS RESOLVES RATHER THAN REFUSES (2026-10-21)
  *
- * The delete below clears every column information_schema reports as
- * pointing at users.id, which was the whole safety story until Jamar
- * sent a screenshot of /admin/members and I looked at Sunny Su.
+ * Six columns hold user ids outside the foreign-key graph, so the
+ * catalogue-driven sweep below cannot see them:
  *
- * Sunny is a real designer. She is named in the URL Media quote sheet.
- * Her row here is a fixture with an @example.com address, so she is
- * unclaimed and would have been deleted — and cooperative_quotes
- * stores its Builders in `proposed_builders`, which is JSONB. Not a
- * foreign key. Postgres would not have refused, the catalogue would
- * not have reported it, and the quote would have been left pointing
- * at a user id that resolves to nothing. Silently.
- *
- * That is the failure this whole page was built to avoid, reintroduced
- * one layer down.
- *
- * Six columns hold user ids outside the FK graph:
- *
- *   projects.admin_user_ids           jsonb array
- *   projects.assigned_member_ids      jsonb array
+ *   projects.admin_user_ids               jsonb array
+ *   projects.assigned_member_ids          jsonb array
+ *   quote_sheets.admin_user_ids           jsonb array
  *   cooperative_quotes.proposed_builders  jsonb, userId per entry
- *   quote_sheets.admin_user_ids       jsonb array
- *   revenue_splits.recipient_id       text — "user id OR sentinel
- *                                     string", per its own comment,
- *                                     which is why it has no FK
- *   cooperative_receipts.recipient_id same
+ *   revenue_splits.recipient_id           text, "user id OR sentinel"
+ *   cooperative_receipts.recipient_id     text, same
  *
- * Found rather than assumed: a reference here refuses the delete and
- * names what holds it. Refusing is right. A fixture row that real work
- * points at is not a fixture any more, whatever its email says, and
- * the person who needs to know is whoever is about to click the
- * button.
+ * The first version refused the whole purge on any hit. Jamar:
+ * "There shouldn't be any blockers... you made a bunch of fake users
+ * permanent and we don't need to keep them at all."
+ *
+ * He is right and the refusal was incoherent. A quote whose Builders
+ * are all fixtures came out of the same seed run as the fixtures, has
+ * never been sent to anybody, and is worth exactly nothing. Refusing
+ * to delete a fake user because fake data points at them is how the
+ * fakes became permanent.
+ *
+ * His rule: "If there's no record or value that counts it just needs
+ * to go."
+ *
+ * So each reference is resolved by what it is rather than blocked:
+ *
+ *   arrays of ids    the id is pulled out of the array. The project
+ *                    or quote sheet is real and stays; it just stops
+ *                    naming somebody who no longer exists.
+ *
+ *   seed-only quote  every proposed Builder is a candidate, so the
+ *                    whole quote is seed residue and goes with them.
+ *
+ *   mixed quote      at least one real Builder, so the quote is real
+ *                    work. THIS is the only thing that still refuses,
+ *                    and it has to: deleting it would destroy a real
+ *                    proposal, and editing a fixture out of a quote
+ *                    that was sent to a client rewrites what they
+ *                    were shown.
+ *
+ *   fixture payouts  a revenue split or receipt paid to a candidate
+ *                    is fictional money. Deleted.
  * ─────────────────────────────────────────────────────────────
  */
-async function softReferences(ids: string[]): Promise<string[]> {
-  const found: string[] = [];
+interface SoftRefOutcome {
+  /** Quotes that mix real and fixture Builders. The only hard stop. */
+  mixedQuotes: string[];
+  /** What was cleaned up, for the confirmation line. */
+  resolved: string[];
+}
 
-  const jsonbArray: Array<[string, string]> = [
+async function resolveSoftReferences(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  ids: string[],
+): Promise<SoftRefOutcome> {
+  const resolved: string[] = [];
+
+  // Quotes naming only candidates are seed residue; quotes naming a
+  // real Builder too are real work.
+  const quotes = (await tx.execute(sql`
+    SELECT q.id,
+           bool_and(b->>'userId' = ANY(${ids})) AS all_seed
+    FROM cooperative_quotes q,
+         jsonb_array_elements(q.proposed_builders) AS b
+    WHERE EXISTS (
+      SELECT 1 FROM jsonb_array_elements(q.proposed_builders) AS c
+      WHERE c->>'userId' = ANY(${ids})
+    )
+    GROUP BY q.id
+  `)) as unknown as { rows: Array<{ id: string; all_seed: boolean }> };
+
+  const seedOnly = quotes.rows.filter((r) => r.all_seed).map((r) => r.id);
+  const mixedQuotes = quotes.rows.filter((r) => !r.all_seed).map((r) => r.id);
+
+  if (mixedQuotes.length > 0) return { mixedQuotes, resolved };
+
+  if (seedOnly.length > 0) {
+    await tx.execute(
+      sql`DELETE FROM cooperative_quote_versions WHERE quote_id = ANY(${seedOnly})`,
+    );
+    await tx.execute(sql`DELETE FROM cooperative_quotes WHERE id = ANY(${seedOnly})`);
+    resolved.push(
+      `${seedOnly.length} seed-only quote${seedOnly.length === 1 ? "" : "s"}`,
+    );
+  }
+
+  // Pull the ids out of the id arrays. The owning row is real.
+  for (const [table, column] of [
     ["projects", "admin_user_ids"],
     ["projects", "assigned_member_ids"],
     ["quote_sheets", "admin_user_ids"],
-  ];
-  for (const [table, column] of jsonbArray) {
-    const r = (await db.execute(sql`
-      SELECT count(*)::int AS n
-      FROM ${sql.identifier(table)} t
+  ] as Array<[string, string]>) {
+    const r = await tx.execute(sql`
+      UPDATE ${sql.identifier(table)} t
+      SET ${sql.identifier(column)} = COALESCE((
+        SELECT jsonb_agg(e.v)
+        FROM jsonb_array_elements_text(t.${sql.identifier(column)}) AS e(v)
+        WHERE e.v <> ALL(${ids})
+      ), '[]'::jsonb)
       WHERE EXISTS (
         SELECT 1 FROM jsonb_array_elements_text(t.${sql.identifier(column)}) AS e(v)
         WHERE e.v = ANY(${ids})
       )
-    `)) as unknown as { rows: Array<{ n: number }> };
-    const n = r.rows[0]?.n ?? 0;
-    if (n > 0) found.push(`${table}.${column} (${n} row${n === 1 ? "" : "s"})`);
+    `);
+    const n = (r as unknown as { rowCount?: number }).rowCount ?? 0;
+    if (n > 0) resolved.push(`${table}.${column} cleaned on ${n} row${n === 1 ? "" : "s"}`);
   }
 
-  // proposed_builders is an array of objects carrying userId, not an
-  // array of strings, so it needs the object form.
-  const quotes = (await db.execute(sql`
-    SELECT count(*)::int AS n
-    FROM cooperative_quotes q
-    WHERE EXISTS (
-      SELECT 1 FROM jsonb_array_elements(q.proposed_builders) AS b
-      WHERE b->>'userId' = ANY(${ids})
-    )
-  `)) as unknown as { rows: Array<{ n: number }> };
-  const qn = quotes.rows[0]?.n ?? 0;
-  if (qn > 0) {
-    found.push(`cooperative_quotes.proposed_builders (${qn} quote${qn === 1 ? "" : "s"})`);
-  }
-
-  const textRefs: Array<[string, string]> = [
+  // Fictional money.
+  for (const [table, column] of [
     ["revenue_splits", "recipient_id"],
     ["cooperative_receipts", "recipient_id"],
-  ];
-  for (const [table, column] of textRefs) {
-    const r = (await db.execute(sql`
-      SELECT count(*)::int AS n
-      FROM ${sql.identifier(table)}
-      WHERE ${sql.identifier(column)} = ANY(${ids})
-    `)) as unknown as { rows: Array<{ n: number }> };
-    const n = r.rows[0]?.n ?? 0;
-    if (n > 0) found.push(`${table}.${column} (${n} row${n === 1 ? "" : "s"})`);
+  ] as Array<[string, string]>) {
+    const r = await tx.execute(
+      sql`DELETE FROM ${sql.identifier(table)} WHERE ${sql.identifier(column)} = ANY(${ids})`,
+    );
+    const n = (r as unknown as { rowCount?: number }).rowCount ?? 0;
+    if (n > 0) resolved.push(`${table}=${n}`);
   }
 
-  return found;
+  return { mixedQuotes, resolved };
 }
 
 export async function purgeUnclaimedSeedUsers(): Promise<SeedPurgeResult> {
@@ -192,21 +228,6 @@ export async function purgeUnclaimedSeedUsers(): Promise<SeedPurgeResult> {
   }
   const ids = candidates.rows.map((r) => r.id);
 
-  // Soft references first. Postgres cannot refuse these, so if the
-  // delete runs with one outstanding it corrupts quietly rather than
-  // failing loudly — which is the one outcome this page exists to
-  // prevent.
-  const soft = await softReferences(ids);
-  if (soft.length > 0) {
-    return {
-      ok: false,
-      message:
-        `Refusing. Real work still references ${soft.length === 1 ? "one of these rows" : "these rows"}: ` +
-        `${soft.join(", ")}. None of those are foreign keys, so the database would have ` +
-        `allowed the delete and left the reference dangling. Reassign or clear them first.`,
-    };
-  }
-
   // Every column pointing at users.id, read from the live catalogue.
   const deps = (await db.execute(sql`
     SELECT tc.table_name, kcu.column_name
@@ -224,8 +245,18 @@ export async function purgeUnclaimedSeedUsers(): Promise<SeedPurgeResult> {
   `)) as unknown as { rows: DependentColumn[] };
 
   const cleared: string[] = [];
+  let blocked: string[] = [];
   try {
     await db.transaction(async (tx) => {
+      // Resolve what the catalogue cannot see, inside the same
+      // transaction so a refusal leaves nothing half-done.
+      const soft = await resolveSoftReferences(tx, ids);
+      if (soft.mixedQuotes.length > 0) {
+        blocked = soft.mixedQuotes;
+        throw new Error("MIXED_QUOTE");
+      }
+      cleared.push(...soft.resolved);
+
       for (const d of deps.rows) {
         // accounts and sessions are empty for every candidate by
         // definition — that is what made them candidates.
@@ -244,6 +275,17 @@ export async function purgeUnclaimedSeedUsers(): Promise<SeedPurgeResult> {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    if (message === "MIXED_QUOTE") {
+      return {
+        ok: false,
+        message:
+          `Refusing. ${blocked.length} quote${blocked.length === 1 ? "" : "s"} ` +
+          `propose both a real Builder and one of these rows — ${blocked.join(", ")}. ` +
+          `Deleting would destroy a real proposal, and editing the fixture out of a ` +
+          `quote a client was shown rewrites the record of what they saw. Replace the ` +
+          `Builder on that quote first.`,
+      };
+    }
     return {
       ok: false,
       message:

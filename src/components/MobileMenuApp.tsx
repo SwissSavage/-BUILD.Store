@@ -24,12 +24,21 @@ import Link from "next/link";
 import { Bell, Menu, X } from "lucide-react";
 import { adminNavGroups } from "@/lib/admin-nav";
 import { signOut } from "@/lib/auth-actions";
+import { ContextualNotificationLink } from "@/components/ContextualNotificationLink";
+import type { ContextualNotificationArea } from "@/lib/contextual-notifications";
+import type { AdminQueueCounts } from "@/lib/admin-nav";
 
 interface MobileMenuAppProps {
   isLoggedIn: boolean;
   isAdmin: boolean;
   isEpk: boolean;
   unread: number;
+  projectActivityCount: number;
+  orderActivityCount: number;
+  walletActivityCount: number;
+  communityActivityCount: number;
+  adminQueueCounts: AdminQueueCounts;
+  adminQueueCount: number;
 }
 
 const memberLinks = [
@@ -82,6 +91,12 @@ export function MobileMenuApp({
   isAdmin,
   isEpk,
   unread,
+  projectActivityCount,
+  orderActivityCount,
+  walletActivityCount,
+  communityActivityCount,
+  adminQueueCounts,
+  adminQueueCount,
 }: MobileMenuAppProps) {
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -166,13 +181,29 @@ export function MobileMenuApp({
                 <ul className="space-y-1 text-lg">
                   {memberLinks.map((item) => (
                     <li key={item.href}>
-                      <Link
+                      <ContextualNotificationLink
                         href={item.href}
+                        area={contextualAreaForHref(item.href)}
                         onClick={closeMenu}
-                        className="block rounded-lg px-4 py-3 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
+                        className="flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                       >
-                        {item.label}
-                      </Link>
+                        <span>{item.label}</span>
+                        {contextualCountForHref(item.href, {
+                          projectActivityCount,
+                          orderActivityCount,
+                          communityActivityCount,
+                        }) > 0 && (
+                          <NavCount
+                            count={contextualCountForHref(item.href, {
+                              projectActivityCount,
+                              orderActivityCount,
+                              communityActivityCount,
+                            })}
+                            singularLabel="unread update"
+                            pluralLabel="unread updates"
+                          />
+                        )}
+                      </ContextualNotificationLink>
                     </li>
                   ))}
                   <li>
@@ -201,13 +232,23 @@ export function MobileMenuApp({
                 <ul className="space-y-1 text-base">
                   {accountLinks.map((item) => (
                     <li key={item.label}>
-                      <Link
+                      <ContextualNotificationLink
                         href={item.href}
+                        area={item.href === "/wallet" ? "wallet" : undefined}
                         onClick={closeMenu}
                         className="block rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                       >
-                        {item.label}
-                      </Link>
+                        <span className="flex items-center justify-between gap-3">
+                          <span>{item.label}</span>
+                          {item.href === "/wallet" && walletActivityCount > 0 && (
+                            <NavCount
+                              count={walletActivityCount}
+                              singularLabel="unread wallet update"
+                              pluralLabel="unread wallet updates"
+                            />
+                          )}
+                        </span>
+                      </ContextualNotificationLink>
                     </li>
                   ))}
                   {isEpk && (
@@ -237,7 +278,16 @@ export function MobileMenuApp({
                           onClick={closeMenu}
                           className="block rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                         >
-                          Admin home
+                          <span className="flex items-center gap-2">
+                            Admin
+                            {adminQueueCount > 0 && (
+                              <NavCount
+                                count={adminQueueCount}
+                                singularLabel="admin item needs review"
+                                pluralLabel="admin items need review"
+                              />
+                            )}
+                          </span>
                         </Link>
                       </li>
                     </ul>
@@ -252,9 +302,16 @@ export function MobileMenuApp({
                               <Link
                                 href={entry.href}
                                 onClick={closeMenu}
-                                className="block rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
+                                className="flex items-center justify-between gap-3 rounded-lg px-4 py-2.5 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                               >
-                                {entry.label}
+                                <span>{entry.label}</span>
+                                {(adminQueueCounts[entry.href] ?? 0) > 0 && (
+                                  <NavCount
+                                    count={adminQueueCounts[entry.href] ?? 0}
+                                    singularLabel="item needs review"
+                                    pluralLabel="items need review"
+                                  />
+                                )}
                               </Link>
                             </li>
                           ))}
@@ -330,5 +387,46 @@ export function MobileMenuApp({
           document.body,
         )}
     </>
+  );
+}
+
+function contextualAreaForHref(href: string): ContextualNotificationArea | undefined {
+  if (href === "/projects") return "projects";
+  if (href === "/orders") return "orders";
+  if (href === "/community") return "community";
+  return undefined;
+}
+
+function contextualCountForHref(
+  href: string,
+  counts: {
+    projectActivityCount: number;
+    orderActivityCount: number;
+    communityActivityCount: number;
+  },
+): number {
+  if (href === "/projects") return counts.projectActivityCount;
+  if (href === "/orders") return counts.orderActivityCount;
+  if (href === "/community") return counts.communityActivityCount;
+  return 0;
+}
+
+function NavCount({
+  count,
+  singularLabel,
+  pluralLabel,
+}: {
+  count: number;
+  singularLabel: string;
+  pluralLabel: string;
+}) {
+  const label = count === 1 ? singularLabel : pluralLabel;
+  return (
+    <span
+      className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand-magenta px-1.5 py-0.5 text-[10px] font-semibold leading-none text-black"
+      aria-label={`${count} ${label}`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
   );
 }

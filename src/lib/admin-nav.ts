@@ -40,6 +40,9 @@ export type AdminNavEntry = {
   group: AdminNavGroup;
 };
 
+/** Unresolved-work counts keyed by their Admin destination. */
+export type AdminQueueCounts = Partial<Record<string, number>>;
+
 /** Section order, top to bottom. Queues first: that is what is waiting on you. */
 export const ADMIN_GROUP_ORDER: AdminNavGroup[] = [
   "queues",

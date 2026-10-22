@@ -1,4 +1,3 @@
-import { Button } from "@/components/Button";
 /**
  * Route-level error boundary.
  *
@@ -13,6 +12,7 @@ import { Button } from "@/components/Button";
  */
 "use client";
 
+import { Button } from "@/components/Button";
 import Link from "next/link";
 import { useEffect } from "react";
 

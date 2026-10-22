@@ -87,7 +87,7 @@ interface DependentColumn {
  *
  *   projects.admin_user_ids               jsonb array
  *   projects.assigned_member_ids          jsonb array
- *   quote_sheets.admin_user_ids           jsonb array
+ *   orders.admin_user_ids                 jsonb array
  *   cooperative_quotes.proposed_builders  jsonb, userId per entry
  *   revenue_splits.recipient_id           text, "user id OR sentinel"
  *   cooperative_receipts.recipient_id     text, same
@@ -142,6 +142,49 @@ function idArray(ids: string[]) {
   return sql`ARRAY[${sql.join(ids.map((i) => sql`${i}`), sql`, `)}]::text[]`;
 }
 
+/**
+ * Confirm the hand-written list matches the database before using it.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-22)
+ *
+ * Jamar, after the third rollback in a row: "why are we guessing?"
+ *
+ * Fair. The foreign-key sweep below asks information_schema what
+ * points at users and has been right every time. This soft-reference
+ * list I typed from reading schema.ts, and got wrong three times —
+ * "userId" for user_id, a JS array where Postgres wanted an array
+ * type, and quote_sheets for orders. Every one surfaced as a
+ * production rollback because there is no database here to test
+ * against.
+ *
+ * The list itself has to stay hand-written: which columns hold user
+ * ids is a judgement about meaning, and no catalogue query knows that
+ * revenue_splits.recipient_id is sometimes a user and sometimes the
+ * string "house_treasury".
+ *
+ * But a hand-written list can be checked against the catalogue, and
+ * that is the difference between a typo surfacing here, by name,
+ * before anything runs — and surfacing as a failed transaction after
+ * somebody clicks a button. Not being able to test is a reason to
+ * make the code verify itself, not a reason to trust my typing.
+ * ─────────────────────────────────────────────────────────────
+ */
+async function verifyColumns(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  pairs: Array<[string, string]>,
+): Promise<string[]> {
+  const rows = (await tx.execute(sql`
+    SELECT table_name, column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+  `)) as unknown as { rows: Array<{ table_name: string; column_name: string }> };
+  const have = new Set(rows.rows.map((r) => `${r.table_name}.${r.column_name}`));
+  return pairs
+    .filter(([t, c]) => !have.has(`${t}.${c}`))
+    .map(([t, c]) => `${t}.${c}`);
+}
+
 interface SoftRefOutcome {
   /** Quotes that mix real and fixture Builders. The only hard stop. */
   mixedQuotes: string[];
@@ -149,11 +192,57 @@ interface SoftRefOutcome {
   resolved: string[];
 }
 
+/** Columns holding user ids that Postgres does not police. */
+const ID_ARRAY_COLUMNS: Array<[string, string]> = [
+  ["projects", "admin_user_ids"],
+  ["projects", "assigned_member_ids"],
+  ["orders", "admin_user_ids"],
+];
+
+/**
+ * Text columns that are a user id, or a sentinel string, or null.
+ *
+ * Checked against the schema rather than remembered, after getting
+ * this list wrong three times. What that check found:
+ *
+ *   cooperative_receipts.recipient_id  does not exist. I invented it.
+ *   invoices.recipient_id              exists, EXCLUDED — it sits
+ *                                      beside issuer_id on a row whose
+ *                                      direction is coop_to_client, so
+ *                                      the recipient is a client.
+ *   reserve_pool_ledger.recipient_id   exists, included — its
+ *                                      debit_reason values are
+ *                                      bonus_release, replacement_
+ *                                      payout and peer_coverage, all
+ *                                      of which pay a member.
+ *
+ * The last one is inference from neighbouring columns, not a documented
+ * fact. If it turns out to hold something else, the symptom is a
+ * reserve ledger row disappearing with a fixture user, which the audit
+ * entry records.
+ */
+const USER_TEXT_COLUMNS: Array<[string, string]> = [
+  ["revenue_splits", "recipient_id"],
+  ["reserve_pool_ledger", "recipient_id"],
+];
+
 async function resolveSoftReferences(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   ids: string[],
 ): Promise<SoftRefOutcome> {
   const resolved: string[] = [];
+
+  // Check the list against the catalogue before running any of it.
+  const wrong = await verifyColumns(tx, [
+    ...ID_ARRAY_COLUMNS,
+    ...USER_TEXT_COLUMNS,
+    ["cooperative_quotes", "proposed_builders"],
+  ]);
+  if (wrong.length > 0) {
+    throw new Error(
+      `BAD_COLUMNS:${wrong.join(", ")}`,
+    );
+  }
 
   // Quotes naming only candidates are seed residue; quotes naming a
   // real Builder too are real work.
@@ -185,11 +274,7 @@ async function resolveSoftReferences(
   }
 
   // Pull the ids out of the id arrays. The owning row is real.
-  for (const [table, column] of [
-    ["projects", "admin_user_ids"],
-    ["projects", "assigned_member_ids"],
-    ["quote_sheets", "admin_user_ids"],
-  ] as Array<[string, string]>) {
+  for (const [table, column] of ID_ARRAY_COLUMNS) {
     const r = await tx.execute(sql`
       UPDATE ${sql.identifier(table)} t
       SET ${sql.identifier(column)} = COALESCE((
@@ -207,10 +292,7 @@ async function resolveSoftReferences(
   }
 
   // Fictional money.
-  for (const [table, column] of [
-    ["revenue_splits", "recipient_id"],
-    ["cooperative_receipts", "recipient_id"],
-  ] as Array<[string, string]>) {
+  for (const [table, column] of USER_TEXT_COLUMNS) {
     const r = await tx.execute(
       sql`DELETE FROM ${sql.identifier(table)} WHERE ${sql.identifier(column)} = ANY(${idArray(ids)})`,
     );
@@ -292,6 +374,15 @@ export async function purgeUnclaimedSeedUsers(): Promise<SeedPurgeResult> {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    if (message.startsWith("BAD_COLUMNS:")) {
+      return {
+        ok: false,
+        message:
+          `Nothing ran. These columns are in my list but not in the database: ` +
+          `${message.slice("BAD_COLUMNS:".length)}. That is my list being wrong, ` +
+          `not your data. Fix the list.`,
+      };
+    }
     if (message === "MIXED_QUOTE") {
       return {
         ok: false,

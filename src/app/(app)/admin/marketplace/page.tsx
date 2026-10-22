@@ -21,6 +21,7 @@ import { db } from "@/db/client";
 import {
   sellerApplications as sellerApplicationsTable,
   products as productsTable,
+  users as usersTable,
 } from "@/db/schema";
 import { getAllUsers } from "@/lib/readers/users";
 import {
@@ -38,6 +39,8 @@ import {
   type OrderStatus,
 } from "@/lib/types";
 import { distributeOrderSplit } from "@/lib/order-actions";
+import { notify } from "@/lib/writers/notifications";
+import { sendTransactionalEmail } from "@/lib/email";
 import { previewOrderSplit } from "@/lib/order-splits";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -50,7 +53,7 @@ async function decideApplication(formData: FormData) {
 
   // Writer swap 2026-08-29: seller approval mutated an in-memory
   // object, so a member approved to sell watched it revert.
-  await db
+  const [applicant] = await db
     .update(sellerApplicationsTable)
     .set({
       status: decision,
@@ -58,10 +61,78 @@ async function decideApplication(formData: FormData) {
       reviewedAt: new Date().toISOString(),
       adminNote: note,
     })
-    .where(eq(sellerApplicationsTable.id, id));
+    .where(eq(sellerApplicationsTable.id, id))
+    .returning({ userId: sellerApplicationsTable.userId });
+
+  // ──────────────────────────────────────────────────────────
+  // TELL THEM (2026-10-22)
+  //
+  // Rob Turley, beta feedback, 16 September, still sitting in New:
+  //
+  //   "After being accepted to list things on the marketplace/store by
+  //   an admin, there's no way for me to post anything there. No
+  //   button, no way to post my listing(s), nothing, and no
+  //   notification via email or any other method/channel that my
+  //   request for approval was accepted."
+  //
+  // The second half was exactly true. This action wrote the status,
+  // revalidated three paths and told nobody. A member applied, was
+  // approved, and the only way to discover it was to go back and look.
+  //
+  // /profile/seller/products exists and is gated on isApprovedSeller,
+  // so the surface Rob could not find is real — it is linked from the
+  // dashboard and nowhere else. The notification carries the link,
+  // which is the part that was missing either way.
+  //
+  // Email as well as the bell. An approval that unlocks earning is
+  // worth leaving the app for, and Rob's complaint named email
+  // specifically.
+  //
+  // Best-effort on the email: a mail outage must not roll back a
+  // decision an admin already made. The in-app notification is the
+  // durable record.
+  // ──────────────────────────────────────────────────────────
+  if (applicant?.userId) {
+    const approved = decision === "approved";
+    const title = approved
+      ? "You're approved to sell on the store"
+      : "Your seller application was not approved";
+    const body = approved
+      ? `Your listings go live from your seller page. ${note ?? ""}`.trim()
+      : note ?? "An admin reviewed your application.";
+
+    await notify({
+      userId: applicant.userId,
+      kind: "seller_application",
+      title,
+      body,
+      href: approved ? "/profile/seller/products" : "/profile/seller",
+    });
+
+    const [member] = await db
+      .select({ email: usersTable.email, firstName: usersTable.firstName })
+      .from(usersTable)
+      .where(eq(usersTable.id, applicant.userId))
+      .limit(1);
+    if (member?.email) {
+      try {
+        await sendTransactionalEmail({
+          to: member.email,
+          subject: title,
+          text: `${member.firstName ? `${member.firstName}, ` : ""}${body}\n\n${approved ? "Post a listing: " : "Your application: "}${process.env.AUTH_URL ?? ""}${approved ? "/profile/seller/products" : "/profile/seller"}`,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[marketplace] seller decision email failed", id, err);
+      }
+    }
+  }
+
   revalidatePath("/admin/marketplace");
   revalidatePath("/admin");
   revalidatePath("/profile/seller");
+  revalidatePath("/profile/seller/products");
+  revalidatePath("/notifications");
 }
 
 async function decideProduct(formData: FormData) {

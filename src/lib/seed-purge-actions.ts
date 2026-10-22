@@ -125,6 +125,23 @@ interface DependentColumn {
  *                    is fictional money. Deleted.
  * ─────────────────────────────────────────────────────────────
  */
+/**
+ * `ids` as one Postgres text[] rather than a list of placeholders.
+ *
+ * Drizzle's sql template expands a JS array into $1, $2, $3…, so
+ * `= ANY(${idArray(ids)})` compiles to `= ANY($1, $2, $3)` and Postgres answers
+ * "op ANY/ALL (array) requires array on right side". It needs a single
+ * array-typed parameter. ARRAY[...]::text[] is that, with every element
+ * still bound rather than interpolated.
+ *
+ * Found by clicking the button: the transaction rolled back and
+ * reported a foreign key refusal, which was my error message guessing.
+ * It was never a foreign key.
+ */
+function idArray(ids: string[]) {
+  return sql`ARRAY[${sql.join(ids.map((i) => sql`${i}`), sql`, `)}]::text[]`;
+}
+
 interface SoftRefOutcome {
   /** Quotes that mix real and fixture Builders. The only hard stop. */
   mixedQuotes: string[];
@@ -142,12 +159,12 @@ async function resolveSoftReferences(
   // real Builder too are real work.
   const quotes = (await tx.execute(sql`
     SELECT q.id,
-           bool_and(b->>'userId' = ANY(${ids})) AS all_seed
+           bool_and(b->>'userId' = ANY(${idArray(ids)})) AS all_seed
     FROM cooperative_quotes q,
          jsonb_array_elements(q.proposed_builders) AS b
     WHERE EXISTS (
       SELECT 1 FROM jsonb_array_elements(q.proposed_builders) AS c
-      WHERE c->>'userId' = ANY(${ids})
+      WHERE c->>'userId' = ANY(${idArray(ids)})
     )
     GROUP BY q.id
   `)) as unknown as { rows: Array<{ id: string; all_seed: boolean }> };
@@ -178,11 +195,11 @@ async function resolveSoftReferences(
       SET ${sql.identifier(column)} = COALESCE((
         SELECT jsonb_agg(e.v)
         FROM jsonb_array_elements_text(t.${sql.identifier(column)}) AS e(v)
-        WHERE e.v <> ALL(${ids})
+        WHERE e.v <> ALL(${idArray(ids)})
       ), '[]'::jsonb)
       WHERE EXISTS (
         SELECT 1 FROM jsonb_array_elements_text(t.${sql.identifier(column)}) AS e(v)
-        WHERE e.v = ANY(${ids})
+        WHERE e.v = ANY(${idArray(ids)})
       )
     `);
     const n = (r as unknown as { rowCount?: number }).rowCount ?? 0;
@@ -195,7 +212,7 @@ async function resolveSoftReferences(
     ["cooperative_receipts", "recipient_id"],
   ] as Array<[string, string]>) {
     const r = await tx.execute(
-      sql`DELETE FROM ${sql.identifier(table)} WHERE ${sql.identifier(column)} = ANY(${ids})`,
+      sql`DELETE FROM ${sql.identifier(table)} WHERE ${sql.identifier(column)} = ANY(${idArray(ids)})`,
     );
     const n = (r as unknown as { rowCount?: number }).rowCount ?? 0;
     if (n > 0) resolved.push(`${table}=${n}`);
@@ -266,12 +283,12 @@ export async function purgeUnclaimedSeedUsers(): Promise<SeedPurgeResult> {
         // are still bound rather than interpolated.
         const res = await tx.execute(
           sql`DELETE FROM ${sql.identifier(d.table_name)}
-              WHERE ${sql.identifier(d.column_name)} = ANY(${ids})`,
+              WHERE ${sql.identifier(d.column_name)} = ANY(${idArray(ids)})`,
         );
         const n = (res as unknown as { rowCount?: number }).rowCount ?? 0;
         if (n > 0) cleared.push(`${d.table_name}.${d.column_name}=${n}`);
       }
-      await tx.execute(sql`DELETE FROM users WHERE id = ANY(${ids})`);
+      await tx.execute(sql`DELETE FROM users WHERE id = ANY(${idArray(ids)})`);
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -289,9 +306,10 @@ export async function purgeUnclaimedSeedUsers(): Promise<SeedPurgeResult> {
     return {
       ok: false,
       message:
-        `Rolled back, nothing changed. ${message}. A foreign key refused the ` +
-        `delete, which means something real references a fixture row. Worth ` +
-        `looking at rather than forcing.`,
+        `Rolled back, nothing changed. ${message}` +
+        (/violates foreign key/i.test(message)
+          ? " — something real references one of these rows. Worth looking at rather than forcing."
+          : ""),
     };
   }
 

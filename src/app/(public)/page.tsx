@@ -131,7 +131,7 @@ function Hero() {
         }}
       />
       <div className="relative mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-green">
+        <div className="mb-6 inline-flex self-start items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-green">
           <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
           Future Modern cooperative
         </div>

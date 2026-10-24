@@ -42,22 +42,22 @@ export function Footer() {
       {/* Decorative watermark: intentionally absent on compact screens. */}
       <img
         aria-hidden="true"
-        src="/brand/turtle.png"
+        src="/brand/footer-turtle-watermark.png"
         alt=""
-        className="pointer-events-none absolute -bottom-48 -left-36 hidden h-[34rem] w-auto select-none opacity-[0.045] brightness-0 invert md:block"
+        className="pointer-events-none absolute -bottom-56 -left-44 hidden h-[42rem] w-auto select-none opacity-[0.07] md:block"
       />
 
-      <div className="relative z-10 mx-auto grid max-w-app gap-x-8 gap-y-10 px-6 py-16 md:grid-cols-4 md:py-20">
-        <div className="md:pr-6">
-          <Link href="/" className="font-display text-lg font-semibold hover:text-brand-magentaText">
+      <div className="relative z-10 mx-auto grid max-w-app gap-x-8 gap-y-10 px-6 py-20 md:grid-cols-5 md:py-24">
+        <div className="md:col-span-2 md:pr-12">
+          <Link href="/" className="font-display text-3xl font-semibold tracking-tight hover:text-brand-magentaText">
             $BUILD<span className="text-brand-magentaText">.</span>Store
           </Link>
-          <p className="mt-2 max-w-56 text-sm leading-relaxed text-ink-faint">
+          <p className="mt-4 max-w-sm text-base leading-relaxed text-ink-muted">
             A Future Modern Builderberg LLC cooperative.
           </p>
           <a
             href={PUBLIC_BOOKING_URL}
-            className="mt-5 inline-block text-sm font-medium text-brand-blueText hover:text-brand-magentaText"
+            className="mt-6 inline-block text-base font-medium text-brand-blueText hover:text-brand-magentaText"
             target="_blank"
             rel="noreferrer"
           >
@@ -67,8 +67,8 @@ export function Footer() {
 
         {FOOTER_GROUPS.map((group) => (
           <div key={group.title}>
-            <h2 className="text-xs uppercase tracking-wider text-ink-muted">{group.title}</h2>
-            <ul className="mt-3 space-y-2 text-sm">
+            <h2 className="font-display text-lg font-semibold tracking-tight text-ink">{group.title}</h2>
+            <ul className="mt-4 space-y-3 text-base">
               {group.links.map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className={linkClassName}>

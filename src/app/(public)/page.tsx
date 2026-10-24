@@ -133,7 +133,7 @@ function Hero() {
       <div className="relative mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
         <div className="mb-6 inline-flex self-start items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-green">
           <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
-          Future Modern cooperative
+          Future Modern
         </div>
         <h1 className="font-display text-5xl font-bold leading-tight md:text-7xl">
           $BUILD with the{" "}
@@ -181,7 +181,7 @@ function Hero() {
               href="/governance#canonization"
               className="transition-colors hover:text-ink"
             >
-              Built Web3-native
+              Web3-native
             </Link>
           </li>
           <li className="flex items-center gap-2">
@@ -193,7 +193,7 @@ function Hero() {
               href="/governance#tier"
               className="transition-colors hover:text-ink"
             >
-              Owner-operated
+              Worker-owned
             </Link>
           </li>
           <li className="flex items-center gap-2">
@@ -205,7 +205,7 @@ function Hero() {
               href="/policies/covenant"
               className="transition-colors hover:text-ink"
             >
-              Cooperative-vetted
+              Peer-reviewed
             </Link>
           </li>
         </ul>
@@ -362,7 +362,7 @@ function FaqSection() {
     {
       question: "What is $BUILD.Store?",
       answer:
-        "$BUILD.Store is the cooperative talent platform of Future Modern. A member-owned network of STEM, Creative Media, and Professional Services professionals who ship serious work for serious clients.\n\nInstead of a marketplace that skims from every transaction, cash flows to the Members who did the work. Ownership stays with the people who built the platform.",
+        "$BUILD.Store is where Future Modern organizes, staffs, and delivers work. It brings together STEM, Creative Media, and Professional Services professionals who ship serious work for serious clients.\n\nInstead of a marketplace that skims from every transaction, cash flows to the Members who did the work. Ownership stays with the people who built the platform.",
     },
     {
       question: "How is this different from Upwork or Toptal?",
@@ -370,31 +370,31 @@ function FaqSection() {
         "Upwork and Toptal are marketplaces owned by shareholders. When you hire through them, most of the money reaches the freelancer; the platform keeps the rest and the freelancer keeps none of the platform.\n\n$BUILD.Store is owned by its Members. The people you hire hold governance in the platform they work through. That changes the incentives all the way down: quality, retention, follow-through. The builders aren't renting the platform. They own it.",
     },
     {
-      question: "Who's in the cooperative?",
+      question: "Who's in Future Modern?",
       answer:
         "Fortune 500-level professionals across three pillars: STEM (engineering, data, AI/ML, blockchain, cybersecurity, research), Creative Media (music, film, editorial, design, direction, post-production), and Professional Services (strategy, legal, finance, operations, management consulting).\n\nEvery Member is vouched in. There's a whitelist and a covenant. Standing is earned through shipped work and honest peer review. Not gamed through ratings inflation.",
     },
     {
       question: "How does hiring work?",
       answer:
-        "You post your project. Our matcher narrows the field to three to five qualified Member teams inside the zone of possible agreement. You pick your lead. The team runs delivery with cooperative-native autonomy. You track milestones in real time; cash and $BUILD tokens settle automatically when the work lands.\n\nNo bidding wars. No thousand-résumé pileups. No AI-generated proposals from strangers.",
+        "You post your project. Our matcher narrows the field to three to five qualified Member teams inside the zone of possible agreement. You pick your lead. The team runs delivery with member-led autonomy. You track milestones in real time; cash and $BUILD tokens settle automatically when the work lands.\n\nNo bidding wars. No thousand-résumé pileups. No AI-generated proposals from strangers.",
     },
     {
       question: "What does \"Web3-native\" actually mean here?",
       answer:
-        "Every Member holds their contribution record on-chain through an ERC-721 canonization card with an ERC-6551 token-bound account. That's how the cooperative encodes standing. Not as a rating in someone else's database, but as portable proof the Member owns.\n\nClients don't need a wallet to hire us. But if you care about how the cooperative treats provenance, the receipts are on-chain.",
+        "Every Member holds their contribution record on-chain through an ERC-721 canonization card with an ERC-6551 token-bound account. That's how Future Modern encodes standing. Not as a rating in someone else's database, but as portable proof the Member owns.\n\nClients don't need a wallet to hire us. But if you care about how Future Modern handles provenance, the receipts are on-chain.",
     },
     {
       question: "How do I join?",
       answer:
-        "The whitelist at /whitelist is the front door. It's currently a curated intake. The cooperative is small enough that every Member is a considered addition. As we scale, more of that intake automates.\n\nProspects can start by contributing on projects; Partners can co-deliver with Members. The full membership tier structure is documented in the Cooperative Covenant.",
+        "The whitelist at /whitelist is the front door. It's currently a curated intake. Future Modern is small enough that every Member is a considered addition. As we scale, more of that intake automates.\n\nProspects can start by contributing on projects; Partners can co-deliver with Members. The full membership tier structure is documented in the Cooperative Covenant.",
     },
   ];
 
   return (
     <Faq
       eyebrow="Common questions"
-      heading="How the cooperative works"
+      heading="How Future Modern works"
       items={items}
     />
   );
@@ -548,10 +548,10 @@ async function CohortRail() {
     periodLabel: thisPeriod.label,
     headline:
       joinedThisMonth === 1
-        ? `${publicName(users[0])} joined the cooperative`
+        ? `${publicName(users[0])} joined Future Modern`
         : joinedThisMonth > 1
-          ? `${joinedThisMonth} builders joined the cooperative`
-          : "The builders of the cooperative",
+          ? `${joinedThisMonth} builders joined Future Modern`
+          : "Future Modern builders",
     narrative: "",
   };
 
@@ -595,7 +595,7 @@ async function CohortRail() {
             </>
           ) : (
             <p className="text-ink-muted">
-              Newest builders in the cooperative. Every engagement
+              Newest Future Modern builders. Every engagement
               routes through Future Modern.
             </p>
           )}

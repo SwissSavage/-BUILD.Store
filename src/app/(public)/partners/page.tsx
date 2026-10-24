@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Partners · $BUILD.Store",
   description:
-    "SaaS partners and product affiliates the Future Modern cooperative endorses. Product-side surface — talent members live on /team.",
+    "SaaS partners and product affiliates Future Modern endorses. Product-side surface — talent members live on /team.",
 };
 
 export default async function PartnersPage() {
@@ -51,9 +51,9 @@ export default async function PartnersPage() {
           Products in the ecosystem
         </h1>
         <p className="mt-3 max-w-2xl text-ink-muted">
-          Future Modern is the cooperative behind $BUILD.Store. This
+          Future Modern operates $BUILD.Store. This
           page is for <strong>products</strong> — SaaS tools we&apos;ve
-          endorsed and physical / referral products cooperative members
+          endorsed and physical / referral products Future Modern members
           use. Talent members live on{" "}
           <Link
             href="/team"
@@ -73,7 +73,7 @@ export default async function PartnersPage() {
               SaaS Partners
             </h2>
             <p className="mt-2 max-w-2xl text-sm text-ink-muted">
-              Software products the cooperative endorses and earns
+              Software products Future Modern endorses and earns
               referral revenue from. Each carries a documented
               referral relationship — when a member or client engages
               through our link, attribution flows back to the coop.
@@ -117,7 +117,7 @@ export default async function PartnersPage() {
             </h2>
             <p className="mt-2 max-w-2xl text-sm text-ink-muted">
               Referral relationships. When a tool genuinely helps a
-              cooperative member move faster, we recommend it and
+              Future Modern member move faster, we recommend it and
               transparently take a kickback. Disclosed by design.
             </p>
           </div>
@@ -155,10 +155,10 @@ export default async function PartnersPage() {
           We list products, not people.
         </CardTitle>
         <p className="mt-3 max-w-prose text-sm text-ink-muted">
-          This page is for products the cooperative endorses under a
+          This page is for products Future Modern endorses under a
           documented referral relationship. If you have a SaaS tool,
           physical product, or infrastructure play that lines up with
-          the cooperative&apos;s posture, get in touch and we&apos;ll
+          Future Modern&apos;s standards, get in touch and we&apos;ll
           route you to the right admin for a review. If you&apos;re
           looking to join as a Builder,{" "}
           <Link
@@ -174,7 +174,7 @@ export default async function PartnersPage() {
             href="/about"
             className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
-            About the cooperative
+            About Future Modern
           </Link>
           <Link
             href="/team"

@@ -551,7 +551,7 @@ async function CohortRail() {
         ? `${publicName(users[0])} joined the cooperative`
         : joinedThisMonth > 1
           ? `${joinedThisMonth} builders joined the cooperative`
-          : "The builders of the cooperative",
+          : "Future Modern builders",
     narrative: "",
   };
 

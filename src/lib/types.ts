@@ -3747,6 +3747,31 @@ export interface ProposedBuilder {
    * ───────────────────────────────────────────────────────────
    */
   pitch?: string;
+  /**
+   * True when an admin put this person on the quote rather than the
+   * person having bid for the work (#207).
+   *
+   * ───────────────────────────────────────────────────────────
+   * WHY IT IS STORED (2026-10-24)
+   *
+   * An ask and a decision look identical once they are both numbers
+   * and a name on a card, and they carry different weight. "They bid
+   * $65/hr for this" is their position. "We approached them at
+   * $65/hr" is ours. Six months into a renegotiation that difference
+   * is the whole argument, and nothing else in the stored quote
+   * records it.
+   *
+   * Carried in the quote data rather than looked up from the
+   * application row, because the quote is the frozen record of what
+   * was sent and should not need a join to a mutable table to say
+   * what it was.
+   *
+   * NOT rendered on the client-facing card. The client is choosing
+   * between people on the merits; "we went and found this one" is
+   * internal provenance, not a selling point or a caveat.
+   * ───────────────────────────────────────────────────────────
+   */
+  adminAdded?: boolean;
 }
 
 export interface CooperativeQuote {
@@ -4447,6 +4472,14 @@ export type AuditLogAction =
   | "inbound.tag_accepted"
   | "inbound.tag_rejected"
   | "rfp.dispatched"
+  /**
+   * An admin put a named Builder on an RFP who never bid for it
+   * (#207). Separate from rfp.dispatched, which is the normal
+   * invitation to bid: this one records that no bid was asked for,
+   * and the terms on the row are the admin's figures rather than the
+   * member's own.
+   */
+  | "rfp.builder_added_outside_applications"
   // Client SOW dual-envelope dispatch (task #45)
   | "sow.dispatched"
   | "sow.dispatch_failed"
@@ -4562,6 +4595,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "inbound.tag_accepted": "Admin accepted proposed tag into canonical set",
   "inbound.tag_rejected": "Admin rejected proposed tag",
   "rfp.dispatched": "RFP quote-request dispatched to talent",
+  "rfp.builder_added_outside_applications":
+    "Builder added to an RFP without a bid",
   "sow.dispatched": "SOW dual-envelope dispatched (client + talent)",
   "sow.dispatch_failed": "SOW dual-envelope dispatch failed",
   "payout_method.added": "Payout method added",
@@ -4585,6 +4620,8 @@ export type AuditLogResourceKind =
   | "cooperative_quote"
   | "invoice"
   | "project"
+  /** A bid row. Used by #207's admin-added Builder path. */
+  | "project_application"
   | "milestone"
   | "booking"
   | "agreement"

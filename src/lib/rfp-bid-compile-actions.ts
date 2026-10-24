@@ -155,6 +155,7 @@ export async function compileBidsIntoQuote(formData: FormData) {
       fixedPriceMax: projectApplications.fixedPriceMax,
       pitch: projectApplications.pitch,
       status: projectApplications.status,
+      addedByAdminId: projectApplications.addedByAdminId,
     })
     .from(projectApplications)
     .where(
@@ -373,6 +374,12 @@ export async function compileBidsIntoQuote(formData: FormData) {
       // and work samples speak for themselves, and a member writing
       // about themselves is always selling themselves.
       pitch: p.pitch,
+      // #207. Frozen into the quote rather than left to a join,
+      // because the quote is the record of what was sent and should
+      // not need a mutable table to say whether this person bid for
+      // the work or was approached about it. Not rendered to the
+      // client — see the WHY on ProposedBuilder.adminAdded.
+      adminAdded: p.addedByAdminId ? true : undefined,
     };
   });
 
@@ -466,6 +473,11 @@ export async function compileBidsIntoQuote(formData: FormData) {
       clientDisplayName,
       compiledFromApplicationIds: applicationIds,
       proposedBuilderIds: proposedBuilders.map((b) => b.userId),
+      // Which of them were approached rather than bid. The audit entry
+      // is where this question gets asked later.
+      adminAddedBuilderIds: proposedBuilders
+        .filter((b) => b.adminAdded)
+        .map((b) => b.userId),
       intent,
     },
     reason: isSending

@@ -45,6 +45,7 @@ import type { CooperativeQuote, ProposedBuilder } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { BuilderPriceBreakdown } from "@/components/BuilderPriceBreakdown";
 import { AdminOwnerField } from "@/components/AdminOwnerField";
+import { AddBuilderOutsideApplications } from "@/components/AddBuilderOutsideApplications";
 import { getAllUsers } from "@/lib/readers/users";
 
 interface Params {
@@ -106,6 +107,11 @@ export default async function RfpBidCompilePage({
       portfolioLink: projectApplications.portfolioLink,
       attachments: projectApplications.attachments,
       status: projectApplications.status,
+      // #207: set when an admin put this person on the board rather
+      // than the person having bid. Tagged on the card below, because
+      // an ask and a decision look identical once they are both a name
+      // and a number on a screen.
+      addedByAdminId: projectApplications.addedByAdminId,
       createdAt: projectApplications.createdAt,
       firstName: users.firstName,
       lastName: users.lastName,
@@ -127,6 +133,15 @@ export default async function RfpBidCompilePage({
       ),
     )
     .orderBy(desc(projectApplications.createdAt));
+
+  // Who the exception path may reach. Anyone already carrying a live
+  // bid on this RFP is excluded, because the composer refuses two bids
+  // from the same person and the honest answer there is to use the bid
+  // that exists. Suspended members are excluded for the obvious reason.
+  const biddingUserIds = new Set(bids.map((b) => b.userId));
+  const addableMembers = ownerRoster.filter(
+    (u) => !u.suspendedAt && !biddingUserIds.has(u.id),
+  );
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
@@ -275,6 +290,11 @@ export default async function RfpBidCompilePage({
                           <span className="text-[11px] text-ink-faint">
                             · {b.proposedRole}
                           </span>
+                          {b.addedByAdminId && (
+                            <span className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-[10px] font-medium text-ink-muted">
+                              Admin-added · no bid
+                            </span>
+                          )}
                           {scrub.hits.length > 0 && (
                             <span className="rounded-full bg-brand-magenta/15 px-2 py-0.5 text-[10px] font-medium text-brand-magentaText">
                               PII flagged: {scrub.hits.join(", ")}
@@ -319,6 +339,11 @@ export default async function RfpBidCompilePage({
                                 )
                               : ""
                           }
+                          // #207: on an admin-added row the submitted
+                          // range is not something the Builder asked
+                          // for, and the breakdown must not label it as
+                          // though it were.
+                          rangeSetByAdmin={Boolean(b.addedByAdminId)}
                         />
 
                         {/* Strengths and weaknesses carry most of the
@@ -610,6 +635,21 @@ export default async function RfpBidCompilePage({
             Drafts stay internal and keep bids editable. Sending activates the client link and locks the selected bid versions.
           </p>
         </form>
+      )}
+
+      {/* Outside the compile form, because forms do not nest and this
+          writes an application row rather than compiling a quote.
+
+          Rendered even with zero bids: "nobody bid and I already know
+          who should do this" is one of the main reasons the exception
+          exists, and hiding it behind an empty list would be exactly
+          backwards. Suppressed once a quote has gone to the client,
+          since adding a candidate to a sent quote changes nothing. */}
+      {(!existingQuote || draftQuote) && (
+        <AddBuilderOutsideApplications
+          rfpId={id}
+          candidates={addableMembers}
+        />
       )}
     </div>
   );

@@ -1513,6 +1513,16 @@ export const projectApplications = pgTable("project_applications", {
   withdrawnAt: timestamp("withdrawn_at", { mode: "string", withTimezone: true }),
   /** Set when this proposal is included in a quote sent to a client. */
   clientPresentedAt: timestamp("client_presented_at", { mode: "string", withTimezone: true }),
+  /**
+   * The admin who put this person on the board, when the member never
+   * applied (#207). NULL — the normal case — means the member sent
+   * this bid themselves.
+   *
+   * The admin's id rather than a boolean, because "who decided to put
+   * this person in front of the client" is the question anyone reading
+   * the quote later actually has.
+   */
+  addedByAdminId: text("added_by_admin_id").references(() => users.id),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
 });
 

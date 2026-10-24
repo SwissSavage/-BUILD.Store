@@ -44,7 +44,6 @@ export default async function Home() {
   return (
     <>
       <Hero />
-      <ContributorAffiliations />
       <Process />
       <Pillars />
       <CohortRail />
@@ -55,8 +54,7 @@ export default async function Home() {
 }
 
 /**
- * Contributor-affiliations trust-strip — sits below the hero on the
- * landing page.
+ * Contributor-affiliations trust-strip — anchors the bottom of the hero.
  *
  * Mirrors the framing Bayu shipped on afuturemodern.com: instead of
  * "trusted by 800k businesses" scale flex or "we shipped for X client"
@@ -84,8 +82,8 @@ function ContributorAffiliations() {
   ] as const;
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-10">
+    <div className="relative w-full border-t border-[var(--surface-border)]">
+      <div className="mx-auto max-w-app px-6 py-7 md:py-8">
         <p className="text-center text-[11px] uppercase tracking-[0.18em] text-ink-muted">
           Contributors have shipped work at
         </p>
@@ -105,7 +103,7 @@ function ContributorAffiliations() {
           $BUILD.Store.
         </p>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -122,7 +120,7 @@ function ContributorAffiliations() {
  */
 function Hero() {
   return (
-    <section className="relative flex min-h-[calc(100svh-68px)] items-center overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface)]">
+    <section className="relative flex min-h-[calc(100svh-68px)] flex-col overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface)]">
       {/* Brand color wash — subtle magenta→blue gradient echoing the turtle shell. */}
       <div
         aria-hidden="true"
@@ -132,7 +130,7 @@ function Hero() {
             "radial-gradient(60% 60% at 85% 20%, #D828A0 0%, transparent 60%), radial-gradient(50% 50% at 15% 80%, #5070F0 0%, transparent 60%)",
         }}
       />
-      <div className="relative mx-auto w-full max-w-app px-6 py-20 md:py-24">
+      <div className="relative mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-green">
           <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
           Future Modern cooperative
@@ -212,6 +210,7 @@ function Hero() {
           </li>
         </ul>
       </div>
+      <ContributorAffiliations />
     </section>
   );
 }

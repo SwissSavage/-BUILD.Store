@@ -44,7 +44,7 @@ export function Footer() {
         aria-hidden="true"
         src="/brand/footer-turtle-watermark.png"
         alt=""
-        className="pointer-events-none absolute -bottom-56 -left-44 hidden h-[42rem] w-auto select-none opacity-[0.07] md:block"
+        className="pointer-events-none absolute -bottom-56 -left-44 hidden h-[42rem] w-auto select-none md:block"
       />
 
       <div className="relative z-10 mx-auto grid max-w-app gap-x-8 gap-y-10 px-6 py-20 md:grid-cols-5 md:py-24">

@@ -55,7 +55,7 @@ export function Footer() {
       className="relative mt-32 overflow-hidden border-t border-[var(--surface-border)] bg-[var(--surface-inset)]"
       style={{
         background:
-          "radial-gradient(ellipse at 0% 100%, rgba(255,255,255,0.035), transparent 38%), var(--surface-inset)",
+          "radial-gradient(ellipse at 0% 100%, rgba(255,255,255,0.05), transparent 40%), var(--surface-inset)",
       }}
     >
       {/* Decorative watermark: intentionally absent on compact screens. */}
@@ -63,15 +63,15 @@ export function Footer() {
         aria-hidden="true"
         src="/brand/footer-turtle-watermark.png"
         alt=""
-        className="pointer-events-none absolute -bottom-[25rem] -left-44 hidden h-[42rem] w-auto origin-bottom-left rotate-[12deg] select-none md:block"
+        className="pointer-events-none absolute -bottom-[19rem] -left-44 hidden h-[42rem] w-auto origin-bottom-left rotate-[12deg] select-none md:block"
       />
 
-      <div className="relative z-10 mx-auto grid max-w-[1500px] gap-x-10 gap-y-12 px-6 py-20 md:grid-cols-5 md:pb-28 md:pt-40">
+      <div className="relative z-10 mx-auto grid max-w-[1500px] gap-x-10 gap-y-12 px-6 py-20 md:grid-cols-5 md:pb-32 md:pt-48">
         <div className="md:col-span-2 md:pr-12">
-          <Link href="/" className="font-display text-5xl font-semibold tracking-tight hover:text-brand-magentaText">
+          <Link href="/" className="font-display text-[3.25rem] font-semibold tracking-tight hover:text-brand-magentaText">
             $BUILD<span className="text-brand-magentaText">.</span>Store
           </Link>
-          <p className="mt-5 max-w-md text-lg leading-relaxed text-ink-muted">
+          <p className="mt-5 max-w-xs text-lg leading-relaxed text-ink-muted">
             $BUILD.Store is where Future Modern organizes, staffs, and
             delivers work.
           </p>
@@ -85,8 +85,8 @@ export function Footer() {
 
         {FOOTER_GROUPS.map((group) => (
           <div key={group.title}>
-            <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">{group.title}</h2>
-            <ul className="mt-6 space-y-4 text-lg text-ink-muted">
+            <h2 className="font-display text-[1.625rem] font-semibold tracking-tight text-ink">{group.title}</h2>
+            <ul className="mt-7 space-y-5 text-[1.1875rem] text-ink-muted">
               {group.links.map((link) => (
                 <li key={link.href}>
                   {link.external ? (
@@ -111,7 +111,7 @@ export function Footer() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-[1500px] px-6">
-        <div className="flex flex-col items-center gap-5 border-t border-[var(--surface-border)] py-6 text-sm text-ink-muted sm:flex-row sm:justify-between">
+        <div className="flex flex-col items-center gap-5 border-t border-[var(--surface-border)] py-8 text-sm text-ink-muted sm:flex-row sm:justify-between">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span>© {new Date().getFullYear()} $BUILD.Store · Future Modern Builderberg LLC. All rights reserved.</span>
             <Link href="/data-use-policy" className={linkClassName}>
@@ -131,29 +131,29 @@ export function Footer() {
             <a
               href="https://github.com/SwissSavage/-BUILD.Store"
               aria-label="$BUILD.Store on GitHub"
-              className={linkClassName}
+              className={`${linkClassName} text-ink`}
               target="_blank"
               rel="noreferrer"
             >
-              <Github aria-hidden="true" size={20} strokeWidth={1.75} />
+              <Github aria-hidden="true" size={22} strokeWidth={1.75} />
             </a>
             <a
               href="https://www.facebook.com/afuturemodern/"
               aria-label="Future Modern on Facebook"
-              className={linkClassName}
+              className={`${linkClassName} text-ink`}
               target="_blank"
               rel="noreferrer"
             >
-              <Facebook aria-hidden="true" size={20} strokeWidth={1.75} />
+              <Facebook aria-hidden="true" size={22} strokeWidth={1.75} />
             </a>
             <a
               href="https://www.linkedin.com/company/future-modern"
               aria-label="Future Modern on LinkedIn"
-              className={linkClassName}
+              className={`${linkClassName} text-ink`}
               target="_blank"
               rel="noreferrer"
             >
-              <Linkedin aria-hidden="true" size={20} strokeWidth={1.75} />
+              <Linkedin aria-hidden="true" size={22} strokeWidth={1.75} />
             </a>
           </div>
         </div>

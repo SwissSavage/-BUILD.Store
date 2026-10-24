@@ -52,82 +52,80 @@ const linkClassName = "hover:text-brand-magentaText";
 export function Footer() {
   return (
     <footer
-      className="relative mt-16 overflow-hidden border-t border-[var(--surface-border)] bg-[var(--surface-inset)]"
+      className="relative mt-16 bg-[var(--surface-inset)]"
       style={{
         background:
           "radial-gradient(ellipse at 0% 100%, rgba(255,255,255,0.05), transparent 40%), var(--surface-inset)",
       }}
     >
-      {/* Decorative watermark: intentionally absent on compact screens. */}
-      <img
-        aria-hidden="true"
-        src="/brand/footer-turtle-watermark.png"
-        alt=""
-        className="pointer-events-none absolute -bottom-[19rem] -left-44 hidden h-[42rem] w-auto origin-bottom-left rotate-[12deg] select-none md:block"
-      />
+      <div className="relative overflow-hidden">
+        {/* Decorative watermark: intentionally absent on compact screens. */}
+        <img
+          aria-hidden="true"
+          src="/brand/footer-turtle-watermark.png"
+          alt=""
+          className="pointer-events-none absolute -left-96 top-[26rem] hidden h-[42rem] w-auto origin-bottom-left rotate-[12deg] select-none md:block"
+        />
 
-      <div className="relative z-10 mx-auto grid max-w-[1500px] gap-x-10 gap-y-12 px-6 py-16 md:grid-cols-5 md:pb-28 md:pt-28">
-        <div className="md:col-span-2 md:pr-12">
-          <Link href="/" className="font-display text-[3.25rem] font-semibold tracking-tight hover:text-brand-magentaText">
+        <div className="relative z-10 mx-auto grid w-full gap-x-10 gap-y-12 px-[7%] py-16 md:min-h-[52rem] md:grid-cols-[1.65fr_1fr_1fr_1fr] md:pb-32 md:pt-48">
+          <div className="md:pr-12">
+            <Link href="/" className="font-display text-5xl font-semibold tracking-tight hover:text-brand-magentaText">
             $BUILD<span className="text-brand-magentaText">.</span>Store
-          </Link>
-          <p className="mt-5 max-w-xs text-lg leading-relaxed text-ink-muted">
-            $BUILD.Store is where Future Modern organizes, staffs, and
-            delivers work.
-          </p>
-          <Link
-            href="/portfolio"
-            className="mt-7 inline-block text-lg font-medium text-brand-blueText hover:text-brand-magentaText"
-          >
-            Explore our work →
-          </Link>
-        </div>
-
-        {FOOTER_GROUPS.map((group) => (
-          <div key={group.title}>
-            <h2 className="font-display text-[1.625rem] font-semibold tracking-tight text-ink">{group.title}</h2>
-            <ul className="mt-7 space-y-5 text-[1.1875rem] text-ink-muted">
-              {group.links.map((link) => (
-                <li key={link.href}>
-                  {link.external ? (
-                    <a
-                      href={link.href}
-                      className={linkClassName}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {link.label}
-                    </a>
-                  ) : (
-                    <Link href={link.href} className={linkClassName}>
-                      {link.label}
-                    </Link>
-                  )}
-                </li>
-              ))}
-            </ul>
+            </Link>
+            <p className="mt-5 max-w-xs text-lg leading-relaxed text-ink-muted">
+              $BUILD.Store is where Future Modern organizes, staffs, and
+              delivers work.
+            </p>
+            <Link
+              href="/portfolio"
+              className="mt-7 inline-block text-lg font-medium text-brand-blueText hover:text-brand-magentaText"
+            >
+              Explore our work →
+            </Link>
           </div>
-        ))}
+
+          {FOOTER_GROUPS.map((group) => (
+            <div key={group.title}>
+              <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">{group.title}</h2>
+              <ul className="mt-6 space-y-5 text-lg text-ink-muted">
+                {group.links.map((link) => (
+                  <li key={link.href}>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        className={linkClassName}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link href={link.href} className={linkClassName}>
+                        {link.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="relative z-10 mx-auto max-w-[1500px] px-6">
-        <div className="flex flex-col items-center gap-5 border-t border-[var(--surface-border)] py-8 text-sm text-ink-muted sm:flex-row sm:justify-between">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <span>© {new Date().getFullYear()} $BUILD.Store · Future Modern Builderberg LLC. All rights reserved.</span>
-            <Link href="/data-use-policy" className={linkClassName}>
-              Data use
-            </Link>
-            <Link href="/policies" className={linkClassName}>
-              Policies
-            </Link>
+      <div className="mx-[3.5%] border-t border-[var(--surface-border)]">
+        <div className="flex flex-col gap-5 py-8 text-sm text-ink-muted sm:flex-row sm:items-center sm:justify-between">
+          <span>© {new Date().getFullYear()} $BUILD.Store · A creative technology cooperative. All rights reserved.</span>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
             <Link href="/policies/privacy" className={linkClassName}>
               Privacy
             </Link>
-            <Link href="/policies/covenant" className={linkClassName}>
-              Covenant
+            <Link href="/policies" className={linkClassName}>
+              Terms
             </Link>
-          </div>
-          <div className="flex items-center gap-4">
+            <Link href="/policies/covenant" className={linkClassName}>
+              Code of conduct
+            </Link>
+            <span aria-hidden="true" className="h-5 border-l border-[var(--surface-border)]" />
             <a
               href="https://github.com/SwissSavage/-BUILD.Store"
               aria-label="$BUILD.Store on GitHub"

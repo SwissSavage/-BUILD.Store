@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="./public/brand/future-modern-banner.png" alt="Future Modern — Build with the best" width="100%" />
+</p>
+
+<p align="center">
   <img src="./public/brand/turtle.png" alt="$BUILD.Store turtle mark" width="92" />
 </p>
 

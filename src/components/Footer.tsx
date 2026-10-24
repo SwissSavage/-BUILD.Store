@@ -1,104 +1,90 @@
 import Link from "next/link";
 import { PUBLIC_BOOKING_CTA, PUBLIC_BOOKING_URL } from "@/lib/public-booking";
 
+const FOOTER_GROUPS = [
+  {
+    title: "Explore",
+    links: [
+      { href: "/about", label: "About" },
+      { href: "/portfolio", label: "Portfolio" },
+      { href: "/cohort", label: "Cohort" },
+      { href: "/articles", label: "Articles" },
+      { href: "/partners", label: "Partners" },
+    ],
+  },
+  {
+    title: "Work with us",
+    links: [
+      { href: "/contracts", label: "Open RFPs" },
+      { href: "/jobs", label: "Jobs" },
+      { href: "/store", label: "Store" },
+      { href: "/signup", label: "Get started" },
+      { href: "/contact", label: "Contact" },
+    ],
+  },
+  {
+    title: "Cooperative",
+    links: [
+      { href: "/portfolio?pillar=stem", label: "STEM" },
+      { href: "/portfolio?pillar=creative-media", label: "Creative Media" },
+      { href: "/portfolio?pillar=professional-services", label: "Professional Services" },
+      { href: "/trust", label: "Trust & security" },
+      { href: "/governance", label: "Governance" },
+    ],
+  },
+] as const;
+
+const linkClassName = "hover:text-brand-magentaText";
+
 export function Footer() {
   return (
     <footer className="mt-24 border-t border-[var(--surface-border)] bg-[var(--surface-inset)]">
-      <div className="mx-auto grid max-w-app gap-8 px-6 py-12 md:grid-cols-4">
-        <div>
-          <div className="font-display text-lg font-semibold">
+      <div className="mx-auto grid max-w-app gap-x-8 gap-y-10 px-6 py-12 md:grid-cols-4">
+        <div className="md:pr-6">
+          <Link href="/" className="font-display text-lg font-semibold hover:text-brand-magentaText">
             $BUILD<span className="text-brand-magentaText">.</span>Store
-          </div>
-          <p className="mt-2 text-xs text-ink-faint">
+          </Link>
+          <p className="mt-2 max-w-56 text-sm leading-relaxed text-ink-faint">
             A Future Modern Builderberg LLC cooperative.
           </p>
+          <a
+            href={PUBLIC_BOOKING_URL}
+            className="mt-5 inline-block text-sm font-medium text-brand-blueText hover:text-brand-magentaText"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {PUBLIC_BOOKING_CTA} →
+          </a>
         </div>
 
-        <div>
-          <h4 className="text-xs uppercase tracking-wider text-ink-muted">Platform</h4>
-          <ul className="mt-3 space-y-1.5 text-sm">
-            <li><Link href="/" className="hover:text-brand-magentaText">Home</Link></li>
-            <li><Link href="/about" className="hover:text-brand-magentaText">About</Link></li>
-            <li><Link href="/portfolio" className="hover:text-brand-magentaText">Portfolio</Link></li>
-            <li><Link href="/cohort" className="hover:text-brand-magentaText">Cohort</Link></li>
-            <li><Link href="/articles" className="hover:text-brand-magentaText">Articles</Link></li>
-            <li><Link href="/partners" className="hover:text-brand-magentaText">Partners</Link></li>
-            <li><Link href="/store" className="hover:text-brand-magentaText">Store</Link></li>
-            <li><Link href="/jobs" className="hover:text-brand-magentaText">Jobs</Link></li>
-            <li><Link href="/contracts" className="hover:text-brand-magentaText">Open RFPs</Link></li>
-            <li><Link href="/trust" className="hover:text-brand-magentaText">Trust &amp; security</Link></li>
-            <li><Link href="/governance" className="hover:text-brand-magentaText">Governance framework</Link></li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="text-xs uppercase tracking-wider text-ink-muted">Pillars</h4>
-          <ul className="mt-3 space-y-1.5 text-sm">
-            <li>
-              <Link
-                href="/portfolio?pillar=stem"
-                className="hover:text-brand-magentaText"
-              >
-                STEM
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/portfolio?pillar=creative-media"
-                className="hover:text-brand-magentaText"
-              >
-                Creative Media
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/portfolio?pillar=professional-services"
-                className="hover:text-brand-magentaText"
-              >
-                Professional Services
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="text-xs uppercase tracking-wider text-ink-muted">Connect</h4>
-          <ul className="mt-3 space-y-1.5 text-sm">
-            <li>
-              <a
-                href={PUBLIC_BOOKING_URL}
-                className="hover:text-brand-magentaText"
-                target="_blank"
-                rel="noreferrer"
-              >
-                {PUBLIC_BOOKING_CTA}
-              </a>
-            </li>
-            <li>
-              <Link href="/signup" className="hover:text-brand-magentaText">Get started</Link>
-            </li>
-            <li>
-              <Link href="/contact" className="hover:text-brand-magentaText">Contact</Link>
-            </li>
-          </ul>
-        </div>
+        {FOOTER_GROUPS.map((group) => (
+          <div key={group.title}>
+            <h2 className="text-xs uppercase tracking-wider text-ink-muted">{group.title}</h2>
+            <ul className="mt-3 space-y-2 text-sm">
+              {group.links.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className={linkClassName}>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </div>
 
       <div className="border-t border-[var(--surface-border)]">
         <div className="mx-auto flex max-w-app flex-col items-center gap-3 px-6 py-4 text-xs text-ink-faint sm:flex-row sm:justify-between">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span>© {new Date().getFullYear()} Future Modern Builderberg LLC. Sandbox build.</span>
-            <Link href="/data-use-policy" className="hover:text-brand-magentaText">
-              Data Use Policy
+            <Link href="/data-use-policy" className={linkClassName}>
+              Data use
             </Link>
-            <Link href="/policies" className="hover:text-brand-magentaText">
+            <Link href="/policies" className={linkClassName}>
               Policies
             </Link>
-            <Link href="/policies/privacy" className="hover:text-brand-magentaText">
+            <Link href="/policies/privacy" className={linkClassName}>
               Privacy
-            </Link>
-            <Link href="/trust" className="hover:text-brand-magentaText">
-              Trust
             </Link>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}

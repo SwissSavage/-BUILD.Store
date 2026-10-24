@@ -693,6 +693,15 @@ html {
   --fm-red-text: #EA6262;
 }
 
+/* These classes also decorate navigational CTAs (<a>/<Link>) while the
+   routes are being migrated to the shared primitive. !important is deliberate:
+   the legacy `rounded-full` utility is emitted after this stylesheet by the
+   Tailwind build, and must not be able to turn an action into a pill. */
+.fm-btn-primary,
+.fm-button {
+  border-radius: var(--control-radius) !important;
+}
+
 .fm-btn-primary {
   background-image: linear-gradient(
     100deg,
@@ -702,18 +711,10 @@ html {
   color: #000000;
   font-weight: 600;
   border: none;
-  border-radius: var(--control-radius);
   transition:
     transform var(--motion-fast) var(--motion-out),
     filter var(--motion-standard) ease,
     box-shadow var(--motion-standard) ease;
-}
-
-/* One geometry rule for every actual action control. Legacy class strings
-   may still describe colour or spacing while routes are simplified, but they
-   cannot turn an action back into a pill. */
-.fm-button {
-  border-radius: var(--control-radius);
 }
 
 .fm-btn-primary:hover:not(:disabled) {

@@ -7,7 +7,7 @@
  * WHY (2026-09-02)
  *
  * Every server-action form in the app used a plain
- * <button type="submit">. Clicking it did the work and told you
+ * <Button type="submit">. Clicking it did the work and told you
  * nothing: no disabled state, no spinner, no change at all until the
  * page happened to re-render. On anything slower than instant, the
  * only rational response is to click again.
@@ -29,6 +29,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 import { useFormStatus } from "react-dom";
+import { Button } from "@/components/Button";
 
 interface SubmitButtonProps {
   children: React.ReactNode;
@@ -43,6 +44,8 @@ interface SubmitButtonProps {
   formAction?: React.ComponentProps<"button">["formAction"];
   /** Inline styles, for the surfaces that set brand colours directly. */
   style?: React.CSSProperties;
+  variant?: "primary" | "secondary" | "ghost";
+  size?: "compact" | "default" | "large" | "icon";
 }
 
 export function SubmitButton({
@@ -55,11 +58,15 @@ export function SubmitButton({
   value,
   formAction,
   style,
+  variant = "primary",
+  size = "default",
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
 
   return (
-    <button
+    <Button
+      variant={variant}
+      size={size}
       type="submit"
       name={name}
       value={value}
@@ -68,7 +75,7 @@ export function SubmitButton({
       disabled={pending || disabled}
       aria-busy={pending}
       style={style}
-      className={`${className} disabled:cursor-not-allowed disabled:opacity-60`}
+      className={className}
     >
       {pending ? (
         <span className="inline-flex items-center gap-2">
@@ -84,6 +91,6 @@ export function SubmitButton({
       ) : (
         children
       )}
-    </button>
+    </Button>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Mobile menu for the marketing (public) nav.
@@ -38,7 +39,7 @@ export function MobileMenu() {
 
   return (
     <>
-      <button
+      <Button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open menu"
@@ -59,7 +60,7 @@ export function MobileMenu() {
             strokeLinecap="round"
           />
         </svg>
-      </button>
+      </Button>
 
       {open && (
         <div
@@ -87,7 +88,7 @@ export function MobileMenu() {
                 $BUILD<span style={{ color: "var(--fm-magenta-text)" }}>.</span>Store
               </span>
             </Link>
-            <button
+            <Button
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Close menu"
@@ -107,7 +108,7 @@ export function MobileMenu() {
                   strokeLinecap="round"
                 />
               </svg>
-            </button>
+            </Button>
           </div>
 
           {/* Scrollable link list */}

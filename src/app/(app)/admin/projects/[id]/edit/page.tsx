@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/projects/[id]/edit — fix a posted listing in place.
  *
@@ -171,12 +172,12 @@ export default async function EditProjectPage({
               className={inputClass}
             />
           </label>
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Move to trash
-          </button>
+          </Button>
         </form>
       </Card>
     </div>

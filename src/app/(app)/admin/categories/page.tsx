@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: store category management.
  *
@@ -110,13 +111,13 @@ export default async function AdminCategoriesPage() {
             />
           </div>
           <div className="md:col-span-2">
-            <button
+            <Button
               type="submit"
               className="rounded-full px-5 py-2 text-sm font-medium text-white"
               style={{ backgroundColor: "#5070F0" }}
             >
               Create category
-            </button>
+            </Button>
           </div>
         </form>
       </Card>
@@ -213,13 +214,13 @@ function CategoryRow({ category }: { category: StoreCategory }) {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2 md:col-span-2">
-          <button
+          <Button
             type="submit"
             className="rounded-full px-4 py-1.5 text-xs font-medium text-white"
             style={{ backgroundColor: "#007048" }}
           >
             Save changes
-          </button>
+          </Button>
           <span className="text-[11px] text-ink-faint">
             Updated {new Date(category.updatedAt).toLocaleDateString()}
           </span>
@@ -229,22 +230,22 @@ function CategoryRow({ category }: { category: StoreCategory }) {
         {category.isActive ? (
           <form action={archiveStoreCategory}>
             <input type="hidden" name="id" value={category.id} />
-            <button
+            <Button
               type="submit"
               className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Archive
-            </button>
+            </Button>
           </form>
         ) : (
           <form action={unarchiveStoreCategory}>
             <input type="hidden" name="id" value={category.id} />
-            <button
+            <Button
               type="submit"
               className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Unarchive
-            </button>
+            </Button>
           </form>
         )}
         <Link

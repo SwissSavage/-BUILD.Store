@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Sandbox stand-in for Stripe-hosted Express onboarding (Phase 1.5).
  *
@@ -138,13 +139,13 @@ export default async function OnboardPage({
           will dispatch transfers to this account.
         </p>
         <form action={completeOnboarding} className="mt-5">
-          <button
+          <Button
             type="submit"
             className="rounded-full px-6 py-2.5 text-sm font-medium text-white"
             style={{ backgroundColor: "#007048" }}
           >
             Simulate completion ✓
-          </button>
+          </Button>
         </form>
       </div>
 

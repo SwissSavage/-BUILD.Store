@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/members/[id] — per-user admin drill-down.
  *
@@ -264,12 +265,12 @@ export default async function MemberDrillDown({
                 placeholder="Circumstances resolved / issue addressed / …"
               />
             </label>
-            <button
+            <Button
               type="submit"
               className="fm-btn-primary rounded-full px-4 py-1.5 text-xs"
             >
               Reactivate account
-            </button>
+            </Button>
           </form>
         </div>
       )}
@@ -366,12 +367,12 @@ export default async function MemberDrillDown({
                   className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-2 py-1 text-xs text-ink"
                   placeholder="Reason (≥ 10 chars, recorded on the audit log)"
                 />
-                <button
+                <Button
                   type="submit"
                   className="rounded-full border border-brand-magenta/40 px-4 py-1.5 text-xs text-brand-magentaText hover:border-brand-magenta"
                 >
                   Delete permanently
-                </button>
+                </Button>
               </form>
             </>
           )}
@@ -457,12 +458,12 @@ export default async function MemberDrillDown({
                   </option>
                 ))}
               </select>
-              <button
+              <Button
                 type="submit"
                 className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta"
               >
                 Change tier
-              </button>
+              </Button>
             </form>
           </Card>
 
@@ -479,14 +480,14 @@ export default async function MemberDrillDown({
             </p>
             <form action={toggleProfilePublic} className="mt-3">
               <input type="hidden" name="uid" value={user.id} />
-              <button
+              <Button
                 type="submit"
                 className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta"
               >
                 {user.profilePublic
                   ? "Hide from discovery"
                   : "Restore to discovery"}
-              </button>
+              </Button>
             </form>
           </Card>
 
@@ -513,14 +514,14 @@ export default async function MemberDrillDown({
             </p>
             <form action={setArtistMode} className="mt-3">
               <input type="hidden" name="uid" value={user.id} />
-              <button
+              <Button
                 type="submit"
                 className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta"
               >
                 {user.profileMode === "epk"
                   ? "Return to contributor"
                   : "Recognise as artist"}
-              </button>
+              </Button>
             </form>
           </Card>
 
@@ -543,12 +544,12 @@ export default async function MemberDrillDown({
             {!isSelf && (
               <form action={toggleAdminFlag} className="mt-3">
                 <input type="hidden" name="uid" value={user.id} />
-                <button
+                <Button
                   type="submit"
                   className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta"
                 >
                   {user.isAdmin ? "Revoke admin" : "Grant admin"}
-                </button>
+                </Button>
               </form>
             )}
           </Card>
@@ -574,14 +575,14 @@ export default async function MemberDrillDown({
                   className="mt-3"
                 >
                   <input type="hidden" name="userId" value={user.id} />
-                  <button
+                  <Button
                     type="submit"
                     className="rounded-full border border-brand-magenta/40 px-3 py-1 text-xs text-brand-magentaText hover:border-brand-magenta"
                   >
                     {user.documensoInvitedAt
                       ? "Re-send invite"
                       : "Send Documenso invite"}
-                  </button>
+                  </Button>
                 </form>
               )}
             </Card>
@@ -609,12 +610,12 @@ export default async function MemberDrillDown({
                   className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-2 py-1 text-xs text-ink"
                   placeholder="Reason (≥ 10 chars, recorded)"
                 />
-                <button
+                <Button
                   type="submit"
                   className="fm-btn-primary rounded-full px-3 py-1 text-xs"
                 >
                   Suspend
-                </button>
+                </Button>
               </form>
             </Card>
           )}

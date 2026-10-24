@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Client-side "Change decision" button rendered inside the approved
@@ -66,7 +67,7 @@ export function QuoteDecidedUndoButton({
   if (!confirming) {
     return (
       <div className="mt-6">
-        <button
+        <Button
           type="button"
           onClick={() => setConfirming(true)}
           disabled={pending}
@@ -75,7 +76,7 @@ export function QuoteDecidedUndoButton({
           {previousDecision === "approved"
             ? "Change my mind"
             : "Actually, let me reconsider"}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -92,22 +93,22 @@ export function QuoteDecidedUndoButton({
         admin will be notified to pause any kickoff momentum.
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
-        <button
+        <Button
           type="button"
           onClick={handleUndo}
           disabled={pending}
           className="fm-btn-primary inline-flex items-center rounded-full px-4 py-1.5 text-xs font-medium shadow-sm shadow-brand-magenta/20 transition-colors disabled:opacity-60"
         >
           {pending ? "Reopening…" : "Yes, reopen"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => setConfirming(false)}
           disabled={pending}
           className="inline-flex items-center rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs text-ink transition-colors hover:border-ink hover:bg-[var(--surface-elevated)] disabled:opacity-60"
         >
           Cancel
-        </button>
+        </Button>
       </div>
       {error && (
         <p

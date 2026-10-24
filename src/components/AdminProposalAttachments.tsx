@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 import { useRef, useState } from "react";
 import { FileText, X } from "lucide-react";
@@ -73,7 +74,7 @@ export function AdminProposalAttachments({
                   {(document.sizeBytes / 1024).toFixed(0)} KB
                 </span>
               </div>
-              <button
+              <Button
                 type="button"
                 onClick={() => setKept((current) => current.filter((item) => item.index !== index))}
                 aria-label={`Remove ${document.name}`}
@@ -81,7 +82,7 @@ export function AdminProposalAttachments({
                 className="absolute right-1 top-1 inline-flex size-8 items-center justify-center rounded-full text-ink-muted hover:bg-[var(--surface-border)] hover:text-brand-magentaText focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-magenta"
               >
                 <X aria-hidden="true" size={15} />
-              </button>
+              </Button>
             </li>
           ))}
           {selected.map((file, index) => (
@@ -98,7 +99,7 @@ export function AdminProposalAttachments({
                   {(file.size / 1024).toFixed(0)} KB · pending
                 </span>
               </div>
-              <button
+              <Button
                 type="button"
                 onClick={() => removeSelected(index)}
                 aria-label={`Remove ${file.name}`}
@@ -106,7 +107,7 @@ export function AdminProposalAttachments({
                 className="absolute right-1 top-1 inline-flex size-8 items-center justify-center rounded-full text-ink-muted hover:bg-[var(--surface-border)] hover:text-brand-magentaText focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-magenta"
               >
                 <X aria-hidden="true" size={15} />
-              </button>
+              </Button>
             </li>
           ))}
         </ul>

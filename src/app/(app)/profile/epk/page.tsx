@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Artist EPK editor.
  *
@@ -226,13 +227,13 @@ function CoreEditor({ epk }: { epk: ArtistEpk | null }) {
           placeholder="Booking via Future Modern only. No direct DMs."
         />
 
-        <button
+        <Button
           type="submit"
           className="rounded-full px-5 py-2 text-sm font-medium text-white"
           style={{ backgroundColor: "#5070F0" }}
         >
           Save core fields
-        </button>
+        </Button>
       </form>
     </Card>
   );
@@ -278,12 +279,12 @@ function FeaturedWorkSection({ entries }: { entries: FeaturedWorkEntry[] }) {
               )}
               <form action={removeFeaturedWork} className="mt-2">
                 <input type="hidden" name="id" value={e.id} />
-                <button
+                <Button
                   type="submit"
                   className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                 >
                   Remove
-                </button>
+                </Button>
               </form>
             </li>
           ))}
@@ -314,12 +315,12 @@ function FeaturedWorkSection({ entries }: { entries: FeaturedWorkEntry[] }) {
           rows={2}
           placeholder="Diss track at former label head."
         />
-        <button
+        <Button
           type="submit"
           className="fm-btn-primary rounded-full px-4 py-1.5 text-xs font-medium"
         >
           Add featured work
-        </button>
+        </Button>
       </form>
     </Card>
   );
@@ -356,12 +357,12 @@ function PressSection({ clips }: { clips: PressClip[] }) {
               )}
               <form action={removePressClip} className="mt-2">
                 <input type="hidden" name="id" value={c.id} />
-                <button
+                <Button
                   type="submit"
                   className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                 >
                   Remove
-                </button>
+                </Button>
               </form>
             </li>
           ))}
@@ -387,13 +388,13 @@ function PressSection({ clips }: { clips: PressClip[] }) {
           label="Date (optional, YYYY-MM-DD)"
           placeholder="2012-06-01"
         />
-        <button
+        <Button
           type="submit"
           className="rounded-full px-4 py-1.5 text-xs font-medium text-white"
           style={{ backgroundColor: "#007048" }}
         >
           Add press clip
-        </button>
+        </Button>
       </form>
     </Card>
   );
@@ -481,12 +482,12 @@ function MetricsSection({ metrics }: { metrics: ArtistMetricSnapshot[] }) {
               </div>
               <form action={removeMetric} className="mt-2">
                 <input type="hidden" name="index" value={i} />
-                <button
+                <Button
                   type="submit"
                   className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                 >
                   Remove
-                </button>
+                </Button>
               </form>
             </li>
           ))}
@@ -497,13 +498,13 @@ function MetricsSection({ metrics }: { metrics: ArtistMetricSnapshot[] }) {
         <SelectField name="platform" label="Platform" options={METRIC_PLATFORM_OPTIONS} />
         <Field name="metric" label="Metric label" required placeholder="Monthly listeners" />
         <Field name="value" label="Value (display string)" required placeholder="42.5k" />
-        <button
+        <Button
           type="submit"
           className="rounded-full px-4 py-1.5 text-xs font-medium text-white"
           style={{ backgroundColor: "#5070F0" }}
         >
           Add metric
-        </button>
+        </Button>
       </form>
     </Card>
   );
@@ -537,12 +538,12 @@ function SocialHandlesSection({ handles }: { handles: ArtistSocialHandle[] }) {
               <p className="mt-1 truncate text-[11px] text-ink-faint">{h.url}</p>
               <form action={removeSocialHandle} className="mt-2">
                 <input type="hidden" name="index" value={i} />
-                <button
+                <Button
                   type="submit"
                   className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                 >
                   Remove
-                </button>
+                </Button>
               </form>
             </li>
           ))}
@@ -553,12 +554,12 @@ function SocialHandlesSection({ handles }: { handles: ArtistSocialHandle[] }) {
         <SelectField name="platform" label="Platform" options={SOCIAL_PLATFORM_OPTIONS} />
         <Field name="url" label="URL" required placeholder="https://twitter.com/handle" />
         <Field name="handle" label="Handle (optional)" placeholder="handle" />
-        <button
+        <Button
           type="submit"
           className="fm-btn-primary rounded-full px-4 py-1.5 text-xs font-medium"
         >
           Add social
-        </button>
+        </Button>
       </form>
     </Card>
   );
@@ -601,12 +602,12 @@ function Web3ProfilesSection({ profiles }: { profiles: Web3MarketplaceProfile[] 
               )}
               <form action={removeWeb3Profile} className="mt-2">
                 <input type="hidden" name="index" value={i} />
-                <button
+                <Button
                   type="submit"
                   className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                 >
                   Remove
-                </button>
+                </Button>
               </form>
             </li>
           ))}
@@ -624,13 +625,13 @@ function Web3ProfilesSection({ profiles }: { profiles: Web3MarketplaceProfile[] 
           rows={2}
           placeholder="STILL HIGH FM-curated drop."
         />
-        <button
+        <Button
           type="submit"
           className="rounded-full px-4 py-1.5 text-xs font-medium text-white"
           style={{ backgroundColor: "#007048" }}
         >
           Add marketplace
-        </button>
+        </Button>
       </form>
     </Card>
   );
@@ -695,14 +696,14 @@ function SubmitSection({ epk }: { epk: ArtistEpk | null }) {
         </p>
       )}
       <form action={submitEpkForReview} className="mt-4">
-        <button
+        <Button
           type="submit"
           disabled={!ready}
           className="rounded-full px-5 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
           style={{ backgroundColor: "#000000" }}
         >
           {alreadySubmitted ? "Re-submit for review" : "Submit for review"}
-        </button>
+        </Button>
       </form>
     </Card>
   );

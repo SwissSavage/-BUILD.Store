@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * The identity editor's save form.
@@ -284,13 +285,13 @@ export function IdentityForm({ user }: { user: IdentityFormUser }) {
         </p>
       </label>
 
-      <button
+      <Button
         type="submit"
         disabled={isPending}
         className="rounded-full bg-ink px-6 py-2.5 text-sm font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black disabled:opacity-60"
       >
         {isPending ? "Saving…" : "Save profile"}
-      </button>
+      </Button>
     </form>
   );
 }

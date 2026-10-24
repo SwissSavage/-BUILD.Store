@@ -5,6 +5,7 @@
  */
 import { Fragment } from "react";
 import Link from "next/link";
+import { ButtonLink } from "@/components/Button";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
 import { memberLabel } from "@/lib/member-label";
@@ -43,7 +44,6 @@ export default async function Home() {
   return (
     <>
       <Hero />
-      <ContributorAffiliations />
       <Process />
       <Pillars />
       <CohortRail />
@@ -54,8 +54,7 @@ export default async function Home() {
 }
 
 /**
- * Contributor-affiliations trust-strip — sits below the hero on the
- * landing page.
+ * Contributor-affiliations trust-strip — anchors the bottom of the hero.
  *
  * Mirrors the framing Bayu shipped on afuturemodern.com: instead of
  * "trusted by 800k businesses" scale flex or "we shipped for X client"
@@ -83,8 +82,8 @@ function ContributorAffiliations() {
   ] as const;
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-10">
+    <div className="relative w-full border-t border-[var(--surface-border)]">
+      <div className="mx-auto max-w-app px-6 py-7 md:py-8">
         <p className="text-center text-[11px] uppercase tracking-[0.18em] text-ink-muted">
           Contributors have shipped work at
         </p>
@@ -104,7 +103,7 @@ function ContributorAffiliations() {
           $BUILD.Store.
         </p>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -121,7 +120,7 @@ function ContributorAffiliations() {
  */
 function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface)]">
+    <section className="relative flex min-h-[calc(100svh-68px)] flex-col overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface)]">
       {/* Brand color wash — subtle magenta→blue gradient echoing the turtle shell. */}
       <div
         aria-hidden="true"
@@ -131,7 +130,7 @@ function Hero() {
             "radial-gradient(60% 60% at 85% 20%, #D828A0 0%, transparent 60%), radial-gradient(50% 50% at 15% 80%, #5070F0 0%, transparent 60%)",
         }}
       />
-      <div className="relative mx-auto max-w-app px-6 py-24 md:py-32">
+      <div className="relative mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-green">
           <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
           Future Modern cooperative
@@ -148,20 +147,24 @@ function Hero() {
           Services professionals. Perfectly matched to your project.
         </p>
         <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-          <Link
+          <ButtonLink
             href="/signup"
-            className="fm-btn-primary inline-flex items-center justify-center rounded-full px-8 py-3 font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
+            variant="primary"
+            size="large"
+            className="px-8 py-3 shadow-lg shadow-brand-magenta/20"
           >
             Get started
-          </Link>
-          <a
+          </ButtonLink>
+          <ButtonLink
             href={PUBLIC_BOOKING_URL}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center justify-center rounded-full border border-brand-blue/60 px-8 py-3 font-medium text-brand-blue transition-colors hover:bg-brand-blue/10"
+            variant="secondary"
+            size="large"
+            className="border-brand-blue/60 px-8 py-3 text-brand-blue hover:bg-brand-blue/10"
           >
             {PUBLIC_BOOKING_CTA}
-          </a>
+          </ButtonLink>
         </div>
 
         {/* Positional strip — Web3-native without being crypto-bro.
@@ -207,6 +210,7 @@ function Hero() {
           </li>
         </ul>
       </div>
+      <ContributorAffiliations />
     </section>
   );
 }

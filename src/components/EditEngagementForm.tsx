@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Change an engagement after it has been sent.
@@ -203,7 +204,7 @@ export function EditEngagementForm(props: EditEngagementProps) {
       <EngagementReferencesField disabled={pending} />
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
+        <Button
           type="submit"
           disabled={pending}
           className="fm-btn-primary rounded-full px-6 py-2.5 text-sm font-medium disabled:opacity-60"
@@ -213,7 +214,7 @@ export function EditEngagementForm(props: EditEngagementProps) {
             : willGoBack
               ? "Save and send back for confirmation"
               : "Save changes"}
-        </button>
+        </Button>
         <span className="text-[11px] text-ink-faint">
           {willGoBack
             ? "The Builder confirms the new terms before work resumes."

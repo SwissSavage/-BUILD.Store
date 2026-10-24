@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Member's personal canon view.
  *
@@ -247,13 +248,13 @@ export default async function MemberCanonPage() {
                       placeholder="Shipping notes (optional)"
                       className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-[11px]"
                     />
-                    <button
+                    <Button
                       type="submit"
                       className="rounded-full px-3 py-1 text-[11px] font-medium text-white"
                       style={{ backgroundColor: "#D4AF37" }}
                     >
                       Request phygital
-                    </button>
+                    </Button>
                   </form>
                 </details>
               </Card>

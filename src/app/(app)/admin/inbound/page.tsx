@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: unified inbound submissions hub.
  *
@@ -332,13 +333,13 @@ function SubmissionRow({
             <div className="mt-3 flex flex-wrap gap-2">
               <form action={approveBookingRequest}>
                 <input type="hidden" name="submissionId" value={row.id} />
-                <button
+                <Button
                   type="submit"
                   className="rounded-full px-3 py-1 text-[11px] font-medium text-white"
                   style={{ backgroundColor: "#007048" }}
                 >
                   Approve → route to attendee
-                </button>
+                </Button>
               </form>
               <form
                 action={declineBookingRequest}
@@ -351,12 +352,12 @@ function SubmissionRow({
                   placeholder="Reason (optional)"
                   className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-[11px]"
                 />
-                <button
+                <Button
                   type="submit"
                   className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                 >
                   Decline
-                </button>
+                </Button>
               </form>
             </div>
           </div>
@@ -389,12 +390,12 @@ function SubmissionRow({
                     ))}
                   </select>
                 </label>
-                <button
+                <Button
                   type="submit"
                   className="rounded-full bg-ink px-3 py-1 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
                 >
                   Update
-                </button>
+                </Button>
               </form>
               )}
 
@@ -418,23 +419,23 @@ function SubmissionRow({
                     ))}
                   </select>
                 </label>
-                <button
+                <Button
                   type="submit"
                   className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                 >
                   Assign
-                </button>
+                </Button>
               </form>
 
               {row.assignedAdminId && (
                 <form action={unassignInbound} className="mt-2">
                   <input type="hidden" name="id" value={row.id} />
-                  <button
+                  <Button
                     type="submit"
                     className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                   >
                     Unassign {assignee ? publicName(assignee) : ""}
-                  </button>
+                  </Button>
                 </form>
               )}
 
@@ -449,12 +450,12 @@ function SubmissionRow({
                     className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1"
                   />
                 </label>
-                <button
+                <Button
                   type="submit"
                   className="mt-2 rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                 >
                   Save note
-                </button>
+                </Button>
               </form>
 
               {/* Admission kinds get a decision, not a pipeline. The yes
@@ -472,12 +473,12 @@ function SubmissionRow({
                     <form action={setInboundStatus} className="mt-2">
                       <input type="hidden" name="id" value={row.id} />
                       <input type="hidden" name="status" value="in_triage" />
-                      <button
+                      <Button
                         type="submit"
                         className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                       >
                         Reopen
-                      </button>
+                      </Button>
                     </form>
                   </div>
                 ) : (
@@ -486,13 +487,13 @@ function SubmissionRow({
                       row.submitterEmail ? (
                         <form action={promoteInboundToInvite}>
                           <input type="hidden" name="id" value={row.id} />
-                          <button
+                          <Button
                             type="submit"
                             className="fm-btn-primary rounded-full px-3 py-1.5 text-[11px] font-medium"
                             title="Prefill /admin/members/invite with this applicant's email + name and jump you there. Countersign-first invite ceremony fires from that page."
                           >
                             Promote to invite →
-                          </button>
+                          </Button>
                         </form>
                       ) : (
                         <span className="text-[11px] text-ink-faint">
@@ -503,23 +504,23 @@ function SubmissionRow({
                       <form action={decideInboundAdmission}>
                         <input type="hidden" name="id" value={row.id} />
                         <input type="hidden" name="decision" value="approved" />
-                        <button
+                        <Button
                           type="submit"
                           className="fm-btn-primary rounded-full px-3 py-1.5 text-[11px] font-medium"
                         >
                           Approve
-                        </button>
+                        </Button>
                       </form>
                     )}
                     <form action={decideInboundAdmission}>
                       <input type="hidden" name="id" value={row.id} />
                       <input type="hidden" name="decision" value="rejected" />
-                      <button
+                      <Button
                         type="submit"
                         className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] font-medium text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
                       >
                         Reject
-                      </button>
+                      </Button>
                     </form>
                   </div>
                 ))}
@@ -547,22 +548,22 @@ function SubmissionRow({
                           <form action={acceptProposedInboundTag}>
                             <input type="hidden" name="id" value={row.id} />
                             <input type="hidden" name="tag" value={t} />
-                            <button
+                            <Button
                               type="submit"
                               className="rounded-full bg-[#007048] px-2.5 py-0.5 text-[10px] font-medium text-white hover:opacity-90"
                             >
                               Accept
-                            </button>
+                            </Button>
                           </form>
                           <form action={rejectProposedInboundTag}>
                             <input type="hidden" name="id" value={row.id} />
                             <input type="hidden" name="tag" value={t} />
-                            <button
+                            <Button
                               type="submit"
                               className="rounded-full border border-[var(--surface-border)] px-2.5 py-0.5 text-[10px] hover:border-[#d84343] hover:text-[#d84343]"
                             >
                               Reject
-                            </button>
+                            </Button>
                           </form>
                         </div>
                       </li>
@@ -581,12 +582,12 @@ function SubmissionRow({
                     className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1"
                   />
                 </label>
-                <button
+                <Button
                   type="submit"
                   className="mt-2 rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                 >
                   Append tags
-                </button>
+                </Button>
               </form>
             </>
           ) : (

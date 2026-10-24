@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/trash — restore or permanently remove deleted projects.
  *
@@ -99,12 +100,12 @@ export default async function AdminTrashPage() {
                 <div className="mt-4 flex flex-wrap items-start gap-3">
                   <form action={restoreProject}>
                     <input type="hidden" name="id" value={p.id} />
-                    <button
+                    <Button
                       type="submit"
                       className="rounded-full bg-brand-green px-4 py-2 text-xs font-medium text-brand-white hover:opacity-90"
                     >
                       Restore
-                    </button>
+                    </Button>
                   </form>
 
                   <details className="min-w-0 flex-1">
@@ -128,12 +129,12 @@ export default async function AdminTrashPage() {
                         placeholder={p.title}
                         className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink"
                       />
-                      <button
+                      <Button
                         type="submit"
                         className="rounded-full border border-brand-magenta px-4 py-1.5 text-xs text-brand-magentaText hover:bg-brand-magenta hover:text-black"
                       >
                         Permanently delete
-                      </button>
+                      </Button>
                     </form>
                   </details>
                 </div>

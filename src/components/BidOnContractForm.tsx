@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Public /contracts/[id] bid form. Writes to project_applications
@@ -293,7 +294,7 @@ export function BidOnContractForm({
           </p>
         )}
 
-        <button
+        <Button
           type="submit"
           disabled={isPending}
           className="fm-btn-primary rounded-full px-5 py-2 text-sm disabled:opacity-50"
@@ -305,7 +306,7 @@ export function BidOnContractForm({
             : editing
               ? "Update proposal"
               : "Submit proposal"}
-        </button>
+        </Button>
       </form>
     </Card>
   );

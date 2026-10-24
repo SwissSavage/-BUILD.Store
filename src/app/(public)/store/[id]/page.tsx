@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Product detail + place-order surface (Phase 2.1 sandbox).
  *
@@ -217,7 +218,7 @@ export default async function ProductDetailPage({
                 </label>
               )}
 
-              <button
+              <Button
                 type="submit"
                 className="w-full rounded-full py-2.5 text-sm font-medium text-white"
                 style={{ backgroundColor: accent }}
@@ -226,7 +227,7 @@ export default async function ProductDetailPage({
                 }
               >
                 Place order →
-              </button>
+              </Button>
               <p className="text-[10px] text-ink-faint">
                 You&apos;ll land on the order page where you can track
                 fulfillment. Real Stripe Connect checkout slots in here

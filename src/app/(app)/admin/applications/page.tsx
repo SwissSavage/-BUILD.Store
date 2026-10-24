@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: pending membership applications. Approve / reject.
  *
@@ -194,22 +195,22 @@ export default async function AdminApplicationsPage() {
                     <form action={decide}>
                       <input type="hidden" name="id" value={app.id} />
                       <input type="hidden" name="decision" value="approved" />
-                      <button
+                      <Button
                         type="submit"
                         className="rounded-full bg-brand-green px-4 py-1.5 text-xs font-medium text-brand-white hover:opacity-90"
                       >
                         Approve
-                      </button>
+                      </Button>
                     </form>
                     <form action={decide}>
                       <input type="hidden" name="id" value={app.id} />
                       <input type="hidden" name="decision" value="rejected" />
-                      <button
+                      <Button
                         type="submit"
                         className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta"
                       >
                         Reject
-                      </button>
+                      </Button>
                     </form>
                   </div>
                 </Card>

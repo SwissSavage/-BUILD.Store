@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: talent-tag curation for one member.
  *
@@ -84,7 +85,7 @@ export default async function AdminMemberTagsPage({
               <form key={t} action={adminRemoveTalentTag}>
                 <input type="hidden" name="userId" value={user.id} />
                 <input type="hidden" name="tag" value={t} />
-                <button
+                <Button
                   type="submit"
                   className="group rounded-full px-3 py-1 text-xs"
                   style={{
@@ -97,7 +98,7 @@ export default async function AdminMemberTagsPage({
                   <span className="opacity-0 transition-opacity group-hover:opacity-100">
                     ✕
                   </span>
-                </button>
+                </Button>
               </form>
             ))
           )}
@@ -113,22 +114,22 @@ export default async function AdminMemberTagsPage({
               className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-sm normal-case tracking-normal text-ink"
             />
           </label>
-          <button
+          <Button
             type="submit"
             className="fm-btn-primary rounded-full px-4 py-1.5 text-xs font-medium"
           >
             Append
-          </button>
+          </Button>
         </form>
 
         <form action={adminRescanTalentTags} className="mt-3">
           <input type="hidden" name="userId" value={user.id} />
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Rescan from bio + skills + portfolio
-          </button>
+          </Button>
         </form>
       </Card>
 

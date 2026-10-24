@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin AR/AP tracker per contract (Phase 1.5).
  *
@@ -413,13 +414,13 @@ export default async function ContractLedgerPage({
               required
               className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
             />
-            <button
+            <Button
               type="submit"
               className="rounded-full px-4 py-2 text-sm font-medium text-white"
               style={{ backgroundColor: "#5070F0" }}
             >
               Create draft
-            </button>
+            </Button>
           </form>
         </Card>
       </section>
@@ -640,12 +641,12 @@ export default async function ContractLedgerPage({
                 type="date"
                 className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
               />
-              <button
+              <Button
                 type="submit"
                 className="fm-btn-primary rounded-full px-3 py-1.5 text-xs font-medium"
               >
                 Issue invoice
-              </button>
+              </Button>
             </form>
           )}
 
@@ -669,25 +670,25 @@ export default async function ContractLedgerPage({
                 placeholder="Mercury ref"
                 className="w-36 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
               />
-              <button
+              <Button
                 type="submit"
                 className="rounded-full px-3 py-1.5 text-xs font-medium text-white"
                 style={{ backgroundColor: "#007048" }}
               >
                 Mark received
-              </button>
+              </Button>
             </form>
           )}
 
           {!isClosed && (
             <form action={toggleCardOptIn}>
               <input type="hidden" name="invoiceId" value={invoice.id} />
-              <button
+              <Button
                 type="submit"
                 className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:bg-[var(--surface-inset)]"
               >
                 {invoice.acceptsCard ? "Disable CC" : "Opt into CC (gross-up)"}
-              </button>
+              </Button>
             </form>
           )}
 

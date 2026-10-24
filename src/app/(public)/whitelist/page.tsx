@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Pre-launch whitelist (Phase 2.3 sandbox).
  *
@@ -459,13 +460,13 @@ export default async function WhitelistPage() {
                       placeholder="Email"
                       className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-xs"
                     />
-                    <button
+                    <Button
                       type="submit"
                       className="w-full rounded-full py-2 text-xs font-medium text-white"
                       style={{ backgroundColor: tier.accent }}
                     >
                       Donate ${Number(tier.priceUsd).toLocaleString()} →
-                    </button>
+                    </Button>
                     <p className="text-[10px] text-ink-faint">
                       No access granted. No perks. No payout. Just gratitude.
                       Card adds ${cashGross.processingFee.toFixed(2)} for
@@ -568,13 +569,13 @@ export default async function WhitelistPage() {
                   placeholder="Budget range (optional, helps triage)"
                   className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-xs"
                 />
-                <button
+                <Button
                   type="submit"
                   className="w-full rounded-full py-2 text-xs font-medium text-white"
                   style={{ backgroundColor: consultation.accent }}
                 >
                   Request scoping call →
-                </button>
+                </Button>
               </form>
             </div>
           </Card>

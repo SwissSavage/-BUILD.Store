@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /profile/edit/identity — Identity.
  *
@@ -149,12 +150,12 @@ export default async function IdentityEditPage() {
               FM domain.
             </p>
           </div>
-          <button
+          <Button
             type="submit"
             className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
           >
             Upload
-          </button>
+          </Button>
         </form>
       </Card>
 

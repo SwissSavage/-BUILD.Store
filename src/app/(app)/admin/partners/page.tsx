@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/partners — manage the three public partner directories.
  *
@@ -144,16 +145,16 @@ export default async function AdminPartnersPage() {
                   Shipped together — we&apos;ve delivered work with them
                 </label>
                 <div className="flex items-center gap-2">
-                  <button type="submit" className={primaryButton}>
+                  <Button type="submit" className={primaryButton}>
                     Save
-                  </button>
+                  </Button>
                 </div>
               </form>
               <form action={removeServicePartner} className="mt-2">
                 <input type="hidden" name="id" value={p.id} />
-                <button type="submit" className={removeButton}>
+                <Button type="submit" className={removeButton}>
                   Remove from public list
-                </button>
+                </Button>
               </form>
             </Card>
           ))}
@@ -197,9 +198,9 @@ export default async function AdminPartnersPage() {
               <input type="checkbox" name="shippedTogether" />
               Shipped together
             </label>
-            <button type="submit" className={primaryButton}>
+            <Button type="submit" className={primaryButton}>
               Add partner
-            </button>
+            </Button>
           </form>
         </Card>
       </section>
@@ -257,15 +258,15 @@ export default async function AdminPartnersPage() {
                     />
                   </label>
                 </div>
-                <button type="submit" className={primaryButton}>
+                <Button type="submit" className={primaryButton}>
                   Save
-                </button>
+                </Button>
               </form>
               <form action={removeEcosystemPartner} className="mt-2">
                 <input type="hidden" name="id" value={p.id} />
-                <button type="submit" className={removeButton}>
+                <Button type="submit" className={removeButton}>
                   Remove from public list
-                </button>
+                </Button>
               </form>
             </Card>
           ))}
@@ -294,9 +295,9 @@ export default async function AdminPartnersPage() {
                 <input name="affiliateUrl" className={inputClass} />
               </label>
             </div>
-            <button type="submit" className={primaryButton}>
+            <Button type="submit" className={primaryButton}>
               Add partner
-            </button>
+            </Button>
           </form>
         </Card>
       </section>
@@ -344,15 +345,15 @@ export default async function AdminPartnersPage() {
                     />
                   </label>
                 </div>
-                <button type="submit" className={primaryButton}>
+                <Button type="submit" className={primaryButton}>
                   Save
-                </button>
+                </Button>
               </form>
               <form action={removeProductAffiliate} className="mt-2">
                 <input type="hidden" name="id" value={p.id} />
-                <button type="submit" className={removeButton}>
+                <Button type="submit" className={removeButton}>
                   Remove from public list
-                </button>
+                </Button>
               </form>
             </Card>
           ))}
@@ -375,9 +376,9 @@ export default async function AdminPartnersPage() {
                 <input name="affiliateUrl" className={inputClass} />
               </label>
             </div>
-            <button type="submit" className={primaryButton}>
+            <Button type="submit" className={primaryButton}>
               Add affiliate
-            </button>
+            </Button>
           </form>
         </Card>
       </section>

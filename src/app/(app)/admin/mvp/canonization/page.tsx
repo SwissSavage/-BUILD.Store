@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: annual canonization.
  *
@@ -121,13 +122,13 @@ export default async function AdminCanonizationPage() {
               className="mt-1 w-32 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
             />
           </label>
-          <button
+          <Button
             type="submit"
             className="rounded-full px-5 py-2 text-sm font-medium text-white"
             style={{ backgroundColor: "#D4AF37" }}
           >
             Canonize year
-          </button>
+          </Button>
         </form>
         <p className="mt-3 text-[11px] text-ink-faint">
           Production: this dispatches the ERC-721 mint cycle and writes
@@ -253,12 +254,12 @@ function YearSection({
                     className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1"
                   />
                 </label>
-                <button
+                <Button
                   type="submit"
                   className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                 >
                   Save caption
-                </button>
+                </Button>
               </form>
             </li>
           );

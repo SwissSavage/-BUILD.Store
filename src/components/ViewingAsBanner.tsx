@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Sticky banner shown whenever an admin is previewing the site as
  * another user (or as a signed-out viewer). Always-visible escape
@@ -32,12 +33,12 @@ export async function ViewingAsBanner() {
           {adminName(realAdmin)}.
         </span>
         <form action={returnToOriginalUser}>
-          <button
+          <Button
             type="submit"
             className="fm-btn-primary rounded-full px-3 py-1 text-xs font-medium"
           >
             Return to your admin account
-          </button>
+          </Button>
         </form>
       </div>
     </div>

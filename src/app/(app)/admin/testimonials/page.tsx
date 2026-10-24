@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: customer testimonial promotion queue (Phase 2.7).
  *
@@ -273,23 +274,23 @@ function PendingRow({ row, ctx }: { row: CustomerFeedback; ctx: Ctx }) {
         <div className="mt-3 flex flex-wrap gap-2">
           <form action={markGoogleReviewFollowupSent}>
             <input type="hidden" name="feedbackId" value={row.id} />
-            <button
+            <Button
               type="submit"
               className="rounded-full px-4 py-1.5 text-xs font-medium text-white"
               style={{ backgroundColor: "#5070F0" }}
             >
               Mark Google Review email sent
-            </button>
+            </Button>
           </form>
           {row.googleReviewFollowupStatus !== "declined" && (
             <form action={declineGoogleReviewFollowup}>
               <input type="hidden" name="feedbackId" value={row.id} />
-              <button
+              <Button
                 type="submit"
                 className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
               >
                 Decline follow-up
-              </button>
+              </Button>
             </form>
           )}
         </div>
@@ -353,13 +354,13 @@ function PendingRow({ row, ctx }: { row: CustomerFeedback; ctx: Ctx }) {
             </p>
           )}
 
-          <button
+          <Button
             type="submit"
             className="rounded-full px-5 py-2 text-xs font-medium text-white"
             style={{ backgroundColor: "#007048" }}
           >
             Publish testimonial
-          </button>
+          </Button>
         </form>
       )}
     </Card>
@@ -403,12 +404,12 @@ function PublishedRow({ row, ctx }: { row: CustomerFeedback; ctx: Ctx }) {
         )}
         <form action={unpublishTestimonial}>
           <input type="hidden" name="feedbackId" value={row.id} />
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Unpublish
-          </button>
+          </Button>
         </form>
       </div>
     </Card>

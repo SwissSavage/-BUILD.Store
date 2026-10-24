@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Reference material, added a row at a time.
@@ -96,7 +97,7 @@ export function EngagementReferencesField({ disabled }: { disabled?: boolean }) 
               className={field}
               disabled={disabled}
             />
-            <button
+            <Button
               type="button"
               onClick={() =>
                 setRows((prev) =>
@@ -110,19 +111,19 @@ export function EngagementReferencesField({ disabled }: { disabled?: boolean }) 
               className="shrink-0 rounded-lg border border-[var(--surface-border)] px-3 text-sm text-ink-muted hover:text-ink disabled:opacity-60"
             >
               ×
-            </button>
+            </Button>
           </div>
         ))}
       </div>
       {rows.length < MAX_ENGAGEMENT_LINKS && (
-        <button
+        <Button
           type="button"
           onClick={() => setRows((prev) => [...prev, newRow()])}
           disabled={disabled}
           className="mt-2 text-[11px] text-brand-magentaText hover:underline disabled:opacity-60"
         >
           Add another link
-        </button>
+        </Button>
       )}
 
       {/* ── files ────────────────────────────────────────────── */}
@@ -175,14 +176,14 @@ export function EngagementReferencesField({ disabled }: { disabled?: boolean }) 
             />
           </label>
           {files.length > 0 && (
-            <button
+            <Button
               type="button"
               onClick={() => setFiles([])}
               disabled={disabled}
               className="text-[11px] text-ink-faint hover:text-ink disabled:opacity-60"
             >
               Clear
-            </button>
+            </Button>
           )}
           <span className="text-[10px] text-ink-faint">
             Up to {MAX_ENGAGEMENT_FILES}, 4 MB each. Link anything larger.

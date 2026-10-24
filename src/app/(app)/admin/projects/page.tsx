@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: project oversight. See all RFPs and active projects.
  * Status transitions are admin-only in v1.
@@ -170,12 +171,12 @@ export default async function AdminProjectsPage() {
                         </option>
                       ))}
                     </select>
-                    <button
+                    <Button
                       type="submit"
                       className="rounded-md border border-[var(--surface-border)] px-2 py-1 text-xs hover:border-brand-magenta"
                     >
                       Update
-                    </button>
+                    </Button>
                   </form>
 
                   {/* Soft delete. Goes to /admin/trash, restorable
@@ -192,12 +193,12 @@ export default async function AdminProjectsPage() {
                         placeholder="Reason (optional)"
                         className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-xs"
                       />
-                      <button
+                      <Button
                         type="submit"
                         className="rounded-md border border-brand-magenta/50 px-2 py-1 text-[11px] text-brand-magentaText hover:border-brand-magenta"
                       >
                         Move to trash
-                      </button>
+                      </Button>
                     </form>
                   </details>
                 </td>

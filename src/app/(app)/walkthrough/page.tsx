@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Beta walkthrough — guided tour scoped to the signed-in user's tier
  * and pillar set. Renders steps in order with a checkmark on completed
@@ -304,12 +305,12 @@ function StepCard({
             also requiring the user to fill out the feedback prompt. */}
         <form action={completeWalkthroughStep}>
           <input type="hidden" name="stepId" value={step.id} />
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-[var(--surface-border)] px-3 py-2 text-xs hover:bg-[var(--surface-inset)]"
           >
             I tried it — mark complete
-          </button>
+          </Button>
         </form>
       </div>
 

@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: who is naming themselves in their own profile, and what to do
  * about it.
@@ -197,24 +198,24 @@ export default async function AdminDisclosurePage() {
               <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-[var(--surface-border)] pt-4">
                 <form action={requestDisclosureFix}>
                   <input type="hidden" name="uid" value={user.id} />
-                  <button
+                  <Button
                     type="submit"
                     className="fm-btn-primary rounded-full px-3 py-1.5 text-[11px] font-medium"
                     title="Sends the member every finding above, verbatim, with a link to their profile editor."
                   >
                     Ask them to fix it
-                  </button>
+                  </Button>
                 </form>
                 {user.profilePublic && (
                   <form action={hideProfilePendingFix}>
                     <input type="hidden" name="uid" value={user.id} />
-                    <button
+                    <Button
                       type="submit"
                       className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
                       title="Takes the profile out of public discovery. Not a suspension: account, work and access are untouched."
                     >
                       Hide until fixed
-                    </button>
+                    </Button>
                   </form>
                 )}
               </div>
@@ -270,13 +271,13 @@ function FieldBlock({
           placeholder="Why this is acceptable (optional)"
           className="min-w-0 flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-ink"
         />
-        <button
+        <Button
           type="submit"
           className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
           title="Takes this field off the list until the member edits it. Recorded against the exact text you just read."
         >
           Reviewed, no action
-        </button>
+        </Button>
       </form>
     </div>
   );

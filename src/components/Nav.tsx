@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Top navigation. Server component — reads session from auth-stub.
  *
@@ -359,14 +360,14 @@ async function AdminDropdown({
 
 function ViewAsButton({ target, label }: { target: string; label: string }) {
   return (
-    <button
+    <Button
       type="submit"
       name="target"
       value={target}
       className="block w-full rounded-lg px-3 py-1.5 text-left hover:bg-[var(--surface-inset)]"
     >
       {label}
-    </button>
+    </Button>
   );
 }
 

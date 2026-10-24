@@ -52,7 +52,7 @@ const linkClassName = "hover:text-brand-magentaText";
 export function Footer() {
   return (
     <footer
-      className="relative mt-32 overflow-hidden border-t border-[var(--surface-border)] bg-[var(--surface-inset)]"
+      className="relative mt-16 overflow-hidden border-t border-[var(--surface-border)] bg-[var(--surface-inset)]"
       style={{
         background:
           "radial-gradient(ellipse at 0% 100%, rgba(255,255,255,0.05), transparent 40%), var(--surface-inset)",
@@ -66,7 +66,7 @@ export function Footer() {
         className="pointer-events-none absolute -bottom-[19rem] -left-44 hidden h-[42rem] w-auto origin-bottom-left rotate-[12deg] select-none md:block"
       />
 
-      <div className="relative z-10 mx-auto grid max-w-[1500px] gap-x-10 gap-y-12 px-6 py-20 md:grid-cols-5 md:pb-32 md:pt-48">
+      <div className="relative z-10 mx-auto grid max-w-[1500px] gap-x-10 gap-y-12 px-6 py-16 md:grid-cols-5 md:pb-28 md:pt-28">
         <div className="md:col-span-2 md:pr-12">
           <Link href="/" className="font-display text-[3.25rem] font-semibold tracking-tight hover:text-brand-magentaText">
             $BUILD<span className="text-brand-magentaText">.</span>Store

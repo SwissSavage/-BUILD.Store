@@ -400,6 +400,35 @@ export async function compileBidsIntoQuote(formData: FormData) {
     createdByUserId: existingQuote?.createdByUserId ?? admin.id,
     selectedLeadUserId: null,
   };
+  // ──────────────────────────────────────────────────────────
+  // WHO OWNS THIS DEAL (2026-10-24)
+  //
+  // Jamar: "splits need to be displayed on screen with admins
+  // allocated manually per deal."
+  //
+  // The admin pool is 80% of the commission and it pays project
+  // managers and advisors. Until approveRfp started setting
+  // adminUserIds, every engagement that came through an RFP had an
+  // empty list, which meant that share had no recipient at
+  // settlement. Compiling a quote is the other moment an admin is
+  // standing in front of the deal, so it is the other place to ask.
+  //
+  // Only read when the form carried the field, so a surface without
+  // the control cannot blank the owners by omission. Present with
+  // nothing ticked is a real choice and does clear them.
+  // ──────────────────────────────────────────────────────────
+  const ownersSubmitted = formData.get("adminUserIdsPresent") !== null;
+  if (ownersSubmitted) {
+    const adminUserIds = formData
+      .getAll("adminUserIds")
+      .map((v) => String(v).trim())
+      .filter(Boolean);
+    await db
+      .update(projects)
+      .set({ adminUserIds, updatedAt: now })
+      .where(eq(projects.id, rfpId));
+  }
+
   await db.transaction(async (tx) => {
     if (existingQuote) {
       await tx

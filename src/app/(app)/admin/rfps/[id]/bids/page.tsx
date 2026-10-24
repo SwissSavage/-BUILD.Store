@@ -43,6 +43,9 @@ import { QuoteCompileRequirements } from "@/components/BidSelectionRequirement";
 import { richTextValuePlainText } from "@/lib/rich-text";
 import type { CooperativeQuote, ProposedBuilder } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { BuilderPriceBreakdown } from "@/components/BuilderPriceBreakdown";
+import { AdminOwnerField } from "@/components/AdminOwnerField";
+import { getAllUsers } from "@/lib/readers/users";
 
 interface Params {
   id: string;
@@ -53,7 +56,9 @@ export default async function RfpBidCompilePage({
 }: {
   params: Promise<Params>;
 }) {
-  await requireAdmin();
+  const viewer = await requireAdmin();
+  const { users: ownerRoster } = await getAllUsers();
+  const adminRoster = ownerRoster.filter((u) => u.isAdmin && !u.suspendedAt);
   const { id } = await params;
 
   const [rfp] = await db
@@ -294,34 +299,27 @@ export default async function RfpBidCompilePage({
                             or to leave room for a bonus. Their payout
                             does not move either way.
                             ─────────────────────────────────────── */}
-                        <label className="mt-3 block">
-                          <span className="text-[10px] uppercase tracking-wider text-ink-muted">
-                            Client rate (optional override)
-                          </span>
-                          <input
-                            name={`clientRate_${b.id}`}
-                            inputMode="decimal"
-                            defaultValue={
-                              draftBuilderByUserId.get(b.userId)?.clientPricing
-                                ? clientRateOf(
-                                    draftBuilderByUserId.get(b.userId)!.clientPricing!,
-                                  )
-                                : ""
-                            }
-                            placeholder={`Default ${formatUsdCents(
-                              suggestedClientRate(b),
-                            )}${b.priceMode === "hourly" ? "/hr" : ""}`}
-                            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
-                          />
-                          <span className="mt-1 block text-[10px] text-ink-faint">
-                            They bid {formatProposalPrice(b)}. Rules give them{" "}
-                            {formatUsdCents(suggestedPayout(b))}
-                            {b.priceMode === "hourly" ? "/hr" : ""} and the
-                            client {formatUsdCents(suggestedClientRate(b))}
-                            {b.priceMode === "hourly" ? "/hr" : ""}. Leave blank
-                            to use that. Below it is refused.
-                          </span>
-                        </label>
+                        {/* #209: all four numbers, and the margin
+                            moves as the override is typed. The
+                            arithmetic is builderPriceBreakdown, the
+                            same function the server recomputes with
+                            before writing. */}
+                        <BuilderPriceBreakdown
+                          fieldName={`clientRate_${b.id}`}
+                          priceMode={b.priceMode ?? null}
+                          hourlyRate={b.hourlyRate ?? null}
+                          hourlyRateMax={b.hourlyRateMax ?? null}
+                          fixedPriceMin={b.fixedPriceMin ?? null}
+                          fixedPriceMax={b.fixedPriceMax ?? null}
+                          initialOverride={
+                            draftBuilderByUserId.get(b.userId)?.clientPricing
+                              ? clientRateOf(
+                                  draftBuilderByUserId.get(b.userId)!
+                                    .clientPricing!,
+                                )
+                              : ""
+                          }
+                        />
 
                         {/* Strengths and weaknesses carry most of the
                             weight in a real $BUILD quote sheet, and
@@ -573,6 +571,19 @@ export default async function RfpBidCompilePage({
                 />
               </label>
             </div>
+          </Card>
+
+          {/* The admin pool is 80% of the commission and pays project
+              managers and advisors. Compiling the quote is one of the
+              two moments somebody is standing in front of the deal, so
+              it is one of the two places to ask who owns it. */}
+          <Card className="mt-6">
+            <AdminOwnerField
+              admins={adminRoster}
+              selected={rfp?.adminUserIds ?? []}
+              currentAdminId={viewer.id}
+              hint="Takes the admin share at settlement, can open reference files, and hears about overdue milestones on this engagement."
+            />
           </Card>
 
           <div className="flex flex-wrap gap-3">

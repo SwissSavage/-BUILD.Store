@@ -8,7 +8,7 @@ type ButtonSize = "compact" | "default" | "large" | "icon";
 const variantClass: Record<ButtonVariant, string> = {
   primary: "fm-btn-primary border-transparent",
   secondary:
-    "border-[var(--surface-border)] bg-transparent text-ink hover:border-brand-magenta/60 hover:bg-[var(--surface-elevated)]",
+    "border border-[var(--surface-border)] bg-transparent text-ink hover:border-brand-magenta/60 hover:bg-[var(--surface-elevated)]",
   ghost:
     "border-transparent bg-transparent text-ink-muted hover:bg-[var(--surface-elevated)] hover:text-ink",
 };

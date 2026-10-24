@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes } from "react";
+import Link from "next/link";
+import type { ButtonHTMLAttributes, ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
@@ -47,6 +48,24 @@ export function Button({
 }) {
   return (
     <button
+      className={buttonClassName({ variant, size, className })}
+      {...props}
+    />
+  );
+}
+
+/** A navigation action with the same variants, geometry, and states as Button. */
+export function ButtonLink({
+  variant,
+  size,
+  className,
+  ...props
+}: ComponentProps<typeof Link> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+}) {
+  return (
+    <Link
       className={buttonClassName({ variant, size, className })}
       {...props}
     />

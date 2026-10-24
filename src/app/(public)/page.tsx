@@ -5,6 +5,7 @@
  */
 import { Fragment } from "react";
 import Link from "next/link";
+import { ButtonLink } from "@/components/Button";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
 import { memberLabel } from "@/lib/member-label";
@@ -148,20 +149,24 @@ function Hero() {
           Services professionals. Perfectly matched to your project.
         </p>
         <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-          <Link
+          <ButtonLink
             href="/signup"
-            className="fm-btn-primary inline-flex items-center justify-center rounded-full px-8 py-3 font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
+            variant="primary"
+            size="large"
+            className="px-8 py-3 shadow-lg shadow-brand-magenta/20"
           >
             Get started
-          </Link>
-          <a
+          </ButtonLink>
+          <ButtonLink
             href={PUBLIC_BOOKING_URL}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center justify-center rounded-full border border-brand-blue/60 px-8 py-3 font-medium text-brand-blue transition-colors hover:bg-brand-blue/10"
+            variant="secondary"
+            size="large"
+            className="border-brand-blue/60 px-8 py-3 text-brand-blue hover:bg-brand-blue/10"
           >
             {PUBLIC_BOOKING_CTA}
-          </a>
+          </ButtonLink>
         </div>
 
         {/* Positional strip — Web3-native without being crypto-bro.

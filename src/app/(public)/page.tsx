@@ -122,7 +122,7 @@ function ContributorAffiliations() {
  */
 function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface)]">
+    <section className="relative flex min-h-[calc(100svh-68px)] items-center overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface)]">
       {/* Brand color wash — subtle magenta→blue gradient echoing the turtle shell. */}
       <div
         aria-hidden="true"
@@ -132,7 +132,7 @@ function Hero() {
             "radial-gradient(60% 60% at 85% 20%, #D828A0 0%, transparent 60%), radial-gradient(50% 50% at 15% 80%, #5070F0 0%, transparent 60%)",
         }}
       />
-      <div className="relative mx-auto max-w-app px-6 py-24 md:py-32">
+      <div className="relative mx-auto w-full max-w-app px-6 py-20 md:py-24">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-green">
           <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
           Future Modern cooperative

@@ -1,4 +1,40 @@
-# $BUILD.Store
+<p align="center">
+  <img src="./public/brand/future-modern-banner.png" alt="Future Modern — Build with the best" width="100%" />
+</p>
+
+<p align="center">
+  <img src="./public/brand/turtle.png" alt="$BUILD.Store turtle mark" width="92" />
+</p>
+
+<h1 align="center">$BUILD.Store</h1>
+
+<p align="center"><strong>$BUILD with the best.</strong></p>
+
+<p align="center">
+  Build a handpicked team from Future Modern's STEM, Creative Media, and Professional Services cooperative.
+</p>
+
+<p align="center">
+  <a href="https://build.afuturemodern.com">
+    <img src="https://shieldcn.dev/badge/Future%20Modern-Cooperative-2563eb.svg?variant=secondary&logo=false" alt="Future Modern cooperative" />
+  </a>
+  <a href="https://github.com/SwissSavage/-BUILD.Store/issues">
+    <img src="https://shieldcn.dev/github/issues/SwissSavage/-BUILD.Store.svg?variant=secondary" alt="Open issues" />
+  </a>
+  <a href="./LICENSE">
+    <img src="https://shieldcn.dev/github/license/SwissSavage/-BUILD.Store.svg?variant=secondary" alt="Apache-2.0 license" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://build.afuturemodern.com">Explore the cooperative</a>
+  &nbsp;·&nbsp;
+  <a href="https://build.afuturemodern.com/signup">Start a project</a>
+  &nbsp;·&nbsp;
+  <a href="./CONTRIBUTING.md">Contribute</a>
+</p>
+
+> Built Web3-native · Owner-operated · Cooperative-vetted
 
 The operating system Future Modern Builderberg LLC uses to run our cooperative. Not a marketplace. Owned and operated by the Members who ship the work.
 

@@ -379,3 +379,118 @@ export function suggestedClientHourlyRate(
   return Math.ceil(suggestedBuilderHourlyPayout(askMin, askMax) / 0.85);
 }
 
+
+// ──────────────────────────────────────────────────────────────────────
+//  The admin breakdown (issue #209)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Every number behind one Builder's line on a quote, in one place.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-24)
+ *
+ * #209: an admin cannot see, in one place, how a Builder's submitted
+ * range became the proposed client price. The composer showed three of
+ * the four numbers in a sentence — "They bid $55. Rules give them $65
+ * and the client $77" — and never showed what Future Modern keeps.
+ *
+ * It also computed those numbers in local functions at the bottom of
+ * the bids page, so the quote composer and the engagement composer
+ * each had their own arithmetic for the same rule. That is how two
+ * surfaces end up disagreeing about one deal.
+ *
+ * So: one helper, server-owned, used by both. Browser-side display can
+ * recompute it for live feedback, but the server recomputes it before
+ * anything is written. A number typed into a form is a suggestion
+ * until the server has agreed with it.
+ *
+ * WHY THE PROVENANCE FIELDS
+ *
+ * An override and an ask look identical once they are both just
+ * numbers on a screen. "They asked for this" and "we decided this"
+ * carry completely different weight in a renegotiation, and the whole
+ * point of showing the breakdown is to keep them distinguishable.
+ * ─────────────────────────────────────────────────────────────
+ */
+export interface BuilderPriceBreakdown {
+  /** What the Builder actually asked for, low end. */
+  submittedMin: number;
+  /** Top of their band, when they quoted one. */
+  submittedMax: number | null;
+  /** What they are paid, after the floor and the bonus hedge. */
+  payoutBasis: number;
+  /** payoutBasis / 0.85, rounded up. What the client would be quoted. */
+  suggestedClientPrice: number;
+  /** What the client is actually quoted, override included. */
+  finalClientPrice: number;
+  /** finalClientPrice - payoutBasis. What funds cooperative operations. */
+  adminAmount: number;
+  /** True when finalClientPrice came from an admin rather than the rule. */
+  clientPriceOverridden: boolean;
+  /**
+   * True when the payout is above what they asked, because the floor or
+   * the hedge lifted it. Worth saying out loud: it looks like an
+   * overpayment until you know the rule.
+   */
+  payoutLiftedByRule: boolean;
+  /** "hourly" prices are per hour; everything else is a total. */
+  perHour: boolean;
+}
+
+/**
+ * Build the breakdown for one Builder.
+ *
+ * `overrideClientPrice` is whatever an admin typed, or null to use the
+ * rule. Zero and negative are treated as absent rather than as a free
+ * engagement — an empty field and a typed 0 arrive identically from a
+ * form, and refusing both is safer than quoting nothing.
+ */
+export function builderPriceBreakdown(input: {
+  priceMode: string | null | undefined;
+  hourlyRate: string | number | null | undefined;
+  hourlyRateMax: string | number | null | undefined;
+  fixedPriceMin: string | number | null | undefined;
+  fixedPriceMax?: string | number | null | undefined;
+  overrideClientPrice?: number | null;
+}): BuilderPriceBreakdown {
+  const num = (v: string | number | null | undefined) => {
+    const n = Number(v ?? 0);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const perHour = input.priceMode === "hourly";
+
+  const submittedMin = perHour ? num(input.hourlyRate) : num(input.fixedPriceMin);
+  const submittedMaxRaw = perHour
+    ? num(input.hourlyRateMax)
+    : num(input.fixedPriceMax);
+  const submittedMax = submittedMaxRaw > submittedMin ? submittedMaxRaw : null;
+
+  // Hourly carries the floor and the hedge. A fixed or range price is
+  // quoted against a scope, so adding $10 to it means nothing — see
+  // the WHY on BUILDER_HOURLY_FLOOR.
+  const payoutBasis = perHour
+    ? suggestedBuilderHourlyPayout(submittedMin, submittedMax)
+    : submittedMax ?? submittedMin;
+
+  const suggestedClientPrice =
+    payoutBasis > 0 ? Math.ceil(payoutBasis / 0.85) : 0;
+
+  const override =
+    input.overrideClientPrice && input.overrideClientPrice > 0
+      ? input.overrideClientPrice
+      : null;
+  const finalClientPrice = override ?? suggestedClientPrice;
+
+  return {
+    submittedMin,
+    submittedMax,
+    payoutBasis,
+    suggestedClientPrice,
+    finalClientPrice,
+    adminAmount: finalClientPrice - payoutBasis,
+    clientPriceOverridden: override !== null,
+    payoutLiftedByRule: payoutBasis > (submittedMax ?? submittedMin),
+    perHour,
+  };
+}

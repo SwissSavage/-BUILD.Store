@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: per-member MVP Score detail + compliance penalty controls.
  *
@@ -111,23 +112,23 @@ export default async function AdminMvpUserPage({
             {snapshot.isProvisional ? (
               <form action={promoteFromProvisional}>
                 <input type="hidden" name="userId" value={user.id} />
-                <button
+                <Button
                   type="submit"
                   className="rounded-full px-5 py-2 text-sm font-medium text-white"
                   style={{ backgroundColor: "#007048" }}
                 >
                   Promote to scored standing
-                </button>
+                </Button>
               </form>
             ) : (
               <form action={demoteToProvisional}>
                 <input type="hidden" name="userId" value={user.id} />
-                <button
+                <Button
                   type="submit"
                   className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
                 >
                   Demote to provisional (override)
-                </button>
+                </Button>
               </form>
             )}
           </div>
@@ -173,12 +174,12 @@ export default async function AdminMvpUserPage({
               className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
             />
           </label>
-          <button
+          <Button
             type="submit"
             className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
           >
             Apply -9 OVR penalty
-          </button>
+          </Button>
         </form>
       </Card>
 
@@ -226,12 +227,12 @@ export default async function AdminMvpUserPage({
                   {isActive && (
                     <form action={rescindCompliancePenalty} className="mt-2">
                       <input type="hidden" name="penaltyId" value={p.id} />
-                      <button
+                      <Button
                         type="submit"
                         className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                       >
                         Rescind (admin override)
-                      </button>
+                      </Button>
                     </form>
                   )}
                 </li>
@@ -287,12 +288,12 @@ export default async function AdminMvpUserPage({
                           defaultValue={snapshot.subRatings[k] ?? 0}
                           className="w-16 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-right text-sm font-mono"
                         />
-                        <button
+                        <Button
                           type="submit"
                           className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                         >
                           Set
-                        </button>
+                        </Button>
                       </form>
                     </td>
                   </tr>

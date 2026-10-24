@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * The link, in full, one click from the clipboard.
@@ -56,13 +57,13 @@ export function CopyLinkButton({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
+      <Button
         type="button"
         onClick={handle}
         className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] font-medium hover:border-brand-magenta hover:text-brand-magentaText"
       >
         {state === "copied" ? "Copied" : state === "failed" ? "Select it below" : label}
-      </button>
+      </Button>
       {state === "failed" && (
         <span className="text-[10px] text-ink-faint">
           The browser blocked the clipboard. The full link is below.

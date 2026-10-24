@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Attribution ledger entry surface (Phase 1.4).
  *
@@ -254,13 +255,13 @@ export default async function AttributionLedgerPage({
             />
           </label>
 
-          <button
+          <Button
             type="submit"
             className="rounded-full px-5 py-2 text-sm font-medium text-white"
             style={{ backgroundColor: "#5070F0" }}
           >
             Log entry
-          </button>
+          </Button>
         </form>
       </Card>
     </div>

@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Public /jobs/[id] apply form. Rendered only for signed-in users;
@@ -104,13 +105,13 @@ export function ApplyToJobForm({ jobId, jobTitle }: Props) {
           </p>
         )}
 
-        <button
+        <Button
           type="submit"
           disabled={isPending}
           className="fm-btn-primary rounded-full px-5 py-2 text-sm disabled:opacity-50"
         >
           {isPending ? "Submitting…" : "Submit application"}
-        </button>
+        </Button>
       </form>
     </Card>
   );

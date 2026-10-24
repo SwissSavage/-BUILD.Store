@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Member-facing locker upload form. Sandbox: pastes a URL placeholder
  * (production replaces with a Mux direct-upload widget that returns a
@@ -140,20 +141,20 @@ export default async function LockerUploadPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 border-t border-[var(--surface-border)] pt-5">
-            <button
+            <Button
               type="submit"
               className="fm-btn-primary rounded-full px-5 py-2 text-xs font-medium"
             >
               Submit for review
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               name="draft"
               value="1"
               className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:bg-[var(--surface-inset)]"
             >
               Save as draft
-            </button>
+            </Button>
           </div>
         </form>
       </Card>

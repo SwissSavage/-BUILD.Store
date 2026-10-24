@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Project detail (Phase 2.5 sandbox, public-extended Phase 2.8).
  *
@@ -392,12 +393,12 @@ function ApplySection({
             name="next"
             value={`/projects/${project.id}`}
           />
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Withdraw application
-          </button>
+          </Button>
         </form>
       </Card>
     );
@@ -539,13 +540,13 @@ function ApplySection({
           you in your inbox — usually within a few days.
         </p>
 
-        <button
+        <Button
           type="submit"
           className="rounded-full px-5 py-2 text-sm font-medium text-white"
           style={{ backgroundColor: "#5070F0" }}
         >
           Submit application
-        </button>
+        </Button>
       </form>
     </Card>
   );
@@ -708,13 +709,13 @@ function ProspectiveOfferSection({
           </div>
         </div>
 
-        <button
+        <Button
           type="submit"
           className="rounded-full px-5 py-2 text-sm font-medium text-white"
           style={{ backgroundColor: "#007048" }}
         >
           Send offer
-        </button>
+        </Button>
       </form>
     </Card>
   );
@@ -898,12 +899,12 @@ async function ProjectMilestonesSection({
                       className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1 text-sm normal-case tracking-normal text-ink placeholder:text-ink-faint"
                     />
                   </label>
-                  <button
+                  <Button
                     type="submit"
                     className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
                   >
                     Save
-                  </button>
+                  </Button>
                 </form>
               </div>
             ))}

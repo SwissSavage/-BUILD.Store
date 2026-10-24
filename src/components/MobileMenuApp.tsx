@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Mobile menu for the auth-side (app) nav.
@@ -110,7 +111,7 @@ export function MobileMenuApp({
 
   return (
     <>
-      <button
+      <Button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open menu"
@@ -127,7 +128,7 @@ export function MobileMenuApp({
             className="fm-btn-primary absolute right-1.5 top-1.5 inline-block h-2 w-2 rounded-full"
           />
         )}
-      </button>
+      </Button>
 
       {open &&
         createPortal(
@@ -163,7 +164,7 @@ export function MobileMenuApp({
                 $BUILD<span style={{ color: "var(--fm-magenta-text)" }}>.</span>Store
               </span>
             </Link>
-            <button
+            <Button
               type="button"
               onClick={closeMenu}
               autoFocus
@@ -171,7 +172,7 @@ export function MobileMenuApp({
               className="inline-flex items-center justify-center rounded-md p-2 text-ink transition-colors hover:bg-[var(--surface-elevated)]"
             >
               <X aria-hidden="true" size={24} strokeWidth={1.6} />
-            </button>
+            </Button>
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-8">
@@ -366,12 +367,12 @@ export function MobileMenuApp({
           <div className="border-t border-[var(--surface-border)] px-6 py-4">
             {isLoggedIn ? (
               <form action={signOut}>
-                <button
+                <Button
                   type="submit"
                   className="w-full rounded-full border border-[var(--surface-border)] px-5 py-3 text-center text-sm font-medium text-ink transition-colors hover:bg-[var(--surface-elevated)]"
                 >
                   Sign out
-                </button>
+                </Button>
               </form>
             ) : (
               <Link

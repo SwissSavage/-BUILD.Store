@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Member calendar — personal view + management.
  *
@@ -222,36 +223,36 @@ export default async function ProfileCalendarPage() {
                     {m.status === "pending" && !hasConfirmed && (
                       <form action={confirmMeeting}>
                         <input type="hidden" name="id" value={m.id} />
-                        <button
+                        <Button
                           type="submit"
                           className="rounded-full px-3 py-1 text-[11px] font-medium text-white"
                           style={{ backgroundColor: "#007048" }}
                         >
                           Confirm
-                        </button>
+                        </Button>
                       </form>
                     )}
                     {m.status === "pending" && (
                       <form action={declineMeeting}>
                         <input type="hidden" name="id" value={m.id} />
-                        <button
+                        <Button
                           type="submit"
                           className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                         >
                           Decline
-                        </button>
+                        </Button>
                       </form>
                     )}
                     {(isOrganizer || user.isAdmin) &&
                       m.status !== "cancelled" && (
                         <form action={cancelMeeting}>
                           <input type="hidden" name="id" value={m.id} />
-                          <button
+                          <Button
                             type="submit"
                             className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                           >
                             Cancel meeting
-                          </button>
+                          </Button>
                         </form>
                       )}
                   </div>
@@ -345,12 +346,12 @@ export default async function ProfileCalendarPage() {
                                 placeholder="Add a correction…"
                                 className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-[11px]"
                               />
-                              <button
+                              <Button
                                 type="submit"
                                 className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[10px] hover:border-brand-magenta hover:text-brand-magentaText"
                               >
                                 Append
-                              </button>
+                              </Button>
                             </form>
                           </div>
                         )}
@@ -412,13 +413,13 @@ export default async function ProfileCalendarPage() {
                               className="mt-1 block w-full text-[11px] text-ink-muted file:mr-3 file:rounded-full file:border file:border-[var(--surface-border)] file:bg-[var(--surface-inset)] file:px-3 file:py-1 file:text-[10px] file:font-medium file:text-ink"
                             />
                           </label>
-                          <button
+                          <Button
                             type="submit"
                             className="rounded-full px-3 py-1 text-[11px] font-medium text-white"
                             style={{ backgroundColor: "#5070F0" }}
                           >
                             {minute ? "Replace" : "Capture"}
-                          </button>
+                          </Button>
                         </form>
                       </details>
                     );
@@ -506,13 +507,13 @@ export default async function ProfileCalendarPage() {
             />
           </label>
           <div className="md:col-span-2">
-            <button
+            <Button
               type="submit"
               className="rounded-full px-5 py-2 text-sm font-medium text-white"
               style={{ backgroundColor: "#5070F0" }}
             >
               Book peer meeting
-            </button>
+            </Button>
           </div>
         </form>
       </Card>
@@ -541,12 +542,12 @@ export default async function ProfileCalendarPage() {
                 </span>
                 <form action={removeAvailability}>
                   <input type="hidden" name="id" value={a.id} />
-                  <button
+                  <Button
                     type="submit"
                     className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                   >
                     Remove
-                  </button>
+                  </Button>
                 </form>
               </li>
             ))}
@@ -611,12 +612,12 @@ export default async function ProfileCalendarPage() {
             />
           </label>
           <div className="md:col-span-4">
-            <button
+            <Button
               type="submit"
               className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Add window
-            </button>
+            </Button>
           </div>
         </form>
         <p className="mt-2 text-[10px] text-ink-faint">
@@ -650,12 +651,12 @@ export default async function ProfileCalendarPage() {
                 </span>
                 <form action={removeBlock}>
                   <input type="hidden" name="id" value={b.id} />
-                  <button
+                  <Button
                     type="submit"
                     className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                   >
                     Remove
-                  </button>
+                  </Button>
                 </form>
               </li>
             ))}
@@ -696,12 +697,12 @@ export default async function ProfileCalendarPage() {
             />
           </label>
           <div className="md:col-span-3">
-            <button
+            <Button
               type="submit"
               className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Add block
-            </button>
+            </Button>
           </div>
         </form>
       </Card>

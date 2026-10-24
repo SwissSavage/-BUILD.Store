@@ -70,14 +70,11 @@ const config: Config = {
         },
       },
       fontFamily: {
-        // Abel — FM's platform typeface (locked 2026-07-03). Applies to
-        // everything except brand logos. Wired via next/font in
-        // src/app/layout.tsx → CSS variable `--font-abel`. Both `sans`
-        // and `display` resolve to it so any existing `font-display` or
-        // `font-sans` usage in components picks up the new type
-        // automatically.
-        sans: ["var(--font-abel)", "system-ui", "sans-serif"],
+        // Landing-page type roles. Keep display copy expressive while task
+        // surfaces, controls, and long reading use Inter's denser rhythm.
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
         display: ["var(--font-abel)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       maxWidth: {
         app: "1280px",

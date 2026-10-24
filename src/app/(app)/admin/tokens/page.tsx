@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: $BUILD distribution console.
  *
@@ -146,12 +147,12 @@ export default async function AdminTokensPage() {
               />
             </label>
 
-            <button
+            <Button
               type="submit"
               className="w-full rounded-full bg-ink py-2.5 text-sm font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
             >
               Distribute
-            </button>
+            </Button>
           </form>
         </Card>
 

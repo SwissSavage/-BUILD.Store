@@ -12,6 +12,7 @@
  */
 "use client";
 
+import { Button } from "@/components/Button";
 import { useEffect } from "react";
 
 export default function GlobalError({
@@ -92,7 +93,7 @@ export default function GlobalError({
             </p>
           )}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <button
+            <Button
               type="button"
               onClick={reset}
               style={{
@@ -106,7 +107,7 @@ export default function GlobalError({
               }}
             >
               Retry
-            </button>
+            </Button>
             <a
               href="/"
               style={{

@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: whitelist ops (Phase 2.3 sandbox).
  *
@@ -268,12 +269,12 @@ export default async function AdminWhitelistPage() {
                   <td className="p-4 text-right">
                     <form action={toggleTierActive}>
                       <input type="hidden" name="id" value={t.id} />
-                      <button
+                      <Button
                         type="submit"
                         className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs hover:border-brand-magenta"
                       >
                         {t.active ? "Pause" : "Resume"}
-                      </button>
+                      </Button>
                     </form>
                   </td>
                 </tr>
@@ -344,35 +345,35 @@ export default async function AdminWhitelistPage() {
                               {p.status === "initiated" && (
                                 <form action={markPurchasePaid}>
                                   <input type="hidden" name="id" value={p.id} />
-                                  <button
+                                  <Button
                                     type="submit"
                                     className="rounded-full bg-brand-green px-3 py-1 text-[11px] font-medium text-brand-white hover:opacity-90"
                                   >
                                     Mark paid
-                                  </button>
+                                  </Button>
                                 </form>
                               )}
                               {p.status === "paid" && (
                                 <form action={distributeDonationSplit}>
                                   <input type="hidden" name="id" value={p.id} />
-                                  <button
+                                  <Button
                                     type="submit"
                                     className="fm-btn-primary rounded-full px-3 py-1 text-[11px] font-medium"
                                   >
                                     Run split
-                                  </button>
+                                  </Button>
                                 </form>
                               )}
                               {(p.status === "paid" ||
                                 p.status === "split_distributed") && (
                                 <form action={refundPurchase}>
                                   <input type="hidden" name="id" value={p.id} />
-                                  <button
+                                  <Button
                                     type="submit"
                                     className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta"
                                   >
                                     Refund
-                                  </button>
+                                  </Button>
                                 </form>
                               )}
                             </div>
@@ -446,12 +447,12 @@ export default async function AdminWhitelistPage() {
                   placeholder="Admin note (internal)"
                   className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-xs"
                 />
-                <button
+                <Button
                   type="submit"
                   className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs hover:border-brand-magenta"
                 >
                   Save
-                </button>
+                </Button>
               </form>
             </Card>
           ))}

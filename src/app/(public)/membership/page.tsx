@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Membership tiers + application flow. Shows the four tiers,
  * marks the current one, and lets the user submit a promotion
@@ -147,12 +148,12 @@ export default async function MembershipPage() {
                   className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
                 />
               </label>
-              <button
+              <Button
                 type="submit"
                 className="rounded-full bg-ink px-6 py-2.5 text-sm font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
               >
                 Submit application
-              </button>
+              </Button>
             </form>
           </Card>
         )}

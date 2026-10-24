@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Member quote-sheet intake — the contributor's structured response to an RFP.
  *
@@ -277,13 +278,13 @@ export default async function QuoteSubmitPage({
             />
           </label>
 
-          <button
+          <Button
             type="submit"
             className="rounded-full px-6 py-2.5 text-sm font-medium text-white"
             style={{ backgroundColor: "#5070F0" }}
           >
             Submit for review
-          </button>
+          </Button>
         </form>
       </Card>
 

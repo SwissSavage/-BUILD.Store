@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * ProfileMenu — avatar-triggered dropdown consolidating every
  * personal-scope surface (Rob beta note #2, task #60).
@@ -165,12 +166,12 @@ export function ProfileMenu({
         <div className="my-1 border-t border-[var(--surface-border)]" />
 
         <form action={signOut}>
-          <button
+          <Button
             type="submit"
             className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-ink-muted hover:bg-[var(--surface-inset)] hover:text-ink"
           >
             Sign out
-          </button>
+          </Button>
         </form>
       </div>
     </details>

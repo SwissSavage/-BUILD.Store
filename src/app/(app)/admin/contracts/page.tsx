@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin contract index — the entry point for the Phase 1 admin surfaces:
  *   - attribution ledger entry per contract
@@ -324,12 +325,12 @@ function ContractRow({
             placeholder="Reason (optional)"
             className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-1.5 text-xs text-ink"
           />
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-brand-magenta/50 px-3 py-1.5 text-[11px] text-brand-magentaText hover:border-brand-magenta"
           >
             Move to trash
-          </button>
+          </Button>
         </form>
       </details>
     </Card>

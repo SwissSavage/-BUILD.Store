@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /community — public cooperative-wide message board (task #64).
  *
@@ -30,7 +31,7 @@ const SITE_URL =
 export const metadata: Metadata = {
   title: "Community — Future Modern",
   description:
-    "Cooperative-wide message board. First-name-only, PII-scrubbed, member-posted.",
+    "Future Modern message board. First-name-only, PII-scrubbed, member-posted.",
   alternates: { canonical: `${SITE_URL}/community` },
 };
 
@@ -80,10 +81,10 @@ export default async function CommunityChatPage() {
         Community
       </div>
       <h1 className="mt-2 font-display text-4xl font-semibold">
-        Cooperative chat
+        Future Modern chat
       </h1>
       <p className="mt-2 max-w-2xl text-sm text-ink-muted">
-        Public board for the cooperative. First names only. Posts are
+        Public board for Future Modern. First names only. Posts are
         auto-scrubbed of emails, phone numbers, and off-platform
         booking links. Anyone can read; Partners and Members post.
       </p>
@@ -98,7 +99,7 @@ export default async function CommunityChatPage() {
               required
               minLength={2}
               maxLength={1000}
-              placeholder="Say something to the cooperative."
+              placeholder="Say something to Future Modern."
               className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none"
             />
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -106,12 +107,12 @@ export default async function CommunityChatPage() {
                 1000 char max. 30s cooldown between posts. Contact
                 info gets scrubbed automatically.
               </p>
-              <button
+              <Button
                 type="submit"
                 className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
               >
                 Post
-              </button>
+              </Button>
             </div>
           </form>
         </Card>
@@ -160,7 +161,7 @@ export default async function CommunityChatPage() {
               const displayName =
                 publicName({ firstName: r.firstName, lastName: null }) ||
                 r.handle ||
-                "Cooperative member";
+                "Future Modern member";
               const canDelete = isAdmin || user?.id === r.userId;
               const hits = Array.isArray(r.piiHits)
                 ? (r.piiHits as string[])
@@ -204,14 +205,14 @@ export default async function CommunityChatPage() {
                               className="mr-2 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-2 py-1 text-[11px] md:w-auto"
                             />
                           )}
-                          <button
+                          <Button
                             type="submit"
                             className="text-[11px] text-ink-faint hover:text-brand-magentaText"
                           >
                             {isAdmin && user?.id !== r.userId
                               ? "Moderate → remove"
                               : "Delete"}
-                          </button>
+                          </Button>
                         </form>
                       )}
                     </div>

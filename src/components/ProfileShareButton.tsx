@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Small "copy shareable link" affordance on public profiles.
@@ -46,7 +47,7 @@ export function ProfileShareButton({ handle, className }: ProfileShareButtonProp
   }, [handle]);
 
   return (
-    <button
+    <Button
       type="button"
       onClick={handleCopy}
       className={
@@ -56,6 +57,6 @@ export function ProfileShareButton({ handle, className }: ProfileShareButtonProp
       aria-live="polite"
     >
       {copied ? "✓ Link copied" : "Copy shareable link"}
-    </button>
+    </Button>
   );
 }

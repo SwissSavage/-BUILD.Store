@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: marketplace vetting queue (Phase 2.1 sandbox preview).
  *
@@ -231,22 +232,22 @@ export default async function AdminMarketplacePage() {
                       className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-xs"
                     />
                     <div className="flex gap-2">
-                      <button
+                      <Button
                         type="submit"
                         name="decision"
                         value="approved"
                         className="rounded-full bg-brand-green px-4 py-1.5 text-xs font-medium text-brand-white hover:opacity-90"
                       >
                         Approve
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="submit"
                         name="decision"
                         value="rejected"
                         className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta"
                       >
                         Reject
-                      </button>
+                      </Button>
                     </div>
                   </form>
                 </Card>
@@ -340,22 +341,22 @@ export default async function AdminMarketplacePage() {
                       className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-xs"
                     />
                     <div className="flex gap-2">
-                      <button
+                      <Button
                         type="submit"
                         name="decision"
                         value="active"
                         className="rounded-full bg-brand-green px-4 py-1.5 text-xs font-medium text-brand-white hover:opacity-90"
                       >
                         Approve → Publish
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="submit"
                         name="decision"
                         value="rejected"
                         className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta"
                       >
                         Reject
-                      </button>
+                      </Button>
                     </div>
                   </form>
                 </Card>
@@ -526,12 +527,12 @@ async function AdminOrdersSection() {
                                     name="id"
                                     value={o.id}
                                   />
-                                  <button
+                                  <Button
                                     type="submit"
                                     className="fm-btn-primary rounded-full px-3 py-1 text-[11px] font-medium"
                                   >
                                     Run split
-                                  </button>
+                                  </Button>
                                 </form>
                               )}
                             {o.splitDistributedAt && (

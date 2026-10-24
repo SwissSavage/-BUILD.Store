@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Public member profile at /u/[handle].
  *
@@ -414,12 +415,12 @@ export default async function PublicProfilePage({
                   placeholder={`Lands in ${publicName(user)}'s /notifications inbox.`}
                   className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
                 />
-                <button
+                <Button
                   type="submit"
                   className="fm-btn-primary rounded-full px-4 py-1.5 text-xs font-medium"
                 >
                   Send
-                </button>
+                </Button>
                 <p className="text-[10px] text-ink-faint">
                   Members and admins can DM any user. No reply thread yet.
                   They&apos;ll respond from /notifications.
@@ -642,13 +643,13 @@ export default async function PublicProfilePage({
                 />
               </label>
               <div className="md:col-span-2">
-                <button
+                <Button
                   type="submit"
                   className="rounded-full px-5 py-2 text-sm font-medium text-white"
                   style={{ backgroundColor: "#5070F0" }}
                 >
                   Submit booking request
-                </button>
+                </Button>
                 <p className="mt-2 text-[11px] text-ink-faint">
                   Request lands with FM&apos;s agent for review. Approved
                   briefs route to {publicName(user)} for confirmation.

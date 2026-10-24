@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Merge open applications with accounts that already exist.
@@ -23,13 +24,13 @@ export function InboundMergeButton() {
 
   return (
     <form action={action} className="flex flex-wrap items-center gap-3">
-      <button
+      <Button
         type="submit"
         disabled={pending}
         className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magentaText disabled:opacity-60"
       >
         {pending ? "Checking…" : "Merge with existing members"}
-      </button>
+      </Button>
       {state ? (
         <span className="text-[11px] text-ink-muted">{state.message}</span>
       ) : (

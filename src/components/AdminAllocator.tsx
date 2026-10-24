@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Client-side allocator for the admin pool on the settlement page.
@@ -152,13 +153,13 @@ export function AdminAllocator({
                     })}
                   </td>
                   <td className="py-3 text-right">
-                    <button
+                    <Button
                       type="button"
                       onClick={() => removeRow(i)}
                       className="text-xs text-ink-faint hover:text-[var(--brand-magenta,#D828A0)]"
                     >
                       Remove
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               );
@@ -178,13 +179,13 @@ export function AdminAllocator({
         </div>
         <div className="flex items-center gap-2">
           {rows.length > 1 && !evenSplit && (
-            <button
+            <Button
               type="button"
               onClick={rebalanceEven}
               className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:bg-[var(--surface-inset)]"
             >
               Reset to even split
-            </button>
+            </Button>
           )}
           {remaining.length > 0 && (
             <select

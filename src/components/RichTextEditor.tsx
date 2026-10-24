@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 import { type MouseEvent, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -177,18 +178,18 @@ export function RichTextEditor({
       )}
       <EditorContent editor={editor} />
       <div className="sticky bottom-4 z-20 flex flex-wrap gap-1 border-t border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2">
-        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={toggleBold} disabled={!editor} aria-label="Bold"><strong>B</strong></button>
-        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleItalic().run()} disabled={!editor} aria-label="Italic"><em>I</em></button>
-        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleUnderline().run()} disabled={!editor} aria-label="Underline"><u>U</u></button>
-        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleStrike().run()} disabled={!editor} aria-label="Strikethrough"><s>S</s></button>
-        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} disabled={!editor}>H2</button>
-        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} disabled={!editor}>H3</button>
-        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleBulletList().run()} disabled={!editor}>• List</button>
-        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleOrderedList().run()} disabled={!editor}>1. List</button>
-        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleBlockquote().run()} disabled={!editor}>Quote</button>
-        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={addLink} disabled={!editor}>Link</button>
-        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()}>Undo</button>
-        <button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()}>Redo</button>
+        <Button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={toggleBold} disabled={!editor} aria-label="Bold"><strong>B</strong></Button>
+        <Button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleItalic().run()} disabled={!editor} aria-label="Italic"><em>I</em></Button>
+        <Button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleUnderline().run()} disabled={!editor} aria-label="Underline"><u>U</u></Button>
+        <Button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleStrike().run()} disabled={!editor} aria-label="Strikethrough"><s>S</s></Button>
+        <Button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} disabled={!editor}>H2</Button>
+        <Button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} disabled={!editor}>H3</Button>
+        <Button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleBulletList().run()} disabled={!editor}>• List</Button>
+        <Button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleOrderedList().run()} disabled={!editor}>1. List</Button>
+        <Button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().toggleBlockquote().run()} disabled={!editor}>Quote</Button>
+        <Button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={addLink} disabled={!editor}>Link</Button>
+        <Button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()}>Undo</Button>
+        <Button type="button" className={buttonClass} onMouseDown={preserveSelection} onClick={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()}>Redo</Button>
       </div>
     </div>
   );

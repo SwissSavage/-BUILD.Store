@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/cooperative-quotes — Cooperative Quote authoring + management.
  *
@@ -346,12 +347,12 @@ export default async function AdminCooperativeQuotesPage() {
                               name="id"
                               value={quote.id}
                             />
-                            <button
+                            <Button
                               type="submit"
                               className="rounded-full border border-brand-magenta px-3 py-1 text-[10px] font-medium text-brand-magentaText hover:bg-brand-magenta hover:text-black"
                             >
                               Retry SOW dispatch
-                            </button>
+                            </Button>
                           </form>
                         )}
                       </div>
@@ -389,13 +390,13 @@ export default async function AdminCooperativeQuotesPage() {
                             quote.status === "viewed") && (
                             <form action={returnQuoteToDraft}>
                               <input type="hidden" name="id" value={quote.id} />
-                              <button
+                              <Button
                                 type="submit"
                                 className="text-xs text-ink-muted hover:text-brand-magentaText hover:underline"
                                 title="Pulls this back to draft so you can rebuild it from the bids. The client link keeps working and shows the draft state."
                               >
                                 Pull back to draft
-                              </button>
+                              </Button>
                             </form>
                           )}
                         </>
@@ -406,12 +407,12 @@ export default async function AdminCooperativeQuotesPage() {
                           name="id"
                           value={quote.id}
                         />
-                        <button
+                        <Button
                           type="submit"
                           className="text-xs text-ink-faint hover:text-brand-magentaText"
                         >
                           Remove
-                        </button>
+                        </Button>
                       </form>
                     </div>
                   </Card>

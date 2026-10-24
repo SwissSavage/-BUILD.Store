@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: beta feedback triage.
  *
@@ -227,12 +228,12 @@ export default async function AdminFeedbackPage({
                       className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1 text-sm normal-case tracking-normal text-ink placeholder:text-ink-faint"
                     />
                   </label>
-                  <button
+                  <Button
                     type="submit"
                     className="rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
                   >
                     Save
-                  </button>
+                  </Button>
                 </form>
               </Card>
             );
@@ -315,12 +316,12 @@ function FilterBar({
         options={[["", "All"], ...surfaceOptions]}
       />
       <div className="flex items-center gap-2 md:col-span-5">
-        <button
+        <Button
           type="submit"
           className="rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
         >
           Apply filters
-        </button>
+        </Button>
         {anyFilter && (
           <Link
             href="/admin/feedback"

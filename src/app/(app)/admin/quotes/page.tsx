@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: outgoing quote-sheet approval queue.
  *
@@ -309,13 +310,13 @@ export default async function AdminQuotesPage({
                       </div>
 
                       <div className="flex flex-wrap gap-3">
-                        <button
+                        <Button
                           type="submit"
                           className="rounded-full px-5 py-2 text-sm font-medium text-white"
                           style={{ backgroundColor: "#007048" }}
                         >
                           {sheet.approvedAt ? "Re-approve" : "Approve"}
-                        </button>
+                        </Button>
                       </div>
                     </form>
 
@@ -339,13 +340,13 @@ export default async function AdminQuotesPage({
                           className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                         />
                       </label>
-                      <button
+                      <Button
                         type="submit"
                         className="text-xs"
                         style={{ color: "var(--fm-red-text)" }}
                       >
                         Reject
-                      </button>
+                      </Button>
                     </form>
                   </div>
                 </div>

@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/referrals — partner referral attribution ledger surface.
  *
@@ -208,12 +209,12 @@ export default async function AdminReferralsPage() {
             />
           </label>
           <div className="flex justify-end">
-            <button
+            <Button
               type="submit"
               className="fm-btn-primary rounded-full px-4 py-2 text-xs font-medium"
             >
               Log referral
-            </button>
+            </Button>
           </div>
         </form>
       </section>
@@ -410,12 +411,12 @@ function ReferralCard({
                 className="mt-1 w-full rounded border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-xs"
               />
             </label>
-            <button
+            <Button
               type="submit"
               className="w-full rounded-full bg-[#007048] py-1.5 text-[11px] font-medium text-white hover:opacity-90"
             >
               Convert
-            </button>
+            </Button>
           </form>
           <form
             action={markReferralDeclined}
@@ -435,12 +436,12 @@ function ReferralCard({
                 className="mt-1 w-full rounded border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-xs"
               />
             </label>
-            <button
+            <Button
               type="submit"
               className="w-full rounded-full border border-[var(--surface-border)] py-1.5 text-[11px] font-medium text-ink hover:bg-[var(--surface-inset)]"
             >
               Decline
-            </button>
+            </Button>
           </form>
         </div>
       )}

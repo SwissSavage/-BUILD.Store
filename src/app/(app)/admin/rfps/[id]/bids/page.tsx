@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/rfps/[id]/bids — bid triage + client-facing quote compiler
  * (task #41).
@@ -612,7 +613,7 @@ export default async function RfpBidCompilePage({
           </Card>
 
           <div className="flex flex-wrap gap-3">
-            <button
+            <Button
               type="submit"
               name="intent"
               value="draft"
@@ -620,8 +621,8 @@ export default async function RfpBidCompilePage({
               className="rounded-full border border-[var(--surface-border)] px-6 py-2 text-sm font-medium hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Save &amp; see draft
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               name="intent"
               value="send"
@@ -629,7 +630,7 @@ export default async function RfpBidCompilePage({
               className="fm-btn-primary rounded-full px-6 py-2 text-sm font-medium"
             >
               Send client quote
-            </button>
+            </Button>
           </div>
           <p className="text-[11px] text-ink-faint">
             Drafts stay internal and keep bids editable. Sending activates the client link and locks the selected bid versions.

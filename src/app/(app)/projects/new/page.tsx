@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Propose an internal initiative (cooperative contribution).
  *
@@ -178,13 +179,13 @@ export default async function NewInitiativePage() {
             defaultValue=""
           />
 
-          <button
+          <Button
             type="submit"
             className="rounded-full px-6 py-2.5 text-sm font-medium text-white"
             style={{ backgroundColor: "#5070F0" }}
           >
             Propose
-          </button>
+          </Button>
         </form>
       </Card>
     </div>

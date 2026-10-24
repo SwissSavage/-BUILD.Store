@@ -1293,6 +1293,45 @@ export const customerFeedbackTokens = pgTable("customer_feedback_tokens", {
   revokedAt: timestamp("revoked_at", { mode: "string", withTimezone: true }),
 });
 
+/**
+ * The client's tracker link for one project.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY ITS OWN TABLE (2026-10-24)
+ *
+ * customer_feedback_tokens is next door and the columns are nearly the
+ * same, which is exactly the argument for not reusing it. A
+ * questionnaire link is spent once and dies; a tracker link is opened
+ * repeatedly for the length of the engagement, which is the point of
+ * it. One table with two lifecycle rules means one `consumeToken` call
+ * away from a client's tracker going dead mid-project.
+ *
+ * So: no usedAt. Revocation and expiry are the only ways it stops
+ * working. lastViewedAt is recorded because "has the client actually
+ * looked" is a question worth being able to answer, and because a link
+ * nobody has opened in six weeks is a sign the engagement went quiet
+ * somewhere other than here.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const projectTrackerTokens = pgTable("project_tracker_tokens", {
+  id: text("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  // set null rather than cascade: deleting an admin must not erase the
+  // record of who handed a client a credential.
+  issuedByUserId: text("issued_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  issuedAt: timestamp("issued_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  expiresAt: timestamp("expires_at", { mode: "string", withTimezone: true }).notNull(),
+  lastViewedAt: timestamp("last_viewed_at", { mode: "string", withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { mode: "string", withTimezone: true }),
+});
+
 export const customerFeedback = pgTable("customer_feedback", {
   id: text("id").primaryKey(),
   contextKind: text("context_kind", {

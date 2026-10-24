@@ -65,9 +65,54 @@ export function middleware(req: NextRequest) {
 }
 
 /**
- * Match the (app) route group — every authenticated surface lives
- * under one of these paths. Public marketing pages under (public)
- * and the invite/[code] ceremony are NOT matched here.
+ * Paths that require a session.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * THE MAGIC-LINK PATHS CAME OUT (2026-10-24)
+ *
+ * This list used to include /contracts/:id/feedback,
+ * /contracts/:id/tracker, /quotes/:path* and /receipts/:path*. All four
+ * are surfaces for clients, who have never had a $BUILD.Store login and
+ * are not going to get one. The feedback page says exactly that in its
+ * own first paragraph.
+ *
+ * So every client quote, tracker link, receipt and questionnaire ever
+ * sent redirected the recipient to /signin. Confirmed on 2026-10-24 by
+ * opening a real client quote link in a private window.
+ *
+ * It stayed invisible because the matcher matches a URL PATH, not a
+ * route group, and nobody testing it was ever signed out. An admin
+ * opening their own client's link sees it work, every time.
+ *
+ * The same path-versus-group confusion is why it was inconsistent in
+ * both directions: (public)/quotes/[token] was gated, while
+ * (app)/invoices/[token] — which is not in this list — was not. Two
+ * surfaces with identical posture, opposite outcomes.
+ *
+ * WHY REMOVING THE GATE IS SAFE
+ *
+ * On all four, the token IS the credential and each page already
+ * enforces it on its own:
+ *
+ *   /quotes/[token]          looked up on cooperative_quotes.client_token,
+ *                            notFound otherwise. The ?draft=1 preview
+ *                            additionally requires an admin.
+ *   /receipts/[token]        looked up on cooperative_receipts.client_token.
+ *   /contracts/:id/feedback  resolveFeedbackToken: exists, unspent,
+ *                            unrevoked, unexpired, right contract.
+ *   /contracts/:id/tracker   resolveTrackerToken, as of
+ *                            drizzle/0039_project_tracker_tokens.sql.
+ *
+ * That last one is why this change could not land on its own. Until
+ * 2026-10-24 the tracker gated on a map written into the page file
+ * containing `demo: "*"`, which authorized every project id. Dropping
+ * the session gate before replacing that map would have turned a leak
+ * between signed-in members into a public one.
+ *
+ * /contracts and /contracts/[id] stay public: Google Jobs indexes them.
+ * /contracts/new and /contracts/:id/quote stay gated, because those are
+ * member surfaces, not client ones.
+ * ─────────────────────────────────────────────────────────────
  */
 export const config = {
   matcher: [
@@ -80,15 +125,8 @@ export const config = {
     "/team/:path*",
     "/wallet/:path*",
     "/projects/:path*",
-    // /contracts and /contracts/[id] are PUBLIC (SEO surface — Google
-    // Jobs indexes them). Member-only contract sub-routes stay gated
-    // individually rather than blanket-gating /contracts/:path*.
     "/contracts/new",
-    "/contracts/:id/feedback",
     "/contracts/:id/quote",
-    "/contracts/:id/tracker",
-    "/quotes/:path*",
     "/locker/:path*",
-    "/receipts/:path*",
   ],
 };

@@ -4415,6 +4415,13 @@ export type AuditLogAction =
   | "rfp.rejected"
   | "contract.base_released"
   | "contract.feedback_link_issued"
+  /**
+   * The client's tracker link. Issued and revoked separately, because
+   * "they lost the email" and "that link reached the wrong person" are
+   * different events and the log should be able to tell them apart.
+   */
+  | "contract.tracker_link_issued"
+  | "contract.tracker_link_revoked"
   | "contract.bonus_released"
   | "contract.bonus_reclaimed"
   | "contract.revenue_split_recorded"
@@ -4549,6 +4556,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "rfp.rejected": "RFP rejected",
   "contract.base_released": "Base pay released",
   "contract.feedback_link_issued": "Client questionnaire link issued",
+  "contract.tracker_link_issued": "Client tracker link issued",
+  "contract.tracker_link_revoked": "Client tracker link revoked",
   "contract.bonus_released": "Bonus released",
   "contract.bonus_reclaimed": "Bonus reclaimed",
   "contract.revenue_split_recorded": "Revenue split recorded",

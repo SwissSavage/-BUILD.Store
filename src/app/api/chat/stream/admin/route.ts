@@ -7,9 +7,9 @@
  *
  * Gated behind requireAdmin(). Non-admin requests get 403.
  *
- * See visitor route's docstring for the rationale on SSE +
- * EventEmitter and the production-swap notes (Postgres LISTEN/NOTIFY,
- * long-lived Node host).
+ * See the visitor route's docstring for the rationale on SSE. Fan-out
+ * across replicas is Postgres LISTEN/NOTIFY as of #241; this route only
+ * subscribes and does not care where an event came from.
  */
 import { getCurrentUser } from "@/lib/auth-stub";
 import { subscribeChatEvents } from "@/lib/chat-events";

@@ -12,12 +12,13 @@
  * Every write that flips visible state ALSO emits a chat event so the
  * SSE handlers can push to subscribed clients.
  *
- * REPLACE WITH:
- *   - Drizzle-backed reads/writes (currently in-memory mocks)
- *   - HubSpot writebacks on thread creation (TODO inline below) so
- *     warm leads also land in CRM via the existing `/api/crm` path
- *   - Postgres LISTEN/NOTIFY in place of the in-process EventEmitter
- *   - Rate limiting + spam triage on the visitor send path
+ * Reads and writes are Drizzle-backed (2026-09-03) and the fan-out is
+ * Postgres LISTEN/NOTIFY across replicas (#241, 2026-10-24). HubSpot
+ * writeback on thread creation is wired below.
+ *
+ * STILL MISSING:
+ *   - Rate limiting and spam triage on the visitor send path. Nothing
+ *     stops a script opening threads as fast as it can post.
  */
 
 import { revalidatePath } from "next/cache";

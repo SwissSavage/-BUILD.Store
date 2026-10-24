@@ -40,7 +40,7 @@ const SITE_URL =
 export const metadata: Metadata = {
   title: "Case studies — Future Modern",
   description:
-    "Completed contracts delivered through the Future Modern cooperative. STEM, Creative Media, and Professional Services engagements.",
+    "Completed contracts delivered through Future Modern. STEM, Creative Media, and Professional Services engagements.",
   alternates: { canonical: `${SITE_URL}/case-studies` },
 };
 
@@ -67,7 +67,7 @@ export default async function CaseStudiesIndex() {
         Completed contracts
       </h1>
       <p className="mt-3 text-lg text-ink-muted">
-        Work delivered through the cooperative. Client names stay
+        Work delivered through Future Modern. Client names stay
         depersonalized until public delivery; contributors are credited
         by first name only.
       </p>

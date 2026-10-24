@@ -213,7 +213,7 @@ export default async function CooperativeQuotePage({
             This is not client-facing; bids remain editable until the quote is sent.
           </div>
         )}
-        <CardEyebrow>Cooperative Quote</CardEyebrow>
+        <CardEyebrow>Future Modern Quote</CardEyebrow>
         <h1 className="mt-2 font-display text-4xl font-semibold leading-tight md:text-5xl">
           A proposal for {quote.clientDisplayName}
         </h1>
@@ -284,7 +284,7 @@ export default async function CooperativeQuotePage({
           <p className="mt-4 max-w-xl text-ink-muted">
             No hard feelings. If any of it lands differently later
             (crew, scope, price, timing), reply to the email that got
-            you here and we&apos;ll re-pitch. The cooperative
+            you here and we&apos;ll re-pitch. Future Modern
             isn&apos;t going anywhere.
           </p>
           {quote.decidedAt && (
@@ -307,7 +307,7 @@ export default async function CooperativeQuotePage({
       {/* Marketing rail. Stickiness lever. */}
       <section className="mt-20 border-t border-[var(--surface-border)] pt-12">
         <p className="text-[11px] uppercase tracking-[0.15em] text-ink-muted">
-          More from the cooperative
+          More from Future Modern
         </p>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
           <Link
@@ -352,7 +352,7 @@ export default async function CooperativeQuotePage({
       </section>
 
       <p className="mt-16 text-center text-[10px] uppercase tracking-wider text-ink-faint">
-        Cooperative Quote · Confidential to {quote.clientDisplayName} ·
+        Future Modern Quote · Confidential to {quote.clientDisplayName} ·
         Not a contract
       </p>
     </div>

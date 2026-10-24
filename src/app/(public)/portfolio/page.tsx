@@ -76,8 +76,8 @@ export default async function PortfolioPage({
       <h1 className="font-display text-4xl font-semibold">Portfolio</h1>
       <p className="mt-2 text-ink-muted">
         {activePillar
-          ? `Work from the cooperative · ${INDUSTRY_LABELS[activePillar]}.`
-          : "Work from the cooperative."}
+          ? `Work from Future Modern · ${INDUSTRY_LABELS[activePillar]}.`
+          : "Work from Future Modern."}
       </p>
 
       <PillarFilter active={activePillar} />

@@ -42,7 +42,7 @@ const SITE_URL =
 export const metadata: Metadata = {
   title: "Articles",
   description:
-    "Future Modern's writing corpus: release retrospectives, curatorial notes, and cooperative principles. Piped from paragraph.com/@future-modern, where the pieces live canonically.",
+    "Future Modern's writing corpus: release retrospectives, curatorial notes, and Future Modern principles. Piped from paragraph.com/@future-modern, where the pieces live canonically.",
   alternates: {
     canonical: PARAGRAPH_BASE,
   },
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     type: "website",
     title: "Articles · Future Modern",
     description:
-      "Release retrospectives, curatorial notes, and cooperative principles. From paragraph.com/@future-modern.",
+      "Release retrospectives, curatorial notes, and Future Modern principles. From paragraph.com/@future-modern.",
     url: "/articles",
   },
 };
@@ -153,7 +153,7 @@ export default function ArticlesPage() {
         The Future Modern archive
       </h1>
       <p className="mt-4 max-w-2xl text-lg text-ink-muted">
-        Release retrospectives, curatorial notes, and cooperative
+        Release retrospectives, curatorial notes, and Future Modern
         principles. Every piece lives at{" "}
         <a
           href={PARAGRAPH_BASE}
@@ -174,7 +174,7 @@ export default function ArticlesPage() {
           Paragraph.com is Future Modern&apos;s Web3-native writing
           rail (formerly Mirror; the archive carried over after
           Paragraph acquired Mirror). We pipe the corpus here so it
-          surfaces alongside the rest of the cooperative. The
+          surfaces alongside the rest of Future Modern. The
           canonical URL stays with Paragraph, which is where the
           words were minted.
         </p>

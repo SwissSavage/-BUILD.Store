@@ -77,6 +77,22 @@ export async function getThreadByVisitorToken(
   return row ?? null;
 }
 
+/**
+ * One message by id.
+ *
+ * Added for #241: a cross-replica chat notification carries identifiers
+ * only, so the replica receiving it reads the row rather than trusting
+ * a copy that travelled with the notification. See chat-events.ts.
+ */
+export async function getMessageById(id: string): Promise<ChatMessage | null> {
+  const [row] = await db
+    .select()
+    .from(chatMessages)
+    .where(eq(chatMessages.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function listMessages(threadId: string): Promise<ChatMessage[]> {
   return db
     .select()

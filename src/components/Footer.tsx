@@ -38,8 +38,16 @@ const linkClassName = "hover:text-brand-magentaText";
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-[var(--surface-border)] bg-[var(--surface-inset)]">
-      <div className="mx-auto grid max-w-app gap-x-8 gap-y-10 px-6 py-12 md:grid-cols-4">
+    <footer className="relative mt-32 overflow-hidden border-t border-[var(--surface-border)] bg-[var(--surface-inset)]">
+      {/* Decorative watermark: intentionally absent on compact screens. */}
+      <img
+        aria-hidden="true"
+        src="/brand/turtle.png"
+        alt=""
+        className="pointer-events-none absolute -bottom-48 -left-36 hidden h-[34rem] w-auto select-none opacity-[0.045] brightness-0 invert md:block"
+      />
+
+      <div className="relative z-10 mx-auto grid max-w-app gap-x-8 gap-y-10 px-6 py-16 md:grid-cols-4 md:py-20">
         <div className="md:pr-6">
           <Link href="/" className="font-display text-lg font-semibold hover:text-brand-magentaText">
             $BUILD<span className="text-brand-magentaText">.</span>Store
@@ -73,7 +81,7 @@ export function Footer() {
         ))}
       </div>
 
-      <div className="border-t border-[var(--surface-border)]">
+      <div className="relative z-10 border-t border-[var(--surface-border)]">
         <div className="mx-auto flex max-w-app flex-col items-center gap-3 px-6 py-4 text-xs text-ink-faint sm:flex-row sm:justify-between">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span>© {new Date().getFullYear()} Future Modern Builderberg LLC. Sandbox build.</span>

@@ -394,7 +394,7 @@ function FaqSection() {
   return (
     <Faq
       eyebrow="Common questions"
-      heading="How the cooperative works"
+      heading="How Future Modern works"
       items={items}
     />
   );

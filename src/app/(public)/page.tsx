@@ -181,7 +181,7 @@ function Hero() {
               href="/governance#canonization"
               className="transition-colors hover:text-ink"
             >
-              Built Web3-native
+              Web3-native
             </Link>
           </li>
           <li className="flex items-center gap-2">
@@ -193,7 +193,7 @@ function Hero() {
               href="/governance#tier"
               className="transition-colors hover:text-ink"
             >
-              Owner-operated
+              Worker-owned
             </Link>
           </li>
           <li className="flex items-center gap-2">
@@ -205,7 +205,7 @@ function Hero() {
               href="/policies/covenant"
               className="transition-colors hover:text-ink"
             >
-              Cooperative-vetted
+              Peer-reviewed
             </Link>
           </li>
         </ul>

@@ -702,6 +702,13 @@ html {
   border-radius: var(--control-radius) !important;
 }
 
+/* Links render as anchors, so they do not receive Button's geometry. Treat
+   every rounded interactive anchor as an action control; status badges and
+   tags use non-interactive elements and remain round. */
+:where(a, button).rounded-full {
+  border-radius: var(--control-radius) !important;
+}
+
 .fm-btn-primary {
   background-image: linear-gradient(
     100deg,

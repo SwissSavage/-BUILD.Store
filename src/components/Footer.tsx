@@ -62,9 +62,9 @@ export function Footer() {
         {/* Decorative watermark: intentionally absent on compact screens. */}
         <img
           aria-hidden="true"
-          src="/brand/wordmark.png"
+          src="/brand/footer-turtle-watermark.png"
           alt=""
-          className="pointer-events-none absolute -left-12 top-[18rem] hidden w-[208rem] select-none brightness-0 invert opacity-[0.025] md:block"
+          className="pointer-events-none absolute -left-[34rem] top-[26rem] hidden h-[42rem] w-auto origin-bottom-left rotate-[12deg] select-none md:block"
         />
 
         <div className="relative z-10 mx-auto grid w-full gap-x-10 gap-y-12 px-[7%] py-16 md:min-h-[52rem] md:grid-cols-[1.65fr_1fr_1fr_1fr] md:pb-32 md:pt-48">

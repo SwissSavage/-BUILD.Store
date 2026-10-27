@@ -1314,6 +1314,100 @@ export interface InvoiceLineItem {
    * markup to the client.
    */
   isProcessingFee?: boolean;
+
+  /* ── Billed work ────────────────────────────────────────────────
+   *
+   * WHY (2026-10-27)
+   *
+   * An invoice line was a sentence and a number: "Ozy Design Services
+   * $65/hr" typed by hand into a description, with the total typed
+   * separately beside it. Nothing connected either to the rate the
+   * client actually agreed to, nothing recorded how many hours were
+   * behind the figure, and a reduced price left no trace that a
+   * reduction had happened at all.
+   *
+   * Jamar: "keep the record uniform from end to end with a record of
+   * any discounts that can be assessed or justified at a later date."
+   *
+   * So a line now carries its own arithmetic. `amount` stays the
+   * authority for every existing reader and is computed from these
+   * rather than typed, which keeps old invoices valid: a line with
+   * none of these fields is a free-text line and still renders.
+   * ───────────────────────────────────────────────────────────── */
+
+  /** The Builder this line bills for. Null for a non-labour line. */
+  builderUserId?: string | null;
+  /**
+   * The client-facing rate on the contract, copied onto the line when
+   * it was written.
+   *
+   * Copied, not looked up. The contract can be amended later and this
+   * invoice must keep saying what was true when it was issued, which
+   * is the same reason a quote freezes its proposed builders.
+   */
+  contractRate?: string | null;
+  /** What is actually being billed per unit. Defaults to contractRate. */
+  unitPrice?: string | null;
+  /** Hours, days, deliverables. */
+  units?: string | null;
+  unitLabel?: string | null;
+  /** numeric(12,2). Taken off the line after unitPrice x units. */
+  discount?: string | null;
+  /**
+   * Why the discount was given.
+   *
+   * Required whenever anything is taken off, because the entire point
+   * of recording a discount is being able to justify it a year later,
+   * and a number with no reason beside it cannot be justified or
+   * assessed. A goodwill write-off and a correction of an overbill
+   * look identical once they are both just a smaller total.
+   */
+  discountReason?: string | null;
+}
+
+/**
+ * What one Builder on a contract is billed to the client at.
+ *
+ * Declared here rather than beside contractRatesForProject, which
+ * resolves it, because the invoice line form needs the shape and
+ * check-client-boundary is right to refuse a "use client" file that
+ * imports anything reaching src/db/client.ts — a type-only import is
+ * invisible to a static scan, and the one time it is not type-only is
+ * the time the build breaks on `pg` in the browser bundle.
+ */
+export interface ContractRate {
+  userId: string;
+  /** numeric(12,2) as a string, or null when the terms are negotiable. */
+  rate: string | null;
+  basis: "hourly" | "fixed" | "negotiable";
+  /** What a unit means on this line, for the invoice form. */
+  unitLabel: string;
+  /** Where the number came from, so the form can say so. */
+  source: "quote" | "engagement";
+}
+
+/**
+ * The arithmetic of one billed line, in one place.
+ *
+ * Exported and used by both the admin form and the server action, so
+ * the number on screen and the number written to the database cannot
+ * disagree. Returns strings at numeric(12,2) precision.
+ */
+export function invoiceLineTotals(input: {
+  unitPrice?: string | number | null;
+  units?: string | number | null;
+  discount?: string | number | null;
+}): { gross: number; discount: number; final: number } {
+  const num = (v: string | number | null | undefined) => {
+    const n = typeof v === "number" ? v : Number(String(v ?? "").replace(/[$,\s]/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  };
+  const gross = Math.round(num(input.unitPrice) * num(input.units) * 100) / 100;
+  // A discount cannot exceed the line. Clamping rather than erroring,
+  // because this also runs on every keystroke in the form and a
+  // half-typed number should not throw.
+  const discount = Math.min(Math.max(num(input.discount), 0), gross);
+  return { gross, discount, final: Math.round((gross - discount) * 100) / 100 };
 }
 
 /**
@@ -4422,6 +4516,16 @@ export type AuditLogAction =
    */
   | "contract.tracker_link_issued"
   | "contract.tracker_link_revoked"
+  /**
+   * A milestone corrected after the fact: dates, owner, title.
+   *
+   * Audited because it is the one action that can make a late
+   * engagement look punctual. Fixing a typo and rewriting history are
+   * the same keystrokes, and the difference lives entirely in the
+   * intent, so the entry records what each field was and what it
+   * became.
+   */
+  | "milestone.edited"
   | "contract.bonus_released"
   | "contract.bonus_reclaimed"
   | "contract.revenue_split_recorded"
@@ -4558,6 +4662,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "contract.feedback_link_issued": "Client questionnaire link issued",
   "contract.tracker_link_issued": "Client tracker link issued",
   "contract.tracker_link_revoked": "Client tracker link revoked",
+  "milestone.edited": "Milestone corrected",
   "contract.bonus_released": "Bonus released",
   "contract.bonus_reclaimed": "Bonus reclaimed",
   "contract.revenue_split_recorded": "Revenue split recorded",

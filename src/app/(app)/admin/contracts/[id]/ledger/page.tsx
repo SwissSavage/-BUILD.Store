@@ -31,6 +31,10 @@ import {
 } from "@/db/schema";
 import { invoiceReader, splitReader, safely } from "@/lib/readers";
 import { getAllUsers } from "@/lib/readers/users";
+import { secureToken } from "@/lib/secure-token";
+import { invoiceLineTotals, type InvoiceLineItem } from "@/lib/types";
+import { contractRatesForProject } from "@/lib/invoice-contract-rates";
+import { InvoiceLineBuilder } from "@/components/InvoiceLineBuilder";
 import { RESERVE_RECIPIENTS } from "@/lib/mock-data/splits";
 import { creditReserveOnInvoiceCollection } from "@/lib/reserve-actions";
 import {
@@ -228,12 +232,86 @@ async function createDraft(formData: FormData) {
   if (!admin || !admin.isAdmin) throw new Error("Admin only");
 
   const contractId = String(formData.get("contractId") ?? "");
-  const description = String(formData.get("description") ?? "Engagement fee");
-  const amount = Number(formData.get("amount") ?? 0);
-  if (amount <= 0) throw new Error("Amount must be > 0");
 
+  // ──────────────────────────────────────────────────────────────
+  // LINES, NOT A SENTENCE AND A NUMBER (2026-10-27)
+  //
+  // This read one description and one amount. "Ozy Design Services
+  // $65/hr" went in one box and a total in the other, with nothing
+  // connecting either to the rate the client agreed to, no record of
+  // the hours behind the figure, and no trace at all when a price was
+  // reduced.
+  //
+  // Everything is recomputed here rather than trusted from the form,
+  // through the same invoiceLineTotals the form renders with, so the
+  // number on screen and the number in the database cannot drift. The
+  // contract rate is read from the contract on this side too: a rate
+  // posted by a browser is a claim, not a term.
+  // ──────────────────────────────────────────────────────────────
+  const builderIds = formData.getAll("builderUserId").map(String);
+  const descriptions = formData.getAll("description").map(String);
+  const unitPrices = formData.getAll("unitPrice").map(String);
+  const unitCounts = formData.getAll("units").map(String);
+  const discounts = formData.getAll("discount").map(String);
+  const reasons = formData.getAll("discountReason").map(String);
+
+  const contractRates = await contractRatesForProject(contractId);
+  const rateByUser = new Map(contractRates.map((r) => [r.userId, r]));
+
+  const lines: InvoiceLineItem[] = [];
   const id = `inv_${randomUUID()}`;
   const now = new Date().toISOString();
+
+  for (let i = 0; i < descriptions.length; i += 1) {
+    const unitPrice = unitPrices[i] ?? "";
+    const units = unitCounts[i] ?? "";
+    const totals = invoiceLineTotals({
+      unitPrice,
+      units,
+      discount: discounts[i] ?? "",
+    });
+    // An empty row is a row somebody added and did not fill in, not an
+    // error worth refusing the whole invoice over.
+    if (totals.gross <= 0) continue;
+
+    const builderUserId = builderIds[i] || null;
+    const contract = builderUserId ? rateByUser.get(builderUserId) : undefined;
+    const contractRate = contract?.rate ?? null;
+
+    // A unit price below the agreed rate is a discount whether or not
+    // it was typed into the discount box, and it needs the same
+    // justification. Otherwise the reason requirement is one keystroke
+    // away from being optional.
+    const implied =
+      contractRate !== null && Number(unitPrice) > 0
+        ? Math.max(0, Number(contractRate) - Number(unitPrice)) *
+          (Number(units) || 0)
+        : 0;
+    const reason = (reasons[i] ?? "").trim();
+    if ((totals.discount > 0 || implied > 0.004) && reason.length === 0) {
+      throw new Error(
+        `Line ${i + 1} is discounted. Say why, so it can be justified later.`,
+      );
+    }
+
+    lines.push({
+      id: `li_${id}_${i + 1}`,
+      description: (descriptions[i] ?? "").trim() || "Engagement fee",
+      amount: totals.final.toFixed(2),
+      builderUserId,
+      contractRate,
+      unitPrice: Number(unitPrice).toFixed(2),
+      units: String(Number(units) || 0),
+      unitLabel: contract?.unitLabel ?? "units",
+      discount: totals.discount.toFixed(2),
+      discountReason: reason || null,
+    });
+  }
+
+  if (lines.length === 0) {
+    throw new Error("Add at least one line with a unit price and a quantity.");
+  }
+  const amount = lines.reduce((acc, l) => acc + Number(l.amount), 0);
   // Writer swap 2026-08-29: draft invoices were pushed in memory, so
   // an admin could bill a client and have the invoice disappear.
   await db.insert(invoicesTable).values({
@@ -246,17 +324,15 @@ async function createDraft(formData: FormData) {
     issuerId: admin.id,
     recipientId: `client_${contractId}`,
     number: `FM-2026-DRAFT-${Math.floor(Math.random() * 9000) + 1000}`,
-    clientToken: `tok_${id}`,
+    // secureToken, not `tok_${id}`. secure-token.ts calls the invoice
+    // token the worst offender in the codebase: the token IS the
+    // credential on /invoices/[token], and a value derived from the
+    // row's own id is guessable by anyone who has seen one invoice.
+    clientToken: secureToken("inv"),
     status: "draft",
     paymentMethod: "ach_mercury",
     acceptsCard: false,
-    lineItems: [
-      {
-        id: `li_${id}_1`,
-        description,
-        amount: amount.toFixed(2),
-      },
-    ],
+    lineItems: lines,
     subtotal: amount.toFixed(2),
     processingFee: "0.00",
     total: amount.toFixed(2),
@@ -291,13 +367,17 @@ export default async function ContractLedgerPage({
   const project = await getProjectById(id);
   if (!project || project.kind !== "contract") notFound();
 
-  const [invoices, splits, { users: roster }] = await Promise.all([
-    safely(() => invoiceReader.where(eq(invoicesTable.contractId, id)), []),
-    safely(() => splitReader.all(), []).then((rows) =>
-      rows.filter((r) => r.contractId === id),
-    ),
-    safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
-  ]);
+  const [invoices, splits, { users: roster }, contractRates] =
+    await Promise.all([
+      safely(() => invoiceReader.where(eq(invoicesTable.contractId, id)), []),
+      safely(() => splitReader.all(), []).then((rows) =>
+        rows.filter((r) => r.contractId === id),
+      ),
+      safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+      // The client-facing rate per Builder, from the approved quote or
+      // the engagement terms. Drives the invoice line form.
+      safely(() => contractRatesForProject(id), []),
+    ]);
   const userById = new Map(roster.map((u) => [u.id, u]));
 
   // AR roll-ups.
@@ -393,33 +473,23 @@ export default async function ContractLedgerPage({
             Drafts are admin-only — the client doesn&apos;t see them until you
             issue. Default rail is Mercury; toggle CC after creating if needed.
           </p>
-          <form
-            action={createDraft}
-            className="mt-4 grid gap-3 md:grid-cols-[1fr_160px_auto]"
-          >
+          <form action={createDraft}>
             <input type="hidden" name="contractId" value={project.id} />
-            <input
-              name="description"
-              placeholder="Line item description (e.g. Milestone 2 — design pass)"
-              required
-              className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
-            />
-            <input
-              name="amount"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Amount (USD)"
-              required
-              className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
-            />
+            <InvoiceLineBuilder rates={contractRates} roster={roster} />
             <button
               type="submit"
-              className="rounded-full px-4 py-2 text-sm font-medium text-white"
+              className="mt-4 rounded-full px-4 py-2 text-sm font-medium text-white"
               style={{ backgroundColor: "#5070F0" }}
             >
               Create draft
             </button>
+            <p className="mt-2 text-[11px] text-ink-faint">
+              The service rate comes from the approved quote, or from the
+              engagement terms when the work was composed directly. It is
+              not editable here: an invoice is not where a contract gets
+              renegotiated. Anything billed under it counts as a discount
+              and needs a reason, including a reduced unit price.
+            </p>
           </form>
         </Card>
       </section>

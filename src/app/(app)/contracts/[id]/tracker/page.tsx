@@ -1,13 +1,36 @@
 /**
- * Public client tracker — Domino's-style read-only progress view.
+ * Client tracker — read-only progress view, opened from a link.
  *
- * Auth-free magic-link surface (clients never had a login). Sandbox
- * accepts `?token=demo` for any active contract; production swap issues
- * signed JWTs from the same service that powers /contracts/[id]/feedback.
+ * Auth-free by design: clients never had a $BUILD.Store login and are
+ * not going to get one.
  *
  * No PII surfaced beyond what the rest of the platform already exposes:
- * milestone titles, statuses, due dates, owner first-names via
+ * milestone titles, statuses, due dates, owner first names via
  * publicName. No internal notes, no admin notes, no member emails.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * TOKEN RAIL (2026-10-24)
+ *
+ * This page gated on a three-entry map written into this file, and one
+ * entry was `demo: "*"`, which authorized every project id. Anyone
+ * appending ?token=demo read the milestone board of any contract in
+ * the database. The other two pointed at seed contracts p_003 and
+ * p_004, so no real client ever had a working link and none could be
+ * made.
+ *
+ * The identical bug was found and fixed on /contracts/[id]/feedback on
+ * 2026-09-04. The fix did not travel to the file next door.
+ *
+ * Tokens now come from `project_tracker_tokens`, minted by an admin on
+ * /admin/contracts/[id]/tracker. resolveTrackerToken is the single
+ * definition of a valid link.
+ *
+ * The client label was a three-entry map too, for the same three seed
+ * clients, so a real engagement rendered its raw clientId — usually an
+ * internal identifier, sometimes a user id — as the client's own name
+ * at the top of their tracker. It now renders the title alone, since
+ * the one person guaranteed to know who the client is, is the client.
+ * ─────────────────────────────────────────────────────────────
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,27 +38,12 @@ import { getProjectById } from "@/lib/readers/projects";
 import { getAllUsers } from "@/lib/readers/users";
 import { getMilestonesForProject, safely } from "@/lib/readers";
 import { publicName } from "@/lib/types";
+import {
+  resolveTrackerToken,
+  touchTrackerToken,
+} from "@/lib/tracker-link-tokens";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
-
-// Sandbox token map. Production: signed JWTs verified at the route level.
-const CLIENT_TRACKER_TOKENS: Record<string, string> = {
-  demo: "*",
-  tok_track_p_003_marisa: "p_003",
-  tok_track_p_004_devon: "p_004",
-};
-
-function tokenAuthorizesContract(token: string, contractId: string): boolean {
-  const allowed = CLIENT_TRACKER_TOKENS[token];
-  if (!allowed) return false;
-  return allowed === "*" || allowed === contractId;
-}
-
-const CLIENT_LABELS: Record<string, string> = {
-  client_url_media: "URL Media",
-  client_bk_greenroots: "Brooklyn GreenRoots",
-  client_arborai: "ArborAI",
-};
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +56,7 @@ export default async function ClientTrackerPage({
 }) {
   const { id } = await params;
   const { token } = await searchParams;
-  const validToken = token ? tokenAuthorizesContract(token, id) : false;
+  const resolution = await resolveTrackerToken(token, id);
   // Reader swap 2026-08-29: was MOCK_PROJECTS/MOCK_USERS. This is the
   // page a CLIENT opens from a magic link, so stale data here is the
   // most externally visible version of the bug.
@@ -60,7 +68,11 @@ export default async function ClientTrackerPage({
     source: "postgres" as const,
   });
 
-  if (!validToken) {
+  if (!resolution.ok) {
+    // One message for every rejection. "Expired" is safe to say and
+    // "that token belongs to a different engagement" is not, so rather
+    // than branch and risk the wrong half leaking, the page says the
+    // same civil thing and the reason lives in the database.
     return (
       <div className="mx-auto max-w-xl px-6 py-16">
         <h1 className="font-display text-3xl font-semibold">
@@ -81,6 +93,12 @@ export default async function ClientTrackerPage({
     );
   }
 
+  // Usage signal, not a credential check, so a failed write must not
+  // stop a client seeing their tracker.
+  if (resolution.tokenId) {
+    void touchTrackerToken(resolution.tokenId).catch(() => {});
+  }
+
   const milestones = await safely(() => getMilestonesForProject(id), []);
   // Reader swap 2026-09-03. `milestones` above is the live table and
   // this line recomputed the same thing from the fixture, so the
@@ -93,7 +111,6 @@ export default async function ClientTrackerPage({
     total: milestones.length,
     ratio: milestones.length === 0 ? 0 : completed / milestones.length,
   };
-  const clientLabel = CLIENT_LABELS[project.clientId] ?? project.clientId;
   // Freshness signal — latest milestone touch anywhere on the project.
   // Uses updatedAt since it's always populated on status changes; falls
   // back to project.updatedAt if no milestones exist yet.
@@ -118,9 +135,8 @@ export default async function ClientTrackerPage({
         {project.title}
       </h1>
       <p className="mt-2 text-sm text-ink-muted">
-        For {clientLabel}. Real-time view of where the engagement is in
-        the delivery cycle. Milestone status updates automatically as the
-        team advances each step.
+        Where the engagement is in the delivery cycle. Milestone status
+        updates as the team advances each step.
       </p>
 
       {/* Task #46 — headline progress strip. Percentage + count + last
@@ -187,7 +203,7 @@ export default async function ClientTrackerPage({
             Your team is scoping the milestones.
           </CardTitle>
           <p className="mt-2 text-sm text-ink-muted">
-            The cooperative team is working on kickoff planning. Once
+            Future Modern is working on kickoff planning. Once
             milestones are locked, they&apos;ll appear here and this
             page will start moving. You&apos;ll get an email the moment
             the first one goes live.
@@ -218,7 +234,7 @@ export default async function ClientTrackerPage({
                       <p className="mt-1 text-xs text-ink-muted">{m.description}</p>
                     )}
                     <p className="mt-2 text-[11px] text-ink-faint">
-                      Owner: {owner ? publicName(owner) : "Cooperative member"}
+                      Owner: {owner ? publicName(owner) : "Unassigned"}
                     </p>
                   </Card>
                 );
@@ -229,9 +245,8 @@ export default async function ClientTrackerPage({
       )}
 
       <p className="mt-8 text-xs text-ink-faint">
-        Questions about the engagement land in your admin&apos;s inbox.
-        Reply to the most recent email thread and they&apos;ll respond
-        from the cooperative.
+        Questions about the engagement reach us fastest as a reply to
+        the most recent email thread.
       </p>
     </div>
   );

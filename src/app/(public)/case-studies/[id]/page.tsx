@@ -11,6 +11,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { FileText, Tags, Users } from "lucide-react";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { portfolioEntries } from "@/db/schema";
 import { getProjectById } from "@/lib/readers/projects";
 import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
@@ -56,21 +59,40 @@ export default async function CaseStudyDetail({
   params: Promise<Params>;
 }) {
   const { id } = await params;
+  // ──────────────────────────────────────────────────────────────
+  // THE ENTRY IS THE GATE (2026-10-27)
+  //
+  // This gated on the project: completed, and an RFP behind it. So a
+  // page existed the moment settlement ran, whether or not anyone had
+  // written it or asked the client, and directly composed engagements
+  // 404'd no matter what.
+  //
+  // Now a published portfolio entry is what makes the URL real. No
+  // entry, or an entry still in the portfolio state, is a 404 — which
+  // is also what "take down" has to mean to be worth anything.
+  // ──────────────────────────────────────────────────────────────
+  const [entry] = await db
+    .select()
+    .from(portfolioEntries)
+    .where(eq(portfolioEntries.projectId, id))
+    .limit(1);
+  if (!entry || entry.state !== "published") notFound();
+
   const project = await getProjectById(id);
-  if (
-    !project ||
-    project.kind !== "contract" ||
-    project.status !== "completed" ||
-    !project.rfpApprovedAt
-  ) {
-    notFound();
-  }
+  if (!project) notFound();
 
   const { users: roster } = await getAllUsers();
   const contributors = (project.assignedMemberIds ?? [])
     .map((uid) => roster.find((u) => u.id === uid))
     .filter((u): u is (typeof roster)[number] => !!u);
-  const publishedAt = project.collectedAt ?? project.rfpApprovedAt;
+  // createdAt as the last resort. publishedAt is set on every entry
+  // that reaches this page, but the chain has to end somewhere that is
+  // not null, because the JSON-LD below feeds it to Date().
+  const publishedAt =
+    entry.publishedAt ??
+    project.collectedAt ??
+    project.rfpApprovedAt ??
+    project.createdAt;
 
   const creativeWork = {
     "@context": "https://schema.org",

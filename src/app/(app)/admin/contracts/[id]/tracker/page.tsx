@@ -22,6 +22,7 @@ import { getAllUsers } from "@/lib/readers/users";
 import {
   createMilestone,
   deleteMilestone,
+  editMilestone,
   pingMilestoneOwner,
   resolveBlocker,
   seedProjectWithTemplate,
@@ -35,6 +36,14 @@ import {
   type ProjectMilestone,
   type User,
 } from "@/lib/types";
+import {
+  getLiveTrackerToken,
+  trackerLinkUrl,
+} from "@/lib/tracker-link-tokens";
+import {
+  issueTrackerLink,
+  revokeTrackerLink,
+} from "@/lib/tracker-link-actions";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
 
@@ -94,6 +103,13 @@ export default async function AdminTrackerPage({
     total: milestones.length,
     ratio: milestones.length === 0 ? 0 : completed / milestones.length,
   };
+  const liveTrackerLink = await safely(
+    () => getLiveTrackerToken(project.id),
+    null,
+  );
+  const origin = (
+    process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? ""
+  ).replace(/\/$/, "");
   const teamCandidates = project.assignedMemberIds
     .concat(project.adminUserIds)
     .filter((v, i, arr) => arr.indexOf(v) === i)
@@ -139,6 +155,80 @@ export default async function AdminTrackerPage({
       <div className="mt-8">
         <MilestoneTracker milestones={milestones} />
       </div>
+
+      {/*
+        The client's link to this board.
+
+        Until 2026-10-24 /contracts/[id]/tracker gated on a three-entry
+        map written into that page, including `demo: "*"`, which
+        authorized every project id in the database. The other two
+        pointed at seed contracts, so no real client had a working link
+        and there was no way to make one. See
+        drizzle/0039_project_tracker_tokens.sql.
+      */}
+      <Card className="mt-6">
+        <CardEyebrow>Client link</CardEyebrow>
+        {liveTrackerLink ? (
+          <>
+            <p className="mt-1 text-xs text-ink-muted">
+              A link is out, good until{" "}
+              {new Date(liveTrackerLink.expiresAt).toLocaleDateString(
+                undefined,
+                { year: "numeric", month: "short", day: "numeric" },
+              )}
+              .{" "}
+              {liveTrackerLink.lastViewedAt
+                ? `Last opened ${new Date(
+                    liveTrackerLink.lastViewedAt,
+                  ).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                  })}.`
+                : "Not opened yet."}
+            </p>
+            <code className="mt-2 block overflow-x-auto rounded-md bg-[var(--surface-inset)] px-2 py-1 text-[11px] text-ink">
+              {trackerLinkUrl(origin, project.id, liveTrackerLink.token)}
+            </code>
+          </>
+        ) : (
+          <p className="mt-1 text-xs text-ink-muted">
+            No live link for this contract. Issue one so the client can
+            watch the milestones land without having to ask.
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <form action={issueTrackerLink}>
+            <input type="hidden" name="projectId" value={project.id} />
+            <button
+              type="submit"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs text-ink hover:border-brand-magenta"
+            >
+              {liveTrackerLink ? "Issue a fresh link" : "Issue client link"}
+            </button>
+          </form>
+          {liveTrackerLink && (
+            /* Separate from reissue on purpose. "They lost the email"
+               and "that link reached somebody it should not have" are
+               different problems, and handing out a new credential is
+               the wrong default for the second one. */
+            <form action={revokeTrackerLink}>
+              <input type="hidden" name="projectId" value={project.id} />
+              <button
+                type="submit"
+                className="text-xs text-brand-magentaText hover:underline"
+              >
+                Revoke without replacing
+              </button>
+            </form>
+          )}
+        </div>
+        <p className="mt-2 text-[11px] text-ink-faint">
+          Issuing a fresh link revokes the previous one, so there is
+          never more than one live credential for an engagement. The
+          link shows milestone titles, status, due dates and owner first
+          names. It shows no rates, no payouts and no attachments.
+        </p>
+      </Card>
 
       <Card className="mt-6 border-[#5070F0]/40">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -284,10 +374,12 @@ function MilestoneRow({
   ownerLabel,
 }: {
   milestone: ProjectMilestone;
-  teamCandidates: Array<{ id: string }>;
+  // Was `Array<{ id: string }>` and discarded with `void teamCandidates`
+  // — passed in and never used. The correction form below needs the
+  // real roster to offer an owner, so it is typed properly now.
+  teamCandidates: User[];
   ownerLabel: (ownerUserId: string) => string;
 }) {
-  void teamCandidates;
   return (
     <Card>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -362,7 +454,21 @@ function MilestoneRow({
               ))}
             </select>
           </label>
-          <Button
+          {/* When it actually landed, not when the button was pressed.
+              Entering finished work after the fact is the normal case
+              for anything that predates the app, and before this the
+              tracker recorded the admin rather than the work. */}
+          <label className="flex flex-col text-[10px] uppercase tracking-wider text-ink-faint">
+            Completed on
+            <input
+              type="date"
+              name="completedOn"
+              defaultValue={milestone.completedAt?.slice(0, 10) ?? ""}
+              max={new Date().toISOString().slice(0, 10)}
+              className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-sm normal-case tracking-normal text-ink"
+            />
+          </label>
+          <button
             type="submit"
             className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
           >
@@ -403,6 +509,105 @@ function MilestoneRow({
           </Button>
         </form>
       </div>
+
+      {/* Correct the row itself.
+          There was no edit at all, so a due date typed wrong could only
+          be fixed by deleting the row and making a new one. Jamar hit
+          that closing out Advanced Welding: a milestone reading two
+          years overdue, and the only available fix was moving the date
+          to today, which swaps a wrong record for a different wrong
+          one. Every change here is audited, because correcting a typo
+          and rewriting history are the same keystrokes. */}
+      <details className="mt-3 group">
+        <summary className="cursor-pointer list-none text-[10px] uppercase tracking-wider text-ink-faint hover:text-brand-magentaText">
+          Correct this milestone
+          <span className="ml-1 group-open:hidden">▸</span>
+          <span className="ml-1 hidden group-open:inline">▾</span>
+        </summary>
+        <form
+          action={editMilestone}
+          className="mt-2 space-y-2 rounded-lg border border-dashed border-[var(--surface-border)] p-3"
+        >
+          <input type="hidden" name="id" value={milestone.id} />
+          <label className="block">
+            <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+              Title
+            </span>
+            <input
+              name="title"
+              defaultValue={milestone.title}
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+              Description
+            </span>
+            <textarea
+              name="description"
+              rows={2}
+              defaultValue={milestone.description ?? ""}
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
+            />
+          </label>
+          <div className="grid gap-2 md:grid-cols-3">
+            <label className="block">
+              <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                Owner
+              </span>
+              <select
+                name="ownerUserId"
+                defaultValue={milestone.ownerUserId}
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
+              >
+                {teamCandidates.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {publicName(u)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                Due date
+              </span>
+              <input
+                type="date"
+                name="dueAt"
+                defaultValue={milestone.dueAt.slice(0, 10)}
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
+              />
+            </label>
+            {milestone.status === "completed" && (
+              <label className="block">
+                <span className="text-[10px] uppercase tracking-wider text-ink-muted">
+                  Completed on
+                </span>
+                <input
+                  type="date"
+                  name="completedOn"
+                  defaultValue={milestone.completedAt?.slice(0, 10) ?? ""}
+                  max={new Date().toISOString().slice(0, 10)}
+                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
+                />
+              </label>
+            )}
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="submit"
+              className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
+            >
+              Save correction
+            </button>
+            <span className="text-[10px] text-ink-faint">
+              Recorded in the audit log, field by field. A past due date
+              is fine and usually right; the overdue sweep skips
+              completed rows.
+            </span>
+          </div>
+        </form>
+      </details>
     </Card>
   );
 }

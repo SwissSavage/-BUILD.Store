@@ -40,6 +40,7 @@ import { projectMilestones } from "@/db/schema";
 import { getAllProjects, getProjectById } from "@/lib/readers/projects";
 import { getMilestonesForProject, milestoneReader } from "@/lib/readers";
 import { getUserById } from "@/lib/readers/users";
+import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import {
   MILESTONE_DUE_SOON_DAYS,
   type MilestoneStatus,
@@ -54,6 +55,54 @@ const MILESTONE_STATUSES: ReadonlyArray<MilestoneStatus> = [
   "blocked",
   "completed",
 ];
+
+/**
+ * An admin-supplied date for something that already happened.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-27)
+ *
+ * Jamar, closing out the Advanced Welding engagement: "there's no way
+ * to correct the PM timeline retroactively, only operates in real
+ * time, which doesn't reflect an accurate record of events."
+ *
+ * updateMilestoneStatus set completedAt to the moment the button was
+ * pressed, with no alternative. So a milestone finished three weeks
+ * ago and ticked off today reads as finished today, and the tracker
+ * the client sees is a record of when somebody did the admin rather
+ * than when the work happened. The same applies to entering a whole
+ * finished project after the fact, which is the normal case for work
+ * that predates the app.
+ *
+ * WHY THE FUTURE IS REFUSED AND THE PAST IS NOT
+ *
+ * A completion date before the milestone row was created is not an
+ * error: entering history late is the main reason this exists. A date
+ * in the future is always wrong, because the thing has not happened
+ * yet, and it would also quietly suppress the overdue sweep.
+ * ─────────────────────────────────────────────────────────────
+ */
+function parseBackdate(
+  raw: FormDataEntryValue | null,
+  fallbackIso: string,
+): string {
+  const v = String(raw ?? "").trim();
+  if (!v) return fallbackIso;
+  // Accept YYYY-MM-DD or ISO. A bare date is read as UTC noon, same as
+  // parseDueAt, so a timezone cannot slide it onto the wrong day.
+  const d = new Date(v.length === 10 ? `${v}T12:00:00Z` : v);
+  if (Number.isNaN(d.getTime())) {
+    throw new Error("That completion date is not a date.");
+  }
+  // A minute of slack, so a clock skew between the browser and the
+  // server does not reject "today".
+  if (d.getTime() > Date.now() + 60_000) {
+    throw new Error(
+      "A completion date in the future means the work has not happened yet.",
+    );
+  }
+  return d.toISOString();
+}
 
 /* ------------------------------------------------------------------ */
 /*  Admin actions                                                      */
@@ -287,6 +336,117 @@ export async function sweepDeadlines() {
 /*  Owner / talent actions                                             */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Correct a milestone after the fact.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-27)
+ *
+ * There was no edit at all. Create, change status, ping, resolve a
+ * blocker, delete. So a due date typed wrong could only be fixed by
+ * deleting the row and making a new one, which throws away its
+ * history, its sequence and anything attached to it.
+ *
+ * Jamar hit the sharp end of that closing out Advanced Welding: a
+ * milestone was reading as two years overdue because of a wrong due
+ * date, and the only available fix was to move the date to today. That
+ * removes the false alarm by replacing a wrong record with a different
+ * wrong record, and the tracker is the thing the client sees.
+ *
+ * WHY THE DUE DATE CAN MOVE INTO THE PAST
+ *
+ * Because that is usually where it belongs. Work entered after it
+ * happened has real dates, and all of them are behind us. The overdue
+ * sweep already skips completed rows, so a true past due date on
+ * finished work raises nothing.
+ *
+ * WHY EVERY CHANGE IS AUDITED
+ *
+ * This is the one action that can make a late engagement look punctual.
+ * Correcting a typo and rewriting history are the same keystrokes, and
+ * the difference between them lives entirely in the intent, so the log
+ * records what each field was and what it became. Nobody is stopped
+ * from fixing their data; it just cannot be done invisibly.
+ *
+ * Admin only. The owner can move their own status, as before, but not
+ * rewrite the terms of their own milestone.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function editMilestone(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const row = await milestoneReader.byId(id);
+  if (!row) throw new Error("Milestone not found");
+
+  const title = String(formData.get("title") ?? "").trim();
+  if (title.length === 0) throw new Error("Title is required");
+  const description = String(formData.get("description") ?? "").trim() || null;
+
+  const ownerUserId = String(formData.get("ownerUserId") ?? "").trim();
+  if (!ownerUserId) throw new Error("Owner is required");
+  if (ownerUserId !== row.ownerUserId && !(await getUserById(ownerUserId))) {
+    throw new Error("Owner not found");
+  }
+
+  const dueAt = parseDueAt(formData.get("dueAt"));
+
+  // Only meaningful on a row that is already complete. Clearing the
+  // field on a completed milestone leaves the stored date alone rather
+  // than wiping it, since an empty box is far more likely to mean
+  // "not changing this" than "forget when it finished".
+  const completedAt =
+    row.status === "completed"
+      ? parseBackdate(formData.get("completedOn"), row.completedAt ?? dueAt)
+      : row.completedAt;
+
+  const changes: Record<string, { from: unknown; to: unknown }> = {};
+  const note = (field: string, from: unknown, to: unknown) => {
+    if (from !== to) changes[field] = { from, to };
+  };
+  note("title", row.title, title);
+  note("description", row.description, description);
+  note("ownerUserId", row.ownerUserId, ownerUserId);
+  note("dueAt", row.dueAt, dueAt);
+  note("completedAt", row.completedAt, completedAt);
+  if (Object.keys(changes).length === 0) return;
+
+  const updatedAt = new Date().toISOString();
+  await db
+    .update(projectMilestones)
+    .set({ title, description, ownerUserId, dueAt, completedAt, updatedAt })
+    .where(eq(projectMilestones.id, id));
+
+  await logAuditEvent({
+    actorUserId: admin.id,
+    actorRoleSnapshot: snapshotActorRole(admin),
+    action: "milestone.edited",
+    resourceKind: "milestone",
+    resourceId: id,
+    before: null,
+    after: { projectId: row.projectId, changes },
+    reason: `Corrected ${Object.keys(changes).join(", ")} on "${row.title}"`,
+  });
+
+  // The owner is told when the work or the deadline moved under them.
+  // Not for a typo in the description, which is noise.
+  const material = ["dueAt", "ownerUserId", "title"].some((f) => f in changes);
+  if (material) {
+    const project = await getProjectById(row.projectId);
+    await pushNotification({
+      userId: ownerUserId,
+      kind: "milestone_status_changed",
+      title: `Milestone updated: ${title}`,
+      body: `${project?.title ?? "A project"}. ${await ownerName(admin.id)} corrected ${Object.keys(changes).join(", ")}. Due ${dueAt.slice(0, 10)}.`,
+      href: `/projects/${row.projectId}`,
+    });
+  }
+
+  revalidatePath(`/admin/contracts/${row.projectId}/tracker`);
+  revalidatePath(`/contracts/${row.projectId}`);
+  revalidatePath(`/contracts/${row.projectId}/tracker`);
+  revalidatePath(`/projects/${row.projectId}`);
+}
+
 export async function updateMilestoneStatus(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) throw new Error("Sign in required");
@@ -318,7 +478,16 @@ export async function updateMilestoneStatus(formData: FormData) {
   let blockerNote = row.blockerNote;
 
   if (next === "completed") {
-    completedAt = updatedAt;
+    // #2026-10-27: was `completedAt = updatedAt` with no alternative,
+    // so a milestone finished three weeks ago and ticked off today
+    // read as finished today. completedOn lets an admin say when it
+    // actually landed. Admin only, deliberately: a contributor setting
+    // their own completion date backwards is how a late milestone
+    // quietly becomes an on-time one. updatedAt stays the real clock
+    // either way, so the row still records when the edit happened.
+    completedAt = user.isAdmin
+      ? parseBackdate(formData.get("completedOn"), updatedAt)
+      : updatedAt;
     blockerNote = null;
   } else if (next === "blocked") {
     blockerNote =

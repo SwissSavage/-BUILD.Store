@@ -18,9 +18,12 @@
  */
 import Link from "next/link";
 import type { Metadata } from "next";
+import { desc, eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { portfolioEntries } from "@/db/schema";
 import { getAllProjects } from "@/lib/readers/projects";
 import { safely } from "@/lib/readers";
-import { INDUSTRY_LABELS } from "@/lib/types";
+import { INDUSTRY_LABELS, type Project } from "@/lib/types";
 import { briefSummary } from "@/components/Brief";
 import { Card, CardEyebrow } from "@/components/Card";
 
@@ -45,20 +48,45 @@ export const metadata: Metadata = {
 };
 
 export default async function CaseStudiesIndex() {
-  const { projects: allProjects } = await safely(() => getAllProjects(), {
-    projects: [],
-    source: "postgres" as const,
-  });
-  const completed = allProjects.filter(
-    (p) =>
-      p.kind === "contract" &&
-      p.status === "completed" &&
-      p.rfpApprovedAt !== null,
-  ).sort((a, b) =>
-    (b.collectedAt ?? b.rfpApprovedAt ?? "").localeCompare(
-      a.collectedAt ?? a.rfpApprovedAt ?? "",
+  // ──────────────────────────────────────────────────────────────
+  // PUBLISHED ENTRIES, NOT COMPLETED CONTRACTS (2026-10-27)
+  //
+  // This filtered live projects on `status === "completed" &&
+  // rfpApprovedAt !== null`, which was wrong twice over.
+  //
+  // It auto-published: a client engagement became a public page the
+  // moment settlement wrote `completed`. Nobody decided to publish it,
+  // nobody wrote it up, and the client was never asked.
+  //
+  // And it excluded most of the work, because rfpApprovedAt is null on
+  // every directly composed engagement.
+  //
+  // Both are now decisions somebody makes on /admin/portfolio, and
+  // publishing requires recorded client consent. See
+  // drizzle/0040_portfolio_entries.sql.
+  // ──────────────────────────────────────────────────────────────
+  const [{ projects: allProjects }, entries] = await Promise.all([
+    safely(() => getAllProjects(), {
+      projects: [],
+      source: "postgres" as const,
+    }),
+    safely(
+      () =>
+        db
+          .select()
+          .from(portfolioEntries)
+          .where(eq(portfolioEntries.state, "published"))
+          .orderBy(desc(portfolioEntries.publishedAt)),
+      [],
     ),
-  );
+  ]);
+  const projectById = new Map(allProjects.map((p) => [p.id, p]));
+  const completed = entries
+    .map((e) => ({ entry: e, project: projectById.get(e.projectId) }))
+    .filter(
+      (row): row is { entry: (typeof entries)[number]; project: Project } =>
+        Boolean(row.project),
+    );
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
@@ -67,26 +95,25 @@ export default async function CaseStudiesIndex() {
         Completed contracts
       </h1>
       <p className="mt-3 text-lg text-ink-muted">
-        Work delivered through the cooperative. Client names stay
-        depersonalized until public delivery; contributors are credited
-        by first name only.
+        Work delivered by Future Modern, published with the client&apos;s
+        agreement. Contributors are credited by first name only.
       </p>
 
       {completed.length === 0 ? (
         <p className="mt-8 text-sm text-ink-muted">
-          No completed case studies yet.
+          Nothing published yet.
         </p>
       ) : (
         <div className="mt-8 grid gap-4">
-          {completed.map((p) => (
-            <Card key={p.id}>
+          {completed.map(({ entry, project }) => (
+            <Card key={entry.id}>
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-xs uppercase tracking-wider text-ink-muted">
-                  {INDUSTRY_LABELS[p.industry]}
+                  {INDUSTRY_LABELS[project.industry]}
                 </span>
                 <span className="text-[11px] text-ink-faint">
                   {new Date(
-                    p.collectedAt ?? p.rfpApprovedAt ?? p.createdAt,
+                    entry.publishedAt ?? entry.createdAt,
                   ).toLocaleDateString(undefined, {
                     year: "numeric",
                     month: "short",
@@ -94,17 +121,23 @@ export default async function CaseStudiesIndex() {
                 </span>
               </div>
               <Link
-                href={`/case-studies/${p.id}`}
+                href={`/case-studies/${project.id}`}
                 className="mt-2 block font-display text-2xl font-semibold hover:text-brand-magentaText"
               >
-                {p.title}
+                {/* The authored headline, not the project title. The
+                    title was written to run an RFP and often names the
+                    client outright. */}
+                {entry.headline}
               </Link>
               <p className="mt-2 line-clamp-3 text-sm text-ink-muted">
-                {briefSummary(p.description, { skipTitle: p.title })}
+                {entry.summary ??
+                  briefSummary(project.description, {
+                    skipTitle: project.title,
+                  })}
               </p>
-              {p.skillsRequired.length > 0 && (
+              {project.skillsRequired.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {p.skillsRequired.slice(0, 6).map((s) => (
+                  {project.skillsRequired.slice(0, 6).map((s) => (
                     <span
                       key={s}
                       className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-[10px] text-ink-muted"

@@ -33,6 +33,9 @@
  * ─────────────────────────────────────────────────────────────
  */
 import type { MetadataRoute } from "next";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/client";
+import { portfolioEntries } from "@/db/schema";
 import { getAllProjects } from "@/lib/readers/projects";
 import { getAllUsers } from "@/lib/readers/users";
 import { getOpenJobs, spotlightReader, safely } from "@/lib/readers";
@@ -159,17 +162,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * CreativeWork entries. datePublished stamped from collectedAt so
    * Google knows delivery timing.
    */
-  const caseStudyRoutes: MetadataRoute.Sitemap = projects
-    .filter(
-      (p) =>
-        p.kind === "contract" &&
-        p.status === "completed" &&
-        p.rfpApprovedAt !== null,
-    )
-    .map((p) => ({
-      url: `${SITE_URL}/case-studies/${p.id}`,
+  // 2026-10-27: was the same `completed && rfpApprovedAt` filter the
+  // index used, so the sitemap advertised a URL for every settled
+  // contract whether or not a case study existed at it. Submitting
+  // 404s to Google is its own problem, but the real one was handing
+  // search engines a list of client engagements nobody had agreed to
+  // publish. Published entries only, same as the page itself.
+  const publishedEntries = await safely(
+    () =>
+      db
+        .select({ projectId: portfolioEntries.projectId, publishedAt: portfolioEntries.publishedAt })
+        .from(portfolioEntries)
+        .where(eq(portfolioEntries.state, "published")),
+    [],
+  );
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+  const caseStudyRoutes: MetadataRoute.Sitemap = publishedEntries
+    .filter((e) => projectById.has(e.projectId))
+    .map((e) => ({
+      url: `${SITE_URL}/case-studies/${e.projectId}`,
       lastModified: new Date(
-        p.collectedAt ?? p.rfpApprovedAt ?? p.createdAt ?? now,
+        e.publishedAt ??
+          projectById.get(e.projectId)?.collectedAt ??
+          now,
       ),
       changeFrequency: "yearly" as const,
       priority: 0.7,

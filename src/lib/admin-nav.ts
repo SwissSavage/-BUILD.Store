@@ -95,6 +95,10 @@ export const ADMIN_NAV: AdminNavEntry[] = [
   { href: "/admin/projects", label: "Projects", group: "deals" },
   { href: "/admin/contracts", label: "Contract operations", group: "deals" },
   { href: "/admin/cooperative-quotes", label: "Cooperative quotes", group: "deals" },
+  // Where finished work gets written up, and where the decision to
+  // publish it gets made. In deals rather than a marketing group
+  // because it is the last stage of an engagement, not a campaign.
+  { href: "/admin/portfolio", label: "Portfolio", group: "deals" },
   { href: "/admin/jobs", label: "Jobs", group: "deals" },
   { href: "/admin/clients", label: "Client patterns", group: "deals" },
   { href: "/admin/partners", label: "Partners", group: "deals" },

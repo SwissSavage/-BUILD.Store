@@ -1313,6 +1313,71 @@ export const customerFeedbackTokens = pgTable("customer_feedback_tokens", {
  * somewhere other than here.
  * ─────────────────────────────────────────────────────────────
  */
+/**
+ * A finished engagement written up, and the opt-in that makes it
+ * public.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-27)
+ *
+ * /case-studies auto-published every completed contract that had an
+ * RFP behind it. Nobody opted in, nobody wrote it up, and the client
+ * was never asked. It also silently excluded every directly composed
+ * engagement, because those have no rfpApprovedAt.
+ *
+ * Entries are created by hand. Nothing lands here automatically, so
+ * the portfolio is what somebody decided to put in it.
+ *
+ * Publishing is a second, separate decision and it requires recorded
+ * client consent. See drizzle/0040_portfolio_entries.sql.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const portfolioEntries = pgTable("portfolio_entries", {
+  id: text("id").primaryKey(),
+  /** Unique: a second write-up of the same engagement is a mistake. */
+  projectId: text("project_id")
+    .notNull()
+    .unique()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  headline: text("headline").notNull(),
+  summary: text("summary"),
+  /** Curated. Not the raw engagement attachments, which are internal. */
+  citedWorks: jsonb("cited_works")
+    .$type<{ label: string; url?: string; note?: string }[]>()
+    .notNull()
+    .default([]),
+  state: text("state", { enum: ["portfolio", "published"] })
+    .notNull()
+    .default("portfolio"),
+  /**
+   * Consent to appear publicly. Who said yes, when, and how it was
+   * captured, because that is the question a year from now. The
+   * publish action refuses without it.
+   */
+  clientConsentAt: timestamp("client_consent_at", {
+    mode: "string",
+    withTimezone: true,
+  }),
+  clientConsentBy: text("client_consent_by"),
+  clientConsentNote: text("client_consent_note"),
+  /**
+   * Separate from consent to appear. A client can agree to the work
+   * being shown and still not want to be named, so the default is the
+   * depersonalized rendering.
+   */
+  clientMayBeNamed: boolean("client_may_be_named").notNull().default(false),
+  createdByUserId: text("created_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  publishedAt: timestamp("published_at", { mode: "string", withTimezone: true }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const projectTrackerTokens = pgTable("project_tracker_tokens", {
   id: text("id").primaryKey(),
   token: text("token").notNull().unique(),

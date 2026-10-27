@@ -4526,6 +4526,21 @@ export type AuditLogAction =
    * became.
    */
   | "milestone.edited"
+  /**
+   * Portfolio and the case-study opt-in.
+   *
+   * Consent is audited separately from publishing because they are
+   * different claims. "The client agreed" is a fact about a
+   * conversation; "it went live" is a fact about the website, and when
+   * a client asks why their project is on a public page the useful
+   * answer needs both.
+   */
+  | "portfolio.entry_created"
+  | "portfolio.entry_updated"
+  | "portfolio.client_consent_recorded"
+  | "portfolio.client_consent_revoked"
+  | "portfolio.published"
+  | "portfolio.unpublished"
   | "contract.bonus_released"
   | "contract.bonus_reclaimed"
   | "contract.revenue_split_recorded"
@@ -4663,6 +4678,12 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "contract.tracker_link_issued": "Client tracker link issued",
   "contract.tracker_link_revoked": "Client tracker link revoked",
   "milestone.edited": "Milestone corrected",
+  "portfolio.entry_created": "Added to portfolio",
+  "portfolio.entry_updated": "Portfolio write-up edited",
+  "portfolio.client_consent_recorded": "Client agreed to be shown publicly",
+  "portfolio.client_consent_revoked": "Client consent withdrawn",
+  "portfolio.published": "Published as a case study",
+  "portfolio.unpublished": "Case study taken down",
   "contract.bonus_released": "Bonus released",
   "contract.bonus_reclaimed": "Bonus reclaimed",
   "contract.revenue_split_recorded": "Revenue split recorded",

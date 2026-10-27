@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Sign-in page — email magic-link entry.
  *
@@ -86,13 +87,13 @@ export default async function SignInPage({
 
       <form action={signInWithGoogle} className="mt-8">
         <input type="hidden" name="next" value={next ?? "/dashboard"} />
-        <button
+        <Button
           type="submit"
           className="flex w-full items-center justify-center gap-3 rounded-full border border-[var(--surface-border)] bg-white py-3 text-base font-medium text-[#3c4043] transition-colors hover:bg-gray-50"
         >
           <GoogleG />
           Sign in with Google
-        </button>
+        </Button>
       </form>
 
       <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-wider text-ink-faint">
@@ -116,12 +117,12 @@ export default async function SignInPage({
             className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-3 text-base"
           />
         </label>
-        <button
+        <Button
           type="submit"
           className="fm-btn-primary w-full rounded-full py-3 text-base font-medium transition-colors"
         >
           Send magic link
-        </button>
+        </Button>
       </form>
 
       <p className="mt-8 text-xs text-ink-faint">

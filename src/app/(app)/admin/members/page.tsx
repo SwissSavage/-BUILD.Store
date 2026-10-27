@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: member list with view switcher.
  *
@@ -155,12 +156,12 @@ export default async function AdminMembersPage({
               </option>
             ))}
           </select>
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta"
           >
             Apply
-          </button>
+          </Button>
         </form>
       </div>
 
@@ -296,12 +297,12 @@ function FlatTable({
                   <td className="p-4">
                     <form action={toggleAdminFlag}>
                       <input type="hidden" name="uid" value={u.id} />
-                      <button
+                      <Button
                         type="submit"
                         className="text-xs text-brand-magentaText hover:underline"
                       >
                         {u.isAdmin ? "Revoke" : "Grant"}
-                      </button>
+                      </Button>
                     </form>
                   </td>
                 )}
@@ -322,12 +323,12 @@ function FlatTable({
                         </option>
                       ))}
                     </select>
-                    <button
+                    <Button
                       type="submit"
                       className="rounded-md border border-[var(--surface-border)] px-2 py-1 text-xs hover:border-brand-magenta"
                     >
                       Set
-                    </button>
+                    </Button>
                   </form>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                     <Link
@@ -392,12 +393,12 @@ function DmCompose({ user }: { user: User }) {
           placeholder="Lands in their /notifications inbox."
           className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-2 py-1 text-xs"
         />
-        <button
+        <Button
           type="submit"
           className="fm-btn-primary rounded-full px-3 py-1 text-[11px] font-medium"
         >
           Send
-        </button>
+        </Button>
       </form>
     </details>
   );

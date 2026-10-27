@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /invite/[code]/code — the illuminated codex.
  *
@@ -492,7 +493,7 @@ function ActivationForm({
         </span>
       </label>
 
-      <button
+      <Button
         type="submit"
         style={{
           display: "inline-block",
@@ -509,7 +510,7 @@ function ActivationForm({
         }}
       >
         Enter the room
-      </button>
+      </Button>
     </form>
   );
 }

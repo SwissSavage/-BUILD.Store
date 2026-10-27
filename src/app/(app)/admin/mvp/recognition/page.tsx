@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: Future Modernist recognition rail.
  *
@@ -212,12 +213,12 @@ export default async function AdminFutureModernistPage() {
                   <p className="mt-3 text-sm text-ink">{r.narrative}</p>
                   <form action={rescindFutureModernist} className="mt-3">
                     <input type="hidden" name="recognitionId" value={r.id} />
-                    <button
+                    <Button
                       type="submit"
                       className="text-[11px] text-brand-magentaText underline hover:opacity-80"
                     >
                       Rescind
-                    </button>
+                    </Button>
                   </form>
                 </Card>
               );
@@ -314,13 +315,13 @@ function SelectForm({
         />
       </label>
 
-      <button
+      <Button
         type="submit"
         className="rounded-full px-5 py-2 text-sm font-medium text-white"
         style={{ backgroundColor: periodKind === "year" ? "#007048" : "#D828A0" }}
       >
         Publish recognition
-      </button>
+      </Button>
     </form>
   );
 }

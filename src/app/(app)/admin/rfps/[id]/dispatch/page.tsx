@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/rfps/[id]/dispatch — one-click quote-request dispatch to
  * matched talent (task #36).
@@ -219,12 +220,12 @@ export default async function RfpDispatchPage({
               })}
             </ul>
 
-            <button
+            <Button
               type="submit"
               className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
             >
               Dispatch quote requests to selected
-            </button>
+            </Button>
             <p className="text-[11px] text-ink-faint">
               Each selected talent gets a notification with a direct
               link to the /contracts/{rfp.id} bid form. Debounced 24h
@@ -300,12 +301,12 @@ export default async function RfpDispatchPage({
             </label>
           </div>
 
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-brand-magenta px-5 py-2 text-sm font-medium text-brand-magentaText hover:bg-brand-magenta hover:text-black"
           >
             Generate invite for external talent
-          </button>
+          </Button>
           <p className="text-[11px] text-ink-faint">
             Grab the invite URL from{" "}
             <Link

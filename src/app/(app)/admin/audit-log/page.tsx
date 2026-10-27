@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/audit-log — reverse-chronological audit log viewer.
  *
@@ -177,12 +178,12 @@ export default async function AuditLogPage({
             </select>
           </label>
           <div className="flex items-end gap-2">
-            <button
+            <Button
               type="submit"
               className="fm-btn-primary rounded-full px-4 py-2 text-xs"
             >
               Apply
-            </button>
+            </Button>
             <Link
               href="/admin/audit-log"
               className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"

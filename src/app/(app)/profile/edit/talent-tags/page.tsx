@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /profile/edit/talent-tags — Talent tags.
  *
@@ -146,7 +147,7 @@ export default async function TalentTagsEditPage() {
             (user.talentTags ?? []).map((t) => (
               <form key={t} action={removeMyTalentTag}>
                 <input type="hidden" name="tag" value={t} />
-                <button
+                <Button
                   type="submit"
                   className="group rounded-full px-3 py-1 text-xs"
                   style={{
@@ -159,7 +160,7 @@ export default async function TalentTagsEditPage() {
                   <span className="opacity-0 transition-opacity group-hover:opacity-100">
                     ✕
                   </span>
-                </button>
+                </Button>
               </form>
             ))
           )}
@@ -174,21 +175,21 @@ export default async function TalentTagsEditPage() {
               className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-sm normal-case tracking-normal text-ink"
             />
           </label>
-          <button
+          <Button
             type="submit"
             className="fm-btn-primary rounded-full px-4 py-1.5 text-xs font-medium"
           >
             Append
-          </button>
+          </Button>
         </form>
 
         <form action={rescanMyTalentTags} className="mt-3">
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Rescan from bio + skills + portfolio
-          </button>
+          </Button>
         </form>
       </Card>
       </section>

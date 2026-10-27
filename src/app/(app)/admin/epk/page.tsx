@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: artist EPK approval queue.
  *
@@ -236,13 +237,13 @@ function PendingEpkRow({
       <div className="mt-6 flex flex-wrap items-start gap-3">
         <form action={approveEpk}>
           <input type="hidden" name="userId" value={epk.userId} />
-          <button
+          <Button
             type="submit"
             className="rounded-full px-5 py-2 text-xs font-medium text-white"
             style={{ backgroundColor: "#007048" }}
           >
             Approve and publish
-          </button>
+          </Button>
         </form>
 
         <form
@@ -261,12 +262,12 @@ function PendingEpkRow({
               className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-1.5 text-sm normal-case tracking-normal text-ink placeholder:text-ink-faint"
             />
           </label>
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Send back
-          </button>
+          </Button>
         </form>
       </div>
     </Card>

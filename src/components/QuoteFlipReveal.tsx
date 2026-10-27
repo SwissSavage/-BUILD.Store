@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Client quote reveal: cards flip in their original grid, then remain there
@@ -115,7 +116,7 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
     const name = publicName(member.user);
 
     return (
-      <button
+      <Button
         key={member.user.id}
         type="button"
         onClick={() => handleCardClick(member.user.id)}
@@ -155,7 +156,7 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
             </TradingCard3D>
           </div>
         </div>
-      </button>
+      </Button>
     );
   }
 
@@ -165,7 +166,7 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
         {renderCard(crew[activeIndex], activeIndex)}
         {crew.length > 1 && (
           <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Proposed builder navigation">
-            <button
+            <Button
               type="button"
               onClick={() => setActiveIndex((index) => Math.max(0, index - 1))}
               disabled={activeIndex === 0}
@@ -173,10 +174,10 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
               aria-label="Previous proposed builder"
             >
               <ChevronLeft aria-hidden="true" size={18} strokeWidth={1.75} />
-            </button>
+            </Button>
             <div className="flex items-center gap-2" aria-label={`Proposed builder ${activeIndex + 1} of ${crew.length}`}>
               {crew.map((member, index) => (
-                <button
+                <Button
                   key={member.user.id}
                   type="button"
                   onClick={() => setActiveIndex(index)}
@@ -191,7 +192,7 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
                 />
               ))}
             </div>
-            <button
+            <Button
               type="button"
               onClick={() => setActiveIndex((index) => Math.min(crew.length - 1, index + 1))}
               disabled={activeIndex === crew.length - 1}
@@ -199,7 +200,7 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
               aria-label="Next proposed builder"
             >
               <ChevronRight aria-hidden="true" size={18} strokeWidth={1.75} />
-            </button>
+            </Button>
           </nav>
         )}
       </div>
@@ -210,9 +211,9 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
 
       {!allFlipped && (
         <div className="mt-8 flex flex-col items-center gap-2">
-          <button type="button" onClick={flipAll} className="fm-btn-primary inline-flex items-center justify-center rounded-full px-8 py-3 font-medium shadow-lg shadow-brand-magenta/20 transition-colors">
+          <Button type="button" onClick={flipAll} className="fm-btn-primary inline-flex items-center justify-center rounded-full px-8 py-3 font-medium shadow-lg shadow-brand-magenta/20 transition-colors">
             {flippedIds.size === 0 ? "Reveal all →" : `Reveal remaining (${remaining}) →`}
-          </button>
+          </Button>
           <p className="text-[11px] uppercase tracking-[0.15em] text-ink-faint">Or reveal each card one at a time</p>
         </div>
       )}

@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Seller fulfillment dashboard (Phase 2.1 sandbox).
  *
@@ -191,12 +192,12 @@ export default async function SellerOrdersPage() {
                               >
                                 <input type="hidden" name="id" value={order.id} />
                                 <input type="hidden" name="status" value={target} />
-                                <button
+                                <Button
                                   type="submit"
                                   className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
                                 >
                                   → {ORDER_STATUS_LABELS[target]}
-                                </button>
+                                </Button>
                               </form>
                             ))}
                           </div>
@@ -223,12 +224,12 @@ export default async function SellerOrdersPage() {
                               name="internalNote"
                               value={order.internalNote ?? ""}
                             />
-                            <button
+                            <Button
                               type="submit"
                               className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
                             >
                               Save tracking
-                            </button>
+                            </Button>
                           </form>
                         )}
                       </Card>

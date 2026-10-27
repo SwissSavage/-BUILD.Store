@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Floating visitor chat widget.
@@ -188,14 +189,14 @@ export function ChatWidget() {
     <>
       {/* Floating launcher */}
       {!isOpen && (
-        <button
+        <Button
           type="button"
           onClick={() => setIsOpen(true)}
           aria-label="Open chat with the cooperative"
           className="fm-btn-primary fixed bottom-6 right-6 z-50 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium shadow-lg transition-opacity"
         >
           <span>Chat with us</span>
-        </button>
+        </Button>
       )}
 
       {/* Panel */}
@@ -218,14 +219,14 @@ export function ChatWidget() {
                   : "Drop us a line, get a real reply"}
               </div>
             </div>
-            <button
+            <Button
               type="button"
               onClick={() => setIsOpen(false)}
               aria-label="Close chat"
               className="rounded-full p-1 text-ink-faint hover:bg-[var(--surface-border)] hover:text-ink"
             >
               ✕
-            </button>
+            </Button>
           </header>
 
           {state.phase === "loading" && (
@@ -279,13 +280,13 @@ export function ChatWidget() {
               {error && (
                 <div className="text-xs text-brand-magentaText">{error}</div>
               )}
-              <button
+              <Button
                 type="submit"
                 disabled={pending}
                 className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-[var(--surface)] disabled:opacity-60"
               >
                 {pending ? "Sending…" : "Start the chat"}
-              </button>
+              </Button>
             </form>
           )}
 
@@ -332,13 +333,13 @@ export function ChatWidget() {
                       }
                     }}
                   />
-                  <button
+                  <Button
                     type="submit"
                     disabled={pending}
                     className="fm-btn-primary rounded-full px-3 py-2 text-xs font-medium disabled:opacity-60"
                   >
                     Send
-                  </button>
+                  </Button>
                 </div>
               </form>
             </>

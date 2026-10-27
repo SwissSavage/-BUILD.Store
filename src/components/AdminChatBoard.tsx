@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * Admin chat board — list of threads on the left, conversation pane
@@ -161,7 +162,7 @@ export function AdminChatBoard({
               (!t.adminLastReadAt || t.lastMessageAt > t.adminLastReadAt);
             return (
               <li key={t.id}>
-                <button
+                <Button
                   type="button"
                   onClick={() => setActiveThreadId(t.id)}
                   className={`flex w-full flex-col items-start gap-1 border-b border-[var(--surface-border)] px-4 py-3 text-left text-sm last:border-0 ${
@@ -188,7 +189,7 @@ export function AdminChatBoard({
                     {CHAT_THREAD_STATUS_LABELS[t.status]} ·{" "}
                     {relTime(t.lastMessageAt)}
                   </div>
-                </button>
+                </Button>
               </li>
             );
           })}
@@ -221,12 +222,12 @@ export function AdminChatBoard({
                       await closeChatThread(fd);
                     }}
                   >
-                    <button
+                    <Button
                       type="submit"
                       className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs hover:bg-[var(--surface-inset)]"
                     >
                       Close
-                    </button>
+                    </Button>
                   </form>
                 ) : (
                   <form
@@ -235,12 +236,12 @@ export function AdminChatBoard({
                       await reopenChatThread(fd);
                     }}
                   >
-                    <button
+                    <Button
                       type="submit"
                       className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs hover:bg-[var(--surface-inset)]"
                     >
                       Reopen
-                    </button>
+                    </Button>
                   </form>
                 )}
               </div>
@@ -281,13 +282,13 @@ export function AdminChatBoard({
                     }
                   }}
                 />
-                <button
+                <Button
                   type="submit"
                   disabled={pending}
                   className="fm-btn-primary rounded-full px-3 py-2 text-xs font-medium disabled:opacity-60"
                 >
                   Send
-                </button>
+                </Button>
               </div>
             </form>
           </>

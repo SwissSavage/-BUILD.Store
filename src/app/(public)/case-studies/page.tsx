@@ -43,7 +43,7 @@ const SITE_URL =
 export const metadata: Metadata = {
   title: "Case studies — Future Modern",
   description:
-    "Completed contracts delivered through the Future Modern cooperative. STEM, Creative Media, and Professional Services engagements.",
+    "Completed contracts delivered through Future Modern. STEM, Creative Media, and Professional Services engagements.",
   alternates: { canonical: `${SITE_URL}/case-studies` },
 };
 

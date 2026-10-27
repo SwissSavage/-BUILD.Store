@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin: project milestone tracker (PM surface).
  *
@@ -245,13 +246,13 @@ export default async function AdminTrackerPage({
             </p>
           </div>
           <form action={sweepDeadlines}>
-            <button
+            <Button
               type="submit"
               className="rounded-full px-5 py-2 text-sm font-medium text-white"
               style={{ backgroundColor: "#5070F0" }}
             >
               Run sweep
-            </button>
+            </Button>
           </form>
         </div>
       </Card>
@@ -270,12 +271,12 @@ export default async function AdminTrackerPage({
               </p>
               <form action={seedProjectWithTemplate} className="mt-4">
                 <input type="hidden" name="projectId" value={id} />
-                <button
+                <Button
                   type="submit"
                   className="rounded-full border border-brand-magenta px-4 py-1.5 text-xs font-medium text-brand-magentaText hover:bg-brand-magenta hover:text-black"
                 >
                   Seed with standard template
-                </button>
+                </Button>
                 <p className="mt-2 text-[11px] text-ink-faint">
                   All five land assigned to the first admin on the
                   project roster. Reassign owners + adjust due dates
@@ -354,12 +355,12 @@ export default async function AdminTrackerPage({
             />
           </label>
           <div className="md:col-span-2">
-            <button
+            <Button
               type="submit"
               className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium"
             >
               Create milestone
-            </button>
+            </Button>
           </div>
         </form>
       </Card>
@@ -472,40 +473,40 @@ function MilestoneRow({
             className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
           >
             Update
-          </button>
+          </Button>
         </form>
 
         <form action={pingMilestoneOwner}>
           <input type="hidden" name="id" value={milestone.id} />
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Ping owner
-          </button>
+          </Button>
         </form>
 
         {milestone.status === "blocked" && (
           <form action={resolveBlocker}>
             <input type="hidden" name="id" value={milestone.id} />
-            <button
+            <Button
               type="submit"
               className="rounded-full px-3 py-1.5 text-[11px] font-medium text-white"
               style={{ backgroundColor: "#007048" }}
             >
               Resolve blocker
-            </button>
+            </Button>
           </form>
         )}
 
         <form action={deleteMilestone}>
           <input type="hidden" name="id" value={milestone.id} />
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] text-brand-magentaText hover:bg-[var(--surface-inset)]"
           >
             Delete
-          </button>
+          </Button>
         </form>
       </div>
 

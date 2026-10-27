@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Payout methods (Phase 1.5, revised 2026-04-22 per the payments pivot).
  *
@@ -250,12 +251,12 @@ export default async function PayoutsPage() {
 
       {user.stripeAccountId && (
         <form action={disconnect} className="mt-6">
-          <button
+          <Button
             type="submit"
             className="text-xs text-ink-faint hover:text-[var(--brand-magenta,#D828A0)]"
           >
             Disconnect Stripe Connect account
-          </button>
+          </Button>
         </form>
       )}
     </div>
@@ -313,12 +314,12 @@ function NotConnected() {
           </li>
         </ul>
         <form action={startConnect} className="mt-5">
-          <button
+          <Button
             type="submit"
             className="rounded-full border border-[var(--surface-border)] px-6 py-2.5 text-sm font-medium hover:bg-[var(--surface-elevated)]"
           >
             Opt into Stripe Connect →
-          </button>
+          </Button>
         </form>
       </div>
     </div>

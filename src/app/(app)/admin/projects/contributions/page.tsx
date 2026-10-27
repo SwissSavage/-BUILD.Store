@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin queue for OUTSIDE-the-cooperative offers to contribute on a
  * specific internal project (Phase 2.8 sandbox).
@@ -242,16 +243,16 @@ function OpenRow({
         />
         <div className="flex flex-wrap gap-2">
           {row.status === "new" && (
-            <button
+            <Button
               type="submit"
               name="status"
               value="contacted"
               className="fm-btn-primary rounded-full px-4 py-2 text-sm font-medium"
             >
               Mark contacted
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="submit"
             name="status"
             value="converted"
@@ -259,15 +260,15 @@ function OpenRow({
             style={{ backgroundColor: "#007048" }}
           >
             Mark converted
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             name="status"
             value="dismissed"
             className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
           >
             Dismiss
-          </button>
+          </Button>
         </div>
       </form>
     </Card>

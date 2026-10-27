@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Task #63 — /admin/payments — payout rail operations console.
  *
@@ -207,12 +208,12 @@ export default async function AdminPaymentsPage() {
                       placeholder="Confirmation #"
                       className="w-40 rounded-lg border border-[var(--surface-border)] px-3 py-1.5 text-sm"
                     />
-                    <button
+                    <Button
                       type="submit"
                       className="rounded-lg bg-[var(--brand-magenta)] px-3 py-1.5 text-sm font-medium text-white"
                     >
                       Mark sent
-                    </button>
+                    </Button>
                   </form>
                 </li>
               );

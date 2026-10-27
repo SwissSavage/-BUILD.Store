@@ -12,6 +12,7 @@
  */
 "use client";
 
+import { Button } from "@/components/Button";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -48,13 +49,13 @@ export default function Error({
           </p>
         )}
         <div className="mt-6 flex flex-wrap gap-3">
-          <button
+          <Button
             type="button"
             onClick={reset}
             className="fm-btn-primary rounded-full px-5 py-2 text-sm"
           >
             Retry
-          </button>
+          </Button>
           <Link
             href="/"
             className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"

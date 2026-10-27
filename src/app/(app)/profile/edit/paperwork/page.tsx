@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /profile/edit/paperwork — Paperwork.
  *
@@ -156,22 +157,22 @@ export default async function PaperworkEditPage() {
           </span>
           {user.dataParticipation ? (
             <form action={optOutDataParticipation}>
-              <button
+              <Button
                 type="submit"
                 className="rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
               >
                 Opt out
-              </button>
+              </Button>
             </form>
           ) : (
             <form action={optInDataParticipation}>
-              <button
+              <Button
                 type="submit"
                 className="rounded-full px-4 py-1.5 text-xs font-medium text-white"
                 style={{ backgroundColor: "#5070F0" }}
               >
                 Opt in
-              </button>
+              </Button>
             </form>
           )}
         </div>
@@ -213,12 +214,12 @@ export default async function PaperworkEditPage() {
                 Once you complete signup, come back and confirm below.
               </p>
               <form action={claimDocumensoAccount} className="mt-3">
-                <button
+                <Button
                   type="submit"
                   className="rounded-full border border-brand-magenta px-4 py-1.5 text-xs font-medium text-brand-magentaText hover:bg-brand-magenta hover:text-black"
                 >
                   I've claimed my account
-                </button>
+                </Button>
               </form>
             </>
           ) : (

@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/Button";
 
 /**
  * ChatWidgetLoader — lazy shell for the visitor chat widget.
@@ -41,7 +42,7 @@ export function ChatWidgetLoader() {
   }
 
   return (
-    <button
+    <Button
       type="button"
       onClick={() => setOpened(true)}
       className="fm-btn-primary fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium shadow-lg shadow-brand-magenta/25 transition-colors"
@@ -52,6 +53,6 @@ export function ChatWidgetLoader() {
         className="inline-block h-2 w-2 rounded-full bg-brand-white"
       />
       Chat with us
-    </button>
+    </Button>
   );
 }

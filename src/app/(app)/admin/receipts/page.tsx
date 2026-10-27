@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /admin/receipts — Cooperative Receipt authoring + management.
  *
@@ -270,12 +271,12 @@ export default async function AdminReceiptsPage() {
             </div>
 
             <div className="flex justify-end">
-              <button
+              <Button
                 type="submit"
                 className="fm-btn-primary rounded-full px-5 py-2 text-sm font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
               >
                 Generate receipt
-              </button>
+              </Button>
             </div>
           </form>
         )}
@@ -350,12 +351,12 @@ export default async function AdminReceiptsPage() {
                           name="id"
                           value={receipt.id}
                         />
-                        <button
+                        <Button
                           type="submit"
                           className="text-xs text-ink-faint hover:text-brand-magentaText"
                         >
                           Remove
-                        </button>
+                        </Button>
                       </form>
                     </div>
                   </Card>

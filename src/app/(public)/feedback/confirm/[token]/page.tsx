@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /feedback/confirm/[token] — client-facing confirmation surface
  * for admin-captured feedback.
@@ -174,12 +175,12 @@ export default async function ClientFeedbackConfirmPage({
             </p>
             <form action={confirmClientFeedback} className="mt-4">
               <input type="hidden" name="token" value={token} />
-              <button
+              <Button
                 type="submit"
                 className="fm-btn-primary w-full rounded-full py-2.5 text-sm font-medium"
               >
                 Confirm rating
-              </button>
+              </Button>
             </form>
           </Card>
           <Card>
@@ -200,12 +201,12 @@ export default async function ClientFeedbackConfirmPage({
                 placeholder="What was wrong? (optional)"
                 className="w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-xs"
               />
-              <button
+              <Button
                 type="submit"
                 className="w-full rounded-full border border-brand-magenta py-2.5 text-sm font-medium text-brand-magentaText hover:bg-brand-magenta/5"
               >
                 Dispute
-              </button>
+              </Button>
             </form>
           </Card>
         </div>

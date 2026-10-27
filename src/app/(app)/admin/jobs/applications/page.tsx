@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin queue for member applications to public job postings
  * (task #42).
@@ -267,22 +268,22 @@ function ApplicationCard({
           className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-1.5 text-xs"
         />
         <div className="flex gap-2">
-          <button
+          <Button
             type="submit"
             name="decision"
             value="approved"
             className="rounded-full bg-[#007048] px-3 py-1.5 text-[11px] font-medium text-white hover:opacity-90"
           >
             Approve → route to client
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             name="decision"
             value="rejected"
             className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] hover:border-[#d84343] hover:text-[#d84343]"
           >
             Reject
-          </button>
+          </Button>
         </div>
       </form>
     </Card>

@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * /invite/[code]/sign — bridge page between the Letter and Documenso.
  *
@@ -101,7 +102,7 @@ export default async function InviteSignPage({
             : "You will be carried to the signing surface. Read the Letter of Intent, sign, and you will be returned to complete your account."}
         </p>
         <form action={proceed}>
-          <button
+          <Button
             type="submit"
             style={{
               display: "inline-block",
@@ -117,7 +118,7 @@ export default async function InviteSignPage({
             }}
           >
             Continue to the covenant
-          </button>
+          </Button>
         </form>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Admin per-member portfolio editor — the actual PII-scrub surface.
  *
@@ -314,13 +315,13 @@ export default async function AdminMemberPortfolioPage({
                       )}
 
                       <div className="flex flex-wrap gap-3">
-                        <button
+                        <Button
                           type="submit"
                           className="rounded-full px-5 py-2 text-sm font-medium text-white"
                           style={{ backgroundColor: "#007048" }}
                         >
                           {isPublished ? "Re-publish" : "Publish"}
-                        </button>
+                        </Button>
                       </div>
                     </form>
 
@@ -328,12 +329,12 @@ export default async function AdminMemberPortfolioPage({
                       <form action={unpublishItem} className="mt-3">
                         <input type="hidden" name="id" value={item.id} />
                         <input type="hidden" name="userId" value={user.id} />
-                        <button
+                        <Button
                           type="submit"
                           className="text-xs text-ink-muted hover:text-ink"
                         >
                           Unpublish
-                        </button>
+                        </Button>
                       </form>
                     )}
 
@@ -351,13 +352,13 @@ export default async function AdminMemberPortfolioPage({
                           className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                         />
                       </label>
-                      <button
+                      <Button
                         type="submit"
                         className="text-xs"
                         style={{ color: "var(--fm-red-text)" }}
                       >
                         Reject
-                      </button>
+                      </Button>
                     </form>
                   </div>
                 </div>

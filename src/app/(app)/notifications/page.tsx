@@ -1,3 +1,4 @@
+import { Button } from "@/components/Button";
 /**
  * Notifications inbox (Phase 2.4 sandbox).
  *
@@ -118,12 +119,12 @@ export default async function NotificationsPage() {
         </div>
         {unreadCount > 0 && (
           <form action={markAllNotificationsRead}>
-            <button
+            <Button
               type="submit"
               className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
             >
               Mark all read ({unreadCount})
-            </button>
+            </Button>
           </form>
         )}
       </div>
@@ -188,7 +189,7 @@ function NotificationRow({
     <form action={markNotificationRead}>
       <input type="hidden" name="id" value={n.id} />
       <input type="hidden" name="next" value={n.href} />
-      <button
+      <Button
         type="submit"
         className={`block w-full rounded-2xl border px-5 py-4 text-left transition-colors ${
           unread
@@ -219,7 +220,7 @@ function NotificationRow({
             {formatTime(n.createdAt)}
           </div>
         </div>
-      </button>
+      </Button>
     </form>
   );
 }

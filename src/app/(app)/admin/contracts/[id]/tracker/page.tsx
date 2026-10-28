@@ -473,7 +473,7 @@ function MilestoneRow({
             className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
           >
             Update
-          </Button>
+          </button>
         </form>
 
         <form action={pingMilestoneOwner}>

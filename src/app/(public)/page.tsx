@@ -239,11 +239,19 @@ function Process() {
           {steps.map((s) => (
             <div
               key={s.n}
-              className={`rounded-2xl border border-t-4 border-[var(--surface-border)] bg-[var(--surface)] p-6 ${accentClass[s.accent]}`}
+              className={`relative overflow-hidden rounded-2xl border border-t-4 border-[var(--surface-border)] bg-[var(--surface)] p-6 ${accentClass[s.accent]}`}
             >
-              <div className={`font-display text-3xl ${accentClass[s.accent].split(" ")[0]}`}>{s.n}</div>
-              <h3 className="mt-4 text-lg font-semibold text-ink">{s.title}</h3>
-              <p className="mt-2 text-sm text-ink-muted">{s.body}</p>
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -left-4 top-1/2 -translate-y-1/2 bg-gradient-to-br from-brand-magenta to-brand-blue bg-clip-text font-display text-[clamp(5rem,10vw,8.75rem)] font-bold leading-none text-transparent opacity-[0.12]"
+              >
+                {s.n}
+              </span>
+              <div className="relative z-10 pl-14">
+                <p className={`font-mono text-xs font-medium tracking-[0.05em] ${accentClass[s.accent].split(" ")[0]}`}>{s.n}</p>
+                <h3 className="mt-2 text-lg font-semibold text-ink">{s.title}</h3>
+                <p className="mt-2 text-sm text-ink-muted">{s.body}</p>
+              </div>
             </div>
           ))}
         </div>

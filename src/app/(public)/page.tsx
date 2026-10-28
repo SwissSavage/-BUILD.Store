@@ -249,8 +249,7 @@ function Process() {
                 {s.n}
               </span>
               <div className="relative z-10">
-                <p className={`font-mono text-xs font-medium tracking-[0.05em] ${accentClass[s.accent].split(" ")[0]}`}>{s.n}</p>
-                <h3 className="mt-2 text-lg font-semibold text-ink">{s.title}</h3>
+                <h3 className="text-lg font-semibold text-ink">{s.title}</h3>
                 <p className="mt-2 text-sm text-ink-muted">{s.body}</p>
               </div>
             </div>

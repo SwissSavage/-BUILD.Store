@@ -19,6 +19,8 @@
 import Link from "next/link";
 import { PostListingButton } from "@/components/PostListingButton";
 import { getAllProjects } from "@/lib/readers/projects";
+import { milestoneCountsByProject, safely } from "@/lib/readers";
+import { MilestoneProgress } from "@/components/MilestoneProgress";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { briefSummary } from "@/components/Brief";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
@@ -85,6 +87,14 @@ export default async function ContractsPage() {
       (b.engagementSentAt ?? "").localeCompare(a.engagementSentAt ?? ""),
     )
     .slice(0, 6);
+
+  // One aggregate query for every card on the page, after the slice so
+  // it only covers what actually renders. Counts only: no titles, no
+  // owners, no dates ever reach this surface.
+  const milestoneCounts = await safely(
+    () => milestoneCountsByProject(placed.map((p) => p.id)),
+    new Map<string, { completed: number; total: number }>(),
+  );
 
   return (
     <div className="mx-auto max-w-app px-6 py-12">
@@ -191,8 +201,28 @@ export default async function ContractsPage() {
                 <p className="mt-3 text-sm text-ink-muted">
                   {p.engagementState === "awaiting_talent"
                     ? "Assigned, pending the member's confirmation."
-                    : "In progress with a member of the cooperative."}
+                    : "In progress."}
                 </p>
+                {/* The bar, and only the bar.
+                    Jamar: "specifics should be hidden." MilestoneProgress
+                    takes a ratio and nothing else, so this card cannot
+                    leak a title, an owner or a date by accident. A
+                    project with no milestones renders nothing rather
+                    than an empty bar, because an empty bar on a public
+                    card reads as stalled work rather than unplanned
+                    work. */}
+                {(() => {
+                  const c = milestoneCounts.get(p.id);
+                  return c ? (
+                    <MilestoneProgress
+                      className="mt-4"
+                      completed={c.completed}
+                      total={c.total}
+                      label="Delivery"
+                      compact
+                    />
+                  ) : null;
+                })()}
                 </Card>
               </Link>
             ))}

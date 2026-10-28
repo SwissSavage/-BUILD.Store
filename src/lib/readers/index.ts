@@ -19,7 +19,7 @@
  * means the first person to try it sees their own data rather than
  * somebody's seed fixture.
  */
-import { and, desc, eq, gt, inArray, isNull, lt, not } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, lt, not, sql } from "drizzle-orm";
 import {
   agreements,
   artistEpks,
@@ -72,6 +72,9 @@ import {
   attributionEntries,
   tokenTransactions,
 } from "@/db/schema";
+// milestoneCountsByProject aggregates in SQL rather than through the
+// reader factory, so it needs the client directly.
+import { db } from "@/db/client";
 import { makeReader } from "./factory";
 import type {
   Agreement,
@@ -239,6 +242,50 @@ export function getMilestonesForOwner(
   userId: string,
 ): Promise<ProjectMilestone[]> {
   return milestoneReader.where(eq(projectMilestones.ownerUserId, userId));
+}
+
+/**
+ * Completed and total milestone counts, keyed by project.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY COUNTS AND NOT ROWS (2026-10-28)
+ *
+ * The public contracts board renders a progress bar on every placed
+ * card. Calling getMilestonesForProject once per card is a query per
+ * row on a page with no upper bound on rows, and it would pull every
+ * title, description and owner id across the network to render two
+ * integers on a page where none of that may be shown.
+ *
+ * Aggregating in SQL keeps it to one round trip and means the public
+ * surface never holds the detail in memory in the first place. A page
+ * that cannot leak what it never loaded.
+ *
+ * Projects with no milestones are absent from the map rather than
+ * present with zeroes, so a caller that forgets to check gets
+ * undefined rather than a bar sitting at 0%.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function milestoneCountsByProject(
+  projectIds: string[],
+): Promise<Map<string, { completed: number; total: number }>> {
+  const out = new Map<string, { completed: number; total: number }>();
+  const ids = Array.from(new Set(projectIds.filter(Boolean)));
+  if (ids.length === 0) return out;
+
+  const rows = await db
+    .select({
+      projectId: projectMilestones.projectId,
+      total: sql<number>`count(*)::int`,
+      completed: sql<number>`count(*) filter (where ${projectMilestones.status} = 'completed')::int`,
+    })
+    .from(projectMilestones)
+    .where(inArray(projectMilestones.projectId, ids))
+    .groupBy(projectMilestones.projectId);
+
+  for (const r of rows) {
+    out.set(r.projectId, { completed: r.completed, total: r.total });
+  }
+  return out;
 }
 
 // ──────────────────────────────────────────────────────────────

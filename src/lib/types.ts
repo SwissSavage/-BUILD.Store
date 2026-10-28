@@ -4527,6 +4527,12 @@ export type AuditLogAction =
    */
   | "milestone.edited"
   /**
+   * Admin owners set on a contract on its own, outside a full project
+   * edit. The 12% operations pool is allocated from that list at
+   * settlement, so changing it changes who gets paid.
+   */
+  | "project.owners_changed"
+  /**
    * Portfolio and the case-study opt-in.
    *
    * Consent is audited separately from publishing because they are
@@ -4678,6 +4684,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "contract.tracker_link_issued": "Client tracker link issued",
   "contract.tracker_link_revoked": "Client tracker link revoked",
   "milestone.edited": "Milestone corrected",
+  "project.owners_changed": "Contract owners changed",
   "portfolio.entry_created": "Added to portfolio",
   "portfolio.entry_updated": "Portfolio write-up edited",
   "portfolio.client_consent_recorded": "Client agreed to be shown publicly",

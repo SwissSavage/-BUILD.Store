@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 const pillars = [
   {
@@ -59,9 +60,11 @@ export function PillarExplorer() {
               onMouseEnter={() => setActiveId(pillar.id)}
               className={`group relative min-h-[26rem] overflow-hidden rounded-2xl border bg-[var(--surface-elevated)] transition-[flex-grow,filter] duration-500 ease-out motion-reduce:transition-none ${accent.border} ${isActive ? "md:flex-[1.65]" : "md:flex-1"}`}
             >
-              <img
+              <Image
                 src={pillar.image}
                 alt=""
+                fill
+                sizes="(min-width: 768px) 34vw, 100vw"
                 className={`absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out motion-reduce:transition-none ${isActive ? "scale-105" : "scale-100"}`}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/75 to-black/20" />

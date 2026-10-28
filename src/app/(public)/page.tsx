@@ -6,8 +6,10 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { ButtonLink } from "@/components/Button";
+import { PillarExplorer } from "@/components/PillarExplorer";
+import { ProcessExplorer } from "@/components/ProcessExplorer";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
+import { publicName } from "@/lib/types";
 import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
 import { servicePartnerReader, spotlightReader, safely } from "@/lib/readers";
@@ -216,63 +218,19 @@ function Hero() {
 }
 
 function Process() {
-  const steps = [
-    { n: "01", accent: "green",   title: "Tell us your project", body: "Submit your RFP and budget. Our automated matcher narrows the field within the zone of possible agreement." },
-    { n: "02", accent: "blue",    title: "Choose from 3–5 options", body: "Not a flood of resumes. A curated set of qualified member teams, skill-filtered to your project." },
-    { n: "03", accent: "magenta", title: "Pick your lead, stay in the loop", body: "Once awarded, the team runs delivery with DAO-style autonomy. You track milestones in real time." },
-    { n: "04", accent: "gold",    title: "Revenue settles, tokens flow", body: "When revenue is collected, cash splits and $BUILD tokens distribute automatically to the crew." },
-  ] as const;
-
-  const accentClass = {
-    magenta: "text-brand-magentaText border-t-brand-magenta",
-    blue:    "text-brand-blue border-t-brand-blue",
-    green:   "text-brand-green border-t-brand-green",
-    gold:    "text-brand-goldText border-t-brand-gold",
-  } as const;
-
   return (
     <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
       <div className="mx-auto max-w-app px-6 py-20">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Our process
         </h2>
-        <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {steps.map((s) => (
-            <div
-              key={s.n}
-              className={`relative overflow-hidden rounded-2xl border border-t-4 border-[var(--surface-border)] bg-[var(--surface)] p-6 ${accentClass[s.accent]}`}
-            >
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute -left-3 -top-5 bg-gradient-to-br from-brand-magenta to-brand-blue bg-clip-text font-display text-[clamp(5rem,10vw,8.75rem)] font-bold leading-none text-transparent opacity-[0.12]"
-              >
-                {s.n}
-              </span>
-              <div className="relative z-10">
-                <h3 className="text-lg font-semibold text-ink">{s.title}</h3>
-                <p className="mt-2 text-sm text-ink-muted">{s.body}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ProcessExplorer />
       </div>
     </section>
   );
 }
 
 function Pillars() {
-  const pillars: { key: Industry; blurb: string; accent: "blue" | "magenta" | "green" }[] = [
-    { key: "stem",                  accent: "blue",    blurb: "Full-stack, data, AI/ML, blockchain, cybersecurity, research." },
-    { key: "creative-media",        accent: "magenta", blurb: "Music, film, editorial, design, direction, post-production." },
-    { key: "professional-services", accent: "green",   blurb: "Strategy, legal, finance, operations, management consulting." },
-  ];
-
-  const styles = {
-    blue:    { ring: "hover:border-brand-blue",    text: "text-brand-blue",    dot: "bg-brand-blue" },
-    magenta: { ring: "hover:border-brand-magenta", text: "text-brand-magentaText", dot: "fm-btn-primary" },
-    green:   { ring: "hover:border-brand-green",   text: "text-brand-green",   dot: "bg-brand-green" },
-  } as const;
-
   return (
     <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
       <div className="mx-auto max-w-app px-6 py-20">
@@ -280,26 +238,7 @@ function Pillars() {
         <p className="mt-2 max-w-2xl text-ink-muted">
           Fortune 500-caliber builders across the industries we serve.
         </p>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {pillars.map((p) => {
-            const s = styles[p.accent];
-            return (
-              <div
-                key={p.key}
-                className={`rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6 transition-colors ${s.ring}`}
-              >
-                <div className={`flex items-center gap-2 text-xs uppercase tracking-wider ${s.text}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-                  Pillar
-                </div>
-                <h3 className="mt-2 font-display text-2xl font-semibold">
-                  {INDUSTRY_LABELS[p.key]}
-                </h3>
-                <p className="mt-3 text-sm text-ink-muted">{p.blurb}</p>
-              </div>
-            );
-          })}
-        </div>
+        <PillarExplorer />
       </div>
     </section>
   );

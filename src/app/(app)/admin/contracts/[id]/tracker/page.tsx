@@ -468,7 +468,7 @@ function MilestoneRow({
               className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-sm normal-case tracking-normal text-ink"
             />
           </label>
-          <button
+          <Button
             type="submit"
             className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-medium text-[var(--surface)] hover:bg-brand-magenta hover:text-black"
           >

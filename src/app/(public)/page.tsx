@@ -217,16 +217,17 @@ function Hero() {
 
 function Process() {
   const steps = [
-    { n: "01", accent: "magenta", title: "Tell us your project", body: "Submit your RFP and budget. Our automated matcher narrows the field within the zone of possible agreement." },
+    { n: "01", accent: "green",   title: "Tell us your project", body: "Submit your RFP and budget. Our automated matcher narrows the field within the zone of possible agreement." },
     { n: "02", accent: "blue",    title: "Choose from 3–5 options", body: "Not a flood of resumes. A curated set of qualified member teams, skill-filtered to your project." },
-    { n: "03", accent: "green",   title: "Pick your lead, stay in the loop", body: "Once awarded, the team runs delivery with DAO-style autonomy. You track milestones in real time." },
-    { n: "04", accent: "magenta", title: "Revenue settles, tokens flow", body: "When revenue is collected, cash splits and $BUILD tokens distribute automatically to the crew." },
+    { n: "03", accent: "magenta", title: "Pick your lead, stay in the loop", body: "Once awarded, the team runs delivery with DAO-style autonomy. You track milestones in real time." },
+    { n: "04", accent: "gold",    title: "Revenue settles, tokens flow", body: "When revenue is collected, cash splits and $BUILD tokens distribute automatically to the crew." },
   ] as const;
 
   const accentClass = {
     magenta: "text-brand-magentaText border-t-brand-magenta",
     blue:    "text-brand-blue border-t-brand-blue",
     green:   "text-brand-green border-t-brand-green",
+    gold:    "text-brand-goldText border-t-brand-gold",
   } as const;
 
   return (

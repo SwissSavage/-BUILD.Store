@@ -23,6 +23,7 @@ const config: Config = {
           magenta: "#D828A0", // right half of turtle shell, "FUTURE" type
           blue: "#5070F0",    // left half of turtle shell, "modern" type
           green: "#007048",   // turtle body + flippers
+          gold: "#D4AF37",    // Champion's Court + fourth process stage
           light: "#F5F5F5",
           mid: "#1A1A1A",
           white: "#FFFFFF",
@@ -46,6 +47,7 @@ const config: Config = {
           magentaText: "#E052B3", // 5.00 on card, 6.03 on black
           blueText: "#5B79F1",    // 4.52 on card, 5.45 on black
           greenText: "#2FD39B",   // lifted; canonical green is 2.83 on card
+          goldText: "#F5D16B",
           redText: "#EA6262",     // 5.32 on card
 
           // Gradient stops for the primary button. Lightened to 65% so

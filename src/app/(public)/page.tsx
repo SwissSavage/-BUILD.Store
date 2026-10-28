@@ -55,6 +55,34 @@ export default async function Home() {
   );
 }
 
+type HomepageTone = "hero" | "process" | "pillars" | "cohort" | "partners" | "faq";
+
+const HOMEPAGE_BACKGROUNDS: Record<HomepageTone, string> = {
+  hero:
+    "radial-gradient(70% 70% at 88% 14%, rgba(216, 40, 160, 0.20) 0%, transparent 62%), radial-gradient(68% 65% at 8% 88%, rgba(80, 112, 240, 0.20) 0%, transparent 64%), linear-gradient(145deg, #060509 0%, #030407 48%, #070407 100%)",
+  process:
+    "radial-gradient(70% 95% at -10% 42%, rgba(0, 112, 72, 0.18) 0%, transparent 66%), radial-gradient(60% 75% at 105% 5%, rgba(80, 112, 240, 0.18) 0%, transparent 64%), linear-gradient(125deg, #060908 0%, #07090d 54%, #08060b 100%)",
+  pillars:
+    "radial-gradient(70% 100% at 100% 44%, rgba(216, 40, 160, 0.14) 0%, transparent 67%), radial-gradient(66% 90% at -8% 78%, rgba(80, 112, 240, 0.15) 0%, transparent 67%), linear-gradient(150deg, #070609 0%, #040506 52%, #070609 100%)",
+  cohort:
+    "radial-gradient(75% 100% at 82% -20%, rgba(80, 112, 240, 0.18) 0%, transparent 66%), radial-gradient(58% 72% at 0% 100%, rgba(216, 40, 160, 0.13) 0%, transparent 66%), linear-gradient(130deg, #05070b 0%, #06060a 52%, #09060a 100%)",
+  partners:
+    "radial-gradient(74% 88% at 10% 20%, rgba(0, 112, 72, 0.17) 0%, transparent 67%), radial-gradient(48% 70% at 100% 100%, rgba(80, 112, 240, 0.12) 0%, transparent 66%), linear-gradient(145deg, #050806 0%, #070808 56%, #050608 100%)",
+  faq:
+    "radial-gradient(65% 85% at 100% 18%, rgba(216, 40, 160, 0.14) 0%, transparent 66%), radial-gradient(62% 82% at 0% 86%, rgba(0, 112, 72, 0.12) 0%, transparent 67%), linear-gradient(140deg, #080609 0%, #060607 50%, #060807 100%)",
+};
+
+/** Homepage-only section atmosphere; public route backgrounds remain unchanged. */
+function HomepageBackdrop({ tone }: { tone: HomepageTone }) {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0"
+      style={{ background: HOMEPAGE_BACKGROUNDS[tone] }}
+    />
+  );
+}
+
 /**
  * Contributor-affiliations trust-strip — anchors the bottom of the hero.
  *
@@ -122,16 +150,8 @@ function ContributorAffiliations() {
  */
 function Hero() {
   return (
-    <section className="relative flex min-h-[calc(100svh-68px)] flex-col overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      {/* Brand color wash — subtle magenta→blue gradient echoing the turtle shell. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.12]"
-        style={{
-          background:
-            "radial-gradient(60% 60% at 85% 20%, #D828A0 0%, transparent 60%), radial-gradient(50% 50% at 15% 80%, #5070F0 0%, transparent 60%)",
-        }}
-      />
+    <section className="relative flex min-h-[calc(100svh-68px)] flex-col overflow-hidden border-b border-[var(--surface-border)] bg-[#050508]">
+      <HomepageBackdrop tone="hero" />
       <div className="relative mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
         <div className="mb-6 inline-flex self-start items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-green">
           <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
@@ -219,8 +239,9 @@ function Hero() {
 
 function Process() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section className="relative isolate overflow-hidden border-b border-[var(--surface-border)] bg-[#07090b]">
+      <HomepageBackdrop tone="process" />
+      <div className="relative z-10 mx-auto max-w-app px-6 py-20">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Our process
         </h2>
@@ -232,8 +253,9 @@ function Process() {
 
 function Pillars() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section className="relative isolate overflow-hidden border-b border-[var(--surface-border)] bg-[#060608]">
+      <HomepageBackdrop tone="pillars" />
+      <div className="relative z-10 mx-auto max-w-app px-6 py-20">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">Three pillars</h2>
         <p className="mt-2 max-w-2xl text-ink-muted">
           Fortune 500-caliber builders across the industries we serve.
@@ -252,8 +274,9 @@ async function Partners() {
   if (partners.length === 0) return null;
 
   return (
-    <section className="fm-below-fold border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section className="fm-below-fold relative isolate overflow-hidden border-b border-[var(--surface-border)] bg-[#060807]">
+      <HomepageBackdrop tone="partners" />
+      <div className="relative z-10 mx-auto max-w-app px-6 py-20">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-display text-3xl font-semibold md:text-4xl">
@@ -339,11 +362,14 @@ function FaqSection() {
   ];
 
   return (
-    <Faq
-      eyebrow="Common questions"
-      heading="How Future Modern works"
-      items={items}
-    />
+    <div className="relative isolate overflow-hidden [&>section]:relative [&>section]:z-10 [&>section]:bg-transparent">
+      <HomepageBackdrop tone="faq" />
+      <Faq
+        eyebrow="Common questions"
+        heading="How Future Modern works"
+        items={items}
+      />
+    </div>
   );
 }
 
@@ -469,8 +495,9 @@ async function CohortRail() {
     const viewer = await safely(() => getCurrentUser(), null);
     if (!viewer?.isAdmin || totalRoster === 0) return null;
     return (
-      <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-        <div className="mx-auto max-w-app px-6 py-10">
+      <section className="relative isolate overflow-hidden border-b border-[var(--surface-border)] bg-[#06070a]">
+        <HomepageBackdrop tone="cohort" />
+        <div className="relative z-10 mx-auto max-w-app px-6 py-10">
           <div className="text-xs uppercase tracking-wider text-brand-blue">
             This month&apos;s cohort · admin only
           </div>
@@ -503,8 +530,9 @@ async function CohortRail() {
   };
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      <div className="mx-auto max-w-app px-6 py-16">
+    <section className="relative isolate overflow-hidden border-b border-[var(--surface-border)] bg-[#06070a]">
+      <HomepageBackdrop tone="cohort" />
+      <div className="relative z-10 mx-auto max-w-app px-6 py-16">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             {/* "Cohort" removed 2026-09-02. Jamar: "We don't say

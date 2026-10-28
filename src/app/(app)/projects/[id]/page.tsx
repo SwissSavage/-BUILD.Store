@@ -65,6 +65,7 @@ import { StructuredText } from "@/components/StructuredText";
 import { formatProposalHours } from "@/lib/proposal-terms";
 import { PeerReviewSection } from "@/components/PeerReviewSection";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
+import { MilestoneProgress } from "@/components/MilestoneProgress";
 import { TalentHand, type TalentHandEntry } from "@/components/TalentHand";
 import {
   deriveTradingCardTier,
@@ -822,6 +823,52 @@ async function ProjectMilestonesSection({
 
   const mine = milestones.filter((m) => m.ownerUserId === user.id);
   const isAdmin = user.isAdmin;
+
+  // ──────────────────────────────────────────────────────────────
+  // WHO SEES THE BOARD (2026-10-28)
+  //
+  // `onTeam` was destructured into this component, typed, and then
+  // never read. So <MilestoneTracker> rendered the entire engagement
+  // to any signed-in member who opened this page: every milestone
+  // title, description, due date and owner name, on any contract,
+  // whether or not they had anything to do with it. The status-update
+  // cards below were correctly limited to `mine`; the board above them
+  // was not limited to anything.
+  //
+  // Jamar's report was that talent could not see the PM surfaces. The
+  // truth was the reverse, and the reverse is the worse of the two.
+  //
+  // Admins and the people doing the work get the board. Everyone else
+  // signed in gets the ratio and nothing else, which is the same line
+  // the public cards draw: enough to see it is moving, nothing about
+  // what the work is or who is carrying it.
+  // ──────────────────────────────────────────────────────────────
+  const canSeeBoard = isAdmin || onTeam;
+  const completed = milestones.filter((m) => m.status === "completed").length;
+
+  if (!canSeeBoard) {
+    return (
+      <section className="space-y-4">
+        <div>
+          <CardEyebrow>Delivery cycle</CardEyebrow>
+          <h2 className="mt-1 font-display text-2xl font-semibold">
+            Progress
+          </h2>
+        </div>
+        <Card>
+          <MilestoneProgress
+            completed={completed}
+            total={milestones.length}
+            label="Milestones landed"
+          />
+          <p className="mt-3 text-xs text-ink-muted">
+            The milestone detail is visible to the people assigned to
+            this engagement and to admins.
+          </p>
+        </Card>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-4">

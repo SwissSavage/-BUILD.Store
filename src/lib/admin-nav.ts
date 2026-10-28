@@ -143,6 +143,9 @@ export const ADMIN_NAV: AdminNavEntry[] = [
  * slip past the guard script unnoticed.
  */
 export const ADMIN_DETAIL_ROUTES: string[] = [
+  // The engagement hub. Reached by clicking a contract rather than
+  // from a menu, and it is the entry point to the four below it.
+  "/admin/contracts/[id]",
   "/admin/contracts/[id]/attribution",
   "/admin/contracts/[id]/ledger",
   "/admin/contracts/[id]/settle",

@@ -245,6 +245,9 @@ function Process() {
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Our process
         </h2>
+        <p className="mt-2 max-w-2xl text-ink-muted">
+          From a clear brief to a recorded closeout.
+        </p>
         <ProcessExplorer />
       </div>
     </section>

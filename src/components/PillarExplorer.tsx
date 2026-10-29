@@ -77,7 +77,7 @@ export function PillarExplorer() {
                 <span className={`text-sm font-medium ${accent.text}`}>{pillar.title}</span>
                 <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/75">{pillar.blurb}</p>
                 <div
-                  className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-out motion-reduce:transition-none ${isActive ? "mt-5 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"}`}
+                  className={`mt-5 grid grid-rows-[1fr] opacity-100 md:transition-[grid-template-rows,opacity,margin] md:duration-300 md:ease-out motion-reduce:transition-none ${isActive ? "md:mt-5 md:grid-rows-[1fr] md:opacity-100" : "md:mt-0 md:grid-rows-[0fr] md:opacity-0"}`}
                 >
                   <ul className="overflow-hidden border-t border-white/20 pt-4 text-sm text-white/85">
                     {pillar.strengths.map((strength) => (

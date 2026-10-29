@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CircleDollarSign, FileText, ListChecks, Users } from "lucide-react";
 
 const stages = [
@@ -75,12 +75,45 @@ const accents = {
 
 export function ProcessExplorer() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isManuallyPaused, setIsManuallyPaused] = useState(false);
+  const [isInteracting, setIsInteracting] = useState(false);
   const active = stages[activeIndex];
   const accent = accents[active.accent];
   const Icon = active.Icon;
+  const isPaused = isManuallyPaused || isInteracting;
+
+  useEffect(() => {
+    if (isPaused) return;
+
+    const timer = window.setInterval(() => {
+      setActiveIndex((index) => (index + 1) % stages.length);
+    }, 7000);
+
+    return () => window.clearInterval(timer);
+  }, [isPaused]);
 
   return (
-    <div className="mt-10">
+    <div
+      className="mt-10"
+      onPointerEnter={() => setIsInteracting(true)}
+      onPointerLeave={() => setIsInteracting(false)}
+      onFocusCapture={() => setIsInteracting(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsInteracting(false);
+        }
+      }}
+    >
+      <div className="mb-4 flex justify-end">
+        <button
+          type="button"
+          aria-pressed={isManuallyPaused}
+          onClick={() => setIsManuallyPaused((paused) => !paused)}
+          className="rounded-[var(--control-radius)] border border-[var(--surface-border)] px-3 py-1.5 text-xs text-ink-muted transition-colors hover:border-brand-blue hover:text-ink"
+        >
+          {isManuallyPaused ? "Resume rotation" : "Pause rotation"}
+        </button>
+      </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" role="tablist" aria-label="How Future Modern works">
         {stages.map((stage, index) => {
           const isActive = index === activeIndex;

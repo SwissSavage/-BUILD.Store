@@ -91,6 +91,26 @@ const TIER_BG_CLASS: Record<TradingCardTier, string> = {
   champion: "fm-card-bg-champion",
 };
 
+// The tier surface has always coloured the background. This sits over the
+// portrait as well, so the tier stays readable when a photograph fills the
+// whole card rather than disappearing behind it.
+const TIER_PORTRAIT_OVERLAY: Record<TradingCardTier, string> = {
+  standard:
+    "linear-gradient(155deg, rgba(67, 72, 91, 0.28) 0%, rgba(13, 13, 13, 0) 58%)",
+  member:
+    "linear-gradient(155deg, rgba(199, 34, 138, 0.32) 0%, rgba(13, 13, 13, 0) 58%)",
+  probation:
+    "linear-gradient(155deg, rgba(102, 102, 102, 0.32) 0%, rgba(13, 13, 13, 0) 58%)",
+  good_standing:
+    "linear-gradient(155deg, rgba(0, 112, 72, 0.36) 0%, rgba(13, 13, 13, 0) 58%)",
+  promotion_eligible:
+    "linear-gradient(155deg, rgba(80, 112, 240, 0.36) 0%, rgba(13, 13, 13, 0) 58%)",
+  future_modernist:
+    "linear-gradient(155deg, rgba(216, 40, 160, 0.38) 0%, rgba(13, 13, 13, 0) 58%)",
+  champion:
+    "linear-gradient(155deg, rgba(212, 175, 55, 0.38) 0%, rgba(13, 13, 13, 0) 58%)",
+};
+
 /**
  * Tier accent, used for the initials wash and the rule under them.
  * Same hues as the borders, at full strength.
@@ -254,6 +274,12 @@ export function TradingCard({
           </span>
         </div>
       )}
+
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ background: TIER_PORTRAIT_OVERLAY[tier] }}
+        aria-hidden
+      />
 
       {/* FM logo watermark — top-right corner, faint.
 

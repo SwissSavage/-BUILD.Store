@@ -1,4 +1,5 @@
 import { TradingCard, type TradingCardTier } from "@/components/TradingCard";
+import type { MembershipTier } from "@/lib/types";
 import { CalendarDays } from "lucide-react";
 
 type CohortBuilder = {
@@ -8,6 +9,7 @@ type CohortBuilder = {
   label: string;
   joinedLabel: string;
   joinedAriaLabel: string;
+  membershipTier: MembershipTier;
   tier: TradingCardTier;
   user: {
     id: string;
@@ -21,23 +23,39 @@ type CohortBuilder = {
 
 type RailDirection = "left" | "right";
 
+const MEMBERSHIP_RAIL_MINIMUM = 20;
+
 /**
- * A complete, moving roster rather than a capped showcase. The newest half
- * travels on the top rail and the older half below it, so a builder never
- * appears in both visible rows at the same time.
+ * A complete, moving roster rather than a capped showcase. Before Future
+ * Modern has enough depth, the rails show the newest and earlier halves. Once
+ * both public Members and Partners reach twenty, they become separate rails.
  */
 export function CohortDeck({ builders }: { builders: CohortBuilder[] }) {
-  // `builders` arrives newest-first. Give an odd builder to the newest rail:
-  // recency remains obvious and every person belongs to exactly one track.
+  const members = builders.filter(
+    (builder) => builder.membershipTier === "member",
+  );
+  const partners = builders.filter(
+    (builder) => builder.membershipTier === "partner",
+  );
+  const hasSeparateMembershipRails =
+    members.length >= MEMBERSHIP_RAIL_MINIMUM &&
+    partners.length >= MEMBERSHIP_RAIL_MINIMUM;
+
+  // `builders` arrives newest-first. Give an odd builder to the newest rail
+  // until both membership groups are substantial enough to stand alone.
   const splitIndex = Math.ceil(builders.length / 2);
-  const newestBuilders = builders.slice(0, splitIndex);
-  const earlierBuilders = builders.slice(splitIndex);
+  const topBuilders = hasSeparateMembershipRails
+    ? partners
+    : builders.slice(0, splitIndex);
+  const bottomBuilders = hasSeparateMembershipRails
+    ? members
+    : builders.slice(splitIndex);
 
   return (
-    <div className="mt-10 space-y-6 overflow-hidden md:space-y-7">
-      <BuilderRail builders={newestBuilders} direction="right" />
-      {earlierBuilders.length > 0 && (
-        <BuilderRail builders={earlierBuilders} direction="left" />
+    <div className="mt-10 space-y-6 overflow-hidden py-2 md:space-y-7">
+      <BuilderRail builders={topBuilders} direction="right" />
+      {bottomBuilders.length > 0 && (
+        <BuilderRail builders={bottomBuilders} direction="left" />
       )}
     </div>
   );
@@ -53,7 +71,7 @@ function BuilderRail({
   const durationSeconds = Math.max(30, builders.length * 5);
 
   return (
-    <div className="cohort-builder-rail overflow-hidden">
+    <div className="cohort-builder-rail overflow-hidden py-2">
       <div
         className={`cohort-builder-track flex w-max ${
           direction === "right" ? "cohort-builder-track--right" : ""

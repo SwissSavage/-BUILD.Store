@@ -599,6 +599,7 @@ async function CohortRail() {
                 label: memberLabel(user),
                 joinedLabel: joined.compact,
                 joinedAriaLabel: joined.accessible,
+                membershipTier: user.membershipTier,
                 user: {
                   id: user.id,
                   firstName: user.firstName,

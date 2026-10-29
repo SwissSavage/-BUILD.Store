@@ -33,7 +33,12 @@ import {
 import { invoiceReader, splitReader, safely } from "@/lib/readers";
 import { getAllUsers } from "@/lib/readers/users";
 import { secureToken } from "@/lib/secure-token";
-import { invoiceLineTotals, type InvoiceLineItem } from "@/lib/types";
+import {
+  invoiceLineTotals,
+  PAYMENT_RAILS,
+  type InvoiceLineItem,
+  type PaymentRail,
+} from "@/lib/types";
 import { contractRatesForProject } from "@/lib/invoice-contract-rates";
 import { InvoiceLineBuilder } from "@/components/InvoiceLineBuilder";
 import { RESERVE_RECIPIENTS } from "@/lib/mock-data/splits";
@@ -129,7 +134,14 @@ async function markReceived(formData: FormData) {
 
   const id = String(formData.get("invoiceId") ?? "");
   const amount = Number(formData.get("amount") ?? 0);
-  const reference = String(formData.get("reference") ?? "");
+  const reference = String(formData.get("reference") ?? "").trim();
+  // Validated against the enum rather than trusted: this is a POST
+  // endpoint, and an unrecognised rail would fail at the database
+  // instead of here, after the paid amount had already been computed.
+  const railRaw = String(formData.get("paymentRail") ?? "").trim();
+  const rail = (PAYMENT_RAILS as readonly string[]).includes(railRaw)
+    ? (railRaw as PaymentRail)
+    : null;
   const inv = await invoiceReader.byId(id);
   if (!inv) throw new Error("Invoice not found");
   if (amount <= 0) throw new Error("Amount must be > 0");
@@ -147,8 +159,25 @@ async function markReceived(formData: FormData) {
     .set({
       paidAmount: newPaid.toFixed(2),
       paidAt: now,
+      // 2026-10-29. This used to read:
+      //
+      //   reference || inv.mercuryReference || `merc_${randomUUID()}`
+      //
+      // so leaving the field blank minted a Mercury-shaped transaction
+      // id that pointed at nothing, and nothing on screen said which
+      // references were real. The one field whose job is to point at
+      // the actual payment could hold a fiction.
+      //
+      // Blank now stays blank, and the rail is named, because the real
+      // invoices come out of Found rather than Mercury and the app had
+      // never heard of it. An unreferenced payment should look
+      // unreferenced.
+      externalReference: reference || inv.externalReference || null,
+      paymentRail: rail ?? inv.paymentRail ?? null,
+      // Kept in sync only while it holds a real Mercury reference, so
+      // the legacy column stops being the thing anybody reads.
       mercuryReference:
-        reference || inv.mercuryReference || `merc_${randomUUID()}`,
+        rail === "mercury" && reference ? reference : inv.mercuryReference,
       status: nextStatus,
       updatedAt: now,
     })
@@ -735,10 +764,25 @@ export default async function ContractLedgerPage({
                 className="w-28 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
                 placeholder="Amount"
               />
+              {/* The rail is named rather than assumed. Real invoices
+                  come out of Found; Mercury is the payout side. */}
+              <select
+                name="paymentRail"
+                defaultValue={invoice.paymentRail ?? "found"}
+                className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
+              >
+                <option value="found">Found</option>
+                <option value="mercury">Mercury</option>
+                <option value="check">Check</option>
+                <option value="zelle">Zelle</option>
+                <option value="stripe">Stripe</option>
+                <option value="other">Other</option>
+              </select>
               <input
                 name="reference"
-                placeholder="Mercury ref"
-                className="w-36 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
+                placeholder="Payment ref (optional)"
+                defaultValue={invoice.externalReference ?? ""}
+                className="w-40 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
               />
               <Button
                 type="submit"

@@ -55,6 +55,7 @@ import {
 import { requireAdmin } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
 import { getAllUsers } from "@/lib/readers/users";
+import { getRemittancesForContract } from "@/lib/readers/remittances";
 import { getMilestonesForProject, safely } from "@/lib/readers";
 import { setContractOwners } from "@/lib/contract-owner-actions";
 import { publicName } from "@/lib/types";
@@ -159,6 +160,7 @@ export default async function ContractHubPage({
     feedback,
     portfolio,
     milestones,
+    statements,
   ] = await Promise.all([
     safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
     safely(
@@ -203,6 +205,7 @@ export default async function ContractHubPage({
       [],
     ),
     safely(() => getMilestonesForProject(id), []),
+    safely(() => getRemittancesForContract(id), []),
   ]);
 
     // The 12% executive pool is a share of revenue, not a platform
@@ -228,6 +231,13 @@ export default async function ContractHubPage({
   const completedMilestones = milestones.filter(
     (m) => m.status === "completed",
   ).length;
+
+  // Self-billing, from the admin side. A statement nobody confirmed is
+  // the open end of a settlement, and a disputed one is somebody saying
+  // we got the money wrong. Both belong on the hub rather than only on
+  // the recipient's own payouts page.
+  const confirmed = statements.filter((r) => r.acknowledgedAt).length;
+  const disputed = statements.filter((r) => r.disputedAt);
 
   // The prerequisites, stated once. Everything below reads them rather
   // than re-deriving its own opinion of what blocks what.
@@ -386,6 +396,24 @@ export default async function ContractHubPage({
 
         <Stage
           n={7}
+          title="Payout statements"
+          done={statements.length > 0 && confirmed === statements.length}
+          blockedBy={isSettled ? undefined : ["settlement"]}
+          detail={
+            statements.length === 0
+              ? "Issued automatically by settlement, one per recipient, cash and $BUILD on the same document. Nobody invoices us."
+              : disputed.length > 0
+                ? `${disputed.length} disputed: ${disputed
+                    .map((r) => r.recipientLabel)
+                    .join(", ")}. Read the note on the recipient's statement and correct the allocation if they are right.`
+                : `${confirmed} of ${statements.length} confirmed by the recipient. The confirmation is the record an invoice would have been.`
+          }
+          href={`/admin/contracts/${project.id}/attribution`}
+          hrefLabel="Attribution"
+        />
+
+        <Stage
+          n={8}
           title="Client feedback"
           done={feedback.length > 0}
           detail={
@@ -398,7 +426,7 @@ export default async function ContractHubPage({
         />
 
         <Stage
-          n={8}
+          n={9}
           title="Portfolio"
           done={entry?.state === "published"}
           blockedBy={

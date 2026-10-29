@@ -54,7 +54,12 @@ import {
   disconnectPayouts,
 } from "@/lib/payouts-stub";
 import { listMyPayoutMethods } from "@/lib/payout-method-actions";
+import { getRemittancesForRecipient } from "@/lib/readers/remittances";
 import { PayoutMethodsCard } from "@/components/PayoutMethodsCard";
+import {
+  RemittanceStatements,
+  type StatementView,
+} from "@/components/RemittanceStatements";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
 const PAYOUT_COLOR: Record<PayoutStatus, string> = {
@@ -97,14 +102,36 @@ export default async function PayoutsPage() {
 
   // Reader swap 2026-08-29: was MOCK_SPLITS, so a contributor's payout
   // history showed seed rows rather than what they had actually earned.
-  const [rawPayouts, { projects }] = await Promise.all([
+  const [rawPayouts, { projects }, statementRows] = await Promise.all([
     safely(() => getSplitsForRecipient(user.id), []),
     safely(() => getAllProjects(), {
       projects: [],
       source: "postgres" as const,
     }),
+    // Task #107. The statement is the self-billing record; the split
+    // table below it is the engine's own view of the same money.
+    safely(() => getRemittancesForRecipient(user.id), []),
   ]);
   const projectById = new Map(projects.map((p) => [p.id, p]));
+
+  const statements: StatementView[] = statementRows.map((r) => ({
+    id: r.id,
+    // The statement's own basis block carries the title as it stood at
+    // issue; the live project is only a fallback for older rows.
+    contractTitle:
+      r.basis.find((b) => b.label === "Engagement")?.value ??
+      projectById.get(r.contractId)?.title ??
+      r.contractId,
+    pool: r.pool,
+    cashAmount: r.cashAmount,
+    voucherAmount: r.voucherAmount,
+    sharePct: r.sharePct,
+    basis: r.basis.filter((b) => b.label !== "Engagement"),
+    issuedAt: r.issuedAt,
+    acknowledgedAt: r.acknowledgedAt,
+    disputedAt: r.disputedAt,
+    disputeNote: r.disputeNote,
+  }));
 
   const myPayouts = [...rawPayouts].sort(
     (a, b) => {
@@ -156,6 +183,8 @@ export default async function PayoutsPage() {
           failedCount={failedCount}
         />
       )}
+
+      <RemittanceStatements statements={statements} />
 
       <PayoutMethodsCard methods={payoutMethods} />
 

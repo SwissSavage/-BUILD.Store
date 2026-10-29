@@ -47,26 +47,21 @@ export default async function Home() {
     <>
       <Hero />
       <div className="relative isolate overflow-hidden bg-[#06070a]">
-        <HomepageBackdrop tone="journey" />
-        <div className="relative z-10">
-          <Process />
-          <Pillars />
-          <CohortRail />
-          <Partners />
-          <FaqSection />
-        </div>
+        <Process />
+        <Pillars />
+        <CohortRail />
+        <Partners />
+        <FaqSection />
       </div>
     </>
   );
 }
 
-type HomepageTone = "hero" | "journey";
+type HomepageTone = "hero";
 
 const HOMEPAGE_BACKGROUNDS: Record<HomepageTone, string> = {
   hero:
     "radial-gradient(70% 70% at 88% 14%, rgba(216, 40, 160, 0.20) 0%, transparent 62%), radial-gradient(68% 65% at 8% 88%, rgba(80, 112, 240, 0.20) 0%, transparent 64%), linear-gradient(145deg, #060509 0%, #030407 48%, #070407 100%)",
-  journey:
-    "radial-gradient(100% 26% at 100% 0%, rgba(80, 112, 240, 0.16) 0%, transparent 68%), radial-gradient(85% 31% at 0% 44%, rgba(0, 112, 72, 0.13) 0%, transparent 68%), radial-gradient(90% 28% at 100% 82%, rgba(216, 40, 160, 0.11) 0%, transparent 68%), linear-gradient(160deg, #06070a 0%, #050609 48%, #060708 100%)",
 };
 
 /** Homepage-only section atmosphere; public route backgrounds remain unchanged. */

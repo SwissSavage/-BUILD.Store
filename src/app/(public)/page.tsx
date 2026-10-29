@@ -587,7 +587,7 @@ async function CohortRail() {
               href: `/u/${user.handle}`,
               name: publicName(user),
               label: memberLabel(user),
-              joinedLabel: monthLabel(user.createdAt) || "Recently joined",
+              joinedLabel: `Joined ${monthLabel(user.createdAt) || "recently"}`,
               user: {
                 id: user.id,
                 firstName: user.firstName,

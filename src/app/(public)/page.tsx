@@ -3,10 +3,10 @@
  * pillars, restyled against the codified Tailwind palette so the
  * whole app lives on one visual system.
  */
-import { Fragment } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ButtonLink } from "@/components/Button";
+import { CohortDeck } from "@/components/CohortDeck";
 import { PillarExplorer } from "@/components/PillarExplorer";
 import { ProcessExplorer } from "@/components/ProcessExplorer";
 import { getCurrentUser } from "@/lib/auth-stub";
@@ -19,10 +19,7 @@ import {
   publicProfileEligible,
 } from "@/lib/profile-visibility";
 import { periodKeyFor } from "@/lib/recognition-period";
-import {
-  TradingCard,
-  deriveTradingCardTier,
-} from "@/components/TradingCard";
+import { deriveTradingCardTier } from "@/components/TradingCard";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { Avatar } from "@/components/Avatar";
 import { PUBLIC_BOOKING_CTA, PUBLIC_BOOKING_URL } from "@/lib/public-booking";
@@ -582,76 +579,31 @@ async function CohortRail() {
           )}
         </div>
 
-        {/* ─────────────────────────────────────────────────────────
-            A RAIL, NOT A LIST (2026-09-02)
-
-            This was a stacked column beside the copy. At three people
-            it read fine; at eight it was a wall of rows, and it grows
-            every time someone joins. Jamar: "this section just throws
-            the profiles at you."
-
-            Horizontal scroll with snap points, so the page shows a few
-            and the reader moves through the rest at their own pace.
-            CSS only — no autoplay, no carousel library, no JS. A
-            rotating rail that moves on its own takes control away from
-            someone trying to read a name, and it cannot be paused by
-            anyone using a keyboard.
-
-            The card is the profile, so each one is the trading card
-            rather than an avatar in a row, and it links through.
-            ───────────────────────────────────────────────────────── */}
         {users.length > 0 && (
-          <div className="mt-10 -mx-6 overflow-x-auto px-6 pb-4 [scrollbar-width:thin] snap-x snap-mandatory">
-            <ul className="flex gap-6">
-              {users.map((user, i) => {
-                // A divider whenever the month changes, so scrolling
-                // past the current month lands you in the previous one
-                // with a label rather than an unexplained jump. The
-                // rail resets monthly at the head and keeps the history
-                // behind it in one continuous scroll.
-                const month = (user.createdAt ?? "").slice(0, 7);
-                const prevMonth =
-                  i === 0 ? null : (users[i - 1].createdAt ?? "").slice(0, 7);
-                const showDivider = i > 0 && month !== prevMonth;
-                return (
-                  <Fragment key={user.id}>
-                    {showDivider && (
-                      <li className="flex w-28 shrink-0 snap-start items-center justify-center border-l border-[var(--surface-border)] pl-4">
-                        <span className="text-xs uppercase tracking-wider text-ink-faint">
-                          {monthLabel(user.createdAt)}
-                        </span>
-                      </li>
-                    )}
-                    <li className="w-44 shrink-0 snap-start md:w-52">
-                  <Link href={`/u/${user.handle}`} className="group block">
-                    <TradingCard
-                      user={user}
-                      tier={deriveTradingCardTier({
-                        ovr: null,
-                        isProvisional: true,
-                        isInChampionsCourt: false,
-                        membershipTier: user.membershipTier,
-                      })}
-                      aspectRatio="3/4"
-                      className="transition-transform group-hover:-translate-y-1"
-                    />
-                    <div className="mt-3">
-                      <div className="truncate font-display text-base font-semibold">
-                        {publicName(user)}
-                      </div>
-                      {memberLabel(user) && (
-                        <div className="mt-0.5 truncate text-xs text-ink-muted">
-                          {memberLabel(user)}
-                        </div>
-                      )}
-                    </div>
-                      </Link>
-                    </li>
-                  </Fragment>
-                );
-              })}
-            </ul>
-          </div>
+          <CohortDeck
+            leadLabel={curated ? "Featured builder" : "Newest builder"}
+            builders={users.map((user) => ({
+              id: user.id,
+              href: `/u/${user.handle}`,
+              name: publicName(user),
+              label: memberLabel(user),
+              joinedLabel: monthLabel(user.createdAt) || "Recently joined",
+              user: {
+                id: user.id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                handle: user.handle,
+                profileImageUrl: user.profileImageUrl,
+                avatarPortraitUrl: user.avatarPortraitUrl,
+              },
+              tier: deriveTradingCardTier({
+                ovr: null,
+                isProvisional: true,
+                isInChampionsCourt: false,
+                membershipTier: user.membershipTier,
+              }),
+            }))}
+          />
         )}
         {users.length < totalRoster && (
           <AdminRosterNote shown={users.length} total={totalRoster} excluded={excluded} />

@@ -133,36 +133,6 @@ export function ProcessExplorer() {
         })}
       </div>
 
-      <div
-        className="relative mt-6 h-3"
-        role="progressbar"
-        aria-label={`Showing process stage ${activeIndex + 1} of ${stages.length}`}
-        aria-valuemin={1}
-        aria-valuemax={stages.length}
-        aria-valuenow={activeIndex + 1}
-      >
-        <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[var(--surface-border)]" />
-        <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 overflow-hidden">
-          <span
-            key={active.number}
-            className={`block h-full origin-left ${accent.marker}`}
-            style={{
-              animation: "process-stage-progress 7s linear forwards",
-              animationPlayState: isInteracting ? "paused" : "running",
-            }}
-          />
-        </div>
-        <div className="absolute inset-0 flex items-center justify-between">
-          {stages.map((stage, index) => (
-            <span
-              key={stage.number}
-              aria-hidden="true"
-              className={`h-2.5 w-2.5 rounded-full border border-[var(--surface)] transition-colors duration-300 ${index === activeIndex ? accents[stage.accent].marker : "bg-[var(--surface-border)]"}`}
-            />
-          ))}
-        </div>
-      </div>
-
       <section
         id="process-detail"
         role="tabpanel"
@@ -204,6 +174,23 @@ export function ProcessExplorer() {
               ))}
             </ul>
           </div>
+        </div>
+        <div
+          className="relative h-1 bg-[var(--surface-border)]"
+          role="progressbar"
+          aria-label={`Showing process stage ${activeIndex + 1} of ${stages.length}`}
+          aria-valuemin={1}
+          aria-valuemax={stages.length}
+          aria-valuenow={activeIndex + 1}
+        >
+          <span
+            key={active.number}
+            className={`block h-full origin-left ${accent.marker}`}
+            style={{
+              animation: "process-stage-progress 7s linear forwards",
+              animationPlayState: isInteracting ? "paused" : "running",
+            }}
+          />
         </div>
       </section>
 

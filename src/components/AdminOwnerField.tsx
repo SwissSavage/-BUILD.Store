@@ -11,7 +11,7 @@
  * adminUserIds was empty on everything that did not come through
  * composeEngagement or the contract poster, and empty is not cosmetic:
  *
- *   - the admin pool at settlement (80% of the commission, for project
+ *   - the executive pool at settlement (80% of the commission, for project
  *     managers and advisors) has no recipient
  *   - /api/engagements/[id]/attachments/[idx] checks adminUserIds for
  *     entitlement, so an admin who should be able to open a reference
@@ -40,10 +40,16 @@ export function AdminOwnerField({
   admins,
   selected,
   currentAdminId,
-  label = "Owning admin",
+  label = "Executive share",
   hint,
 }: {
-  /** Everyone flagged isAdmin. */
+  /**
+   * Anyone who can be put on the 12% executive pool. NOT the people
+   * flagged isAdmin, which is a platform permission and a different
+   * question entirely: Rob runs deals and is not an app administrator,
+   * so filtering on that flag made him impossible to attach to one.
+   * Members and partners, excluding viewers and suspended accounts.
+   */
   admins: User[];
   /** Already on the project. */
   selected: string[];

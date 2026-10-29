@@ -205,7 +205,14 @@ export default async function ContractHubPage({
     safely(() => getMilestonesForProject(id), []),
   ]);
 
-  const adminRoster = roster.filter((u) => u.isAdmin && !u.suspendedAt);
+    // The 12% executive pool is a share of revenue, not a platform
+  // permission. Filtering candidates by users.isAdmin conflated the
+  // two and meant partners who ran the deal could never be put on
+  // it: Rob is not flagged isAdmin, so he never appeared. Same list
+  // the settle page already offers, which had it right.
+  const adminRoster = roster.filter(
+    (u) => u.membershipTier !== "viewer" && !u.suspendedAt,
+  );
   const nameById = new Map(roster.map((u) => [u.id, publicName(u)]));
 
   const owners = project.adminUserIds ?? [];
@@ -277,12 +284,12 @@ export default async function ContractHubPage({
       <div className="mt-8 space-y-4">
         <Stage
           n={1}
-          title="Owners"
+          title="Executive share"
           done={hasOwners}
           detail={
             hasOwners
               ? owners.map((o) => nameById.get(o) ?? o).join(", ")
-              : "The 12% operations pool is allocated from this list at settlement. Empty means that share is written with no recipient."
+              : "The 12% executive pool splits evenly across this list at settlement. Anyone who ran the deal belongs here, whether or not they are an app administrator. Empty means that share is written with no recipient."
             }
         >
           {!isSettled && (
@@ -292,7 +299,7 @@ export default async function ContractHubPage({
                 admins={adminRoster}
                 selected={owners}
                 currentAdminId={viewer.id}
-                hint="Takes the admin share at settlement, can open reference files, and hears about overdue milestones."
+                hint="Splits the 12% evenly at settlement, can open reference files, and hears about overdue milestones. Members and partners, not just administrators."
               />
               <button
                 type="submit"

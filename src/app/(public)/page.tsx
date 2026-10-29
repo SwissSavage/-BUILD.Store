@@ -581,7 +581,6 @@ async function CohortRail() {
 
         {users.length > 0 && (
           <CohortDeck
-            leadLabel={curated ? "Featured builder" : "Newest builder"}
             builders={users.map((user) => ({
               id: user.id,
               href: `/u/${user.handle}`,

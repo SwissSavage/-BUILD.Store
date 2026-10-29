@@ -1,7 +1,4 @@
-import {
-  TradingCard,
-  type TradingCardTier,
-} from "@/components/TradingCard";
+import { TradingCard, type TradingCardTier } from "@/components/TradingCard";
 
 type CohortBuilder = {
   id: string;
@@ -20,50 +17,116 @@ type CohortBuilder = {
   };
 };
 
+type RailDirection = "left" | "right";
+
 /**
- * The homepage is a living joiner feed. It remains a complete roster rather
- * than a curated subset: newest builders lead and every eligible person has a
- * card in the same responsive layout.
+ * A complete, moving roster rather than a capped showcase. The two opposing
+ * tracks retain the newest-first source order and let the roster feel alive
+ * without turning the cards into a pager visitors have to operate.
  */
-export function CohortDeck({
+export function CohortDeck({ builders }: { builders: CohortBuilder[] }) {
+  const midpoint = Math.ceil(builders.length / 2);
+  const topBuilders = builders.slice(0, midpoint);
+  const bottomBuilders = builders.slice(midpoint);
+
+  return (
+    <div className="mt-10 space-y-6 overflow-hidden md:space-y-7">
+      <BuilderRail builders={topBuilders} direction="right" />
+      {bottomBuilders.length > 0 && (
+        <BuilderRail builders={bottomBuilders} direction="left" />
+      )}
+      <style jsx global>{`
+        @keyframes cohort-builder-scroll {
+          to {
+            transform: translate3d(-50%, 0, 0);
+          }
+        }
+
+        .cohort-builder-track {
+          animation: cohort-builder-scroll 36s linear infinite;
+          will-change: transform;
+        }
+
+        .cohort-builder-track--right {
+          animation-direction: reverse;
+        }
+
+        .cohort-builder-rail:hover .cohort-builder-track,
+        .cohort-builder-rail:focus-within .cohort-builder-track {
+          animation-play-state: paused;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .cohort-builder-track {
+            animation: none;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function BuilderRail({
   builders,
-  leadLabel,
+  direction,
 }: {
   builders: CohortBuilder[];
-  leadLabel: string;
+  direction: RailDirection;
+}) {
+  const durationSeconds = Math.max(30, builders.length * 5);
+
+  return (
+    <div className="cohort-builder-rail overflow-hidden">
+      <div
+        className={`cohort-builder-track flex w-max ${
+          direction === "right" ? "cohort-builder-track--right" : ""
+        }`}
+        style={{ animationDuration: `${durationSeconds}s` }}
+      >
+        <ul className="flex shrink-0 gap-4 pr-4 md:gap-5 md:pr-5">
+          {builders.map((builder) => (
+            <BuilderCard key={builder.id} builder={builder} />
+          ))}
+        </ul>
+        <ul
+          className="flex shrink-0 gap-4 pr-4 md:gap-5 md:pr-5"
+          aria-hidden="true"
+        >
+          {builders.map((builder) => (
+            <BuilderCard key={builder.id} builder={builder} repeated />
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function BuilderCard({
+  builder,
+  repeated = false,
+}: {
+  builder: CohortBuilder;
+  repeated?: boolean;
 }) {
   return (
-    <div className="mt-10">
-      <p className="mb-5 text-sm text-ink-muted">
-        {builders.length} {builders.length === 1 ? "builder" : "builders"} — newest first.
-      </p>
-
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 md:gap-5 lg:grid-cols-5 lg:gap-6">
-        {builders.map((builder, index) => (
-          <li
-            key={builder.id}
-            className={index === 0 ? "sm:col-span-1" : undefined}
-          >
-            <TradingCard
-              user={builder.user}
-              href={builder.href}
-              tier={builder.tier}
-              aspectRatio="3/4"
-              className="transition-transform duration-200 hover:-translate-y-1"
-            >
-              <div className="mt-auto">
-                <p className="text-xs font-medium uppercase tracking-wider text-white/70">
-                  {index === 0 ? leadLabel : builder.joinedLabel}
-                </p>
-                <h3 className="mt-1 font-display text-base font-semibold text-white sm:text-xl">
-                  {builder.name}
-                </h3>
-                <p className="mt-1 text-xs text-white/75 sm:text-sm">{builder.label}</p>
-              </div>
-            </TradingCard>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <li>
+      <TradingCard
+        user={builder.user}
+        href={repeated ? undefined : builder.href}
+        tier={builder.tier}
+        aspectRatio="3/4"
+        className="w-36 transition-transform duration-200 hover:-translate-y-1 sm:w-40 md:w-48 lg:w-52"
+      >
+        <div className="mt-auto">
+          <p className="text-[10px] font-medium text-white/65">
+            {builder.joinedLabel}
+          </p>
+          <h3 className="mt-1 font-display text-base font-semibold text-white sm:text-lg">
+            {builder.name}
+          </h3>
+          <p className="mt-1 truncate text-xs text-white/75">{builder.label}</p>
+        </div>
+      </TradingCard>
+    </li>
   );
 }

@@ -127,7 +127,14 @@ async function rejectRfp(formData: FormData) {
 export default async function AdminRfpQueuePage() {
   const viewer = await requireAdmin();
   const { users: roster } = await getAllUsers();
-  const adminRoster = roster.filter((u) => u.isAdmin && !u.suspendedAt);
+    // The 12% managed-ops pool is a share of revenue, not a platform
+  // permission. Filtering candidates by users.isAdmin conflated the
+  // two and meant partners who ran the deal could never be put on
+  // it: Rob is not flagged isAdmin, so he never appeared. Same list
+  // the settle page already offers, which had it right.
+  const adminRoster = roster.filter(
+    (u) => u.membershipTier !== "viewer" && !u.suspendedAt,
+  );
 
   const queue = await db
     .select()

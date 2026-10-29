@@ -40,7 +40,14 @@ export default async function EditProjectPage({
   if (!project) notFound();
 
   const { users: roster } = await getAllUsers();
-  const admins = roster.filter((u) => u.isAdmin && !u.suspendedAt);
+    // The 12% managed-ops pool is a share of revenue, not a platform
+  // permission. Filtering candidates by users.isAdmin conflated the
+  // two and meant partners who ran the deal could never be put on
+  // it: Rob is not flagged isAdmin, so he never appeared. Same list
+  // the settle page already offers, which had it right.
+  const admins = roster.filter(
+    (u) => u.membershipTier !== "viewer" && !u.suspendedAt,
+  );
 
   const backHref =
     project.kind === "contract" ? `/contracts/${id}` : `/projects/${id}`;

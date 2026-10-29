@@ -137,7 +137,7 @@ export default async function AttributionLedgerPage({
     totalContribWeight > 0 ? (weight / totalContribWeight) * 100 : 0;
 
   // Admin-role entries only nominate. Anyone logged here who is not on
-  // the contract's admin list will not be paid from the 12%.
+  // the contract's executive list will not be paid from the 12%.
   const onAdminList = new Set(project.adminUserIds ?? []);
   const nominatedNotOnList = adminEntries
     .map((e) => e.userId)
@@ -161,7 +161,7 @@ export default async function AttributionLedgerPage({
           Append-only record of who did what. Contributor roles divide
           the 85% pool in proportion to each other. Admin roles nominate
           people for the 12% pool, which splits evenly and is set by the
-          contract&apos;s admin list rather than here.
+          contract&apos;s executive list rather than here.
         </p>
       </header>
 
@@ -233,21 +233,21 @@ export default async function AttributionLedgerPage({
         )}
       </Card>
 
-      {/* The admin pool, stated plainly, because this page used to mix
+      {/* The executive pool, stated plainly, because this page used to mix
           it into the list above with a weight on it and pay none of
           that any attention at settlement. */}
       <Card className="mt-6">
-        <CardTitle>Admin pool &mdash; 12%</CardTitle>
+        <CardTitle>Executive pool &mdash; 12%</CardTitle>
         <p className="mt-1 text-xs text-ink-muted">
-          Splits evenly across everyone on the contract&apos;s admin
-          list. There is no weighting: being on the deal is the
+          Splits evenly across everyone on the contract&apos;s
+          executive list. There is no weighting: being on the deal is the
           qualification. Introducer and advisor entries below are
           nominations, and the weight on them is not used.
         </p>
 
         <div className="mt-4">
           <p className="text-[10px] uppercase tracking-wider text-ink-muted">
-            On the admin list &mdash; these are the people who get paid
+            On the executive list &mdash; these are the people who get paid
           </p>
           {onAdminList.size === 0 ? (
             <p className="mt-1 text-sm text-brand-magentaText">
@@ -268,7 +268,7 @@ export default async function AttributionLedgerPage({
             href={`/admin/contracts/${project.id}`}
             className="mt-2 inline-block text-xs text-brand-magentaText hover:underline"
           >
-            Change the admin list on the contract →
+            Change the executive list on the contract →
           </Link>
         </div>
 
@@ -286,7 +286,7 @@ export default async function AttributionLedgerPage({
                   </span>
                   {!onAdminList.has(e.userId) && (
                     <span className="ml-2 text-xs text-brand-magentaText">
-                      not on the admin list, will not be paid
+                      not on the executive list, will not be paid
                     </span>
                   )}
                 </li>
@@ -295,7 +295,7 @@ export default async function AttributionLedgerPage({
             {nominatedNotOnList.length > 0 && (
               <p className="mt-3 rounded-lg border border-brand-magenta/40 bg-brand-magenta/5 px-3 py-2 text-xs text-ink">
                 {nominatedNotOnList.length === 1 ? "One person is" : `${nominatedNotOnList.length} people are`}{" "}
-                nominated here but not on the admin list. Nominating
+                nominated here but not on the executive list. Nominating
                 somebody does not pay them.
               </p>
             )}

@@ -236,7 +236,7 @@ function Hero() {
 
 function Process() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-transparent">
+    <section className="bg-transparent">
       <div className="mx-auto max-w-app px-6 py-20">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Our process
@@ -252,7 +252,7 @@ function Process() {
 
 function Pillars() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-transparent">
+    <section className="bg-transparent">
       <div className="mx-auto max-w-app px-6 py-20">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">Three pillars</h2>
         <p className="mt-2 max-w-2xl text-ink-muted">
@@ -272,7 +272,7 @@ async function Partners() {
   if (partners.length === 0) return null;
 
   return (
-    <section className="fm-below-fold border-b border-[var(--surface-border)] bg-transparent">
+    <section className="fm-below-fold bg-transparent">
       <div className="mx-auto max-w-app px-6 py-20">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -359,7 +359,7 @@ function FaqSection() {
   ];
 
   return (
-    <div className="[&>section]:bg-transparent">
+    <div className="[&>section]:border-transparent [&>section]:bg-transparent">
       <Faq
         eyebrow="Common questions"
         heading="How Future Modern works"
@@ -491,7 +491,7 @@ async function CohortRail() {
     const viewer = await safely(() => getCurrentUser(), null);
     if (!viewer?.isAdmin || totalRoster === 0) return null;
     return (
-      <section className="border-b border-[var(--surface-border)] bg-transparent">
+      <section className="bg-transparent">
         <div className="mx-auto max-w-app px-6 py-10">
           <div className="text-xs uppercase tracking-wider text-brand-blue">
             This month&apos;s cohort · admin only
@@ -525,7 +525,7 @@ async function CohortRail() {
   };
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-transparent">
+    <section className="bg-transparent">
       <div className="mx-auto max-w-app px-6 py-16">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>

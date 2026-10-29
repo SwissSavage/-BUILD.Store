@@ -232,8 +232,16 @@ function ContractRow({
           <CardEyebrow>{INDUSTRY_LABELS[project.industry]}</CardEyebrow>
           {/* The title was plain text on a card full of links to
               sub-surfaces, so the one thing with no route out of it
-              was the contract itself. */}
-          <Link href={`/projects/${project.id}`}>
+              was the contract itself.
+
+              2026-10-29: it pointed at /projects/[id], the member
+              view, which is the wrong destination from an admin
+              operations board. It goes to the contract hub now, which
+              is the page that can actually say what this engagement
+              is waiting on. Without this the hub had no entry point
+              at all, which is how a surface ends up built and
+              unreachable. */}
+          <Link href={`/admin/contracts/${project.id}`}>
             <CardTitle className="mt-1 truncate hover:text-brand-magentaText">
               {project.title}
             </CardTitle>

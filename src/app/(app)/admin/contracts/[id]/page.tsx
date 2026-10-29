@@ -411,7 +411,28 @@ export default async function ContractHubPage({
         />
       </div>
 
-      <p className="mt-8 text-xs text-ink-faint">
+      {/* The full record, for the fields this page does not carry.
+          Linked from here because /admin/projects/[id]/edit was
+          reachable by typing the URL and no other way, which is how
+          the owner pool ended up invisible for months. */}
+      <div className="mt-8 flex flex-wrap items-center gap-4 text-xs">
+        <Link
+          href={`/admin/projects/${project.id}/edit`}
+          className="text-brand-magentaText hover:underline"
+        >
+          Edit the full record →
+        </Link>
+        <Link
+          href={`/contracts/${project.id}`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-ink-muted hover:text-ink"
+        >
+          Public contract page ↗
+        </Link>
+      </div>
+
+      <p className="mt-6 text-xs text-ink-faint">
         There is deliberately no settle button on this page. Settlement
         writes money and cannot be undone, so it happens on its own
         surface with the allocator in front of you.

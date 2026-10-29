@@ -10,6 +10,7 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { db } from "@/db/client";
 import { projects as projectsTable } from "@/db/schema";
 import { getAllProjects } from "@/lib/readers/projects";
+import { briefSummary } from "@/components/Brief";
 import { getAllApplications } from "@/lib/readers/project-applications";
 import { trashProject } from "@/lib/project-trash-actions";
 import { INDUSTRY_LABELS, type Project } from "@/lib/types";
@@ -127,15 +128,32 @@ export default async function AdminProjectsPage() {
                 <td className="p-4">
                   {/* The row had no way into the thing it describes.
                       Every admin list should be a route to the record,
-                      not a readout of it. */}
+                      not a readout of it.
+
+                      2026-10-29: it pointed at /projects/[id], the
+                      member view. For a contract the admin's home is
+                      the hub, which is the only surface that can say
+                      what the engagement is waiting on and the only
+                      route to attribution, the ledger, settlement and
+                      the owner pool. Internal initiatives have no hub,
+                      so those still go to the member page. */}
                   <Link
-                    href={`/projects/${p.id}`}
+                    href={
+                      p.kind === "contract"
+                        ? `/admin/contracts/${p.id}`
+                        : `/projects/${p.id}`
+                    }
                     className="font-medium hover:text-brand-magentaText"
                   >
                     {p.title}
                   </Link>
                   <div className="text-xs text-ink-muted line-clamp-1">
-                    {p.description}
+                    {/* Was {p.description}, which rendered the raw
+                        rich-text value, so a brief authored in the
+                        editor showed as tiptap:{"type":"doc"...} in
+                        the list. briefSummary falls back to the plain
+                        string when the value is not rich text. */}
+                    {briefSummary(p.description, { skipTitle: p.title })}
                   </div>
                 </td>
                 <td className="p-4 text-ink-muted">

@@ -72,7 +72,7 @@ export function PillarExplorer() {
                 type="button"
                 aria-pressed={isActive}
                 onClick={() => setActiveId(pillar.id)}
-                className="relative flex h-full w-full flex-col justify-end p-6 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-brand-blue"
+                className="relative flex min-h-[26rem] w-full flex-col justify-end p-6 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-brand-blue"
               >
                 <span className={`text-sm font-medium ${accent.text}`}>{pillar.title}</span>
                 <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/75">{pillar.blurb}</p>

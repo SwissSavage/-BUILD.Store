@@ -1,4 +1,5 @@
 import { TradingCard, type TradingCardTier } from "@/components/TradingCard";
+import { CalendarDays } from "lucide-react";
 
 type CohortBuilder = {
   id: string;
@@ -6,6 +7,7 @@ type CohortBuilder = {
   name: string;
   label: string;
   joinedLabel: string;
+  joinedAriaLabel: string;
   tier: TradingCardTier;
   user: {
     id: string;
@@ -20,15 +22,23 @@ type CohortBuilder = {
 type RailDirection = "left" | "right";
 
 /**
- * A complete, moving roster rather than a capped showcase. The two opposing
- * tracks retain the newest-first source order and let the roster feel alive
- * without turning the cards into a pager visitors have to operate.
+ * A complete, moving roster rather than a capped showcase. The newest half
+ * travels on the top rail and the older half below it, so a builder never
+ * appears in both visible rows at the same time.
  */
 export function CohortDeck({ builders }: { builders: CohortBuilder[] }) {
+  // `builders` arrives newest-first. Give an odd builder to the newest rail:
+  // recency remains obvious and every person belongs to exactly one track.
+  const splitIndex = Math.ceil(builders.length / 2);
+  const newestBuilders = builders.slice(0, splitIndex);
+  const earlierBuilders = builders.slice(splitIndex);
+
   return (
     <div className="mt-10 space-y-6 overflow-hidden md:space-y-7">
-      <BuilderRail builders={builders} direction="right" />
-      <BuilderRail builders={builders} direction="left" />
+      <BuilderRail builders={newestBuilders} direction="right" />
+      {earlierBuilders.length > 0 && (
+        <BuilderRail builders={earlierBuilders} direction="left" />
+      )}
     </div>
   );
 }
@@ -85,8 +95,10 @@ function BuilderCard({
         className="w-36 transition-transform duration-200 hover:-translate-y-1 sm:w-40 md:w-48 lg:w-52"
       >
         <div className="mt-auto">
-          <p className="text-[10px] font-medium text-white/65">
-            {builder.joinedLabel}
+          <p className="flex items-center gap-1 text-[10px] font-medium text-white/65">
+            <CalendarDays aria-hidden="true" size={12} strokeWidth={1.75} />
+            <span aria-hidden="true">{builder.joinedLabel}</span>
+            <span className="sr-only">{builder.joinedAriaLabel}</span>
           </p>
           <h3 className="mt-1 font-display text-base font-semibold text-white sm:text-lg">
             {builder.name}

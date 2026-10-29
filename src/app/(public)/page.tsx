@@ -411,16 +411,31 @@ function FaqSection() {
  * growing rather than as a list that stopped.
  */
 /**
- * "September 2026" from an ISO timestamp, for the rail's month
- * dividers. Scrolling past the current month should land somewhere
- * labelled rather than in an unexplained continuation.
+ * A compact date for the roster card and an explicit version for screen
+ * readers. The visible label stays quiet; the accessible label retains the
+ * fact that it is a join date.
  */
-function monthLabel(iso: string | null | undefined): string {
-  if (!iso) return "";
+function joinDateLabel(iso: string | null | undefined): {
+  compact: string;
+  accessible: string;
+} {
+  if (!iso) return { compact: "Recent", accessible: "Joined recently" };
   const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? ""
-    : d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  if (Number.isNaN(d.getTime())) {
+    return { compact: "Recent", accessible: "Joined recently" };
+  }
+
+  return {
+    compact: d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
+    accessible: `Joined ${d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    })}`,
+  };
 }
 
 async function CohortRail() {
@@ -457,22 +472,13 @@ async function CohortRail() {
     // continuous scroll rather than being hidden behind a link.
     .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
 
-  // Curated picks lead, then everyone else who joined, in join order.
-  // CURATION ADDS, IT NEVER SUBTRACTS. Highlighting one person must not
-  // delete the other six from the feed.
-  const pinned = (curated?.userIds ?? [])
-    .map((id) => roster.find((u) => u.id === id))
-    .filter((u): u is (typeof roster)[number] => !!u)
-    .filter((u) => publicProfileEligible(u, recognizedIds));
-
-  const ordered = [
-    ...pinned,
-    ...eligible.filter((u) => !pinned.some((p) => p.id === u.id)),
-  ];
-  // No cap. Capping produced a "+N more" card that hid the people it
-  // was counting, on the one section whose job is to show that people
-  // are joining.
-  const users = ordered;
+  // The two rails are divided into newest and earlier joiners in CohortDeck,
+  // so keep this source list strictly chronological. A curated spotlight can
+  // shape the section copy, but must not move an older builder into the newer
+  // rail or create a duplicate across both tracks.
+  // No cap. Capping produced a "+N more" card that hid the people it was
+  // counting, on the one section whose job is to show that people are joining.
+  const users = eligible;
   const thisMonthKey = thisPeriod.key;
   const joinedThisMonth = users.filter((u) =>
     (u.createdAt ?? "").startsWith(thisMonthKey),
@@ -583,27 +589,32 @@ async function CohortRail() {
 
         {users.length > 0 && (
           <CohortDeck
-            builders={users.map((user) => ({
-              id: user.id,
-              href: `/u/${user.handle}`,
-              name: publicName(user),
-              label: memberLabel(user),
-              joinedLabel: `Joined ${monthLabel(user.createdAt) || "recently"}`,
-              user: {
+            builders={users.map((user) => {
+              const joined = joinDateLabel(user.createdAt);
+
+              return {
                 id: user.id,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                handle: user.handle,
-                profileImageUrl: user.profileImageUrl,
-                avatarPortraitUrl: user.avatarPortraitUrl,
-              },
-              tier: deriveTradingCardTier({
-                ovr: null,
-                isProvisional: true,
-                isInChampionsCourt: false,
-                membershipTier: user.membershipTier,
-              }),
-            }))}
+                href: `/u/${user.handle}`,
+                name: publicName(user),
+                label: memberLabel(user),
+                joinedLabel: joined.compact,
+                joinedAriaLabel: joined.accessible,
+                user: {
+                  id: user.id,
+                  firstName: user.firstName,
+                  lastName: user.lastName,
+                  handle: user.handle,
+                  profileImageUrl: user.profileImageUrl,
+                  avatarPortraitUrl: user.avatarPortraitUrl,
+                },
+                tier: deriveTradingCardTier({
+                  ovr: null,
+                  isProvisional: true,
+                  isInChampionsCourt: false,
+                  membershipTier: user.membershipTier,
+                }),
+              };
+            })}
           />
         )}
         {users.length < totalRoster && (

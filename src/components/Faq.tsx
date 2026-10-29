@@ -57,23 +57,35 @@ export function Faq({
     })),
   };
 
+  const faqContent = (
+    <>
+      <CardEyebrow>{eyebrow}</CardEyebrow>
+      <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
+        {heading}
+      </h2>
+      <FaqAccordion items={items} />
+    </>
+  );
+
   return (
     <section className="border-t border-[var(--surface-border)] bg-[var(--surface)]">
       <div
         className={`mx-auto px-6 py-20 ${
           aside
-            ? "grid max-w-app gap-10 lg:grid-cols-2 lg:gap-12"
+            ? "max-w-app"
             : "max-w-3xl"
         }`}
       >
-        <div>
-          <CardEyebrow>{eyebrow}</CardEyebrow>
-          <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
-            {heading}
-          </h2>
-          <FaqAccordion items={items} />
-        </div>
-        {aside && <aside className="lg:pt-1">{aside}</aside>}
+        {aside ? (
+          <div className="grid overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-inset)] lg:grid-cols-2">
+            <div className="p-6 md:p-8">{faqContent}</div>
+            <aside className="border-t border-[var(--surface-border)] p-6 md:p-8 lg:border-l lg:border-t-0">
+              {aside}
+            </aside>
+          </div>
+        ) : (
+          faqContent
+        )}
       </div>
 
       {/* FAQPage JSON-LD — Google renders these as expandable Q&A in

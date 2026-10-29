@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { CardEyebrow } from "@/components/Card";
 import { SubmitButton } from "@/components/SubmitButton";
 import {
   initialHomepageQuestionState,
@@ -20,14 +21,17 @@ export function HomepageQuestionForm() {
   return (
     <form
       action={formAction}
-      className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
+      className="flex h-full flex-col"
     >
-      <h3 className="font-display text-xl font-semibold">Ask a question</h3>
-      <p className="mt-2 text-sm text-ink-muted">
+      <CardEyebrow>Contact</CardEyebrow>
+      <h3 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
+        Ask a question
+      </h3>
+      <p className="mt-3 text-sm text-ink-muted">
         Didn&apos;t find what you needed? Send it directly to the team.
       </p>
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-8 space-y-4">
         <label className="block text-sm font-medium text-ink">
           Name
           <input
@@ -79,9 +83,9 @@ export function HomepageQuestionForm() {
         </p>
       )}
 
-      <SubmitButton className="mt-6" pendingLabel="Sending question…">
-        Send question
-      </SubmitButton>
+      <div className="mt-auto pt-6">
+        <SubmitButton pendingLabel="Sending question…">Send question</SubmitButton>
+      </div>
     </form>
   );
 }

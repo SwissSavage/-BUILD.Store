@@ -4,6 +4,7 @@
  * whole app lives on one visual system.
  */
 import { Fragment } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ButtonLink } from "@/components/Button";
 import { PillarExplorer } from "@/components/PillarExplorer";
@@ -47,8 +48,24 @@ export default async function Home() {
     <>
       <Hero />
       <div className="relative isolate overflow-hidden bg-[#06070a]">
-        <Process />
-        <Pillars />
+        <div className="relative isolate overflow-hidden">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-64 top-1/3 hidden h-[44rem] w-[44rem] -translate-y-1/2 opacity-[0.045] md:block"
+          >
+            <Image
+              src="/brand/turtle.png"
+              alt=""
+              fill
+              sizes="44rem"
+              className="object-contain brightness-0 invert"
+            />
+          </div>
+          <div className="relative z-10">
+            <Process />
+            <Pillars />
+          </div>
+        </div>
         <CohortRail />
         <Partners />
         <FaqSection />
@@ -232,7 +249,7 @@ function Hero() {
 function Process() {
   return (
     <section className="bg-transparent">
-      <div className="mx-auto max-w-app px-6 py-20">
+      <div className="mx-auto max-w-app px-6 pb-12 pt-20 md:pb-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Our process
         </h2>
@@ -248,7 +265,7 @@ function Process() {
 function Pillars() {
   return (
     <section className="bg-transparent">
-      <div className="mx-auto max-w-app px-6 py-20">
+      <div className="mx-auto max-w-app px-6 pb-20 pt-12 md:pt-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">Three pillars</h2>
         <p className="mt-2 max-w-2xl text-ink-muted">
           Fortune 500-caliber builders across the industries we serve.

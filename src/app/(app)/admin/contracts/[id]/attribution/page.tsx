@@ -23,10 +23,12 @@ import { getAttributionForUser, attributionReader, safely } from "@/lib/readers"
 import { getAllUsers } from "@/lib/readers/users";
 import {
   ATTRIBUTION_ROLE_LABELS,
+  rolePool,
   adminName,
   type AttributionRole,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { AttributionRoleField } from "@/components/AttributionRoleField";
 import { Avatar } from "@/components/Avatar";
 
 async function logEntry(formData: FormData) {
@@ -97,7 +99,49 @@ export default async function AttributionLedgerPage({
   // and anyone who submitted a quote.
   const suggested = new Set<string>(project.assignedMemberIds);
 
-  const totalWeight = entries.reduce((sum, e) => sum + e.weight, 0);
+  // ──────────────────────────────────────────────────────────────
+  // TWO POOLS, TWO MECHANISMS (2026-10-29)
+  //
+  // rolePool sends contributor and delivery_lead to the 85% pool and
+  // introducer and advisor to the 12% pool, and the two are settled in
+  // completely different ways:
+  //
+  //   contributor   proportional. The settle page normalises, so the
+  //                 weights are relative to each other and a single
+  //                 contributor at 0.50 takes the whole pool.
+  //   admin         binary and even. The settle page says it outright:
+  //                 "contract.adminUserIds is the source of truth." It
+  //                 divides by headcount and never reads a weight.
+  //
+  // This page showed one flat list with a weight on every row and
+  // warned when the total missed 1.00. So an admin-role entry looked
+  // like it was buying a share, the number typed into it was silently
+  // discarded, and a correct contributor ledger was reported as broken
+  // because relative weights do not sum to one.
+  //
+  // Jamar, on Ozy sitting at 0.50 alone: "Why would it be assumed that
+  // someone's contribution doesn't sum to 100."
+  // ──────────────────────────────────────────────────────────────
+  const contributorEntries = entries.filter(
+    (e) => rolePool(e.role) === "contributor",
+  );
+  const adminEntries = entries.filter((e) => rolePool(e.role) === "admin");
+  const totalContribWeight = contributorEntries.reduce(
+    (sum, e) => sum + e.weight,
+    0,
+  );
+  // What each contributor actually receives, computed the same way the
+  // settle page computes it, so this page stops being a different
+  // opinion about the same arithmetic.
+  const sharePct = (weight: number) =>
+    totalContribWeight > 0 ? (weight / totalContribWeight) * 100 : 0;
+
+  // Admin-role entries only nominate. Anyone logged here who is not on
+  // the contract's admin list will not be paid from the 12%.
+  const onAdminList = new Set(project.adminUserIds ?? []);
+  const nominatedNotOnList = adminEntries
+    .map((e) => e.userId)
+    .filter((uid) => !onAdminList.has(uid));
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
@@ -114,35 +158,36 @@ export default async function AttributionLedgerPage({
           {project.title}
         </h1>
         <p className="mt-2 text-ink-muted">
-          Append-only record of who did what. Drives the default 85%
-          contributor split at settlement.
+          Append-only record of who did what. Contributor roles divide
+          the 85% pool in proportion to each other. Admin roles nominate
+          people for the 12% pool, which splits evenly and is set by the
+          contract&apos;s admin list rather than here.
         </p>
       </header>
 
       <Card className="mt-8">
         <div className="flex items-baseline justify-between">
-          <CardTitle>Entries ({entries.length})</CardTitle>
-          {entries.length > 0 && (
-            <span
-              className={`text-xs ${
-                Math.abs(totalWeight - 1) < 0.01
-                  ? "text-brand-green"
-                  : "text-ink-faint"
-              }`}
-            >
-              Total weight: {totalWeight.toFixed(2)}
-              {Math.abs(totalWeight - 1) > 0.01 && " (does not sum to 1.00)"}
+          <CardTitle>
+            Contributor pool &mdash; 85% ({contributorEntries.length})
+          </CardTitle>
+          {/* Relative, not absolute. The old copy read "Total weight:
+              0.50 (does not sum to 1.00)", which reported a correct
+              ledger as broken: the settle page normalises, so one
+              contributor at 0.50 takes the entire pool. */}
+          {contributorEntries.length > 0 && (
+            <span className="text-xs text-ink-faint">
+              Weights are relative. Total {totalContribWeight.toFixed(2)}.
             </span>
           )}
         </div>
 
-        {entries.length === 0 ? (
+        {contributorEntries.length === 0 ? (
           <p className="mt-4 text-sm text-ink-muted">
-            No entries yet. Add the first one below.
+            Nobody logged yet, so the 85% pool has nothing to divide by.
           </p>
         ) : (
           <ul className="mt-4 divide-y divide-[var(--surface-border)]">
-            {entries.map((e) => {
+            {contributorEntries.map((e) => {
               const u = userById.get(e.userId);
               return (
                 <li key={e.id} className="py-3">
@@ -157,8 +202,19 @@ export default async function AttributionLedgerPage({
                             {ATTRIBUTION_ROLE_LABELS[e.role]}
                           </span>
                         </div>
-                        <div className="text-sm font-medium" style={{ color: "var(--fm-blue-text)" }}>
-                          weight {e.weight.toFixed(2)}
+                        {/* The share is the number that decides what
+                            they are paid. The raw weight is shown
+                            beside it because it is what you edit. */}
+                        <div className="shrink-0 text-right">
+                          <div
+                            className="text-sm font-medium tabular-nums"
+                            style={{ color: "var(--fm-blue-text)" }}
+                          >
+                            {sharePct(e.weight).toFixed(0)}% of the pool
+                          </div>
+                          <div className="text-[10px] text-ink-faint tabular-nums">
+                            weight {e.weight.toFixed(2)}
+                          </div>
                         </div>
                       </div>
                       {e.notes && (
@@ -174,6 +230,76 @@ export default async function AttributionLedgerPage({
               );
             })}
           </ul>
+        )}
+      </Card>
+
+      {/* The admin pool, stated plainly, because this page used to mix
+          it into the list above with a weight on it and pay none of
+          that any attention at settlement. */}
+      <Card className="mt-6">
+        <CardTitle>Admin pool &mdash; 12%</CardTitle>
+        <p className="mt-1 text-xs text-ink-muted">
+          Splits evenly across everyone on the contract&apos;s admin
+          list. There is no weighting: being on the deal is the
+          qualification. Introducer and advisor entries below are
+          nominations, and the weight on them is not used.
+        </p>
+
+        <div className="mt-4">
+          <p className="text-[10px] uppercase tracking-wider text-ink-muted">
+            On the admin list &mdash; these are the people who get paid
+          </p>
+          {onAdminList.size === 0 ? (
+            <p className="mt-1 text-sm text-brand-magentaText">
+              Nobody. The 12% will be allocated with no recipient if you
+              settle like this.
+            </p>
+          ) : (
+            <p className="mt-1 text-sm">
+              {Array.from(onAdminList)
+                .map((uid) => adminName(userById.get(uid)))
+                .join(", ")}{" "}
+              <span className="text-ink-faint">
+                ({(100 / onAdminList.size).toFixed(0)}% each)
+              </span>
+            </p>
+          )}
+          <Link
+            href={`/admin/contracts/${project.id}`}
+            className="mt-2 inline-block text-xs text-brand-magentaText hover:underline"
+          >
+            Change the admin list on the contract →
+          </Link>
+        </div>
+
+        {adminEntries.length > 0 && (
+          <div className="mt-5 border-t border-[var(--surface-border)] pt-4">
+            <p className="text-[10px] uppercase tracking-wider text-ink-muted">
+              Nominated here ({adminEntries.length})
+            </p>
+            <ul className="mt-2 space-y-1">
+              {adminEntries.map((e) => (
+                <li key={e.id} className="text-sm">
+                  {adminName(userById.get(e.userId))}{" "}
+                  <span className="text-ink-muted">
+                    · {ATTRIBUTION_ROLE_LABELS[e.role]}
+                  </span>
+                  {!onAdminList.has(e.userId) && (
+                    <span className="ml-2 text-xs text-brand-magentaText">
+                      not on the admin list, will not be paid
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {nominatedNotOnList.length > 0 && (
+              <p className="mt-3 rounded-lg border border-brand-magenta/40 bg-brand-magenta/5 px-3 py-2 text-xs text-ink">
+                {nominatedNotOnList.length === 1 ? "One person is" : `${nominatedNotOnList.length} people are`}{" "}
+                nominated here but not on the admin list. Nominating
+                somebody does not pay them.
+              </p>
+            )}
+          </div>
         )}
       </Card>
 
@@ -206,42 +332,7 @@ export default async function AttributionLedgerPage({
             </select>
           </label>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="text-xs uppercase tracking-wider text-ink-muted">
-                Role
-              </span>
-              <select
-                name="role"
-                required
-                defaultValue="contributor"
-                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
-              >
-                {(Object.keys(ATTRIBUTION_ROLE_LABELS) as AttributionRole[]).map(
-                  (r) => (
-                    <option key={r} value={r}>
-                      {ATTRIBUTION_ROLE_LABELS[r]}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-xs uppercase tracking-wider text-ink-muted">
-                Weight (0.00 – 1.00)
-              </span>
-              <input
-                name="weight"
-                type="number"
-                min="0"
-                max="1"
-                step="0.05"
-                defaultValue="0.5"
-                required
-                className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
-              />
-            </label>
-          </div>
+          <AttributionRoleField />
 
           <label className="block">
             <span className="text-xs uppercase tracking-wider text-ink-muted">

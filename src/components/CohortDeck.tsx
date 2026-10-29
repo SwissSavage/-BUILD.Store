@@ -25,16 +25,10 @@ type RailDirection = "left" | "right";
  * without turning the cards into a pager visitors have to operate.
  */
 export function CohortDeck({ builders }: { builders: CohortBuilder[] }) {
-  const midpoint = Math.ceil(builders.length / 2);
-  const topBuilders = builders.slice(0, midpoint);
-  const bottomBuilders = builders.slice(midpoint);
-
   return (
     <div className="mt-10 space-y-6 overflow-hidden md:space-y-7">
-      <BuilderRail builders={topBuilders} direction="right" />
-      {bottomBuilders.length > 0 && (
-        <BuilderRail builders={bottomBuilders} direction="left" />
-      )}
+      <BuilderRail builders={builders} direction="right" />
+      <BuilderRail builders={builders} direction="left" />
       <style jsx global>{`
         @keyframes cohort-builder-scroll {
           to {

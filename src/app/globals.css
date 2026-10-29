@@ -737,6 +737,35 @@ html {
   outline-offset: 2px;
 }
 
+/* Homepage builder roster: each row repeats its full set of cards so a
+   50% translate has no visible jump. Interaction pauses the loop; people
+   with reduced-motion preferences receive a stable roster instead. */
+@keyframes cohort-builder-scroll {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.cohort-builder-track {
+  animation: cohort-builder-scroll 36s linear infinite;
+  will-change: transform;
+}
+
+.cohort-builder-track--right {
+  animation-direction: reverse;
+}
+
+.cohort-builder-rail:hover .cohort-builder-track,
+.cohort-builder-rail:focus-within .cohort-builder-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cohort-builder-track {
+    animation: none;
+  }
+}
+
 /* Windows high-contrast mode discards the gradient, so give the
    button an edge it is allowed to keep. */
 @media (forced-colors: active) {

@@ -29,33 +29,6 @@ export function CohortDeck({ builders }: { builders: CohortBuilder[] }) {
     <div className="mt-10 space-y-6 overflow-hidden md:space-y-7">
       <BuilderRail builders={builders} direction="right" />
       <BuilderRail builders={builders} direction="left" />
-      <style jsx global>{`
-        @keyframes cohort-builder-scroll {
-          to {
-            transform: translate3d(-50%, 0, 0);
-          }
-        }
-
-        .cohort-builder-track {
-          animation: cohort-builder-scroll 36s linear infinite;
-          will-change: transform;
-        }
-
-        .cohort-builder-track--right {
-          animation-direction: reverse;
-        }
-
-        .cohort-builder-rail:hover .cohort-builder-track,
-        .cohort-builder-rail:focus-within .cohort-builder-track {
-          animation-play-state: paused;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .cohort-builder-track {
-            animation: none;
-          }
-        }
-      `}</style>
     </div>
   );
 }

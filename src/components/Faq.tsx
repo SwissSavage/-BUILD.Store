@@ -62,7 +62,7 @@ export function Faq({
       <div
         className={`mx-auto px-6 py-20 ${
           aside
-            ? "grid max-w-app gap-10 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-14"
+            ? "grid max-w-app gap-10 lg:grid-cols-2 lg:gap-12"
             : "max-w-3xl"
         }`}
       >

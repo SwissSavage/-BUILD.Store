@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ButtonLink } from "@/components/Button";
 import { CohortDeck } from "@/components/CohortDeck";
+import { HomepageQuestionForm } from "@/components/HomepageQuestionForm";
 import { PillarExplorer } from "@/components/PillarExplorer";
 import { ProcessExplorer } from "@/components/ProcessExplorer";
 import { getCurrentUser } from "@/lib/auth-stub";
@@ -373,6 +374,7 @@ function FaqSection() {
         eyebrow="Common questions"
         heading="How Future Modern works"
         items={items}
+        aside={<HomepageQuestionForm />}
       />
     </div>
   );

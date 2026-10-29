@@ -11,7 +11,9 @@
  * per page — search engines get confused when a URL emits multiple
  * FAQPage payloads.
  */
+import type { ReactNode } from "react";
 import { CardEyebrow } from "@/components/Card";
+import { FaqAccordion } from "@/components/FaqAccordion";
 
 export interface FaqItem {
   /** The question, in FM voice. Short-form works best. */
@@ -32,12 +34,15 @@ interface FaqProps {
   heading?: string;
   /** Q&A items rendered in order. */
   items: FaqItem[];
+  /** Optional page-specific path for people whose question is not answered. */
+  aside?: ReactNode;
 }
 
 export function Faq({
   eyebrow = "FAQ",
   heading = "Common questions",
   items,
+  aside,
 }: FaqProps) {
   const schema = {
     "@context": "https://schema.org",
@@ -54,35 +59,21 @@ export function Faq({
 
   return (
     <section className="border-t border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-3xl px-6 py-20">
-        <CardEyebrow>{eyebrow}</CardEyebrow>
-        <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
-          {heading}
-        </h2>
-
-        <div className="mt-10 space-y-3">
-          {items.map((item) => (
-            <details
-              key={item.question}
-              className="group rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-5 py-4 transition-colors hover:border-brand-magenta/40"
-            >
-              <summary className="flex cursor-pointer list-none items-start justify-between gap-4 font-display text-lg font-semibold text-ink">
-                <span>{item.question}</span>
-                <span
-                  aria-hidden="true"
-                  className="mt-1 shrink-0 text-brand-magentaText transition-transform group-open:rotate-45"
-                >
-                  +
-                </span>
-              </summary>
-              <div className="mt-3 space-y-3 text-sm text-ink-muted">
-                {item.answer.split("\n\n").map((paragraph, i) => (
-                  <p key={i}>{paragraph}</p>
-                ))}
-              </div>
-            </details>
-          ))}
+      <div
+        className={`mx-auto px-6 py-20 ${
+          aside
+            ? "grid max-w-app gap-10 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-14"
+            : "max-w-3xl"
+        }`}
+      >
+        <div>
+          <CardEyebrow>{eyebrow}</CardEyebrow>
+          <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
+            {heading}
+          </h2>
+          <FaqAccordion items={items} />
         </div>
+        {aside && <aside className="lg:pt-1">{aside}</aside>}
       </div>
 
       {/* FAQPage JSON-LD — Google renders these as expandable Q&A in

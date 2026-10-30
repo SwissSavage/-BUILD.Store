@@ -759,18 +759,9 @@ html {
 }
 
 .hero-video-stage--mobile .hero-video-stage-media {
-  -webkit-mask-image: radial-gradient(
-    ellipse 112% 94% at 50% 50%,
-    #000 36%,
-    rgba(0, 0, 0, 0.92) 68%,
-    transparent 100%
-  );
-  mask-image: radial-gradient(
-    ellipse 112% 94% at 50% 50%,
-    #000 36%,
-    rgba(0, 0, 0, 0.92) 68%,
-    transparent 100%
-  );
+  -webkit-mask-image: none;
+  mask-image: none;
+  opacity: 0.48;
 }
 
 @media (prefers-reduced-motion: reduce) {

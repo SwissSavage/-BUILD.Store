@@ -164,7 +164,7 @@ function HeroVideo({ mobile = false }: { mobile?: boolean }) {
       aria-hidden="true"
       className={
         mobile
-          ? "hero-video-stage hero-video-stage--mobile relative mt-12 aspect-video w-full overflow-hidden md:hidden"
+          ? "hero-video-stage hero-video-stage--mobile absolute inset-0 overflow-hidden md:hidden"
           : "hero-video-stage absolute inset-y-0 left-[42%] right-0 hidden overflow-hidden md:block"
       }
     >
@@ -174,14 +174,17 @@ function HeroVideo({ mobile = false }: { mobile?: boolean }) {
         muted
         playsInline
         preload="metadata"
-        className="hero-video-stage-media h-full w-full object-cover object-center"
+        className={`hero-video-stage-media h-full w-full object-cover ${
+          mobile ? "object-[65%_center]" : "object-center"
+        }`}
       >
         <source src="/videos/future-modern-hero.mp4" type="video/mp4" />
       </video>
       {mobile ? (
         <>
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050508] via-[#050508]/45 to-[#050508]/65" />
-          <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-[#050508] to-transparent" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,8,0.90)_0%,rgba(5,5,8,0.84)_42%,rgba(5,5,8,0.74)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(115%_80%_at_8%_92%,rgba(80,112,240,0.25)_0%,rgba(5,5,8,0.92)_58%,transparent_100%)]" />
+          <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-[#050508]/85 to-transparent" />
         </>
       ) : (
         <>
@@ -200,6 +203,7 @@ function Hero() {
     <section className="relative flex min-h-[calc(100svh-68px)] flex-col overflow-hidden border-b border-[var(--surface-border)] bg-[#050508]">
       <HomepageBackdrop tone="hero" />
       <HeroVideo />
+      <HeroVideo mobile />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-y-0 left-0 z-[1] hidden w-[72%] bg-[radial-gradient(90%_105%_at_8%_92%,rgba(80,112,240,0.24)_0%,rgba(5,5,8,0.98)_48%,rgba(5,5,8,0.84)_66%,transparent_100%)] md:block"
@@ -284,7 +288,6 @@ function Hero() {
               </Link>
             </li>
           </ul>
-          <HeroVideo mobile />
         </div>
       </div>
       <div className="relative z-10 bg-[#050508]/90">

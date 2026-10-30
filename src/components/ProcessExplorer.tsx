@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CircleDollarSign, FileText, ListChecks, Users } from "lucide-react";
+import { ScrollReveal } from "@/components/ScrollReveal";
 
 const stages = [
   {
@@ -108,27 +109,28 @@ export function ProcessExplorer() {
           const stageAccent = accents[stage.accent];
 
           return (
-            <button
-              key={stage.number}
-              id={`process-tab-${stage.number}`}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              aria-controls="process-detail"
-              onClick={() => setActiveIndex(index)}
-              className={`relative min-h-48 overflow-hidden rounded-2xl border border-t-4 border-[var(--surface-border)] bg-[var(--surface)] p-6 text-left transition-[transform,border-color,background-color] duration-300 ease-out motion-reduce:transition-none ${stageAccent.border} ${isActive ? "-translate-y-1 bg-[var(--surface-elevated)]" : "hover:-translate-y-0.5 hover:bg-[var(--surface-elevated)]"}`}
-            >
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute -left-3 -top-5 bg-gradient-to-br from-brand-magenta to-brand-blue bg-clip-text font-display text-[clamp(5rem,10vw,8.75rem)] font-bold leading-none text-transparent opacity-[0.12]"
+            <ScrollReveal key={stage.number} delay={index * 60}>
+              <button
+                id={`process-tab-${stage.number}`}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls="process-detail"
+                onClick={() => setActiveIndex(index)}
+                className={`relative min-h-48 w-full overflow-hidden rounded-2xl border border-t-4 border-[var(--surface-border)] bg-[var(--surface)] p-6 text-left transition-[transform,border-color,background-color] duration-300 ease-out motion-reduce:transition-none ${stageAccent.border} ${isActive ? "-translate-y-1 bg-[var(--surface-elevated)]" : "hover:-translate-y-0.5 hover:bg-[var(--surface-elevated)]"}`}
               >
-                {stage.number}
-              </span>
-              <span className="relative z-10 block">
-                <span className="block text-lg font-semibold text-ink">{stage.title}</span>
-                <span className="mt-2 block text-sm leading-relaxed text-ink-muted">{stage.body}</span>
-              </span>
-            </button>
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -left-3 -top-5 bg-gradient-to-br from-brand-magenta to-brand-blue bg-clip-text font-display text-[clamp(5rem,10vw,8.75rem)] font-bold leading-none text-transparent opacity-[0.12]"
+                >
+                  {stage.number}
+                </span>
+                <span className="relative z-10 block">
+                  <span className="block text-lg font-semibold text-ink">{stage.title}</span>
+                  <span className="mt-2 block text-sm leading-relaxed text-ink-muted">{stage.body}</span>
+                </span>
+              </button>
+            </ScrollReveal>
           );
         })}
       </div>

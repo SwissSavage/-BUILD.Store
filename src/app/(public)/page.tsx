@@ -10,6 +10,7 @@ import { CohortDeck } from "@/components/CohortDeck";
 import { HomepageQuestionForm } from "@/components/HomepageQuestionForm";
 import { PillarExplorer } from "@/components/PillarExplorer";
 import { ProcessExplorer } from "@/components/ProcessExplorer";
+import { ScrollReveal } from "@/components/ScrollReveal";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { publicName } from "@/lib/types";
 import { memberLabel } from "@/lib/member-label";
@@ -64,7 +65,9 @@ export default async function Home() {
             <Pillars />
           </div>
         </div>
-        <CohortRail />
+        <ScrollReveal>
+          <CohortRail />
+        </ScrollReveal>
         <Partners />
         <FaqSection />
       </div>
@@ -290,13 +293,15 @@ function Process() {
   return (
     <section className="bg-transparent">
       <div className="mx-auto max-w-app px-6 pb-12 pt-20 md:pb-14">
-        <h2 className="font-display text-3xl font-semibold md:text-4xl">
-          Our process
-        </h2>
-        <p className="mt-2 max-w-2xl text-ink-muted">
-          From a clear brief to a recorded closeout.
-        </p>
-        <ProcessExplorer />
+        <ScrollReveal>
+          <h2 className="font-display text-3xl font-semibold md:text-4xl">
+            Our process
+          </h2>
+          <p className="mt-2 max-w-2xl text-ink-muted">
+            From a clear brief to a recorded closeout.
+          </p>
+          <ProcessExplorer />
+        </ScrollReveal>
       </div>
     </section>
   );
@@ -306,11 +311,13 @@ function Pillars() {
   return (
     <section className="bg-transparent">
       <div className="mx-auto max-w-app px-6 pb-20 pt-12 md:pt-14">
-        <h2 className="font-display text-3xl font-semibold md:text-4xl">Three pillars</h2>
-        <p className="mt-2 max-w-2xl text-ink-muted">
-          Fortune 500-caliber builders across the industries we serve.
-        </p>
-        <PillarExplorer />
+        <ScrollReveal>
+          <h2 className="font-display text-3xl font-semibold md:text-4xl">Three pillars</h2>
+          <p className="mt-2 max-w-2xl text-ink-muted">
+            Fortune 500-caliber builders across the industries we serve.
+          </p>
+          <PillarExplorer />
+        </ScrollReveal>
       </div>
     </section>
   );
@@ -412,12 +419,14 @@ function FaqSection() {
 
   return (
     <div className="[&>section]:border-transparent [&>section]:bg-transparent">
-      <Faq
-        eyebrow="Common questions"
-        heading="How Future Modern works"
-        items={items}
-        aside={<HomepageQuestionForm />}
-      />
+      <ScrollReveal>
+        <Faq
+          eyebrow="Common questions"
+          heading="How Future Modern works"
+          items={items}
+          aside={<HomepageQuestionForm />}
+        />
+      </ScrollReveal>
     </div>
   );
 }

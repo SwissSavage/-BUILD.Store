@@ -23,7 +23,7 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
               type="button"
               aria-expanded={isOpen}
               aria-controls={answerId}
-              onClick={() => setOpenIndex(index)}
+              onClick={() => setOpenIndex((current) => (current === index ? -1 : index))}
               className="flex w-full cursor-pointer items-start justify-between gap-4 text-left font-display text-lg font-semibold text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-magenta"
             >
               <span>{item.question}</span>
@@ -36,18 +36,27 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
                 }`}
               />
             </button>
-            {isOpen && (
+            <div
+              className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-out motion-reduce:transition-none ${
+                isOpen
+                  ? "mt-3 grid-rows-[1fr] opacity-100"
+                  : "mt-0 grid-rows-[0fr] opacity-0"
+              }`}
+            >
+              <div className="overflow-hidden">
               <div
                 id={answerId}
                 role="region"
                 aria-label={item.question}
-                className="mt-3 space-y-3 text-sm text-ink-muted"
+                aria-hidden={!isOpen}
+                className="space-y-3 text-sm text-ink-muted"
               >
                 {item.answer.split("\n\n").map((paragraph, paragraphIndex) => (
                   <p key={paragraphIndex}>{paragraph}</p>
                 ))}
               </div>
-            )}
+              </div>
+            </div>
           </div>
         );
       })}

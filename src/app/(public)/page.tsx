@@ -155,91 +155,133 @@ function ContributorAffiliations() {
  * people belong on it — not as generic avatars but as the branded
  * player cards that signal how the cooperative organizes.
  */
+function HeroVideo({ mobile = false }: { mobile?: boolean }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={
+        mobile
+          ? "relative mt-12 aspect-video w-full overflow-hidden md:hidden"
+          : "absolute inset-y-0 left-[42%] right-0 hidden overflow-hidden md:block"
+      }
+    >
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="metadata"
+        className="h-full w-full object-cover object-center"
+      >
+        <source src="/videos/future-modern-hero.mp4" type="video/mp4" />
+      </video>
+      {mobile ? (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050508] via-[#050508]/20 to-[#050508]/45" />
+          <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-[#050508] to-transparent" />
+        </>
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,#050508_0%,rgba(5,5,8,0.98)_7%,rgba(5,5,8,0.78)_26%,rgba(5,5,8,0.20)_65%,rgba(5,5,8,0.05)_100%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#050508] via-[#050508]/70 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-1/5 bg-gradient-to-b from-[#050508]/55 to-transparent" />
+        </>
+      )}
+    </div>
+  );
+}
+
 function Hero() {
   return (
     <section className="relative flex min-h-[calc(100svh-68px)] flex-col overflow-hidden border-b border-[var(--surface-border)] bg-[#050508]">
       <HomepageBackdrop tone="hero" />
-      <div className="relative mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
-        <div className="mb-6 inline-flex self-start items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-green">
-          <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
-          Future Modern
-        </div>
-        <h1 className="font-display text-5xl font-bold leading-tight md:text-7xl">
-          $BUILD with the{" "}
-          <span className="bg-gradient-to-r from-brand-magenta to-brand-blue bg-clip-text text-transparent">
-            best.
-          </span>
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg text-ink-muted md:text-xl">
-          $BUILD <strong className="text-ink">a team</strong> from our handpicked
-          talent pool of Fortune 500-level STEM, Creative Media, and Professional
-          Services professionals. Perfectly matched to your project.
-        </p>
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-          <ButtonLink
-            href="/signup"
-            variant="primary"
-            size="large"
-            className="px-8 py-3 shadow-lg shadow-brand-magenta/20"
-          >
-            Get started
-          </ButtonLink>
-          <ButtonLink
-            href={PUBLIC_BOOKING_URL}
-            target="_blank"
-            rel="noreferrer"
-            variant="secondary"
-            size="large"
-            className="border-brand-blue/60 px-8 py-3 text-brand-blue hover:bg-brand-blue/10"
-          >
-            {PUBLIC_BOOKING_CTA}
-          </ButtonLink>
-        </div>
+      <HeroVideo />
+      <div className="relative z-10 mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
+        <div className="max-w-2xl">
+          <div className="mb-6 inline-flex self-start items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-green">
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
+            Future Modern
+          </div>
+          <h1 className="font-display text-5xl font-bold leading-tight md:text-7xl">
+            $BUILD with the{" "}
+            <span className="bg-gradient-to-r from-brand-magenta to-brand-blue bg-clip-text text-transparent">
+              best.
+            </span>
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg text-ink-muted md:text-xl">
+            $BUILD <strong className="text-ink">a team</strong> from our handpicked
+            talent pool of Fortune 500-level STEM, Creative Media, and Professional
+            Services professionals. Perfectly matched to your project.
+          </p>
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <ButtonLink
+              href="/signup"
+              variant="primary"
+              size="large"
+              className="px-8 py-3 shadow-lg shadow-brand-magenta/20"
+            >
+              Get started
+            </ButtonLink>
+            <ButtonLink
+              href={PUBLIC_BOOKING_URL}
+              target="_blank"
+              rel="noreferrer"
+              variant="secondary"
+              size="large"
+              className="border-brand-blue/60 px-8 py-3 text-brand-blue hover:bg-brand-blue/10"
+            >
+              {PUBLIC_BOOKING_CTA}
+            </ButtonLink>
+          </div>
 
-        {/* Positional strip — Web3-native without being crypto-bro.
-            Three small signals a considered reader clocks in half a
-            second. Each one links to the surface where the receipt
-            lives, so the strip reads as a promise you can verify. */}
-        <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.15em] text-ink-faint">
-          <li className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="fm-btn-primary inline-block h-1.5 w-1.5 rounded-full"
-            />
-            <Link
-              href="/governance#canonization"
-              className="transition-colors hover:text-ink"
-            >
-              Web3-native
-            </Link>
-          </li>
-          <li className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="inline-block h-1.5 w-1.5 rounded-full bg-brand-blue"
-            />
-            <Link
-              href="/governance#tier"
-              className="transition-colors hover:text-ink"
-            >
-              Worker-owned
-            </Link>
-          </li>
-          <li className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="inline-block h-1.5 w-1.5 rounded-full bg-brand-green"
-            />
-            <Link
-              href="/policies/covenant"
-              className="transition-colors hover:text-ink"
-            >
-              Peer-reviewed
-            </Link>
-          </li>
-        </ul>
+          {/* Positional strip — Web3-native without being crypto-bro.
+              Three small signals a considered reader clocks in half a
+              second. Each one links to the surface where the receipt
+              lives, so the strip reads as a promise you can verify. */}
+          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.15em] text-ink-faint">
+            <li className="flex items-center gap-2">
+              <span
+                aria-hidden
+                className="fm-btn-primary inline-block h-1.5 w-1.5 rounded-full"
+              />
+              <Link
+                href="/governance#canonization"
+                className="transition-colors hover:text-ink"
+              >
+                Web3-native
+              </Link>
+            </li>
+            <li className="flex items-center gap-2">
+              <span
+                aria-hidden
+                className="inline-block h-1.5 w-1.5 rounded-full bg-brand-blue"
+              />
+              <Link
+                href="/governance#tier"
+                className="transition-colors hover:text-ink"
+              >
+                Worker-owned
+              </Link>
+            </li>
+            <li className="flex items-center gap-2">
+              <span
+                aria-hidden
+                className="inline-block h-1.5 w-1.5 rounded-full bg-brand-green"
+              />
+              <Link
+                href="/policies/covenant"
+                className="transition-colors hover:text-ink"
+              >
+                Peer-reviewed
+              </Link>
+            </li>
+          </ul>
+          <HeroVideo mobile />
+        </div>
       </div>
-      <ContributorAffiliations />
+      <div className="relative z-10 bg-[#050508]/90">
+        <ContributorAffiliations />
+      </div>
     </section>
   );
 }

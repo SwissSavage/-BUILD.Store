@@ -9,8 +9,9 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const secret = process.env.LANDING_SUBMISSION_SECRET;
-  const supplied = request.headers.get("authorization")?.replace(/^Bearer /, "") ?? "";
-  if (!secret) return Response.json({ error: "Service unavailable" }, { status: 503 });
+  const authorization = request.headers.get("authorization") ?? "";
+  const supplied = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  if (!secret || secret.length < 32) return Response.json({ error: "Service unavailable" }, { status: 503 });
   const a = Buffer.from(secret), b = Buffer.from(supplied);
   if (a.length !== b.length || !timingSafeEqual(a, b)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) || !["talent", "project"].includes(type)) {
       return Response.json({ error: "Invalid submission" }, { status: 400 });
     }
-    const fields: Record<string, string | string[]> = {};
+    const fields: Record<string, string | string[]> = Object.create(null);
     for (const [key, value] of form.entries()) {
       if (["files", "submissionId", "submissionType", "honeypot"].includes(key)) continue;
       if (typeof value !== "string" || key.length > 80 || value.length > 4000 || Object.keys(fields).length > 40) throw new Error("Invalid field");
@@ -52,7 +53,15 @@ export async function POST(request: Request) {
     const now = new Date().toISOString();
     const name = `${firstName} ${lastName}`;
     const title = `Landing-page ${type === "talent" ? "talent application" : "project request"} · ${name}`;
-    const body = Object.entries(fields).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : value}`).join("\n");
+    const labels: Record<string, string> = {
+      path: "Request type", firstName: "First name", lastName: "Last name", email: "Email", company: "Company",
+      pillars: "Pillars", hasReferral: "Has referral", referralName: "Referral name", portfolioUrl: "Portfolio URL",
+      contributionSummary: "Contribution summary", termsAccepted: "Terms accepted", laborValueOptIn: "Labor value opt-in",
+      workArrangement: "Work arrangement", location: "Location", relevantLink: "Relevant link", rolesNeeded: "Roles needed",
+      requestSummary: "Request summary", budgetRange: "Budget range", projectName: "Project name", projectSummary: "Project summary",
+      teamCapabilities: "Team capabilities", engagementLength: "Engagement length", additionalNotes: "Additional notes",
+    };
+    const body = Object.entries(fields).map(([key, value]) => `${labels[key] ?? key}: ${Array.isArray(value) ? value.join(", ") : value}`).join("\n");
     const result = await db.transaction(async (tx) => {
       const metadata = attachments.map(({ name, size, type }) => ({ name, size, type }));
       const inserted = await tx.insert(inboundSubmissions).values({ id: rowId, kind: "other", status: "new", title, submitter: name, submitterEmail: email, submitterCompany: typeof fields.company === "string" ? fields.company : null, pillarTags: [], keywordTags: [], body, attachments: metadata, linkedResourceId: digest, derived: false, createdAt: now, updatedAt: now }).onConflictDoNothing().returning({ id: inboundSubmissions.id });
@@ -62,13 +71,13 @@ export async function POST(request: Request) {
       }
       if (attachments.length) await tx.insert(landingSubmissionDocuments).values(attachments.map((file, index) => ({ submissionId: rowId, documentIndex: index, contentBase64: file.base64 })));
       const admins = await tx.select({ id: users.id }).from(users).where(eq(users.isAdmin, true));
-      if (admins.length) await tx.insert(notifications).values(admins.map((admin) => ({ id: `n_${randomUUID()}`, userId: admin.id, kind: "direct_message", title, body: "A new Future Modern landing-page submission is ready for review.", href: `/admin/inbound#${rowId}`, createdAt: now, readAt: null })));
+      if (admins.length) await tx.insert(notifications).values(admins.map((admin) => ({ id: `n_${randomUUID()}`, userId: admin.id, kind: "landing_submission", title, body: "A new Future Modern landing-page submission is ready for review.", href: `/admin/inbound#${rowId}`, createdAt: now, readAt: null })));
       return "created";
     });
     if (result === "conflict") return Response.json({ error: "Submission ID already used" }, { status: 409 });
     return Response.json({ success: true, id: rowId, duplicate: result === "duplicate" });
   } catch (error) {
     console.error("LANDING_SUBMISSION_FAILED", error instanceof Error ? error.name : "unknown");
-    return Response.json({ error: "Submission could not be saved" }, { status: 400 });
+    return Response.json({ error: "Submission could not be saved" }, { status: 503 });
   }
 }

@@ -7,7 +7,6 @@ import {
   customerFeedbackReader,
   epkReader,
   feedbackReader,
-  inboundReader,
   jobApplicationReader,
   membershipApplicationReader,
   portfolioReader,
@@ -19,6 +18,9 @@ import {
   productReader,
 } from "@/lib/readers";
 import { getAllApplications } from "@/lib/readers/project-applications";
+import { count as sqlCount, inArray } from "drizzle-orm";
+import { db } from "@/db/client";
+import { inboundSubmissions } from "@/db/schema";
 import type { AdminQueueCounts } from "@/lib/admin-nav";
 
 export type { AdminQueueCounts } from "@/lib/admin-nav";
@@ -53,14 +55,15 @@ export async function getAdminQueueCounts(): Promise<AdminQueueCounts> {
     safely(() => epkReader.all(), []),
     safely(() => feedbackReader.all(), []),
     safely(() => customerFeedbackReader.all(), []),
-    safely(() => inboundReader.all(), []),
+    safely(async () => {
+      const [result] = await db.select({ value: sqlCount() }).from(inboundSubmissions).where(inArray(inboundSubmissions.status, ["new", "in_triage", "needs_info"]));
+      return result.value;
+    }, 0),
   ]);
 
   const count = (value: number) => (value > 0 ? value : undefined);
   return {
-    "/admin/inbound": count(inbound.filter((row) =>
-      row.status === "new" || row.status === "in_triage" || row.status === "needs_info",
-    ).length),
+    "/admin/inbound": count(inbound),
     "/admin/applications": count(membershipApplications.filter((row) => row.status === "pending").length),
     "/admin/projects/applications": count(projectApplications.filter((row) => row.status === "pending").length),
     "/admin/jobs/applications": count(jobApplications.filter((row) => row.status === "pending").length),

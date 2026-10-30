@@ -21,7 +21,8 @@ Tracking: [$BUILD.Store #293](https://github.com/SwissSavage/-BUILD.Store/issues
 - [x] Preserve the existing honeypot and email notification path; avoid reporting a failed submission solely because the email notification failed after successful intake.
 - [ ] Review and finish server-side field validation for both forms and both project paths.
 - [ ] Enforce file count, per-file size, combined size, and actual PDF content consistently.
-- [ ] Add reliable shared rate limiting and request-size limits; do not add a CAPTCHA.
+- [x] Add shared database-backed rate limiting and request-size limits; no CAPTCHA is used.
+- [ ] Confirm the production proxy topology and exercise rate limiting across replicas.
 - [ ] Verify that the visitor sees success only after $BUILD.Store confirms the complete submission is saved and that failed submissions retain their form content.
 - [ ] Verify unchanged retries, edited submissions, concurrent retries, and lost responses do not create unwanted duplicates or mix data.
 - [ ] Review email-failure and retry behavior, including duplicate-email handling.
@@ -39,12 +40,12 @@ Tracking: [$BUILD.Store #293](https://github.com/SwissSavage/-BUILD.Store/issues
 - [ ] Verify database-enforced deduplication, concurrent requests, transaction rollback, and retries with conflicting content.
 - [ ] Verify the inbound entry presents every relevant field, identifies the landing page as its source, and links to the correct attachments.
 - [ ] Verify admin notifications link to the correct entry and Admin → Inbound counts update as intended; confirm the actual refresh behavior.
-- [ ] Review whether the navigation count should use a count query rather than loading all inbound records.
+- [x] Use a database count for the navigation badge instead of loading all inbound records.
 
 ## Configuration and rollout
 
-- [ ] Document the receiving URL and server credential environment variables, using distinct development and production values.
-- [ ] Document credential rotation, deployment configuration, and request-size limits without recording secrets.
+- [x] Document the receiving URL and server credential environment variables, using distinct development and production values.
+- [x] Document credential rotation, deployment configuration, and request-size limits without recording secrets.
 - [ ] Deploy the $BUILD.Store receiver and migration to development first, then configure and deploy the landing-page integration.
 - [ ] Verify the existing email delivery remains useful and does not misreport accepted submissions.
 - [ ] Review production configuration and deploy only after both changes have been reviewed and tested.
@@ -52,6 +53,7 @@ Tracking: [$BUILD.Store #293](https://github.com/SwissSavage/-BUILD.Store/issues
 ## Verification
 
 - [ ] Run relevant type checks and production builds for both repositories.
+- [x] Run focused PDF validation and retry-digest tests; confirm unauthenticated receiver and attachment requests are rejected locally.
 - [ ] Test a talent application, a find-talent request, and a build-team request, with and without PDFs.
 - [ ] Check missing and invalid credentials, malformed data, invalid PDF content, oversized files, and rate-limit behavior.
 - [ ] Simulate app, database, notification, and email failures; confirm the visitor receives the correct outcome and submissions are not silently lost.
@@ -63,3 +65,12 @@ Tracking: [$BUILD.Store #293](https://github.com/SwissSavage/-BUILD.Store/issues
 ## Operational note
 
 The landing-page repository tracks files under `node_modules`; the dependency installation in the isolated worktree changed those files. Do not include those generated changes in the integration commits.
+
+### Environment and deployment
+
+- Configure `LANDING_SUBMISSION_SECRET` on $BUILD.Store and the same value as `BUILD_STORE_SUBMISSION_SECRET` on the landing server. Use a random secret of at least 32 characters, unique to the environment, and rotate both values together.
+- Set `BUILD_STORE_SUBMISSION_URL` on the landing server to the HTTPS $BUILD.Store URL ending in `/api/landing-submissions`. The server does not follow redirects with the credential.
+- The receiver stores PDFs in a separate PostgreSQL table. Existing database backups, capacity, retention, and administrator access controls apply. Migrations `0042` and `0043` must be applied before accepting submissions.
+- The shared rate-limit table stores HMAC-derived visitor keys, not raw IP addresses. It allows ten attempts per ten-minute window across replicas. Old records are removed opportunistically after one day when further traffic arrives.
+- `TRUST_PROXY_HOPS=1` should be set on the landing server only when exactly one trusted reverse proxy overwrites forwarded client IP headers. Otherwise the limiter uses the direct peer address; visitors behind the same proxy may share a limit. Confirm the actual deployment topology before enabling it.
+- Deploy and configure the $BUILD.Store receiver first; then deploy the landing server. Test development before production. Configure matching request-body limits at all upstream proxies for up to 25 MB of PDF content plus multipart overhead.

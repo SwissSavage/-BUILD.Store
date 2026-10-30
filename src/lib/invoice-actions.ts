@@ -155,6 +155,8 @@ export async function createInternalInvoice(formData: FormData): Promise<void> {
     paidAt: null,
     paidAmount: "0.00",
     mercuryReference: null,
+    paymentRail: null,
+    externalReference: null,
     stripePaymentIntentId: null,
     notes,
     // Signature workflow is not initiated for internal invoices.
@@ -340,6 +342,8 @@ export async function generateExternalInvoice(
     paidAt: null,
     paidAmount: "0.00",
     mercuryReference: null,
+    paymentRail: null,
+    externalReference: null,
     stripePaymentIntentId: null,
     notes: `Aggregates ${internals.length} approved internal invoice${
       internals.length === 1 ? "" : "s"
@@ -375,6 +379,37 @@ export async function generateExternalInvoice(
 
   revalidatePath("/admin/invoices");
   revalidatePath(`/admin/contracts/${projectId}/settle`);
+}
+
+/**
+ * paymentMethod names the instrument, payment_rail names where the
+ * money actually moved. They are not the same thing: ach_mercury and
+ * wire_mercury are both the Mercury rail, and "check" and "other" have
+ * no rail-specific reference column at all, which is why their
+ * references used to be dropped.
+ */
+function railFor(
+  method:
+    | "ach_mercury"
+    | "wire_mercury"
+    | "cc_stripe"
+    | "check"
+    | "other"
+    | null,
+): "mercury" | "stripe" | "check" | "other" | null {
+  switch (method) {
+    case "ach_mercury":
+    case "wire_mercury":
+      return "mercury";
+    case "cc_stripe":
+      return "stripe";
+    case "check":
+      return "check";
+    case "other":
+      return "other";
+    default:
+      return null;
+  }
 }
 
 /**
@@ -459,6 +494,12 @@ export async function markExternalInvoicePaid(
       paidAt,
       paidAmount: newPaidAmount.toFixed(2),
       paymentMethod: method ?? row.paymentMethod,
+      // One reference column for every rail (2026-10-29). This path
+      // already had the reference and only wrote it into whichever of
+      // the two rail-specific columns matched the method, so a check or
+      // a Found transfer recorded its reference nowhere.
+      externalReference: externalRef ?? row.externalReference,
+      paymentRail: railFor(method) ?? row.paymentRail,
       mercuryReference:
         method === "ach_mercury" || method === "wire_mercury"
           ? externalRef ?? row.mercuryReference
@@ -563,6 +604,8 @@ export async function createMarketplaceReceiptInternal(input: {
     paidAt: now,
     paidAmount: input.total,
     mercuryReference: null,
+    paymentRail: null,
+    externalReference: null,
     stripePaymentIntentId: input.stripePaymentIntentId,
     notes: `Auto-generated receipt for order ${input.orderNumber}.`,
     // Marketplace receipts fire on Stripe-completed orders — no
@@ -628,6 +671,8 @@ export async function createRetroactiveReceipt(
     paidAt: now,
     paidAmount: amount,
     mercuryReference: null,
+    paymentRail: null,
+    externalReference: null,
     stripePaymentIntentId: null,
     notes: `Retroactive rectification: ${rationale}`,
     // Signature workflow is not initiated at creation. Admin sends it

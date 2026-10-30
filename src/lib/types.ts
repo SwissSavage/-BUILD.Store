@@ -1500,6 +1500,28 @@ export const COOP_RECIPIENT_ID = "coop_cooperative";
  *   - sourceInvoiceIds — only populated for coop_to_client (references
  *     the talent_to_coop invoices it aggregates).
  */
+/**
+ * Where the money actually moved, as opposed to paymentMethod, which
+ * names the instrument. Mirrors the invoices.payment_rail enum.
+ */
+export type PaymentRail =
+  | "mercury"
+  | "found"
+  | "check"
+  | "zelle"
+  | "stripe"
+  | "other";
+
+/** The rails, as a value, so a form post can be validated against it. */
+export const PAYMENT_RAILS = [
+  "mercury",
+  "found",
+  "check",
+  "zelle",
+  "stripe",
+  "other",
+] as const satisfies readonly PaymentRail[];
+
 export interface Invoice {
   id: string;
   /** Discriminator — see InvoiceDirection docblock. */
@@ -1553,8 +1575,25 @@ export interface Invoice {
   paidAt: string | null;
   /** numeric(12,2) — total received so far across one or more payments. */
   paidAmount: string;
-  /** Mercury transaction reference once funds land. Null on CC. */
+  /**
+   * Legacy. Only written when the rail actually was Mercury and a real
+   * reference was entered. Read externalReference instead: this column
+   * used to be filled with a generated `merc_*` id whenever the admin
+   * left the field blank, so historic values cannot be trusted.
+   */
   mercuryReference: string | null;
+  /**
+   * Which rail the client paid on — found, mercury, check, zelle,
+   * stripe, other. Named rather than assumed: the real invoices come
+   * out of Found and the app had never heard of it.
+   */
+  paymentRail: PaymentRail | null;
+  /**
+   * The payment's own reference on that rail, or null. Nullable on
+   * purpose: an unreferenced payment should look unreferenced rather
+   * than carry an id that points at nothing.
+   */
+  externalReference: string | null;
   /** Stripe Payment Intent ID once funds land via CC. Null on Mercury. */
   stripePaymentIntentId: string | null;
   notes: string | null;
@@ -1615,6 +1654,8 @@ export function clientInvoiceView(
     paidAt: invoice.paidAt,
     paidAmount: invoice.paidAmount,
     mercuryReference: invoice.mercuryReference,
+    paymentRail: invoice.paymentRail,
+    externalReference: invoice.externalReference,
     stripePaymentIntentId: invoice.stripePaymentIntentId,
     createdAt: invoice.createdAt,
     updatedAt: invoice.updatedAt,
@@ -4621,7 +4662,16 @@ export type AuditLogAction =
   | "payout_method.default_changed"
   | "payout.dispatched"
   | "payout.dispatch_failed"
-  | "payout.manual_confirmed";
+  | "payout.manual_confirmed"
+  /**
+   * Self-billing (task #107). The cooperative issues the statement and
+   * the recipient agrees it or says it is wrong, which is the record an
+   * invoice used to stand in for. Both verbs are financial-subset: they
+   * are the evidence that a payout was accepted, so they fall under the
+   * 7-year retention window rather than the 12-month one.
+   */
+  | "remittance.acknowledged"
+  | "remittance.disputed";
 
 export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "user.signed_in": "User signed in",
@@ -4747,6 +4797,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "payout.dispatched": "Payout dispatched",
   "payout.dispatch_failed": "Payout dispatch failed",
   "payout.manual_confirmed": "Manual payout confirmed sent",
+  "remittance.acknowledged": "Payout statement confirmed by recipient",
+  "remittance.disputed": "Payout statement disputed by recipient",
 };
 
 /** Coarse resource kinds referenced from audit entries. Keep aligned

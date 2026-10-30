@@ -52,6 +52,7 @@ import {
 } from "@/lib/settlement-splits";
 import { hasValidPayoutDocument } from "@/lib/payout-gate";
 import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
+import { issueRemittancesForSettlement } from "@/lib/remittance";
 import { getAllUsers } from "@/lib/readers/users";
 import {
   ATTRIBUTION_ROLE_LABELS,
@@ -197,6 +198,25 @@ async function settleContract(formData: FormData) {
     // eslint-disable-next-line no-console
     console.error(
       `[contract-settle] issueBuildFromSettlement failed for ${contractId}:`,
+      err,
+    );
+  }
+
+  // The statement, issued rather than waited on. Reads the splits and
+  // vouchers just written rather than recomputing them, so it cannot
+  // hold a second opinion about the same money. Best-effort for the
+  // same reason the cascade above is: settlement has already happened,
+  // and a missing document must not unwind a payment.
+  try {
+    await issueRemittancesForSettlement({
+      contractId,
+      contractTitle: project.title,
+      issuedByUserId: admin.id,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[contract-settle] issueRemittancesForSettlement failed for ${contractId}:`,
       err,
     );
   }

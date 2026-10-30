@@ -1122,6 +1122,20 @@ export const invoices = pgTable("invoices", {
   paidAt: timestamp("paid_at", { mode: "string", withTimezone: true }),
   paidAmount: numeric("paid_amount", { precision: 12, scale: 2 }).notNull().default("0"),
   mercuryReference: text("mercury_reference"),
+  /**
+   * How the money actually moved, and its reference in that system.
+   *
+   * mercuryReference was written as
+   *   reference || inv.mercuryReference || `merc_${randomUUID()}`
+   * so a blank field produced a Mercury-looking id corresponding to
+   * nothing. Real invoices come out of Found now and the app had never
+   * heard of it. Nullable on purpose: an unreferenced payment should
+   * look unreferenced rather than invent itself a receipt.
+   */
+  paymentRail: text("payment_rail", {
+    enum: ["mercury", "found", "check", "zelle", "stripe", "other"],
+  }),
+  externalReference: text("external_reference"),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   notes: text("notes"),
   // ── Documenso signature tracking ──────────────────────────────────
@@ -1374,6 +1388,69 @@ export const portfolioEntries = pgTable("portfolio_entries", {
     .notNull()
     .defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * What a person was paid, issued by the cooperative rather than
+ * billed to it.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-10-29)
+ *
+ * Self-billing. By settlement there is already a countersigned
+ * engagement with the rate, an attribution ledger and a split computed
+ * from both, so a contractor's invoice would restate numbers this
+ * system generated. The cooperative issues the statement, the
+ * recipient acknowledges it, and that acknowledgement is the record.
+ *
+ * Snapshotted rather than joined: a remittance is what somebody was
+ * told at the time, and a later correction must not silently rewrite
+ * it. See drizzle/0041_remittances.sql.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const remittances = pgTable("remittances", {
+  id: text("id").primaryKey(),
+  contractId: text("contract_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  /**
+   * Deliberately not a foreign key. A remittance outlives the account
+   * it was issued to, the same way the audit log outlives a deleted
+   * user, which is why recipientLabel carries the name.
+   */
+  recipientId: text("recipient_id").notNull(),
+  pool: text("pool", {
+    enum: ["contributor", "admin", "treasury", "liquidity_pool"],
+  }).notNull(),
+  cashAmount: numeric("cash_amount", { precision: 12, scale: 2 }).notNull(),
+  /** Their share of that pool, for the "why this number" line. */
+  sharePct: numeric("share_pct", { precision: 6, scale: 3 }),
+  /** $BUILD issued in the same settlement pass. */
+  voucherAmount: numeric("voucher_amount", { precision: 14, scale: 2 })
+    .notNull()
+    .default("0"),
+  /** Frozen at issue: contract title, pool, weight, rate, period. */
+  basis: jsonb("basis")
+    .$type<{ label: string; value: string }[]>()
+    .notNull()
+    .default([]),
+  recipientLabel: text("recipient_label").notNull(),
+  issuedAt: timestamp("issued_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  issuedByUserId: text("issued_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  /** The half of self-billing that matters: they saw it and agreed. */
+  acknowledgedAt: timestamp("acknowledged_at", {
+    mode: "string",
+    withTimezone: true,
+  }),
+  disputedAt: timestamp("disputed_at", { mode: "string", withTimezone: true }),
+  disputeNote: text("dispute_note"),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
     .notNull()
     .defaultNow(),
 });

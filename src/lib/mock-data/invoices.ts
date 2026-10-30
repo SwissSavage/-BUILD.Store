@@ -64,6 +64,8 @@ export const MOCK_INVOICES: Invoice[] = [
     paidAt: "2026-02-20T00:00:00Z",
     paidAmount: "12000.00",
     mercuryReference: "merc_txn_8f2a31",
+    paymentRail: "mercury",
+    externalReference: "merc_txn_8f2a31",
     stripePaymentIntentId: null,
     notes:
       "Paid in full via Mercury ACH on 2026-02-20. Settle page already ran the split (see splits.ts).",
@@ -106,6 +108,8 @@ export const MOCK_INVOICES: Invoice[] = [
     paidAt: "2026-03-22T00:00:00Z",
     paidAmount: "3750.00",
     mercuryReference: "merc_txn_9b71c4",
+    paymentRail: "mercury",
+    externalReference: "merc_txn_9b71c4",
     stripePaymentIntentId: null,
     notes:
       "50% deposit landed 2026-03-22. Balance ($3,750) due on milestone 1 acceptance — Rob to chase the AP team this week.",
@@ -164,6 +168,8 @@ export const MOCK_INVOICES: Invoice[] = [
     paidAt: null,
     paidAmount: "0.00",
     mercuryReference: null,
+    paymentRail: null,
+    externalReference: null,
     stripePaymentIntentId: null,
     notes:
       "Client requested CC at contracting (client requires corporate Amex). Markup is the gross-up — cooperative still nets $14,000.",
@@ -216,6 +222,8 @@ export const MOCK_INVOICES: Invoice[] = [
     paidAt: null,
     paidAmount: "0.00",
     mercuryReference: null,
+    paymentRail: null,
+    externalReference: null,
     stripePaymentIntentId: null,
     notes:
       "Holding pending proposal acceptance. Once URL Media counter-signs, issue 50% deposit invoice and re-baseline.",
@@ -260,6 +268,8 @@ export const MOCK_INVOICES: Invoice[] = [
     paidAt: null,
     paidAmount: "0.00",
     mercuryReference: null,
+    paymentRail: null,
+    externalReference: null,
     stripePaymentIntentId: null,
     notes:
       "Approved by u_jamar 2026-03-06. Locks in Aliza's contributor-pool share when p_003 settles.",
@@ -298,6 +308,8 @@ export const MOCK_INVOICES: Invoice[] = [
     paidAt: null,
     paidAmount: "0.00",
     mercuryReference: null,
+    paymentRail: null,
+    externalReference: null,
     stripePaymentIntentId: null,
     notes: "Awaiting admin approval.",
     documensoEnvelopeId: null,
@@ -340,6 +352,8 @@ export const MOCK_INVOICES: Invoice[] = [
     paidAt: "2026-06-15T14:00:00Z",
     paidAmount: "185.52",
     mercuryReference: null,
+    paymentRail: null,
+    externalReference: null,
     stripePaymentIntentId: "pi_mock_ord_001",
     notes: "Auto-generated on order fulfillment.",
     documensoEnvelopeId: null,
@@ -383,6 +397,8 @@ export const MOCK_INVOICES: Invoice[] = [
     paidAt: "2026-07-25T00:00:00Z",
     paidAmount: "3500.00",
     mercuryReference: null,
+    paymentRail: null,
+    externalReference: null,
     stripePaymentIntentId: null,
     notes:
       "Audit rectification. Ties an already-completed payout back to a documented event so the split ledger reconciles cleanly.",

@@ -64,6 +64,51 @@ li {
   outline-offset: 3px;
 }
 
+/* Colour clarity is a user-selected high-contrast mode. It does not attempt
+   to simulate a particular kind of colour blindness; it makes hue optional
+   for reading and finding interactive controls. */
+html[data-color-clarity="on"] {
+  --surface: #000000;
+  --surface-elevated: #000000;
+  --surface-inset: #000000;
+  --surface-border: #FFFFFF;
+  --ink: #FFFFFF;
+  --ink-muted: #FFFFFF;
+  --ink-faint: #D9D9D9;
+  --fm-grad-from: #FFFFFF;
+  --fm-grad-to: #FFFFFF;
+}
+
+html[data-color-clarity="on"] :where(
+  [class*="text-brand-magenta"],
+  [class*="text-brand-blue"],
+  [class*="text-brand-green"],
+  [class*="text-brand-gold"],
+  [class*="text-brand-red"]
+) {
+  color: #FFFFFF !important;
+}
+
+html[data-color-clarity="on"] :where(
+  [class*="border-brand-magenta"],
+  [class*="border-brand-blue"],
+  [class*="border-brand-green"],
+  [class*="border-brand-gold"],
+  [class*="border-brand-red"]
+) {
+  border-color: #FFFFFF !important;
+}
+
+html[data-color-clarity="on"] :where([class*="bg-clip-text"], [class*="text-transparent"]) {
+  background-image: none !important;
+  -webkit-text-fill-color: currentColor;
+  color: #FFFFFF !important;
+}
+
+html[data-color-clarity="on"] :where(img, video) {
+  filter: grayscale(1) contrast(1.1);
+}
+
 :where(input, textarea, select) {
   font: inherit;
   caret-color: #E052B3;

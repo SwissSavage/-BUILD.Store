@@ -75,7 +75,7 @@ export function HomepageQuestionForm() {
       {state.status !== "idle" && (
         <p
           className={`mt-4 text-sm ${
-            state.status === "success" ? "text-brand-green" : "text-brand-magentaText"
+            state.status === "success" ? "text-brand-greenText" : "text-brand-magentaText"
           }`}
           role={state.status === "error" ? "alert" : "status"}
         >

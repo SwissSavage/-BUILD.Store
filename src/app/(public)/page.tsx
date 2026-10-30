@@ -210,7 +210,7 @@ function Hero() {
       />
       <div className="relative z-10 mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
         <div className="max-w-2xl">
-          <div className="mb-6 inline-flex self-start items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-green">
+          <div className="mb-6 inline-flex self-start items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-greenText">
             <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
             Future Modern
           </div>
@@ -368,7 +368,7 @@ async function Partners() {
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-lg font-semibold">{p.name}</h3>
                 {p.shippedTogether && (
-                  <span className="text-[10px] uppercase tracking-wider text-[#007048]">
+                  <span className="text-[10px] uppercase tracking-wider text-brand-greenText">
                     Shipped together
                   </span>
                 )}

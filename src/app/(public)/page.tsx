@@ -206,7 +206,7 @@ function Hero() {
       <HeroVideo mobile />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 left-0 z-[1] hidden w-[72%] bg-[radial-gradient(90%_105%_at_8%_92%,rgba(80,112,240,0.24)_0%,rgba(5,5,8,0.98)_48%,rgba(5,5,8,0.84)_66%,transparent_100%)] md:block"
+        className="hero-video-left-veil pointer-events-none absolute inset-y-0 left-0 z-[1] hidden w-[72%] md:block"
       />
       <div className="relative z-10 mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
         <div className="max-w-2xl">

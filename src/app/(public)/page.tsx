@@ -164,8 +164,8 @@ function HeroVideo({ mobile = false }: { mobile?: boolean }) {
       aria-hidden="true"
       className={
         mobile
-          ? "relative mt-12 aspect-video w-full overflow-hidden md:hidden"
-          : "absolute inset-y-0 left-[42%] right-0 hidden overflow-hidden md:block"
+          ? "hero-video-stage hero-video-stage--mobile relative mt-12 aspect-video w-full overflow-hidden md:hidden"
+          : "hero-video-stage absolute inset-y-0 left-[42%] right-0 hidden overflow-hidden md:block"
       }
     >
       <video
@@ -174,19 +174,20 @@ function HeroVideo({ mobile = false }: { mobile?: boolean }) {
         muted
         playsInline
         preload="metadata"
-        className="h-full w-full object-cover object-center"
+        className="hero-video-stage-media h-full w-full object-cover object-center"
       >
         <source src="/videos/future-modern-hero.mp4" type="video/mp4" />
       </video>
       {mobile ? (
         <>
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050508] via-[#050508]/20 to-[#050508]/45" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050508] via-[#050508]/45 to-[#050508]/65" />
           <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-[#050508] to-transparent" />
         </>
       ) : (
         <>
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,#050508_0%,rgba(5,5,8,0.98)_7%,rgba(5,5,8,0.78)_26%,rgba(5,5,8,0.20)_65%,rgba(5,5,8,0.05)_100%)]" />
-          <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#050508] via-[#050508]/70 to-transparent" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,#050508_0%,rgba(5,5,8,0.99)_10%,rgba(5,5,8,0.86)_30%,rgba(5,5,8,0.40)_62%,rgba(5,5,8,0.18)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_48%,rgba(216,40,160,0.10),transparent_62%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#050508] via-[#050508]/85 to-transparent" />
           <div className="absolute inset-x-0 top-0 h-1/5 bg-gradient-to-b from-[#050508]/55 to-transparent" />
         </>
       )}

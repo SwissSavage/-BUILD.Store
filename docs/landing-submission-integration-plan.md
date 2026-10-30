@@ -35,7 +35,8 @@ Tracking: [$BUILD.Store #293](https://github.com/SwissSavage/-BUILD.Store/issues
 - [x] Draft an admin-only attachment download route.
 - [x] Draft a transaction that saves the inbox entry, document content, and admin notifications together.
 - [ ] Complete a security and correctness review of authentication, request-size enforcement, validation, and error responses.
-- [ ] Confirm the migration applies on the development database and document the resulting storage and retention implications.
+- [ ] Verify the migrations also apply cleanly on a fresh database and confirm production storage and retention implications.
+- [x] Confirm both migrations are recorded in the development database and validate their SQL in a temporary schema rolled back after the test.
 - [ ] Verify document contents survive redeployment and are accessible only to authorized admins; verify safe downloads and handling of missing documents.
 - [ ] Verify database-enforced deduplication, concurrent requests, transaction rollback, and retries with conflicting content.
 - [ ] Verify the inbound entry presents every relevant field, identifies the landing page as its source, and links to the correct attachments.
@@ -55,11 +56,14 @@ Tracking: [$BUILD.Store #293](https://github.com/SwissSavage/-BUILD.Store/issues
 - [ ] Run relevant type checks and production builds for both repositories.
 - [x] Run focused PDF validation and retry-digest tests; confirm unauthenticated receiver and attachment requests are rejected locally.
 - [ ] Test a talent application, a find-talent request, and a build-team request, with and without PDFs.
+- [x] Exercise the receiver against the development database for a talent application with a PDF and both project request types; confirm three submissions and six admin notifications were saved.
+- [x] Verify an unchanged retry is deduplicated, changed content using the same ID is rejected, the rate limit rejects an eleventh request, and unauthenticated downloads are rejected.
 - [ ] Check missing and invalid credentials, malformed data, invalid PDF content, oversized files, and rate-limit behavior.
 - [ ] Simulate app, database, notification, and email failures; confirm the visitor receives the correct outcome and submissions are not silently lost.
 - [ ] Verify unauthorized and non-admin users cannot read inbox entries or download documents.
 - [ ] Test keyboard and mobile access to the inbox attachment links.
 - [ ] Review the diff, including excluding generated dependency files from commits.
+- [x] Remove the specifically generated synthetic development submissions, their notifications, and the test rate-limit key after verification.
 - [ ] Create one detailed PR per repository after the changes are reviewed, linking the corresponding issue and documenting deployment order.
 
 ## Operational note

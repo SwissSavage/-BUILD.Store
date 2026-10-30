@@ -782,6 +782,12 @@ html {
   outline-offset: 2px;
 }
 
+/* The visitor-chat launcher sits flush with the viewport edge so it cannot
+   cover the footer's social and policy links. */
+.fm-chat-launcher {
+  border-radius: 0.75rem 0 0 0.75rem !important;
+}
+
 /* The homepage hero video keeps a right-side composition so its subject stays
    in frame. Its media has a soft elliptical mask, while a separate hero-wide
    black and blue veil carries the left edge seamlessly over the footage. */

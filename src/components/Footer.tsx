@@ -52,7 +52,7 @@ const linkClassName = "hover:text-brand-magentaText";
 export function Footer() {
   return (
     <footer
-      className="relative mt-16 bg-[var(--surface-inset)]"
+      className="relative bg-[var(--surface-inset)]"
       style={{
         background:
           "radial-gradient(ellipse at 0% 100%, rgba(255,255,255,0.05), transparent 40%), var(--surface-inset)",

@@ -3,11 +3,16 @@
  * pillars, restyled against the codified Tailwind palette so the
  * whole app lives on one visual system.
  */
-import { Fragment } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ButtonLink } from "@/components/Button";
+import { CohortDeck } from "@/components/CohortDeck";
+import { HomepageQuestionForm } from "@/components/HomepageQuestionForm";
+import { PillarExplorer } from "@/components/PillarExplorer";
+import { ProcessExplorer } from "@/components/ProcessExplorer";
+import { ScrollReveal } from "@/components/ScrollReveal";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { INDUSTRY_LABELS, publicName, type Industry } from "@/lib/types";
+import { publicName } from "@/lib/types";
 import { memberLabel } from "@/lib/member-label";
 import { getAllUsers } from "@/lib/readers/users";
 import { servicePartnerReader, spotlightReader, safely } from "@/lib/readers";
@@ -16,10 +21,7 @@ import {
   publicProfileEligible,
 } from "@/lib/profile-visibility";
 import { periodKeyFor } from "@/lib/recognition-period";
-import {
-  TradingCard,
-  deriveTradingCardTier,
-} from "@/components/TradingCard";
+import { deriveTradingCardTier } from "@/components/TradingCard";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { Avatar } from "@/components/Avatar";
 import { PUBLIC_BOOKING_CTA, PUBLIC_BOOKING_URL } from "@/lib/public-booking";
@@ -44,12 +46,50 @@ export default async function Home() {
   return (
     <>
       <Hero />
-      <Process />
-      <Pillars />
-      <CohortRail />
-      <Partners />
-      <FaqSection />
+      <div className="relative isolate overflow-hidden bg-[#06070a]">
+        <div className="relative isolate overflow-hidden">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-64 top-1/3 hidden h-[44rem] w-[44rem] -translate-y-1/2 opacity-[0.045] md:block"
+          >
+            <Image
+              src="/brand/turtle.png"
+              alt=""
+              fill
+              sizes="44rem"
+              className="object-contain brightness-0 invert"
+            />
+          </div>
+          <div className="relative z-10">
+            <Process />
+            <Pillars />
+          </div>
+        </div>
+        <ScrollReveal>
+          <CohortRail />
+        </ScrollReveal>
+        <Partners />
+        <FaqSection />
+      </div>
     </>
+  );
+}
+
+type HomepageTone = "hero";
+
+const HOMEPAGE_BACKGROUNDS: Record<HomepageTone, string> = {
+  hero:
+    "radial-gradient(70% 70% at 88% 14%, rgba(216, 40, 160, 0.20) 0%, transparent 62%), radial-gradient(68% 65% at 8% 88%, rgba(80, 112, 240, 0.20) 0%, transparent 64%), linear-gradient(145deg, #060509 0%, #030407 48%, #070407 100%)",
+};
+
+/** Homepage-only section atmosphere; public route backgrounds remain unchanged. */
+function HomepageBackdrop({ tone }: { tone: HomepageTone }) {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0"
+      style={{ background: HOMEPAGE_BACKGROUNDS[tone] }}
+    />
   );
 }
 
@@ -118,180 +158,174 @@ function ContributorAffiliations() {
  * people belong on it — not as generic avatars but as the branded
  * player cards that signal how the cooperative organizes.
  */
+function HeroVideo({ mobile = false }: { mobile?: boolean }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={
+        mobile
+          ? "hero-video-stage hero-video-stage--mobile absolute inset-0 overflow-hidden md:hidden"
+          : "hero-video-stage absolute inset-y-0 left-[42%] right-0 hidden overflow-hidden md:block"
+      }
+    >
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="metadata"
+        className={`hero-video-stage-media h-full w-full object-cover ${
+          mobile ? "object-[65%_center]" : "object-center"
+        }`}
+      >
+        <source src="/videos/future-modern-hero.mp4" type="video/mp4" />
+      </video>
+      {mobile ? (
+        <>
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,8,0.90)_0%,rgba(5,5,8,0.84)_42%,rgba(5,5,8,0.74)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(115%_80%_at_8%_92%,rgba(80,112,240,0.25)_0%,rgba(5,5,8,0.92)_58%,transparent_100%)]" />
+          <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-[#050508]/85 to-transparent" />
+        </>
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,8,0.94)_0%,rgba(5,5,8,0.78)_28%,rgba(5,5,8,0.40)_65%,rgba(5,5,8,0.18)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_48%,rgba(216,40,160,0.10),transparent_62%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#050508] via-[#050508]/85 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-1/5 bg-gradient-to-b from-[#050508]/55 to-transparent" />
+        </>
+      )}
+    </div>
+  );
+}
+
 function Hero() {
   return (
-    <section className="relative flex min-h-[calc(100svh-68px)] flex-col overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      {/* Brand color wash — subtle magenta→blue gradient echoing the turtle shell. */}
+    <section className="relative flex min-h-[calc(100svh-68px)] flex-col overflow-hidden border-b border-[var(--surface-border)] bg-[#050508]">
+      <HomepageBackdrop tone="hero" />
+      <HeroVideo />
+      <HeroVideo mobile />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.12]"
-        style={{
-          background:
-            "radial-gradient(60% 60% at 85% 20%, #D828A0 0%, transparent 60%), radial-gradient(50% 50% at 15% 80%, #5070F0 0%, transparent 60%)",
-        }}
+        className="hero-video-left-veil pointer-events-none absolute inset-y-0 left-0 z-[1] hidden w-[72%] md:block"
       />
-      <div className="relative mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
-        <div className="mb-6 inline-flex self-start items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-green">
-          <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
-          Future Modern
-        </div>
-        <h1 className="font-display text-5xl font-bold leading-tight md:text-7xl">
-          $BUILD with the{" "}
-          <span className="bg-gradient-to-r from-brand-magenta to-brand-blue bg-clip-text text-transparent">
-            best.
-          </span>
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg text-ink-muted md:text-xl">
-          $BUILD <strong className="text-ink">a team</strong> from our handpicked
-          talent pool of Fortune 500-level STEM, Creative Media, and Professional
-          Services professionals. Perfectly matched to your project.
-        </p>
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-          <ButtonLink
-            href="/signup"
-            variant="primary"
-            size="large"
-            className="px-8 py-3 shadow-lg shadow-brand-magenta/20"
-          >
-            Get started
-          </ButtonLink>
-          <ButtonLink
-            href={PUBLIC_BOOKING_URL}
-            target="_blank"
-            rel="noreferrer"
-            variant="secondary"
-            size="large"
-            className="border-brand-blue/60 px-8 py-3 text-brand-blue hover:bg-brand-blue/10"
-          >
-            {PUBLIC_BOOKING_CTA}
-          </ButtonLink>
-        </div>
+      <div className="relative z-10 mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
+        <div className="max-w-2xl">
+          <div className="mb-6 inline-flex self-start items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-green">
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
+            Future Modern
+          </div>
+          <h1 className="font-display text-5xl font-bold leading-tight md:text-7xl">
+            $BUILD with the{" "}
+            <span className="bg-gradient-to-r from-brand-magenta to-brand-blue bg-clip-text text-transparent">
+              best.
+            </span>
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg text-ink-muted md:text-xl">
+            $BUILD <strong className="text-ink">a team</strong> from our handpicked
+            talent pool of Fortune 500-level STEM, Creative Media, and Professional
+            Services professionals. Perfectly matched to your project.
+          </p>
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <ButtonLink
+              href="/signup"
+              variant="primary"
+              size="large"
+              className="px-8 py-3 shadow-lg shadow-brand-magenta/20"
+            >
+              Get started
+            </ButtonLink>
+            <ButtonLink
+              href={PUBLIC_BOOKING_URL}
+              target="_blank"
+              rel="noreferrer"
+              variant="secondary"
+              size="large"
+              className="border-brand-blue/60 px-8 py-3 text-brand-blue hover:bg-brand-blue/10"
+            >
+              {PUBLIC_BOOKING_CTA}
+            </ButtonLink>
+          </div>
 
-        {/* Positional strip — Web3-native without being crypto-bro.
-            Three small signals a considered reader clocks in half a
-            second. Each one links to the surface where the receipt
-            lives, so the strip reads as a promise you can verify. */}
-        <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.15em] text-ink-faint">
-          <li className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="fm-btn-primary inline-block h-1.5 w-1.5 rounded-full"
-            />
-            <Link
-              href="/governance#canonization"
-              className="transition-colors hover:text-ink"
-            >
-              Web3-native
-            </Link>
-          </li>
-          <li className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="inline-block h-1.5 w-1.5 rounded-full bg-brand-blue"
-            />
-            <Link
-              href="/governance#tier"
-              className="transition-colors hover:text-ink"
-            >
-              Worker-owned
-            </Link>
-          </li>
-          <li className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="inline-block h-1.5 w-1.5 rounded-full bg-brand-green"
-            />
-            <Link
-              href="/policies/covenant"
-              className="transition-colors hover:text-ink"
-            >
-              Peer-reviewed
-            </Link>
-          </li>
-        </ul>
+          {/* Positional strip — Web3-native without being crypto-bro.
+              Three small signals a considered reader clocks in half a
+              second. Each one links to the surface where the receipt
+              lives, so the strip reads as a promise you can verify. */}
+          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.15em] text-ink-faint">
+            <li className="flex items-center gap-2">
+              <span
+                aria-hidden
+                className="fm-btn-primary inline-block h-1.5 w-1.5 rounded-full"
+              />
+              <Link
+                href="/governance#canonization"
+                className="transition-colors hover:text-ink"
+              >
+                Web3-native
+              </Link>
+            </li>
+            <li className="flex items-center gap-2">
+              <span
+                aria-hidden
+                className="inline-block h-1.5 w-1.5 rounded-full bg-brand-blue"
+              />
+              <Link
+                href="/governance#tier"
+                className="transition-colors hover:text-ink"
+              >
+                Worker-owned
+              </Link>
+            </li>
+            <li className="flex items-center gap-2">
+              <span
+                aria-hidden
+                className="inline-block h-1.5 w-1.5 rounded-full bg-brand-green"
+              />
+              <Link
+                href="/policies/covenant"
+                className="transition-colors hover:text-ink"
+              >
+                Peer-reviewed
+              </Link>
+            </li>
+          </ul>
+        </div>
       </div>
-      <ContributorAffiliations />
+      <div className="relative z-10 bg-[#050508]/90">
+        <ContributorAffiliations />
+      </div>
     </section>
   );
 }
 
 function Process() {
-  const steps = [
-    { n: "01", accent: "magenta", title: "Tell us your project", body: "Submit your RFP and budget. Our automated matcher narrows the field within the zone of possible agreement." },
-    { n: "02", accent: "blue",    title: "Choose from 3–5 options", body: "Not a flood of resumes. A curated set of qualified member teams, skill-filtered to your project." },
-    { n: "03", accent: "green",   title: "Pick your lead, stay in the loop", body: "Once awarded, the team runs delivery with DAO-style autonomy. You track milestones in real time." },
-    { n: "04", accent: "magenta", title: "Revenue settles, tokens flow", body: "When revenue is collected, cash splits and $BUILD tokens distribute automatically to the crew." },
-  ] as const;
-
-  const accentClass = {
-    magenta: "text-brand-magentaText border-t-brand-magenta",
-    blue:    "text-brand-blue border-t-brand-blue",
-    green:   "text-brand-green border-t-brand-green",
-  } as const;
-
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      <div className="mx-auto max-w-app px-6 py-20">
-        <h2 className="font-display text-3xl font-semibold md:text-4xl">
-          Our process
-        </h2>
-        <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {steps.map((s) => (
-            <div
-              key={s.n}
-              className={`rounded-2xl border border-t-4 border-[var(--surface-border)] bg-[var(--surface)] p-6 ${accentClass[s.accent]}`}
-            >
-              <div className={`font-display text-3xl ${accentClass[s.accent].split(" ")[0]}`}>{s.n}</div>
-              <h3 className="mt-4 text-lg font-semibold text-ink">{s.title}</h3>
-              <p className="mt-2 text-sm text-ink-muted">{s.body}</p>
-            </div>
-          ))}
-        </div>
+    <section className="bg-transparent">
+      <div className="mx-auto max-w-app px-6 pb-12 pt-20 md:pb-14">
+        <ScrollReveal>
+          <h2 className="font-display text-3xl font-semibold md:text-4xl">
+            Our process
+          </h2>
+          <p className="mt-2 max-w-2xl text-ink-muted">
+            From a clear brief to a recorded closeout.
+          </p>
+          <ProcessExplorer />
+        </ScrollReveal>
       </div>
     </section>
   );
 }
 
 function Pillars() {
-  const pillars: { key: Industry; blurb: string; accent: "blue" | "magenta" | "green" }[] = [
-    { key: "stem",                  accent: "blue",    blurb: "Full-stack, data, AI/ML, blockchain, cybersecurity, research." },
-    { key: "creative-media",        accent: "magenta", blurb: "Music, film, editorial, design, direction, post-production." },
-    { key: "professional-services", accent: "green",   blurb: "Strategy, legal, finance, operations, management consulting." },
-  ];
-
-  const styles = {
-    blue:    { ring: "hover:border-brand-blue",    text: "text-brand-blue",    dot: "bg-brand-blue" },
-    magenta: { ring: "hover:border-brand-magenta", text: "text-brand-magentaText", dot: "fm-btn-primary" },
-    green:   { ring: "hover:border-brand-green",   text: "text-brand-green",   dot: "bg-brand-green" },
-  } as const;
-
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
-        <h2 className="font-display text-3xl font-semibold md:text-4xl">Three pillars</h2>
-        <p className="mt-2 max-w-2xl text-ink-muted">
-          Fortune 500-caliber builders across the industries we serve.
-        </p>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {pillars.map((p) => {
-            const s = styles[p.accent];
-            return (
-              <div
-                key={p.key}
-                className={`rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6 transition-colors ${s.ring}`}
-              >
-                <div className={`flex items-center gap-2 text-xs uppercase tracking-wider ${s.text}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-                  Pillar
-                </div>
-                <h3 className="mt-2 font-display text-2xl font-semibold">
-                  {INDUSTRY_LABELS[p.key]}
-                </h3>
-                <p className="mt-3 text-sm text-ink-muted">{p.blurb}</p>
-              </div>
-            );
-          })}
-        </div>
+    <section className="bg-transparent">
+      <div className="mx-auto max-w-app px-6 pb-20 pt-12 md:pt-14">
+        <ScrollReveal>
+          <h2 className="font-display text-3xl font-semibold md:text-4xl">Three pillars</h2>
+          <p className="mt-2 max-w-2xl text-ink-muted">
+            Fortune 500-caliber builders across the industries we serve.
+          </p>
+          <PillarExplorer />
+        </ScrollReveal>
       </div>
     </section>
   );
@@ -305,7 +339,7 @@ async function Partners() {
   if (partners.length === 0) return null;
 
   return (
-    <section className="fm-below-fold border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+    <section className="fm-below-fold bg-transparent">
       <div className="mx-auto max-w-app px-6 py-20">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -392,11 +426,16 @@ function FaqSection() {
   ];
 
   return (
-    <Faq
-      eyebrow="Common questions"
-      heading="How Future Modern works"
-      items={items}
-    />
+    <div className="[&>section]:border-transparent [&>section]:bg-transparent">
+      <ScrollReveal>
+        <Faq
+          eyebrow="Common questions"
+          heading="How Future Modern works"
+          items={items}
+          aside={<HomepageQuestionForm />}
+        />
+      </ScrollReveal>
+    </div>
   );
 }
 
@@ -431,16 +470,31 @@ function FaqSection() {
  * growing rather than as a list that stopped.
  */
 /**
- * "September 2026" from an ISO timestamp, for the rail's month
- * dividers. Scrolling past the current month should land somewhere
- * labelled rather than in an unexplained continuation.
+ * A compact date for the roster card and an explicit version for screen
+ * readers. The visible label stays quiet; the accessible label retains the
+ * fact that it is a join date.
  */
-function monthLabel(iso: string | null | undefined): string {
-  if (!iso) return "";
+function joinDateLabel(iso: string | null | undefined): {
+  compact: string;
+  accessible: string;
+} {
+  if (!iso) return { compact: "Recent", accessible: "Joined recently" };
   const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? ""
-    : d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  if (Number.isNaN(d.getTime())) {
+    return { compact: "Recent", accessible: "Joined recently" };
+  }
+
+  return {
+    compact: d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
+    accessible: `Joined ${d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    })}`,
+  };
 }
 
 async function CohortRail() {
@@ -477,22 +531,13 @@ async function CohortRail() {
     // continuous scroll rather than being hidden behind a link.
     .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
 
-  // Curated picks lead, then everyone else who joined, in join order.
-  // CURATION ADDS, IT NEVER SUBTRACTS. Highlighting one person must not
-  // delete the other six from the feed.
-  const pinned = (curated?.userIds ?? [])
-    .map((id) => roster.find((u) => u.id === id))
-    .filter((u): u is (typeof roster)[number] => !!u)
-    .filter((u) => publicProfileEligible(u, recognizedIds));
-
-  const ordered = [
-    ...pinned,
-    ...eligible.filter((u) => !pinned.some((p) => p.id === u.id)),
-  ];
-  // No cap. Capping produced a "+N more" card that hid the people it
-  // was counting, on the one section whose job is to show that people
-  // are joining.
-  const users = ordered;
+  // The two rails are divided into newest and earlier joiners in CohortDeck,
+  // so keep this source list strictly chronological. A curated spotlight can
+  // shape the section copy, but must not move an older builder into the newer
+  // rail or create a duplicate across both tracks.
+  // No cap. Capping produced a "+N more" card that hid the people it was
+  // counting, on the one section whose job is to show that people are joining.
+  const users = eligible;
   const thisMonthKey = thisPeriod.key;
   const joinedThisMonth = users.filter((u) =>
     (u.createdAt ?? "").startsWith(thisMonthKey),
@@ -522,7 +567,7 @@ async function CohortRail() {
     const viewer = await safely(() => getCurrentUser(), null);
     if (!viewer?.isAdmin || totalRoster === 0) return null;
     return (
-      <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+      <section className="bg-transparent">
         <div className="mx-auto max-w-app px-6 py-10">
           <div className="text-xs uppercase tracking-wider text-brand-blue">
             This month&apos;s cohort · admin only
@@ -556,7 +601,7 @@ async function CohortRail() {
   };
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
+    <section className="bg-transparent">
       <div className="mx-auto max-w-app px-6 py-16">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -601,76 +646,36 @@ async function CohortRail() {
           )}
         </div>
 
-        {/* ─────────────────────────────────────────────────────────
-            A RAIL, NOT A LIST (2026-09-02)
-
-            This was a stacked column beside the copy. At three people
-            it read fine; at eight it was a wall of rows, and it grows
-            every time someone joins. Jamar: "this section just throws
-            the profiles at you."
-
-            Horizontal scroll with snap points, so the page shows a few
-            and the reader moves through the rest at their own pace.
-            CSS only — no autoplay, no carousel library, no JS. A
-            rotating rail that moves on its own takes control away from
-            someone trying to read a name, and it cannot be paused by
-            anyone using a keyboard.
-
-            The card is the profile, so each one is the trading card
-            rather than an avatar in a row, and it links through.
-            ───────────────────────────────────────────────────────── */}
         {users.length > 0 && (
-          <div className="mt-10 -mx-6 overflow-x-auto px-6 pb-4 [scrollbar-width:thin] snap-x snap-mandatory">
-            <ul className="flex gap-6">
-              {users.map((user, i) => {
-                // A divider whenever the month changes, so scrolling
-                // past the current month lands you in the previous one
-                // with a label rather than an unexplained jump. The
-                // rail resets monthly at the head and keeps the history
-                // behind it in one continuous scroll.
-                const month = (user.createdAt ?? "").slice(0, 7);
-                const prevMonth =
-                  i === 0 ? null : (users[i - 1].createdAt ?? "").slice(0, 7);
-                const showDivider = i > 0 && month !== prevMonth;
-                return (
-                  <Fragment key={user.id}>
-                    {showDivider && (
-                      <li className="flex w-28 shrink-0 snap-start items-center justify-center border-l border-[var(--surface-border)] pl-4">
-                        <span className="text-xs uppercase tracking-wider text-ink-faint">
-                          {monthLabel(user.createdAt)}
-                        </span>
-                      </li>
-                    )}
-                    <li className="w-44 shrink-0 snap-start md:w-52">
-                  <Link href={`/u/${user.handle}`} className="group block">
-                    <TradingCard
-                      user={user}
-                      tier={deriveTradingCardTier({
-                        ovr: null,
-                        isProvisional: true,
-                        isInChampionsCourt: false,
-                        membershipTier: user.membershipTier,
-                      })}
-                      aspectRatio="3/4"
-                      className="transition-transform group-hover:-translate-y-1"
-                    />
-                    <div className="mt-3">
-                      <div className="truncate font-display text-base font-semibold">
-                        {publicName(user)}
-                      </div>
-                      {memberLabel(user) && (
-                        <div className="mt-0.5 truncate text-xs text-ink-muted">
-                          {memberLabel(user)}
-                        </div>
-                      )}
-                    </div>
-                      </Link>
-                    </li>
-                  </Fragment>
-                );
-              })}
-            </ul>
-          </div>
+          <CohortDeck
+            builders={users.map((user) => {
+              const joined = joinDateLabel(user.createdAt);
+
+              return {
+                id: user.id,
+                href: `/u/${user.handle}`,
+                name: publicName(user),
+                label: memberLabel(user),
+                joinedLabel: joined.compact,
+                joinedAriaLabel: joined.accessible,
+                membershipTier: user.membershipTier,
+                user: {
+                  id: user.id,
+                  firstName: user.firstName,
+                  lastName: user.lastName,
+                  handle: user.handle,
+                  profileImageUrl: user.profileImageUrl,
+                  avatarPortraitUrl: user.avatarPortraitUrl,
+                },
+                tier: deriveTradingCardTier({
+                  ovr: null,
+                  isProvisional: true,
+                  isInChampionsCourt: false,
+                  membershipTier: user.membershipTier,
+                }),
+              };
+            })}
+          />
         )}
         {users.length < totalRoster && (
           <AdminRosterNote shown={users.length} total={totalRoster} excluded={excluded} />

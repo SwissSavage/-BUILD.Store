@@ -165,7 +165,7 @@ function HeroVideo({ mobile = false }: { mobile?: boolean }) {
       className={
         mobile
           ? "hero-video-stage hero-video-stage--mobile relative mt-12 aspect-video w-full overflow-hidden md:hidden"
-          : "hero-video-stage absolute inset-y-0 left-[42%] right-0 hidden overflow-hidden md:block"
+          : "hero-video-stage absolute inset-0 hidden overflow-hidden md:block"
       }
     >
       <video
@@ -185,7 +185,8 @@ function HeroVideo({ mobile = false }: { mobile?: boolean }) {
         </>
       ) : (
         <>
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,#050508_0%,rgba(5,5,8,0.99)_10%,rgba(5,5,8,0.86)_30%,rgba(5,5,8,0.40)_62%,rgba(5,5,8,0.18)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,#050508_0%,#050508_35%,rgba(5,5,8,0.96)_49%,rgba(5,5,8,0.58)_68%,rgba(5,5,8,0.22)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(72%_92%_at_8%_88%,rgba(80,112,240,0.22)_0%,rgba(5,5,8,0.92)_50%,transparent_74%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_48%,rgba(216,40,160,0.10),transparent_62%)]" />
           <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#050508] via-[#050508]/85 to-transparent" />
           <div className="absolute inset-x-0 top-0 h-1/5 bg-gradient-to-b from-[#050508]/55 to-transparent" />

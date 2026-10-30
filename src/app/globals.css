@@ -737,10 +737,11 @@ html {
   outline-offset: 2px;
 }
 
-/* The homepage hero video is an atmospheric field, not a rectangular media
-   panel. A soft elliptical mask lets it dissipate into the black canvas while
-   the veils in the component preserve copy contrast. */
-.hero-video-stage {
+/* The homepage hero video occupies the entire hero, so there is no physical
+   edge where footage can begin. Its media alone has a soft elliptical mask;
+   the foreground veils stay full-width to carry the hero's black and blue
+   atmosphere seamlessly over the footage. */
+.hero-video-stage-media {
   -webkit-mask-image: radial-gradient(
     ellipse 88% 92% at 70% 50%,
     #000 22%,
@@ -753,15 +754,12 @@ html {
     rgba(0, 0, 0, 0.94) 54%,
     transparent 100%
   );
-}
-
-.hero-video-stage-media {
   opacity: 0.74;
   filter: saturate(0.78) contrast(0.9);
   transform: scale(1.04);
 }
 
-.hero-video-stage--mobile {
+.hero-video-stage--mobile .hero-video-stage-media {
   -webkit-mask-image: radial-gradient(
     ellipse 112% 94% at 50% 50%,
     #000 36%,

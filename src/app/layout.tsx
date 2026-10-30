@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Abel, Inter, JetBrains_Mono } from "next/font/google";
+import { ColorClarityControl } from "@/components/ColorClarityControl";
 import "./globals.css";
 
 /**
@@ -255,6 +256,12 @@ export default function RootLayout({
     >
       <head>
         <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try { if (localStorage.getItem('fm-color-clarity') === 'on') document.documentElement.dataset.colorClarity = 'on'; } catch {}",
+          }}
+        />
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
@@ -264,6 +271,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         {children}
+        <ColorClarityControl />
       </body>
     </html>
   );

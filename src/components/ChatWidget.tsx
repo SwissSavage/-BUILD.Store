@@ -28,6 +28,7 @@ import { Button } from "@/components/Button";
  */
 
 import { useEffect, useRef, useState } from "react";
+import { MessageCircle, X } from "lucide-react";
 import {
   markVisitorThreadRead,
   sendVisitorMessage,
@@ -187,15 +188,15 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* Floating launcher */}
+      {/* Edge launcher stays out of the footer's link and social-control area. */}
       {!isOpen && (
         <Button
           type="button"
           onClick={() => setIsOpen(true)}
           aria-label="Open chat with the cooperative"
-          className="fm-btn-primary fixed bottom-6 right-6 z-50 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium shadow-lg transition-opacity"
+          className="fm-btn-primary fm-chat-launcher fixed bottom-6 right-0 z-50 size-12 p-0 shadow-lg shadow-brand-magenta/25"
         >
-          <span>Chat with us</span>
+          <MessageCircle aria-hidden="true" size={21} strokeWidth={1.8} />
         </Button>
       )}
 
@@ -225,7 +226,7 @@ export function ChatWidget() {
               aria-label="Close chat"
               className="rounded-full p-1 text-ink-faint hover:bg-[var(--surface-border)] hover:text-ink"
             >
-              ✕
+              <X aria-hidden="true" size={18} strokeWidth={1.8} />
             </Button>
           </header>
 

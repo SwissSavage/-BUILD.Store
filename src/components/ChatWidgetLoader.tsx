@@ -25,6 +25,7 @@ import { Button } from "@/components/Button";
  */
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import { MessageCircle } from "lucide-react";
 
 const ChatWidget = dynamic(
   () => import("@/components/ChatWidget").then((mod) => ({ default: mod.ChatWidget })),
@@ -45,14 +46,10 @@ export function ChatWidgetLoader() {
     <Button
       type="button"
       onClick={() => setOpened(true)}
-      className="fm-btn-primary fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium shadow-lg shadow-brand-magenta/25 transition-colors"
-      aria-label="Open chat"
+      className="fm-btn-primary fm-chat-launcher fixed bottom-6 right-0 z-40 size-12 p-0 shadow-lg shadow-brand-magenta/25"
+      aria-label="Open chat with the cooperative"
     >
-      <span
-        aria-hidden
-        className="inline-block h-2 w-2 rounded-full bg-brand-white"
-      />
-      Chat with us
+      <MessageCircle aria-hidden="true" size={21} strokeWidth={1.8} />
     </Button>
   );
 }

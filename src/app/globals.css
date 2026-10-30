@@ -737,10 +737,9 @@ html {
   outline-offset: 2px;
 }
 
-/* The homepage hero video occupies the entire hero, so there is no physical
-   edge where footage can begin. Its media alone has a soft elliptical mask;
-   the foreground veils stay full-width to carry the hero's black and blue
-   atmosphere seamlessly over the footage. */
+/* The homepage hero video keeps a right-side composition so its subject stays
+   in frame. Its media has a soft elliptical mask, while a separate hero-wide
+   black and blue veil carries the left edge seamlessly over the footage. */
 .hero-video-stage-media {
   -webkit-mask-image: radial-gradient(
     ellipse 88% 92% at 70% 50%,

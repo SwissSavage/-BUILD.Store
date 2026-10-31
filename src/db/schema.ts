@@ -1810,6 +1810,12 @@ export const inboundSubmissions = pgTable("inbound_submissions", {
   updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
 });
 
+export const landingSubmissionDocuments = pgTable("landing_submission_documents", {
+  submissionId: text("submission_id").notNull().references(() => inboundSubmissions.id, { onDelete: "cascade" }),
+  documentIndex: integer("document_index").notNull(),
+  contentBase64: text("content_base64").notNull(),
+}, (table) => [primaryKey({ columns: [table.submissionId, table.documentIndex] })]);
+
 // ──────────────────────────────────────────────────────────────────────
 //  $BUILD vouchers (off-chain claim mirror against the real token)
 // ──────────────────────────────────────────────────────────────────────

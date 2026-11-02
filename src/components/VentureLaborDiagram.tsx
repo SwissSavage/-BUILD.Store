@@ -21,6 +21,10 @@ export function VentureLaborDiagram() {
       <title id={`${id}-title`}>Venture Labor OS system diagram</title>
       <desc id={`${id}-description`}>The Venture Labor OS connects the contributor, platform, client or deal, treasury, and liquidity pool. Green arrows show deal flow, pink arrows show cash or equity, blue arrows show the platform, and gray arrows show treasury flow. Dashed arrows indicate feedback or a two-way platform and client relationship. A full list of flows follows the diagram.</desc>
       <defs>
+        <linearGradient id={`${id}-surface`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#101118" />
+          <stop offset="100%" stopColor="#0b0c10" />
+        </linearGradient>
         <pattern id={`${id}-dots`} width="24" height="24" patternUnits="userSpaceOnUse">
           <circle cx="12" cy="12" r="0.9" fill="#a1aabe" opacity="0.16" />
         </pattern>
@@ -30,6 +34,7 @@ export function VentureLaborDiagram() {
           </marker>
         ))}
       </defs>
+      <rect width="960" height="760" fill={`url(#${id}-surface)`} aria-hidden="true" />
       <rect width="960" height="760" fill={`url(#${id}-dots)`} aria-hidden="true" />
 
       {/* The outer relationships follow the original constellation. */}
@@ -72,6 +77,7 @@ export function VentureLaborDiagram() {
       ))}
 
       {/* The legend preserves the original color and dash meanings. */}
+      <rect x="48" y="660" width="864" height="92" rx="16" fill="#14151b" stroke="#32343e" strokeWidth="1" />
       <g fontSize="13" fill="#d6d8df">
         <path d="M70 686 H102" stroke={colors.cash} strokeWidth="2" /><text x="112" y="691">Cash / equity</text>
         <path d="M294 686 H326" stroke={colors.platform} strokeWidth="2" /><text x="336" y="691">Platform</text>

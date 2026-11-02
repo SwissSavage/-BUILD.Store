@@ -52,3 +52,8 @@
 .modern svg text[fill="#D828A0"] {
   fill: #ee88cc;
 }
+
+.modern.fullscreen {
+  border: 0 !important;
+  border-radius: 0 !important;
+}

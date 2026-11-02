@@ -15,10 +15,10 @@
  */
 import styles from "./VentureLaborConstellation.module.css";
 
-export function VentureLaborConstellation({ modern = false }: { modern?: boolean } = {}) {
+export function VentureLaborConstellation({ modern = false, fullscreen = false }: { modern?: boolean; fullscreen?: boolean } = {}) {
   return (
     <div
-      className={modern ? styles.modern : undefined}
+      className={modern ? `${styles.modern} ${fullscreen ? styles.fullscreen : ""}` : undefined}
       style={{
         background: "#060a10",
         border: "1px solid #1a3060",

@@ -1,69 +1,84 @@
 import { useId } from "react";
 
-/** Detailed view of the Venture Labor system; the accompanying overview provides the same flows as text. */
+/** Detailed visual of the existing Venture Labor flows; the page also lists them as text. */
 export function VentureLaborDiagram() {
   const id = useId().replace(/:/g, "");
-  const arrows = { pink: `${id}-pink`, blue: `${id}-blue`, green: `${id}-green`, gray: `${id}-gray` };
-  const colors: Record<string, string> = { pink: "#c973a9", blue: "#8197e4", green: "#61b99a", gray: "#90939f" };
+  const colors = {
+    cash: "#e597c8",
+    platform: "#9aaeff",
+    deal: "#7bd2af",
+    treasury: "#b3b7c4",
+  };
   const nodes = [
-    { x: 350, y: 34, width: 260, title: "CONTRIBUTOR", lines: ["Skills · Relationships", "Domain expertise"], color: "#68c7a4" },
-    { x: 690, y: 234, width: 246, title: "PLATFORM", lines: ["Infrastructure · Brand", "Distribution · Leverage"], color: "#91a5ff" },
-    { x: 660, y: 524, width: 276, title: "CLIENT / DEAL", lines: ["Revenue generated", "85 · 12 · 3 split"], color: "#68c7a4" },
-    { x: 24, y: 524, width: 276, title: "TREASURY", lines: ["Collects 3% · 1.5% operations", "1.5% to liquidity pool"], color: "#b8bac7" },
-    { x: 24, y: 234, width: 246, title: "LIQUIDITY POOL / $BUILD", lines: ["Passive equity accrual", "OTC = mobilization"], color: "#e68bc5" },
+    { x: 356, y: 46, width: 248, title: "Contributor", detail: ["Skills · Relationships", "Domain expertise"], accent: colors.deal },
+    { x: 686, y: 238, width: 250, title: "Platform", detail: ["Infrastructure · Brand", "Distribution · Leverage"], accent: colors.platform },
+    { x: 642, y: 510, width: 294, title: "Client / deal", detail: ["Revenue generated", "85 · 12 · 3 split"], accent: colors.deal },
+    { x: 24, y: 510, width: 294, title: "Treasury", detail: ["Collects 3% · 1.5% operations", "1.5% → liquidity pool"], accent: colors.treasury },
+    { x: 24, y: 238, width: 250, title: "Liquidity pool / $BUILD", detail: ["Passive equity accrual", "OTC = mobilization"], accent: colors.cash },
   ];
   return (
-    <svg viewBox="0 0 960 760" role="img" aria-labelledby={`${id}-title ${id}-description`} className="block h-auto w-full bg-[#0b0c10]">
+    <svg viewBox="0 0 960 760" role="img" aria-labelledby={`${id}-title ${id}-description`} className="block h-auto w-full bg-[#0b0c10]" style={{ fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
       <title id={`${id}-title`}>Venture Labor OS system diagram</title>
-      <desc id={`${id}-description`}>Contributor, platform, client, treasury and liquidity pool connected to Venture Labor OS through deal flow, cash, platform leverage and feedback. The full set of flows is also listed in text below the diagram.</desc>
+      <desc id={`${id}-description`}>The Venture Labor OS connects the contributor, platform, client or deal, treasury, and liquidity pool. Green arrows show deal flow, pink arrows show cash or equity, blue arrows show the platform, and gray arrows show treasury flow. Dashed arrows indicate feedback or a two-way platform and client relationship. A full list of flows follows the diagram.</desc>
       <defs>
         <pattern id={`${id}-dots`} width="24" height="24" patternUnits="userSpaceOnUse">
-          <circle cx="12" cy="12" r="1" fill="#8e96ad" opacity="0.22" />
+          <circle cx="12" cy="12" r="0.9" fill="#a1aabe" opacity="0.16" />
         </pattern>
-        {Object.entries(arrows).map(([color, marker]) => (
-          <marker key={color} id={marker} markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
-            <path d="M0 0 L7 3.5 L0 7 Z" fill={colors[color]} />
+        {Object.entries(colors).map(([name, color]) => (
+          <marker key={name} id={`${id}-${name}`} viewBox="0 0 8 8" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+            <path d="M0 0 L8 4 L0 8 Z" fill={color} />
           </marker>
         ))}
       </defs>
       <rect width="960" height="760" fill={`url(#${id}-dots)`} aria-hidden="true" />
+
+      {/* The outer relationships follow the original constellation. */}
       <g fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M475 130 L475 299" stroke="#61b99a" markerEnd={`url(#${arrows.green})`} />
-        <path d="M488 299 L488 130" stroke="#c973a9" markerEnd={`url(#${arrows.pink})`} />
-        <path d="M610 88 Q722 122 785 224" stroke="#8197e4" markerEnd={`url(#${arrows.blue})`} />
-        <path d="M582 347 L680 292" stroke="#8197e4" markerEnd={`url(#${arrows.blue})`} />
-        <path d="M813 338 Q817 433 797 514" stroke="#8197e4" strokeDasharray="6 6" markerStart={`url(#${arrows.blue})`} markerEnd={`url(#${arrows.blue})`} />
-        <path d="M550 427 L687 514" stroke="#61b99a" markerEnd={`url(#${arrows.green})`} />
-        <path d="M676 514 L538 436" stroke="#c973a9" markerEnd={`url(#${arrows.pink})`} />
-        <path d="M650 573 Q480 633 310 573" stroke="#c973a9" markerEnd={`url(#${arrows.pink})`} />
-        <path d="M163 514 Q128 426 140 338" stroke="#90939f" markerEnd={`url(#${arrows.gray})`} />
-        <path d="M160 224 Q246 116 340 88" stroke="#c973a9" markerEnd={`url(#${arrows.pink})`} />
-        <path d="M420 436 L277 514" stroke="#c973a9" strokeDasharray="6 6" markerStart={`url(#${arrows.pink})`} markerEnd={`url(#${arrows.pink})`} />
-        <path d="M377 348 L280 292" stroke="#c973a9" strokeDasharray="6 6" markerStart={`url(#${arrows.pink})`} markerEnd={`url(#${arrows.pink})`} />
+        {/* Contributor → platform; liquidity → contributor */}
+        <path d="M604 98 C690 108 765 155 797 231" stroke={colors.platform} markerEnd={`url(#${id}-platform)`} />
+        <path d="M163 231 C195 155 270 108 351 98" stroke={colors.cash} markerEnd={`url(#${id}-cash)`} />
+        {/* Platform ↔ client; treasury → liquidity */}
+        <path d="M811 344 L811 503" stroke={colors.platform} strokeDasharray="6 6" markerStart={`url(#${id}-platform)`} markerEnd={`url(#${id}-platform)`} />
+        <path d="M149 503 L149 345" stroke={colors.treasury} markerEnd={`url(#${id}-treasury)`} />
+        {/* Client → treasury */}
+        <path d="M694 618 C694 649 266 649 266 623" stroke={colors.cash} markerEnd={`url(#${id}-cash)`} />
+        {/* Contributor → hub; hub → contributor */}
+        <path d="M471 153 L471 291" stroke={colors.deal} markerEnd={`url(#${id}-deal)`} />
+        <path d="M489 291 L489 153" stroke={colors.cash} markerEnd={`url(#${id}-cash)`} />
+        {/* Hub → platform */}
+        <path d="M593 340 L679 292" stroke={colors.platform} markerEnd={`url(#${id}-platform)`} />
+        {/* Hub → client; client → hub */}
+        <path d="M544 422 L689 503" stroke={colors.deal} markerEnd={`url(#${id}-deal)`} />
+        <path d="M669 503 L526 429" stroke={colors.cash} markerEnd={`url(#${id}-cash)`} />
+        {/* Hub ↔ treasury; hub ↔ liquidity */}
+        <path d="M418 428 L294 503" stroke={colors.cash} strokeDasharray="6 6" markerStart={`url(#${id}-cash)`} markerEnd={`url(#${id}-cash)`} />
+        <path d="M367 340 L281 292" stroke={colors.cash} strokeDasharray="6 6" markerStart={`url(#${id}-cash)`} markerEnd={`url(#${id}-cash)`} />
       </g>
+
+      {/* Solid, rounded nodes keep all text and accents inside the shape. */}
       <g>
-        <rect x="379" y="302" width="202" height="132" rx="22" fill="#17181d" stroke="#bd6da3" strokeWidth="1.5" />
-        <circle cx="480" cy="331" r="4" fill="#d887bd" />
-        <text x="480" y="363" textAnchor="middle" fill="#f3f4f6" fontSize="20" fontWeight="700">Venture Labor</text>
-        <text x="480" y="388" textAnchor="middle" fill="#d6a0c4" fontSize="16" fontWeight="600">OS</text>
-        <text x="480" y="410" textAnchor="middle" fill="#b7bac5" fontSize="12">Future Modern</text>
+        <rect x="368" y="294" width="224" height="128" rx="20" fill="#1c1d24" stroke="#a85e91" strokeWidth="1.5" />
+        <text x="480" y="344" textAnchor="middle" fill="#f7f7fa" fontSize="20" fontWeight="700">Venture Labor OS</text>
+        <text x="480" y="371" textAnchor="middle" fill="#c6a8be" fontSize="13">Future Modern</text>
       </g>
       {nodes.map((node) => (
         <g key={node.title}>
-          <rect x={node.x} y={node.y} width={node.width} height="96" rx="16" fill="#17181d" stroke="#555963" strokeWidth="1.5" />
-          <circle cx={node.x + 20} cy={node.y + 25} r="4" fill={node.color} />
-          <text x={node.x + 34} y={node.y + 30} fill="#f3f4f6" fontSize="14" fontWeight="700">{node.title}</text>
-          <text x={node.x + 20} y={node.y + 57} fill="#c2c4cd" fontSize="13">{node.lines[0]}</text>
-          <text x={node.x + 20} y={node.y + 77} fill="#c2c4cd" fontSize="13">{node.lines[1]}</text>
+          <rect x={node.x} y={node.y} width={node.width} height="104" rx="16" fill="#191b21" stroke="#4d515e" strokeWidth="1.5" />
+          <circle cx={node.x + 22} cy={node.y + 30} r="4" fill={node.accent} />
+          <text x={node.x + 36} y={node.y + 35} fill="#f7f7fa" fontSize="16" fontWeight="700">{node.title}</text>
+          <text x={node.x + 22} y={node.y + 62} fill="#c4c7d0" fontSize="13">{node.detail[0]}</text>
+          <text x={node.x + 22} y={node.y + 83} fill="#c4c7d0" fontSize="13">{node.detail[1]}</text>
         </g>
       ))}
-      <g fontSize="12" fill="#d0d1d8">
-        <path d="M110 694 H142" stroke="#c973a9" strokeWidth="2" /><text x="150" y="698">Cash / equity</text>
-        <path d="M307 694 H339" stroke="#8197e4" strokeWidth="2" /><text x="347" y="698">Platform</text>
-        <path d="M475 694 H507" stroke="#61b99a" strokeWidth="2" /><text x="515" y="698">Deal flow</text>
-        <path d="M635 694 H667" stroke="#90939f" strokeWidth="2" /><text x="675" y="698">Treasury flow</text>
-        <path d="M307 726 H339" stroke="#c973a9" strokeWidth="2" strokeDasharray="6 6" /><text x="347" y="730">Feedback loop</text>
-        <path d="M535 726 H567" stroke="#8197e4" strokeWidth="2" strokeDasharray="6 6" /><text x="575" y="730">Platform ↔ client</text>
+
+      {/* The legend preserves the original color and dash meanings. */}
+      <g fontSize="13" fill="#d6d8df">
+        <path d="M70 686 H102" stroke={colors.cash} strokeWidth="2" /><text x="112" y="691">Cash / equity</text>
+        <path d="M294 686 H326" stroke={colors.platform} strokeWidth="2" /><text x="336" y="691">Platform</text>
+        <path d="M480 686 H512" stroke={colors.deal} strokeWidth="2" /><text x="522" y="691">Deal flow</text>
+        <path d="M661 686 H693" stroke={colors.treasury} strokeWidth="2" /><text x="703" y="691">Treasury flow</text>
+        <path d="M294 724 H326" stroke={colors.cash} strokeWidth="2" strokeDasharray="6 6" /><text x="336" y="729">Feedback loop</text>
+        <path d="M535 724 H567" stroke={colors.platform} strokeWidth="2" strokeDasharray="6 6" /><text x="577" y="729">Platform ↔ client</text>
       </g>
     </svg>
   );

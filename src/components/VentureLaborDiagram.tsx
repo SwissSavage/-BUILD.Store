@@ -21,7 +21,7 @@ export function VentureLaborDiagram() {
       <rect width="960" height="760" fill={`url(#${id}-dots)`} />
 
       {/* The shell is the boundary of the system, not an additional flow. */}
-      <ellipse cx="480" cy="378" rx="235" ry="242" fill={`url(#${id}-shell)`} stroke={`url(#${id}-outline)`} strokeWidth="2" opacity=".9" />
+      <ellipse cx="480" cy="378" rx="235" ry="242" fill={`url(#${id}-shell)`} stroke={`url(#${id}-outline)`} strokeWidth="1.5" opacity=".55" />
       <ellipse cx="480" cy="378" rx="222" ry="229" fill="none" stroke="#91a6e8" strokeOpacity=".16" />
       <g fill="none" stroke="#99a4d9" strokeOpacity=".11" strokeWidth="1.2">
         <path d="M480 148 L480 245 M480 510 L480 607 M260 378 H351 M609 378 H700" />
@@ -31,21 +31,21 @@ export function VentureLaborDiagram() {
 
       {/* Outer routes and spokes retain the original's direction and line styles. */}
       <g fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M575 110 Q765 105 828 244" stroke="#708cff" markerEnd={marker("blue")} />
-        <path d="M800 340 Q788 465 732 552" stroke="#708cff" strokeDasharray="6 5" markerEnd={marker("blue")} />
-        <path d="M745 552 Q803 465 812 340" stroke="#708cff" strokeDasharray="6 5" markerEnd={marker("blue")} />
-        <path d="M740 640 Q480 683 220 640" stroke="#ef4bbd" markerEnd={marker("pink")} />
-        <path d="M130 244 Q195 105 385 110" stroke="#ef4bbd" markerEnd={marker("pink")} />
-        <path d="M486 162 V310" stroke="#35bc91" markerEnd={marker("green")} />
-        <path d="M474 310 V162" stroke="#ef4bbd" markerEnd={marker("pink")} />
-        <path d="M546 360 L728 306" stroke="#708cff" markerEnd={marker("blue")} />
-        <path d="M525 429 L667 552" stroke="#35bc91" markerEnd={marker("green")} />
-        <path d="M654 552 L515 432" stroke="#ef4bbd" markerEnd={marker("pink")} />
-        <path d="M220 552 Q153 455 130 340" stroke="#9aa7bc" markerEnd={marker("gray")} />
-        <path d="M435 429 L293 552" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
-        <path d="M306 552 L445 432" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
-        <path d="M414 360 L232 306" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
-        <path d="M232 318 L414 372" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M569 110 C700 110 805 140 830 250" stroke="#708cff" markerEnd={marker("blue")} />
+        <path d="M800 334 C800 420 775 490 732 558" stroke="#708cff" strokeDasharray="6 5" markerEnd={marker("blue")} />
+        <path d="M745 558 C788 490 813 420 813 334" stroke="#708cff" strokeDasharray="6 5" markerEnd={marker("blue")} />
+        <path d="M740 634 C590 682 370 682 220 634" stroke="#ef4bbd" markerEnd={marker("pink")} />
+        <path d="M130 250 C155 140 260 110 391 110" stroke="#ef4bbd" markerEnd={marker("pink")} />
+        <path d="M486 156 V316" stroke="#35bc91" markerEnd={marker("green")} />
+        <path d="M474 316 V156" stroke="#ef4bbd" markerEnd={marker("pink")} />
+        <path d="M539 361 L734 306" stroke="#708cff" markerEnd={marker("blue")} />
+        <path d="M526 420 L667 558" stroke="#35bc91" markerEnd={marker("green")} />
+        <path d="M654 558 L520 425" stroke="#ef4bbd" markerEnd={marker("pink")} />
+        <path d="M220 558 C175 490 145 420 130 334" stroke="#9aa7bc" markerEnd={marker("gray")} />
+        <path d="M434 420 L293 558" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M306 558 L440 425" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M421 361 L226 306" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M226 318 L419 371" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
       </g>
 
       {/* Placement gives the head and flippers their form; consistent frames keep the labels legible. */}

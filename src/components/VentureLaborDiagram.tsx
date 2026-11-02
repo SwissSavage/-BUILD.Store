@@ -17,12 +17,16 @@ export function VentureLaborDiagram() {
       <title id={`${id}-title`}>Venture Labor OS system diagram</title>
       <desc id={`${id}-description`}>Contributor, platform, client, treasury and liquidity pool connected to Venture Labor OS through deal flow, cash, platform leverage and feedback. The full set of flows is also listed in text below the diagram.</desc>
       <defs>
+        <pattern id={`${id}-dots`} width="24" height="24" patternUnits="userSpaceOnUse">
+          <circle cx="12" cy="12" r="1" fill="#8e96ad" opacity="0.22" />
+        </pattern>
         {Object.entries(arrows).map(([color, marker]) => (
           <marker key={color} id={marker} markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
             <path d="M0 0 L7 3.5 L0 7 Z" fill={colors[color]} />
           </marker>
         ))}
       </defs>
+      <rect width="960" height="760" fill={`url(#${id}-dots)`} aria-hidden="true" />
       <g fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M475 130 L475 299" stroke="#61b99a" markerEnd={`url(#${arrows.green})`} />
         <path d="M488 299 L488 130" stroke="#c973a9" markerEnd={`url(#${arrows.pink})`} />

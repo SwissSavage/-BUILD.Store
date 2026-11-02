@@ -99,8 +99,8 @@ export function DiagramZoom({ children, fullscreen = false }: { children: ReactN
           <button type="button" onClick={() => updateZoom(1)} disabled={zoom === 1} aria-label="Reset zoom" className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--surface-border)] text-ink hover:bg-[var(--surface-elevated)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-blue disabled:opacity-40"><RotateCcw size={16} aria-hidden="true" /></button>
         </div>
       </div>
-      <div ref={viewport} role="region" tabIndex={0} onKeyDown={keyDown} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd} style={{ touchAction: "none", cursor: zoom > 1 ? "grab" : "default" }} className={`${fullscreen ? "absolute inset-0 flex items-center justify-center" : "relative rounded-2xl"} overflow-hidden select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-blue`} aria-label="Venture Labor diagram">
-        <div style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, transformOrigin: "center", width: fullscreen ? "min(100%, calc(100dvh * 960 / 760))" : "100%" }} className="shrink-0">{children}</div>
+      <div ref={viewport} role="region" tabIndex={0} onKeyDown={keyDown} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd} style={{ touchAction: "none", cursor: zoom > 1 ? "grab" : "default", aspectRatio: fullscreen ? undefined : "960 / 760" }} className={`${fullscreen ? "absolute inset-0" : "relative rounded-2xl"} flex items-center justify-center overflow-hidden select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-blue`} aria-label="Venture Labor diagram">
+        <div style={{ transform: `translate(${offset.x}px, ${offset.y}px)`, width: fullscreen ? `min(${zoom * 100}%, calc(100dvh * ${zoom * 960} / 760))` : `${zoom * 100}%` }} className="shrink-0">{children}</div>
       </div>
     </div>
   );

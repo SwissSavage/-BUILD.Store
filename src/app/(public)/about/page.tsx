@@ -16,6 +16,8 @@
  */
 import Link from "next/link";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { ButtonLink, buttonClassName } from "@/components/Button";
+import { ArrowDown } from "lucide-react";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { TaglineRare } from "@/components/TaglineRare";
 import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
@@ -48,20 +50,22 @@ export default function AboutPage() {
         entries={getEntriesForPage("/about")}
         pageUrl={`${SITE_URL}/about`}
       />
-      <Hero />
-      <WhyWeBuiltThis />
-      <PeoplePowered />
-      <VentureLabor />
-      <ConstellationSection />
-      <CoreCompetencies />
-      <Provenance />
-      <Credentials />
-      <WhatWeSayNoTo />
-      <WhatChanged />
-      <Pillars />
-      <RoadmapPeek />
-      <FaqSection />
-      <CTA />
+      <div className="bg-[#06070a]">
+        <Hero />
+        <WhyWeBuiltThis />
+        <PeoplePowered />
+        <Credentials />
+        <VentureLabor />
+        <ConstellationSection />
+        <WhatChanged />
+        <Provenance />
+        <Pillars />
+        <CoreCompetencies />
+        <WhatWeSayNoTo />
+        <RoadmapPeek />
+        <FaqSection />
+        <CTA />
+      </div>
     </>
   );
 }
@@ -105,20 +109,8 @@ function WhyWeBuiltThis() {
   ];
 
   return (
-    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      {/* Gradient wash — subtle radial from magenta to blue, echoes
-          the hero's own wash so the visual language stays consistent
-          while this block reads as its own moment. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.14]"
-        style={{
-          background:
-            "radial-gradient(65% 65% at 15% 20%, #D828A0 0%, transparent 60%), radial-gradient(50% 50% at 85% 85%, #5070F0 0%, transparent 60%)",
-        }}
-      />
-
-      <div className="relative mx-auto max-w-app px-6 py-24 md:py-32">
+    <section id="our-story" className="relative scroll-mt-24 overflow-hidden">
+      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
         <div className="text-xs uppercase tracking-wider text-brand-magentaText">
           Why we built this
         </div>
@@ -247,26 +239,20 @@ function FaqSection() {
   ];
 
   return (
-    <Faq
-      eyebrow="Common questions"
-      heading="Questions the cooperative gets asked"
-      items={items}
-    />
+    <div id="questions" className="scroll-mt-24 [&>section]:border-0 [&>section]:bg-transparent">
+      <Faq
+        eyebrow="Common questions"
+        heading="Questions the cooperative gets asked"
+        items={items}
+      />
+    </div>
   );
 }
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.10]"
-        style={{
-          background:
-            "radial-gradient(60% 60% at 80% 20%, #D828A0 0%, transparent 60%), radial-gradient(50% 50% at 10% 90%, #007048 0%, transparent 60%)",
-        }}
-      />
-      <div className="relative mx-auto max-w-app px-6 py-20 md:py-28">
+    <section className="relative overflow-hidden">
+      <div className="relative mx-auto max-w-app px-6 pb-14 pt-16 md:pb-16 md:pt-24">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-3 py-1 text-xs font-medium text-brand-magentaText">
           <span className="fm-btn-primary h-1.5 w-1.5 rounded-full" />
           About Future Modern
@@ -301,6 +287,16 @@ function Hero() {
             Access is earned, not sold
           </span>
         </div>
+        <a href="#our-story" className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-brand-blue underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-blue">
+          Explore the story <ArrowDown aria-hidden="true" size={16} />
+        </a>
+        <nav aria-label="About page sections" className="mt-10 flex flex-wrap gap-x-6 gap-y-3 border-t border-[var(--surface-border)] pt-5 text-sm text-ink-muted">
+          <a className="hover:text-ink focus-visible:text-ink" href="#people">Our people</a>
+          <a className="hover:text-ink focus-visible:text-ink" href="#model">Our model</a>
+          <a className="hover:text-ink focus-visible:text-ink" href="#expertise">Our expertise</a>
+          <a className="hover:text-ink focus-visible:text-ink" href="#standards">Our standards</a>
+          <a className="hover:text-ink focus-visible:text-ink" href="#questions">Questions</a>
+        </nav>
       </div>
     </section>
   );
@@ -317,8 +313,8 @@ function Hero() {
 
 function PeoplePowered() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section id="people" className="scroll-mt-24">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <div className="grid gap-10 md:grid-cols-[1.5fr,1fr]">
           <div>
             <div className="text-xs uppercase tracking-wider text-brand-green">
@@ -327,7 +323,7 @@ function PeoplePowered() {
             <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
               The resumes speak for themselves.
             </h2>
-            <div className="mt-6 space-y-5 text-ink-muted">
+            <div className="mt-6 max-w-prose space-y-5 leading-relaxed text-ink-muted">
               <p>
                 The people who built this are already reputed in their
                 fields. Top performers at the companies they passed through.
@@ -364,7 +360,7 @@ function PeoplePowered() {
           <Card className="self-start">
             <CardEyebrow>What &quot;people-powered&quot; means</CardEyebrow>
             <CardTitle className="mt-2">Earned, not bought</CardTitle>
-            <ul className="mt-4 space-y-3 text-sm text-ink-muted">
+            <ul className="mt-4 space-y-3 text-sm leading-relaxed text-ink-muted">
               <li>
                 <span className="text-ink">Access is earned.</span> Three
                 paths in: invitation from an existing member, application +
@@ -402,8 +398,8 @@ function PeoplePowered() {
 
 function VentureLabor() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section id="model" className="scroll-mt-24">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <div className="grid gap-10 md:grid-cols-[1fr,1.5fr]">
           <div>
             <div className="text-xs uppercase tracking-wider text-brand-magentaText">
@@ -435,7 +431,7 @@ function VentureLabor() {
             <CardTitle className="mt-2">
               Ideological as much as technical.
             </CardTitle>
-            <p className="mt-3 text-sm text-ink-muted">
+            <p className="mt-3 text-sm leading-relaxed text-ink-muted">
               The failure mode of pooled labor is not the people who
               cannot do the work. It is the people who can do the work
               and will throw out the agreement the moment a check
@@ -497,8 +493,8 @@ function WhatChanged() {
   } as const;
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section>
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           What we changed
         </h2>
@@ -519,7 +515,7 @@ function WhatChanged() {
               >
                 Old model → ours
               </div>
-              <div className="mt-3 text-sm text-ink-muted">
+              <div className="mt-3 text-sm leading-relaxed text-ink-muted">
                 <span className="text-ink-faint">Before:</span> {row.old}
               </div>
               <div className="mt-3 text-sm">
@@ -571,18 +567,8 @@ function WhatWeSayNoTo() {
   ];
 
   return (
-    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      {/* Subtle magenta wash — this is the identity moment, so the
-          brand color shows up quietly behind the type. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.10]"
-        style={{
-          background:
-            "radial-gradient(60% 60% at 50% 30%, #D828A0 0%, transparent 65%)",
-        }}
-      />
-      <div className="relative mx-auto max-w-app px-6 py-20">
+    <section id="standards" className="scroll-mt-24 relative overflow-hidden">
+      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
         <p className="text-xs uppercase tracking-[0.18em] text-brand-magentaText">
           The discipline
         </p>
@@ -605,7 +591,7 @@ function WhatWeSayNoTo() {
           ))}
         </ul>
 
-        <p className="mt-8 max-w-2xl text-sm text-ink-muted">
+        <p className="mt-8 max-w-2xl text-sm leading-relaxed text-ink-muted">
           We cold pitch to get in the door. We don&apos;t cold close.
           That&apos;s the whole difference.
         </p>
@@ -673,8 +659,8 @@ function CoreCompetencies() {
   ];
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section>
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Core competencies
         </h2>
@@ -688,8 +674,7 @@ function CoreCompetencies() {
           {groups.map((g) => (
             <div
               key={g.label}
-              className="rounded-2xl border border-t-4 border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
-              style={{ borderTopColor: g.color }}
+              className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
             >
               <div
                 className="text-xs uppercase tracking-wider"
@@ -697,7 +682,7 @@ function CoreCompetencies() {
               >
                 {g.label}
               </div>
-              <ul className="mt-4 space-y-1.5 text-sm text-ink-muted">
+              <ul className="mt-4 space-y-1.5 text-sm leading-relaxed text-ink-muted">
                 {g.skills.map((s) => (
                   <li key={s} className="flex items-baseline gap-2">
                     <span
@@ -763,8 +748,8 @@ function Provenance() {
   } as const;
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section>
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <div className="flex flex-wrap items-baseline gap-3">
           <span className="text-xs uppercase tracking-wider text-brand-magentaText">
             Core values
@@ -783,12 +768,12 @@ function Provenance() {
           {principles.map((p) => (
             <div
               key={p.title}
-              className={`rounded-2xl border border-t-4 border-[var(--surface-border)] bg-[var(--surface)] p-6 ${accentClass[p.accent]}`}
+              className={`rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 ${accentClass[p.accent]}`}
             >
               <h3 className="font-display text-lg font-semibold text-ink">
                 {p.title}
               </h3>
-              <p className="mt-3 text-sm text-ink-muted">{p.body}</p>
+              <p className="mt-3 text-sm leading-relaxed text-ink-muted">{p.body}</p>
             </div>
           ))}
         </div>
@@ -843,8 +828,8 @@ function Credentials() {
   ];
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section>
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Where the team cut its teeth
         </h2>
@@ -858,8 +843,7 @@ function Credentials() {
           {groups.map((g) => (
             <div
               key={g.label}
-              className="rounded-2xl border border-l-4 border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
-              style={{ borderLeftColor: g.color }}
+              className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
             >
               <div
                 className="text-xs uppercase tracking-wider"
@@ -888,8 +872,8 @@ function Credentials() {
 
 function Pillars() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section id="expertise" className="scroll-mt-24">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Three pillars, one cooperative
         </h2>
@@ -985,7 +969,7 @@ function OriginNote({
       >
         {eyebrow}
       </p>
-      <p className="mt-2 text-sm text-ink-muted">{body}</p>
+      <p className="mt-2 text-sm leading-relaxed text-ink-muted">{body}</p>
     </div>
   );
 }
@@ -1015,24 +999,15 @@ function PillarCard({
         Pillar
       </div>
       <h3 className="mt-2 font-display text-2xl font-semibold">{label}</h3>
-      <p className="mt-3 text-sm text-ink-muted">{blurb}</p>
+      <p className="mt-3 text-sm leading-relaxed text-ink-muted">{blurb}</p>
     </div>
   );
 }
 
 function RoadmapPeek() {
   return (
-    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      {/* Subtle radial wash — brand palette rhythm */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.08]"
-        style={{
-          background:
-            "radial-gradient(50% 60% at 15% 20%, #007048 0%, transparent 60%), radial-gradient(50% 60% at 85% 90%, #5070F0 0%, transparent 60%)",
-        }}
-      />
-      <div className="relative mx-auto max-w-app px-6 py-24">
+    <section className="relative overflow-hidden">
+      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
         <div className="grid gap-14 md:grid-cols-[1fr,1.7fr]">
           <div>
             <div className="text-xs uppercase tracking-wider text-brand-magentaText">
@@ -1144,7 +1119,7 @@ function RoadmapRow({
             {status}
           </span>
         </div>
-        <p className="mt-3 text-sm text-ink-muted">{body}</p>
+        <p className="mt-3 text-sm leading-relaxed text-ink-muted">{body}</p>
       </div>
     </div>
   );
@@ -1152,8 +1127,8 @@ function RoadmapRow({
 
 function ConstellationSection() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section>
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <div className="max-w-2xl">
           <div className="text-xs uppercase tracking-wider text-brand-magentaText">
             Venture Labor OS
@@ -1194,8 +1169,8 @@ function ConstellationSection() {
 
 function CTA() {
   return (
-    <section className="bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20 text-center">
+    <section>
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14 text-center">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Ready to be part of it?
         </h2>
@@ -1204,18 +1179,12 @@ function CTA() {
           client looking for a real team. Start here.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link
-            href="/signup"
-            className="fm-btn-primary inline-flex items-center justify-center rounded-full px-8 py-3 font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
-          >
+          <ButtonLink href="/signup" variant="primary" size="large">
             Apply to join
-          </Link>
-          <Link
-            href="/membership"
-            className="inline-flex items-center justify-center rounded-full border border-brand-blue/60 px-8 py-3 font-medium text-brand-blue transition-colors hover:bg-brand-blue/10"
-          >
+          </ButtonLink>
+          <ButtonLink href="/membership" variant="secondary" size="large">
             See membership tiers
-          </Link>
+          </ButtonLink>
           <a
             href={PUBLIC_BOOKING_URL}
             target="_blank"

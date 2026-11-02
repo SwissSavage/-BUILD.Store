@@ -31,38 +31,38 @@ export function VentureLaborDiagram() {
 
       {/* Outer routes and spokes retain the original's direction and line styles. */}
       <g fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M569 126 Q685 159 746 260" stroke="#708cff" markerEnd={marker("blue")} />
-        <path d="M746 334 Q730 458 699 558" stroke="#708cff" strokeDasharray="6 5" markerEnd={marker("blue")} />
-        <path d="M710 558 Q744 450 757 334" stroke="#708cff" strokeDasharray="6 5" markerEnd={marker("blue")} />
-        <path d="M645 610 Q480 656 315 610" stroke="#ef4bbd" markerEnd={marker("pink")} />
-        <path d="M214 260 Q275 159 391 126" stroke="#ef4bbd" markerEnd={marker("pink")} />
+        <path d="M569 126 Q685 159 716 260" stroke="#708cff" markerEnd={marker("blue")} />
+        <path d="M716 334 Q705 458 679 558" stroke="#708cff" strokeDasharray="6 5" markerEnd={marker("blue")} />
+        <path d="M690 558 Q720 450 727 334" stroke="#708cff" strokeDasharray="6 5" markerEnd={marker("blue")} />
+        <path d="M625 610 Q480 656 335 610" stroke="#ef4bbd" markerEnd={marker("pink")} />
+        <path d="M244 260 Q275 159 391 126" stroke="#ef4bbd" markerEnd={marker("pink")} />
         <path d="M486 156 V318" stroke="#35bc91" markerEnd={marker("green")} />
         <path d="M474 318 V156" stroke="#ef4bbd" markerEnd={marker("pink")} />
-        <path d="M536 360 L735 306" stroke="#708cff" markerEnd={marker("blue")} />
-        <path d="M520 419 L661 554" stroke="#35bc91" markerEnd={marker("green")} />
-        <path d="M650 559 L511 425" stroke="#ef4bbd" markerEnd={marker("pink")} />
-        <path d="M252 558 Q224 449 214 335" stroke="#9aa7bc" markerEnd={marker("gray")} />
-        <path d="M448 426 L309 558" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
-        <path d="M299 551 L437 420" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
-        <path d="M424 360 L226 306" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
-        <path d="M226 316 L424 371" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M536 360 L705 306" stroke="#708cff" markerEnd={marker("blue")} />
+        <path d="M520 419 L641 558" stroke="#35bc91" markerEnd={marker("green")} />
+        <path d="M630 559 L511 425" stroke="#ef4bbd" markerEnd={marker("pink")} />
+        <path d="M272 558 Q254 449 244 334" stroke="#9aa7bc" markerEnd={marker("gray")} />
+        <path d="M448 426 L329 558" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M319 558 L437 420" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M424 360 L256 306" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M256 316 L424 371" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
       </g>
 
-      {/* The head and paired flippers are the content panels themselves. */}
+      {/* Placement gives the head and flippers their form; consistent frames keep the labels legible. */}
       <g strokeWidth="1.5">
-        <path d="M391 156 V105 Q391 54 480 54 Q569 54 569 105 V156 Q480 169 391 156 Z" fill="#101b1a" stroke="#38b991" />
-        <path d="M226 258 Q150 220 54 248 Q31 256 32 282 V321 Q87 361 226 334 Z" fill="#211322" stroke="#d94bb0" />
-        <path d="M734 258 Q810 220 906 248 Q929 256 928 282 V321 Q873 361 734 334 Z" fill="#121a30" stroke="#6e88f7" />
-        <path d="M315 558 Q233 540 147 574 Q128 584 130 615 L142 638 Q224 654 315 620 Z" fill="#181b25" stroke="#8994ab" />
-        <path d="M645 558 Q727 540 813 574 Q832 584 830 615 L818 638 Q736 654 645 620 Z" fill="#10211e" stroke="#36ae8b" />
+        <rect x="391" y="80" width="178" height="76" rx="10" fill="#101b1a" stroke="#38b991" />
+        <rect x="62" y="250" width="194" height="84" rx="10" fill="#211322" stroke="#d94bb0" />
+        <rect x="704" y="250" width="194" height="84" rx="10" fill="#121a30" stroke="#6e88f7" />
+        <rect x="145" y="558" width="190" height="76" rx="10" fill="#181b25" stroke="#8994ab" />
+        <rect x="625" y="558" width="190" height="76" rx="10" fill="#10211e" stroke="#36ae8b" />
       </g>
       <g textAnchor="middle" fontFamily="Arial, sans-serif" fill="#f6f7ff">
         <text x="480" y="103" fontSize="14" fontWeight="700" letterSpacing="1">CONTRIBUTOR</text>
         <text x="480" y="123" fontSize="11" fill="#c7d4d2">Skills · Relationships</text><text x="480" y="140" fontSize="11" fill="#c7d4d2">Domain Expertise</text>
-        <text x="130" y="280" fontSize="13" fontWeight="700" letterSpacing=".5">LIQUIDITY POOL</text><text x="130" y="296" fontSize="11" fontWeight="700" fill="#ff8bd6">= $BUILD TOKEN</text><text x="130" y="312" fontSize="10.5" fill="#d3c5d0">Passive equity accrual</text><text x="130" y="327" fontSize="10.5" fill="#d3c5d0">OTC = mobilization</text>
-        <text x="830" y="281" fontSize="13" fontWeight="700" letterSpacing=".5">PLATFORM</text><text x="830" y="302" fontSize="11" fill="#c4cce2">Infrastructure · Brand</text><text x="830" y="319" fontSize="11" fill="#c4cce2">Distribution · Leverage</text>
-        <text x="220" y="584" fontSize="13" fontWeight="700" letterSpacing=".5">TREASURY</text><text x="220" y="604" fontSize="11" fill="#c8cbd5">Collects 3% · 1.5% ops</text><text x="220" y="621" fontSize="11" fill="#c8cbd5">1.5% → liquidity pool</text>
-        <text x="740" y="584" fontSize="13" fontWeight="700" letterSpacing=".5">CLIENT / DEAL</text><text x="740" y="604" fontSize="11" fill="#c5d5d0">Revenue Generated</text><text x="740" y="621" fontSize="11" fill="#ff8bd6">85 · 12 · 3 Split</text>
+        <text x="160" y="280" fontSize="13" fontWeight="700" letterSpacing=".5">LIQUIDITY POOL</text><text x="160" y="296" fontSize="11" fontWeight="700" fill="#ff8bd6">= $BUILD TOKEN</text><text x="160" y="312" fontSize="10.5" fill="#d3c5d0">Passive equity accrual</text><text x="160" y="327" fontSize="10.5" fill="#d3c5d0">OTC = mobilization</text>
+        <text x="800" y="281" fontSize="13" fontWeight="700" letterSpacing=".5">PLATFORM</text><text x="800" y="302" fontSize="11" fill="#c4cce2">Infrastructure · Brand</text><text x="800" y="319" fontSize="11" fill="#c4cce2">Distribution · Leverage</text>
+        <text x="240" y="584" fontSize="13" fontWeight="700" letterSpacing=".5">TREASURY</text><text x="240" y="604" fontSize="11" fill="#c8cbd5">Collects 3% · 1.5% ops</text><text x="240" y="621" fontSize="11" fill="#c8cbd5">1.5% → liquidity pool</text>
+        <text x="720" y="584" fontSize="13" fontWeight="700" letterSpacing=".5">CLIENT / DEAL</text><text x="720" y="604" fontSize="11" fill="#c5d5d0">Revenue Generated</text><text x="720" y="621" fontSize="11" fill="#ff8bd6">85 · 12 · 3 Split</text>
       </g>
       <circle cx="480" cy="378" r="62" fill={`url(#${id}-hub)`} stroke="#ef4bbd" strokeWidth="2" />
       <circle cx="480" cy="378" r="54" fill="none" stroke="#f18ad2" strokeOpacity=".25" />

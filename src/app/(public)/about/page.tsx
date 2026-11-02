@@ -20,6 +20,7 @@ import { ButtonLink, buttonClassName } from "@/components/Button";
 import { ArrowDown, Check, Maximize2, X } from "lucide-react";
 import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
 import { DiagramZoom } from "@/components/DiagramZoom";
+import { DiagramMobileViewer } from "@/components/DiagramMobileViewer";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { TaglineRare } from "@/components/TaglineRare";
 import { DefinedTermSchema } from "@/components/DefinedTermSchema";
@@ -415,7 +416,8 @@ function VentureLaborOverview() {
           <h3 className="mt-2 font-display text-2xl font-semibold md:text-3xl">How the system connects</h3>
           <p className="mt-3 max-w-3xl leading-relaxed text-ink-muted">The contributors, platform, client, treasury, and liquidity pool connected through Venture Labor.</p>
         </div>
-        <details className="group mt-5 sm:mt-0">
+        <DiagramMobileViewer><VentureLaborConstellation modern /></DiagramMobileViewer>
+        <details className="group hidden sm:block">
           <summary className="inline-flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-[var(--surface-border)] px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-brand-magenta/60 hover:bg-[var(--surface-elevated)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue sm:absolute sm:right-8 sm:top-6 [&::-webkit-details-marker]:hidden">
             <Maximize2 size={16} aria-hidden="true" />
             <span className="group-open:hidden">View diagram</span>

@@ -194,8 +194,10 @@ function Hero() {
               </span>.
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-ink-muted md:text-xl">
-              Curated crews. The people who ship keep 85%. That&apos;s what
-              gets the best in the room.
+              Future Modern is a cooperative talent agency operating at the intersection
+              of art, tech and culture to deliver creative strategy, managed services,
+              and labor solutions through a nexus of 1,000+ members and partners, many
+              with Unicorn startup, FAANG, and Fortune 500 experience.
             </p>
             <p className="mt-3 text-base leading-relaxed text-ink-muted">
               Read on to see how we work with clients, and how members earn theirs.
@@ -292,25 +294,25 @@ function PeoplePowered() {
             <h3 className="mt-2 font-display text-2xl font-semibold">Earned, not bought</h3>
             <ul className="mt-6 grid gap-4 leading-relaxed text-ink-muted sm:grid-cols-2">
               <li className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
-                <span className="text-ink">Access is earned.</span> Three
-                paths in: invitation from an existing member, application +
-                vetting, or contribution to the cooperative&apos;s
-                infrastructure. The whitelist is not for sale.
+                <span className="text-ink">Earned, not bought.</span>{" "}
+                Access is earned through invitation, application and vetting,
+                or contribution to the cooperative&apos;s infrastructure. The
+                whitelist is not for sale.
               </li>
               <li className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
                 <span className="text-ink">Admin-authored framing.</span>{" "}
                 Members submit objective fields: price, timeline, work
-                samples. The cooperative authors the positioning so the work
-                speaks for itself, not the cold-pitch voice.
+                samples. The cooperative authors positioning so the work
+                speaks for itself.
               </li>
               <li className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
                 <span className="text-ink">85% to the people who shipped.</span>{" "}
-                One 15% house cut funds infrastructure, commissions, and
-                operations.
+                Eighty-five percent of all client revenue goes directly to the
+                member teams who delivered the work.
               </li>
               <li className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
                 <span className="text-ink">Attribution is permanent.</span>{" "}
-                The ledger compounds across years. Contributions don&apos;t
+                The ledger compounds across years. Contributions do not
                 reset to zero when a contract closes.
               </li>
             </ul>
@@ -340,19 +342,20 @@ function VentureLabor() {
             </h2>
             <p className="mt-5 text-ink-muted">
               Venture Capital pools money and goes looking for labor to
-              multiply it. Venture Labor is the inversion. People who can
-              do the work pool their skill and time, and the upside on
-              what gets shipped belongs to the people who shipped it.
+              multiply it. Venture Labor is the inversion. Skilled labor pools
+              its time and effort, and the upside on what gets shipped belongs
+              to the people who shipped it.
             </p>
             <p className="mt-4 text-ink-muted">
               The phrase is honest about where we came from. Patrons
               used to buy into an artist&apos;s work to keep it moving
-              until it sold. The tradition is real, and the controls
+              until it sold. The tradition is old, and the controls
               around it were historically lazy: no point-of-sale
               discipline, contracts that read like favors, profit
               conversations that did not happen until the money was
               already gone. We kept the underlying idea and fixed the
-              controls. We stopped pretending the labor was not equity.
+              controls. We understand that workers are creating the value and
+              deserve the upside of their contributions.
             </p>
           </div>
 
@@ -367,10 +370,9 @@ function VentureLabor() {
               <span className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2">Values</span>
             </div>
             <p className="mt-4 leading-relaxed text-ink-muted">
-              The failure mode of pooled labor is not the people who
-              cannot do the work. It is the people who can do the work
-              and will throw out the agreement the moment a check
-              clears. We vet for that first. The craft we can teach.
+              The failure of pooled labor is not lack of talent, but talented
+              people who disregard the agreement the moment a check clears.
+              We vet for that first. The craft we can teach.
               The values we cannot, and we have stopped trying.
             </p>
             <p className="mt-4 border-l-2 border-brand-magenta/40 pl-4 text-sm italic leading-relaxed text-ink-muted">
@@ -460,27 +462,27 @@ function WhatChanged() {
   const rows: { old: string; ours: string; accent: "magenta" | "blue" | "green" }[] = [
     {
       old: "Platform takes ~10–20%, agency takes a margin, contributor gets the residual.",
-      ours: "Contributors keep 85% of contract revenue. The 15% house cut funds shared infrastructure. Not shareholders.",
+      ours: "Contributors keep 85% of contract revenue. The 15% house cut funds shared infrastructure, not outside shareholders.",
       accent: "magenta",
     },
     {
       old: "Direct contact info is a leak vector. Clients and contributors both hide it to keep the door open for off-platform deals.",
-      ours: "Admins scrub direct-contact info on the way out so contributors get attribution without becoming a circumvention target. PII removal is never a rejection. Admins just remove it inline.",
+      ours: "Information is gated until engagement begins. Contributors get attribution without becoming a circumvention target.",
       accent: "blue",
     },
     {
       old: "Each contributor pitches themselves cold. Quality of self-presentation drowns out quality of work.",
-      ours: "Members submit objective fields: price, timeline, work samples. Admins author the positioning narrative consistently across every quote sheet so nobody undersells or overclaims themselves.",
+      ours: "Members submit objective fields: price, timeline, work samples. Executive Strategists author the positioning narrative consistently and honestly.",
       accent: "green",
     },
     {
-      old: "Bidding platforms extract from both sides. Workers pay to be seen (bids, boosts, subscriptions, verifications). Clients wade through 50+ proposals per RFP to find the 3-5 qualified matches.",
-      ours: "No bidding. No pay for access. Ever. We do the vetting for you. The cooperative curates 3-5 qualified matches per skillset. Workers stay in delivery mode. Clients get the shortlist, not the slush pile.",
+      old: "Bidding platforms extract from both sides. Workers pay to be seen. Clients wade through 50+ proposals to find 3-5 matches.",
+      ours: "No bidding. No pay for access. The cooperative curates 3-5 qualified matches per skillset. Workers stay in delivery mode.",
       accent: "blue",
     },
     {
       old: "When the contract closes, the relationship resets to zero. No equity, no compounding ownership.",
-      ours: "Contributors accrue $BUILD tokens on every shipped contract. Real attribution, real co-ownership, real governance rights as you move up the membership tiers.",
+      ours: "Contributors accrue $BUILD tokens on every shipped contract. Real attribution, real co-ownership, and real governance.",
       accent: "magenta",
     },
   ];
@@ -549,12 +551,15 @@ function WhatChanged() {
  */
 function WhatWeSayNoTo() {
   const refusals = [
-    "No bidding. No pay for access. Ever.",
-    "No paid tiers. No sponsored listings. No boosted profiles.",
+    "No pay for access. Membership is earned by contribution, not cash.",
+    "No paid tiers. Every member owns their own rate.",
+    "No sponsored listings. Curation isn't an auction.",
+    "No boosted profiles. Merit isn't a line item.",
+    "No selling user's personal data. Trust is not a revenue stream.",
     "No sales theater. Honest pricing, honest tracking, honest scope. Every time.",
-    "No exit strategy. No dilution of cooperative ownership.",
-    "No discounts. Rarity is the pricing model.",
-    "No opaque compensation. Talent sees the gate before it fires.",
+    "No exit strategy. Ownership is permanent by design.",
+    "No discounts. Value is set by the creator, not haggled by the buyer.",
+    "No confusion about compensation. The split is published before the work starts.",
   ];
 
   return (
@@ -697,31 +702,31 @@ function Provenance() {
     {
       title: "Provenance.",
       body:
-        "Resources and acknowledgement flow back to original ideas and the labor that moves culture forward. Attribution is permanent and the ledger is public to the contributors on each engagement. Nobody chases anyone for credit, and contributions compound across years.",
+        "Resources and acknowledgement flow back to original ideas and the labor that moves culture forward. Attribution is permanent.",
       accent: "magenta",
     },
     {
       title: "Discernment.",
       body:
-        "We curate. The cooperative isn’t a marketplace of disconnected skills. Admins frame contributors consistently, vet incoming RFPs, and assemble cross-pillar teams the way a good agency partner would. We create the wave that others ride.",
+        "Future Modern curates contributors, vets incoming RFPs, and assembles cross-pillar teams the way a strong agency partner would.",
       accent: "blue",
     },
     {
       title: "Equity.",
       body:
-        "Eighty-five percent of contract revenue flows to the people who shipped. $BUILD tokens accrue with contribution. Membership tiers map to governance rights. The platform is owned by the people building it. By design, not as a marketing claim.",
+        "Eighty-five percent of contract revenue flows to the people who shipped. $BUILD tokens accrue with contribution. The platform is owned by the people building it.",
       accent: "green",
     },
     {
       title: "Truth and inquiry.",
       body:
-        "We value freedom and responsibility of expression, alongside honesty, transparency, and experimentation. Where we’re unsure, we say so. Where we’re certain, we ship. The roadmap is public; the open frictions are too.",
+        "Where we are unsure, we say so. Where we are certain, we ship.",
       accent: "magenta",
     },
     {
       title: "Tried and true × cutting edge.",
       body:
-        "We’re innovative in how we combine proven methods with new technology and strategy. We aren’t shipping a tech demo. We’re running an agency on top of a cooperative model and the engineering follows the operations, not the other way around.",
+        "Future Modern combines proven operations with new technology and strategy. The engineering follows the operations, not the other way around.",
       accent: "blue",
     },
     {
@@ -864,26 +869,25 @@ function Pillars() {
         </h2>
         <p className="mt-2 text-ink-muted">
           Every member sits in at least one pillar. Many sit across two. A
-          handful move freely through all three. The pillar framing is how we
-          route opportunities and how we build teams that can actually ship a
-          Fortune-500-grade brief.
+          handful move freely through all three. The pillar framing is how
+          opportunities are routed and how teams are built for serious briefs.
         </p>
 
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           <PillarCard
             label="STEM"
             color="#5070F0"
-            blurb="Full-stack engineering, AI/ML, blockchain, security, data, research."
+            blurb="Full-stack engineering, AI/ML, blockchain, security, data, research, and more."
           />
           <PillarCard
             label="Creative Media"
             color="#D828A0"
-            blurb="Music, film, editorial, design, direction, post-production."
+            blurb="Music, film, editorial, design, direction, post-production, and more."
           />
           <PillarCard
             label="Professional Services"
             color="#007048"
-            blurb="Strategy, legal, finance, operations, management consulting."
+            blurb="Strategy, legal, finance, operations, management consulting, and more."
           />
         </div>
 

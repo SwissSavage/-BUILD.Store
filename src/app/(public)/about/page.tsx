@@ -17,7 +17,8 @@
 import Link from "next/link";
 import { HomepageQuestionForm } from "@/components/HomepageQuestionForm";
 import { ButtonLink, buttonClassName } from "@/components/Button";
-import { ArrowDown, Check, X } from "lucide-react";
+import { ArrowDown, Check, Maximize2, X } from "lucide-react";
+import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { TaglineRare } from "@/components/TaglineRare";
 import { DefinedTermSchema } from "@/components/DefinedTermSchema";
@@ -121,7 +122,6 @@ function WhyWeBuiltThis() {
         </div>
         <div className="mx-auto mt-10 max-w-2xl text-center">
           <p className="text-xl italic text-ink-muted">&ldquo;We looked. We couldn&apos;t find it. So we built it.&rdquo;</p>
-          <p className="mt-4 text-lg text-ink-muted">We looked. We stopped looking. So we built it.</p>
           <p className="mt-3 text-lg font-medium text-ink">If it&apos;s the deal you&apos;ve been waiting for, the door is open.</p>
         </div>
       </div>
@@ -408,10 +408,25 @@ function VentureLaborOverview() {
   ];
   return (
     <figure className="mt-12 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)]">
-      <figcaption className="border-b border-[var(--surface-border)] px-6 py-6 sm:px-8">
-        <p className="text-sm font-medium text-brand-magentaText">Venture Labor OS</p>
-        <h3 className="mt-2 font-display text-2xl font-semibold md:text-3xl">How the system connects</h3>
-        <p className="mt-3 max-w-3xl leading-relaxed text-ink-muted">The contributors, platform, client, treasury, and liquidity pool connected through Venture Labor.</p>
+      <figcaption className="relative border-b border-[var(--surface-border)] px-6 py-6 sm:px-8">
+        <div className="sm:pr-52">
+          <p className="text-sm font-medium text-brand-magentaText">Venture Labor OS</p>
+          <h3 className="mt-2 font-display text-2xl font-semibold md:text-3xl">How the system connects</h3>
+          <p className="mt-3 max-w-3xl leading-relaxed text-ink-muted">The contributors, platform, client, treasury, and liquidity pool connected through Venture Labor.</p>
+        </div>
+        <details className="group mt-5 sm:mt-0">
+          <summary className="inline-flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-[var(--surface-border)] px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-brand-magenta/60 hover:bg-[var(--surface-elevated)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue sm:absolute sm:right-8 sm:top-6 [&::-webkit-details-marker]:hidden">
+            <Maximize2 size={16} aria-hidden="true" />
+            <span className="group-open:hidden">View original diagram</span>
+            <span className="hidden group-open:inline">Hide original diagram</span>
+          </summary>
+          <div className="mt-6">
+            <p className="mb-3 text-sm leading-relaxed text-ink-muted">Explore the original Venture Labor constellation. On a small screen, scroll sideways to see the full diagram.</p>
+            <div role="region" aria-label="Original Venture Labor diagram, scroll horizontally" tabIndex={0} className="overflow-x-auto rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue">
+              <div className="min-w-[680px]"><VentureLaborConstellation /></div>
+            </div>
+          </div>
+        </details>
       </figcaption>
       <div className="relative bg-[var(--surface)] px-6 pb-6 pt-6 sm:px-8">
         <div className="relative z-10 mx-auto w-fit rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-5 py-3 text-center font-display text-lg font-semibold text-ink">Venture Labor OS</div>

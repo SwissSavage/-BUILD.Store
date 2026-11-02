@@ -417,7 +417,7 @@ function VentureLaborOverview() {
           <p className="mt-3 max-w-3xl leading-relaxed text-ink-muted">The contributors, platform, client, treasury, and liquidity pool connected through Venture Labor.</p>
         </div>
         <DiagramMobileViewer><VentureLaborDiagram /></DiagramMobileViewer>
-        <details className="group hidden sm:block">
+        <details open className="group hidden sm:block">
           <summary className="inline-flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-[var(--surface-border)] px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-brand-magenta/60 hover:bg-[var(--surface-elevated)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue sm:absolute sm:right-8 sm:top-6 [&::-webkit-details-marker]:hidden">
             <Maximize2 size={16} aria-hidden="true" />
             <span className="group-open:hidden">View diagram</span>

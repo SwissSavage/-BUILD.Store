@@ -1,315 +1,81 @@
 import { useId } from "react";
-import styles from "./VentureLaborDiagram.module.css";
 
+/** The labeled nodes form the head and flippers; the central network forms the shell. */
 export function VentureLaborDiagram() {
   const id = useId().replace(/:/g, "");
+  const marker = (color: string) => `url(#${id}-${color})`;
   return (
-    <div className={styles.diagram}
-      style={{
-        background: "#060a10",
-        border: "1px solid #1a3060",
-        borderRadius: 5,
-        overflow: "hidden",
-      }}
-    >
-      <svg
-        viewBox="0 0 960 760"
-        xmlns="http://www.w3.org/2000/svg"
-        style={{ width: "100%", height: "auto", background: "#060a10" }}
-        role="img"
-        aria-label="Venture Labor OS Turtle Constellation diagram"
-      >
-        <defs>
-          <marker
-            id={`${id}-am`}
-            markerWidth="6"
-            markerHeight="6"
-            refX="5"
-            refY="3"
-            orient="auto"
-          >
-            <path d="M0,0 L0,6 L6,3 z" fill="#D828A0" opacity="0.9" />
-          </marker>
-          <marker
-            id={`${id}-ab`}
-            markerWidth="6"
-            markerHeight="6"
-            refX="5"
-            refY="3"
-            orient="auto"
-          >
-            <path d="M0,0 L0,6 L6,3 z" fill="#5070F0" opacity="0.9" />
-          </marker>
-          <marker
-            id={`${id}-ag`}
-            markerWidth="6"
-            markerHeight="6"
-            refX="5"
-            refY="3"
-            orient="auto"
-          >
-            <path d="M0,0 L0,6 L6,3 z" fill="#007048" opacity="0.9" />
-          </marker>
-          <marker
-            id={`${id}-ad`}
-            markerWidth="6"
-            markerHeight="6"
-            refX="5"
-            refY="3"
-            orient="auto"
-          >
-            <path d="M0,0 L0,6 L6,3 z" fill="#556" opacity="0.9" />
-          </marker>
+    <svg viewBox="0 0 960 760" xmlns="http://www.w3.org/2000/svg" role="img"
+      aria-labelledby={`${id}-title ${id}-description`} style={{ display: "block", width: "100%", height: "auto", background: "#080a12" }}>
+      <title id={`${id}-title`}>Venture Labor OS turtle constellation</title>
+      <desc id={`${id}-description`}>The contributor, platform, client, treasury and liquidity pool surround the Venture Labor OS. Colored, directed lines show cash and equity, platform, deal, treasury and feedback flows.</desc>
+      <defs>
+        <pattern id={`${id}-dots`} width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".7" fill="#7183ae" opacity=".22" /></pattern>
+        <radialGradient id={`${id}-shell`}><stop stopColor="#191027" /><stop offset=".7" stopColor="#101323" /><stop offset="1" stopColor="#090d18" /></radialGradient>
+        <linearGradient id={`${id}-outline`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#526bfa" /><stop offset=".5" stopColor="#bd3dae" /><stop offset="1" stopColor="#087f67" /></linearGradient>
+        <radialGradient id={`${id}-hub`}><stop stopColor="#32112d" /><stop offset="1" stopColor="#100d1a" /></radialGradient>
+        {[["pink", "#ef4bbd"], ["blue", "#708cff"], ["green", "#35bc91"], ["gray", "#9aa7bc"]].map(([name, color]) => (
+          <marker key={name} id={`${id}-${name}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill={color} /></marker>
+        ))}
+      </defs>
+      <rect width="960" height="760" fill={`url(#${id}-dots)`} />
 
-          <filter id={`${id}-glow-m`}>
-            <feGaussianBlur stdDeviation="6" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id={`${id}-glow-b`}>
-            <feGaussianBlur stdDeviation="5" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id={`${id}-glow-g`}>
-            <feGaussianBlur stdDeviation="5" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id={`${id}-glow-hub`}>
-            <feGaussianBlur stdDeviation="14" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
+      {/* The shell is the boundary of the system, not an additional flow. */}
+      <ellipse cx="480" cy="378" rx="235" ry="242" fill={`url(#${id}-shell)`} stroke={`url(#${id}-outline)`} strokeWidth="2" opacity=".9" />
+      <ellipse cx="480" cy="378" rx="222" ry="229" fill="none" stroke="#91a6e8" strokeOpacity=".16" />
+      <g fill="none" stroke="#99a4d9" strokeOpacity=".11" strokeWidth="1.2">
+        <path d="M480 148 L480 245 M480 510 L480 607 M260 378 H351 M609 378 H700" />
+        <path d="M328 205 L399 282 M632 205 L561 282 M328 551 L399 474 M632 551 L561 474" />
+        <path d="M395 237 L480 202 L565 237 L600 320 L565 343 M395 237 L360 320 L395 343 M360 436 L395 518 L480 554 L565 518 L600 436" />
+      </g>
 
-          <radialGradient id={`${id}-hub-grad`} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#1a0818" />
-            <stop offset="100%" stopColor="#06080f" />
-          </radialGradient>
-          <pattern
-            id={`${id}-dots`}
-            x="0"
-            y="0"
-            width="36"
-            height="36"
-            patternUnits="userSpaceOnUse"
-          >
-            <circle cx="18" cy="18" r="0.7" fill="#1a2535" opacity="0.5" />
-          </pattern>
-        </defs>
+      {/* Outer routes and spokes retain the original's direction and line styles. */}
+      <g fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M569 126 Q685 159 746 260" stroke="#708cff" markerEnd={marker("blue")} />
+        <path d="M746 334 Q730 458 699 558" stroke="#708cff" strokeDasharray="6 5" markerEnd={marker("blue")} />
+        <path d="M710 558 Q744 450 757 334" stroke="#708cff" strokeDasharray="6 5" markerEnd={marker("blue")} />
+        <path d="M645 610 Q480 656 315 610" stroke="#ef4bbd" markerEnd={marker("pink")} />
+        <path d="M214 260 Q275 159 391 126" stroke="#ef4bbd" markerEnd={marker("pink")} />
+        <path d="M486 156 V318" stroke="#35bc91" markerEnd={marker("green")} />
+        <path d="M474 318 V156" stroke="#ef4bbd" markerEnd={marker("pink")} />
+        <path d="M536 360 L735 306" stroke="#708cff" markerEnd={marker("blue")} />
+        <path d="M520 419 L661 554" stroke="#35bc91" markerEnd={marker("green")} />
+        <path d="M650 559 L511 425" stroke="#ef4bbd" markerEnd={marker("pink")} />
+        <path d="M252 558 Q224 449 214 335" stroke="#9aa7bc" markerEnd={marker("gray")} />
+        <path d="M448 426 L309 558" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M299 551 L437 420" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M424 360 L226 306" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M226 316 L424 371" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+      </g>
 
-        <rect width="960" height="760" fill="#060a10" />
-        <rect width="960" height="760" fill={`url(#${id}-dots)`} />
+      {/* The head and paired flippers are the content panels themselves. */}
+      <g strokeWidth="1.5">
+        <path d="M391 156 V105 Q391 54 480 54 Q569 54 569 105 V156 Q480 169 391 156 Z" fill="#101b1a" stroke="#38b991" />
+        <path d="M226 258 Q150 220 54 248 Q31 256 32 282 V321 Q87 361 226 334 Z" fill="#211322" stroke="#d94bb0" />
+        <path d="M734 258 Q810 220 906 248 Q929 256 928 282 V321 Q873 361 734 334 Z" fill="#121a30" stroke="#6e88f7" />
+        <path d="M315 558 Q233 540 147 574 Q128 584 130 615 L142 638 Q224 654 315 620 Z" fill="#181b25" stroke="#8994ab" />
+        <path d="M645 558 Q727 540 813 574 Q832 584 830 615 L818 638 Q736 654 645 620 Z" fill="#10211e" stroke="#36ae8b" />
+      </g>
+      <g textAnchor="middle" fontFamily="Arial, sans-serif" fill="#f6f7ff">
+        <text x="480" y="103" fontSize="14" fontWeight="700" letterSpacing="1">CONTRIBUTOR</text>
+        <text x="480" y="123" fontSize="11" fill="#c7d4d2">Skills · Relationships</text><text x="480" y="140" fontSize="11" fill="#c7d4d2">Domain Expertise</text>
+        <text x="130" y="280" fontSize="13" fontWeight="700" letterSpacing=".5">LIQUIDITY POOL</text><text x="130" y="296" fontSize="11" fontWeight="700" fill="#ff8bd6">= $BUILD TOKEN</text><text x="130" y="312" fontSize="10.5" fill="#d3c5d0">Passive equity accrual</text><text x="130" y="327" fontSize="10.5" fill="#d3c5d0">OTC = mobilization</text>
+        <text x="830" y="281" fontSize="13" fontWeight="700" letterSpacing=".5">PLATFORM</text><text x="830" y="302" fontSize="11" fill="#c4cce2">Infrastructure · Brand</text><text x="830" y="319" fontSize="11" fill="#c4cce2">Distribution · Leverage</text>
+        <text x="220" y="584" fontSize="13" fontWeight="700" letterSpacing=".5">TREASURY</text><text x="220" y="604" fontSize="11" fill="#c8cbd5">Collects 3% · 1.5% ops</text><text x="220" y="621" fontSize="11" fill="#c8cbd5">1.5% → liquidity pool</text>
+        <text x="740" y="584" fontSize="13" fontWeight="700" letterSpacing=".5">CLIENT / DEAL</text><text x="740" y="604" fontSize="11" fill="#c5d5d0">Revenue Generated</text><text x="740" y="621" fontSize="11" fill="#ff8bd6">85 · 12 · 3 Split</text>
+      </g>
+      <circle cx="480" cy="378" r="62" fill={`url(#${id}-hub)`} stroke="#ef4bbd" strokeWidth="2" />
+      <circle cx="480" cy="378" r="54" fill="none" stroke="#f18ad2" strokeOpacity=".25" />
+      <g textAnchor="middle" fontFamily="Arial, sans-serif"><text x="480" y="371" fill="#fff" fontWeight="700" fontSize="14">VENTURE</text><text x="480" y="390" fill="#ff8bd6" fontWeight="700" fontSize="14">LABOR OS</text><text x="480" y="407" fill="#c4b9c9" fontSize="10">Future Modern</text></g>
 
-        {/* The brand turtle is a visual backdrop; flow arrows are drawn separately above it. */}
-        <g aria-hidden="true" fill="none" stroke="#8e99ad" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.35">
-          {/* Head and flippers echo the Future Modern turtle mark. */}
-          <path d="M450 245 Q445 210 463 196 Q480 182 497 196 Q515 210 510 245" />
-          <circle cx="468" cy="214" r="2.5" fill="#8e99ad" stroke="none" />
-          <circle cx="492" cy="214" r="2.5" fill="#8e99ad" stroke="none" />
-          <path d="M351 286 Q300 228 249 252 Q225 263 213 288 Q256 281 303 324" />
-          <path d="M609 286 Q660 228 711 252 Q735 263 747 288 Q704 281 657 324" />
-          <path d="M357 478 Q322 497 320 548 Q323 579 356 594 Q380 599 404 574" />
-          <path d="M603 478 Q638 497 640 548 Q637 579 604 594 Q580 599 556 574" />
-          {/* The faceted shell stays behind the actual connection paths. */}
-          <path d="M480 245 L607 281 L607 480 L480 552 L353 480 L353 281 Z" />
-          <path d="M353 281 L480 348 L607 281 M353 348 L480 415 L607 348 M353 415 L480 482 L607 415 M353 480 L480 415 L607 480 M480 245 V552" />
-        </g>
-
-        {/* PENTAGON OUTER EDGES */}
-
-        {/* Contributor → Platform (blue — platform leverage) */}
-        <path d="M588,150 Q680,180 735,282" stroke="#5070F0" strokeWidth="1.4" fill="none" markerEnd={`url(#${id}-ab)`} opacity="0.7" />
-
-        {/* Platform ↔ Client/Deal (dashed blue bidirectional) */}
-        <path d="M780,344 Q780,470 755,607" stroke="#5070F0" strokeWidth="1.2" fill="none" strokeDasharray="5,3" markerEnd={`url(#${id}-ab)`} opacity="0.7" />
-        <path d="M765,607 Q790,470 790,344" stroke="#5070F0" strokeWidth="1.2" fill="none" strokeDasharray="5,3" markerEnd={`url(#${id}-ab)`} opacity="0.7" />
-
-        {/* Client/Deal → Treasury (pink — cash payment) */}
-        <path d="M642,650 Q480,706 324,650" stroke="#D828A0" strokeWidth="1.4" fill="none" markerEnd={`url(#${id}-am)`} opacity="0.8" />
-
-        {/* Liquidity/$BUILD → Contributor (pink — cash/equity out) */}
-        <path d="M226,286 Q300,200 366,160" stroke="#D828A0" strokeWidth="1.4" fill="none" markerEnd={`url(#${id}-am)`} opacity="0.7" />
-
-        {/* HUB SPOKES */}
-
-        {/* Contributor → Hub (green — deal flow in) */}
-        <path d="M484,194 L484,319" stroke="#007048" strokeWidth="1.8" fill="none" markerEnd={`url(#${id}-ag)`} opacity="0.85" />
-
-        {/* Hub → Contributor (pink — cash out, reciprocal) */}
-        <path d="M472,319 L472,194" stroke="#D828A0" strokeWidth="1.6" fill="none" markerEnd={`url(#${id}-am)`} opacity="0.85" />
-
-        {/* Hub → Platform (blue — amplifies leverage) */}
-        <path d="M538,365 L734,312" stroke="#5070F0" strokeWidth="1.8" fill="none" markerEnd={`url(#${id}-ab)`} opacity="0.85" />
-
-        {/* Hub → Client/Deal (green — deal flow out) */}
-        <path d="M516,425 L675,607" stroke="#007048" strokeWidth="1.6" fill="none" markerEnd={`url(#${id}-ag)`} opacity="0.85" />
-        {/* Client/Deal → Hub (pink — cash in, parallel offset) */}
-        <path d="M665,607 L504,435" stroke="#D828A0" strokeWidth="1.6" fill="none" markerEnd={`url(#${id}-am)`} opacity="0.85" />
-
-        {/* Treasury → Liquidity/$BUILD (grey straight) */}
-        <path d="M205,607 Q170,470 170,354" stroke="#556" strokeWidth="1.4" fill="none" markerEnd={`url(#${id}-ad)`} opacity="0.8" />
-
-        {/* Hub ↔ Treasury (pink dashed — reinvestment feedback) */}
-        <path d="M444,431 L290,607" stroke="#D828A0" strokeWidth="1.2" fill="none" strokeDasharray="5,3" markerEnd={`url(#${id}-am)`} opacity="0.65" />
-        <path d="M280,607 L434,431" stroke="#D828A0" strokeWidth="1.2" fill="none" strokeDasharray="5,3" markerEnd={`url(#${id}-am)`} opacity="0.65" />
-
-        {/* Hub ↔ Liquidity/$BUILD (pink dashed reciprocal feedback) */}
-        <path d="M428,358 L226,308" stroke="#D828A0" strokeWidth="1.4" fill="none" strokeDasharray="5,3" markerEnd={`url(#${id}-am)`} opacity="0.7" />
-        <path d="M226,318 L428,370" stroke="#D828A0" strokeWidth="1.4" fill="none" strokeDasharray="5,3" markerEnd={`url(#${id}-am)`} opacity="0.7" />
-
-        {/* HUB */}
-        <circle cx="480" cy="380" r="68" fill="#D828A0" opacity="0.03" filter={`url(#${id}-glow-hub)`} />
-        <circle cx="480" cy="380" r="56" fill={`url(#${id}-hub-grad)`} stroke="#D828A0" strokeWidth="1.5" />
-        <path d="M480,324 A56,56 0 0,0 480,436" fill="#5070F0" opacity="0.07" />
-        <path d="M480,324 A56,56 0 0,1 480,436" fill="#D828A0" opacity="0.07" />
-        <line x1="480" y1="328" x2="480" y2="432" stroke="#D828A0" strokeWidth="1" opacity="0.4" />
-        <line x1="430" y1="350" x2="530" y2="350" stroke="#1a2a3a" strokeWidth="0.7" opacity="0.5" />
-        <line x1="424" y1="380" x2="536" y2="380" stroke="#1a2a3a" strokeWidth="0.7" opacity="0.5" />
-        <line x1="430" y1="410" x2="530" y2="410" stroke="#1a2a3a" strokeWidth="0.7" opacity="0.5" />
-        <line x1="454" y1="326" x2="440" y2="434" stroke="#5070F0" strokeWidth="0.6" opacity="0.25" />
-        <line x1="506" y1="326" x2="520" y2="434" stroke="#D828A0" strokeWidth="0.6" opacity="0.25" />
-        <text
-          x="480"
-          y="372"
-          textAnchor="middle"
-          fontFamily="Syne, sans-serif"
-          fontSize="11"
-          fontWeight="800"
-          fill="#F5F5F5"
-        >
-          VENTURE
-        </text>
-        <text
-          x="480"
-          y="387"
-          textAnchor="middle"
-          fontFamily="Syne, sans-serif"
-          fontSize="11"
-          fontWeight="800"
-          fill="#D828A0"
-        >
-          LABOR OS
-        </text>
-        <text
-          x="480"
-          y="401"
-          textAnchor="middle"
-          fontFamily="DM Mono, monospace"
-          fontSize="7.5"
-          fill="#444"
-        >
-          Future Modern
-        </text>
-
-        {/* NODE 1: CONTRIBUTOR — head */}
-        <circle cx="480" cy="120" r="5" fill="#007048" filter={`url(#${id}-glow-g)`} />
-        <rect x="372" y="130" width="216" height="58" rx="2" fill="#050e08" stroke="#007048" strokeWidth="1.4" />
-        <rect x="372" y="130" width="216" height="2.5" fill="#007048" opacity="0.9" />
-        <text x="480" y="150" textAnchor="middle" fontFamily="Syne, sans-serif" fontSize="10" fontWeight="700" fill="#F5F5F5">
-          CONTRIBUTOR
-        </text>
-        <text x="480" y="164" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="8" fill="#406050">
-          Skills · Relationships
-        </text>
-        <text x="480" y="177" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="8" fill="#406050">
-          Domain Expertise
-        </text>
-
-        {/* NODE 2: PLATFORM — top right flipper */}
-        <circle cx="737" cy="307" r="5" fill="#5070F0" filter={`url(#${id}-glow-b)`} />
-        <rect x="740" y="280" width="196" height="58" rx="2" fill="#060810" stroke="#5070F0" strokeWidth="1.4" />
-        <rect x="740" y="280" width="196" height="2.5" fill="#5070F0" opacity="0.9" />
-        <text x="838" y="300" textAnchor="middle" fontFamily="Syne, sans-serif" fontSize="10" fontWeight="700" fill="#F5F5F5">
-          PLATFORM
-        </text>
-        <text x="838" y="314" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="8" fill="#405060">
-          Infrastructure · Brand
-        </text>
-        <text x="838" y="327" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="8" fill="#405060">
-          Distribution · Leverage
-        </text>
-
-        {/* NODE 3: CLIENT/DEAL — bottom right flipper (GREEN) */}
-        <circle cx="639" cy="608" r="5" fill="#007048" filter={`url(#${id}-glow-g)`} />
-        <rect x="642" y="614" width="210" height="66" rx="2" fill="#050e08" stroke="#007048" strokeWidth="1.4" />
-        <rect x="642" y="614" width="210" height="2.5" fill="#007048" opacity="0.9" />
-        <text x="747" y="634" textAnchor="middle" fontFamily="Syne, sans-serif" fontSize="10" fontWeight="700" fill="#F5F5F5">
-          CLIENT / DEAL
-        </text>
-        <text x="747" y="648" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="8" fill="#406050">
-          Revenue Generated
-        </text>
-        <text x="747" y="662" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="8" fill="#D828A0">
-          85 · 12 · 3 Split
-        </text>
-
-        {/* NODE 4: TREASURY — bottom left flipper */}
-        <circle cx="321" cy="608" r="5" fill="#556" filter={`url(#${id}-glow-b)`} />
-        <rect x="108" y="614" width="210" height="66" rx="2" fill="#090909" stroke="#445" strokeWidth="1.4" />
-        <rect x="108" y="614" width="210" height="2.5" fill="#556" opacity="0.9" />
-        <text x="213" y="634" textAnchor="middle" fontFamily="Syne, sans-serif" fontSize="10" fontWeight="700" fill="#F5F5F5">
-          TREASURY
-        </text>
-        <text x="213" y="648" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="8" fill="#505060">
-          Collects 3% · 1.5% ops
-        </text>
-        <text x="213" y="662" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="8" fill="#505060">
-          1.5% → liquidity pool
-        </text>
-
-        {/* NODE 5: LIQUIDITY POOL / $BUILD — top left flipper */}
-        <circle cx="223" cy="307" r="5" fill="#D828A0" filter={`url(#${id}-glow-m)`} />
-        <rect x="24" y="278" width="196" height="70" rx="2" fill="#0e060e" stroke="#D828A0" strokeWidth="1.4" />
-        <rect x="24" y="278" width="196" height="2.5" fill="#D828A0" opacity="0.9" />
-        <text x="122" y="298" textAnchor="middle" fontFamily="Syne, sans-serif" fontSize="10" fontWeight="700" fill="#F5F5F5">
-          LIQUIDITY POOL
-        </text>
-        <text x="122" y="312" textAnchor="middle" fontFamily="Syne, sans-serif" fontSize="9" fontWeight="700" fill="#D828A0">
-          = $BUILD TOKEN
-        </text>
-        <text x="122" y="326" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="7.5" fill="#604060">
-          Passive equity accrual
-        </text>
-        <text x="122" y="338" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="7.5" fill="#604060">
-          OTC = mobilization
-        </text>
-
-        {/* LEGEND */}
-        <rect x="268" y="700" width="560" height="46" rx="2" fill="#080a10" stroke="#1a2535" strokeWidth="1" />
-        <line x1="284" y1="716" x2="306" y2="716" stroke="#D828A0" strokeWidth="1.5" />
-        <text x="310" y="719" fontFamily="DM Mono, monospace" fontSize="8" fill="#D828A0">
-          cash / equity
-        </text>
-        <line x1="390" y1="716" x2="412" y2="716" stroke="#5070F0" strokeWidth="1.5" />
-        <text x="416" y="719" fontFamily="DM Mono, monospace" fontSize="8" fill="#5070F0">
-          platform
-        </text>
-        <line x1="470" y1="716" x2="492" y2="716" stroke="#007048" strokeWidth="1.5" />
-        <text x="496" y="719" fontFamily="DM Mono, monospace" fontSize="8" fill="#007048">
-          deal flow
-        </text>
-        <line x1="608" y1="716" x2="630" y2="716" stroke="#556" strokeWidth="1.5" />
-        <text x="634" y="719" fontFamily="DM Mono, monospace" fontSize="8" fill="#556">
-          treasury flow
-        </text>
-        <line x1="284" y1="736" x2="306" y2="736" stroke="#D828A0" strokeWidth="1.2" strokeDasharray="4,3" />
-        <text x="310" y="739" fontFamily="DM Mono, monospace" fontSize="8" fill="#D828A0">
-          feedback loop
-        </text>
-        <line x1="390" y1="736" x2="412" y2="736" stroke="#5070F0" strokeWidth="1.2" strokeDasharray="4,3" />
-        <text x="416" y="739" fontFamily="DM Mono, monospace" fontSize="8" fill="#5070F0">
-          platform ↔ client (dashed)
-        </text>
-      </svg>
-    </div>
+      <g fontFamily="Arial, sans-serif" fontSize="11" fill="#d5d8e7">
+        <path d="M103 692 h28" stroke="#ef4bbd" strokeWidth="2" /><text x="138" y="696">cash / equity</text>
+        <path d="M275 692 h28" stroke="#708cff" strokeWidth="2" /><text x="310" y="696">platform</text>
+        <path d="M425 692 h28" stroke="#35bc91" strokeWidth="2" /><text x="460" y="696">deal flow</text>
+        <path d="M580 692 h28" stroke="#9aa7bc" strokeWidth="2" /><text x="615" y="696">treasury flow</text>
+        <path d="M275 720 h28" stroke="#ef4bbd" strokeWidth="2" strokeDasharray="6 4" /><text x="310" y="724">feedback loop</text>
+        <path d="M487 720 h28" stroke="#708cff" strokeWidth="2" strokeDasharray="6 4" /><text x="522" y="724">platform ↔ client</text>
+      </g>
+    </svg>
   );
 }

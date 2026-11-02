@@ -484,11 +484,6 @@ function WhatChanged() {
     },
   ];
 
-  const accentClass = {
-    magenta: "text-brand-magentaText",
-    blue: "text-brand-blue",
-    green: "text-brand-green",
-  } as const;
 
   return (
     <section>
@@ -502,23 +497,20 @@ function WhatChanged() {
           plumbing.
         </p>
 
-        <div className="mt-8 space-y-6">
-          {rows.map((row, i) => (
-            <div
-              key={i}
-              className="border-t border-[var(--surface-border)] pt-5"
-            >
-              <div
-                className={`text-xs uppercase tracking-wider ${accentClass[row.accent]}`}
-              >
-                Old model → ours
+        <div className="mt-8 overflow-hidden rounded-2xl border border-[var(--surface-border)]">
+          <div className="hidden grid-cols-2 border-b border-[var(--surface-border)] bg-[var(--surface-inset)] text-sm font-medium sm:grid">
+            <span className="px-4 py-4 sm:px-6">Before</span>
+            <span className="border-l border-[var(--surface-border)] px-4 py-4 text-brand-magentaText sm:px-6">Now</span>
+          </div>
+          {rows.map((row) => (
+            <div key={row.old} className="grid grid-cols-1 border-b border-[var(--surface-border)] last:border-b-0 sm:grid-cols-2">
+              <div className="px-4 py-5 leading-relaxed text-ink-muted sm:px-6">
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-ink-muted sm:hidden">Before</span>
+                {row.old}
               </div>
-              <div className="mt-3 leading-relaxed text-ink-muted">
-                <span className="text-ink-faint">Before:</span> {row.old}
-              </div>
-              <div className="mt-3 text-sm">
-                <span className="text-ink-faint">Now:</span>{" "}
-                <span className="text-ink">{row.ours}</span>
+              <div className="border-t border-[var(--surface-border)] bg-[var(--surface-inset)] px-4 py-5 leading-relaxed text-ink sm:border-l sm:border-t-0 sm:px-6">
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-brand-magentaText sm:hidden">Now</span>
+                {row.ours}
               </div>
             </div>
           ))}
@@ -1155,34 +1147,36 @@ function ConstellationSection() {
 
 function CTA() {
   return (
-    <section>
-      <div className="mx-auto max-w-app px-6 pb-20 pt-14 md:pb-28 md:pt-20 text-center">
-        <h2 className="font-display text-4xl font-semibold leading-tight md:text-6xl">
-          Ready to be part of it?
-        </h2>
-        <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-ink-muted">
-          Whether you&apos;re a contributor looking for a fairer model or a
-          client looking for a real team. Start here.
-        </p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <ButtonLink href="/signup" variant="primary" size="large" className="min-w-44 px-7">
-            Apply to join
-          </ButtonLink>
-          <ButtonLink href="/membership" variant="secondary" size="large" className="min-w-44 px-7">
-            See membership tiers
-          </ButtonLink>
-          <a
-            href={PUBLIC_BOOKING_URL}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonClassName({ variant: "secondary", size: "large", className: "min-w-44 px-7" })}
-          >
-            {PUBLIC_BOOKING_CTA}
-          </a>
+    <section className="relative isolate overflow-hidden bg-[var(--surface-inset)]">
+      <div aria-hidden="true" className="pointer-events-none absolute -bottom-44 -left-32 h-[28rem] w-[28rem] bg-[url('/brand/turtle.png')] bg-contain bg-no-repeat opacity-[0.06] grayscale motion-safe:transition-opacity" />
+      <div className="relative mx-auto max-w-app px-6 py-16 md:py-24">
+        <div className="max-w-3xl">
+          <h2 className="font-display text-4xl font-semibold leading-tight md:text-6xl">
+            Ready to be part of it?
+          </h2>
+          <p className="mt-5 text-lg leading-relaxed text-ink-muted">
+            Whether you&apos;re a contributor looking for a fairer model or a
+            client looking for a real team. Start here.
+          </p>
         </div>
-        <p className="mt-8 text-xs text-ink-faint">
-          Future Modern · A cooperative talent platform.
-        </p>
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="flex h-full flex-col items-start rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 transition-transform duration-200 motion-safe:hover:-translate-y-1">
+            <p className="font-display text-xl font-semibold">Join as a contributor</p>
+            <p className="mt-2 flex-1 leading-relaxed text-ink-muted">Start your application to join Future Modern.</p>
+            <ButtonLink href="/signup" variant="primary" size="large" className="mt-6">Apply to join</ButtonLink>
+          </div>
+          <div className="flex h-full flex-col items-start rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 transition-transform duration-200 motion-safe:hover:-translate-y-1">
+            <p className="font-display text-xl font-semibold">Explore membership</p>
+            <p className="mt-2 flex-1 leading-relaxed text-ink-muted">Learn about the different membership tiers.</p>
+            <ButtonLink href="/membership" variant="secondary" size="large" className="mt-6">See membership tiers</ButtonLink>
+          </div>
+          <div className="flex h-full flex-col items-start rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 transition-transform duration-200 motion-safe:hover:-translate-y-1">
+            <p className="font-display text-xl font-semibold">Build a team</p>
+            <p className="mt-2 flex-1 leading-relaxed text-ink-muted">Talk with us about the work you want to do.</p>
+            <a href={PUBLIC_BOOKING_URL} target="_blank" rel="noreferrer" className={buttonClassName({ variant: "secondary", size: "large", className: "mt-6" })}>{PUBLIC_BOOKING_CTA}</a>
+          </div>
+        </div>
+        <p className="mt-8 text-sm text-ink-muted">Future Modern · A cooperative talent platform.</p>
       </div>
     </section>
   );

@@ -17,7 +17,7 @@
 import Link from "next/link";
 import { HomepageQuestionForm } from "@/components/HomepageQuestionForm";
 import { ButtonLink, buttonClassName } from "@/components/Button";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, Check, X } from "lucide-react";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { TaglineRare } from "@/components/TaglineRare";
 import { DefinedTermSchema } from "@/components/DefinedTermSchema";
@@ -69,134 +69,60 @@ export default function AboutPage() {
   );
 }
 
-/**
- * Why we built this — founder's confession + numbered deal frame.
- *
- * The Challenger-Sale move: names the shape of the deal every worker
- * already knows they'd stay for, walks the reader through the trade-
- * off they've been forced to accept elsewhere (companies give you 1
- * and 2; gig platforms give you 3 and 4), then reveals FM as the
- * place that gives all four. Founder confession beat + low-friction
- * close.
- *
- * Visual weight designed to make skimming impossible — big numeric
- * marks in FM palette, gradient wash behind, comparison row with FM
- * card standing out via full palette treatment.
- */
 function WhyWeBuiltThis() {
   const items = [
-    {
-      n: "1)",
-      color: "var(--fm-magenta-text)",
-      text: "Real equity for the effort.",
-    },
-    {
-      n: "2)",
-      color: "var(--fm-blue-text)",
-      text: "Pay tied to what you deliver.",
-    },
-    {
-      n: "3)",
-      color: "var(--fm-green-text)",
-      text: "Hours structured around the work, not the office.",
-    },
-    {
-      n: "4)",
-      color: "var(--fm-magenta-text)",
-      text: "Recognition for what you shipped, not how you performed.",
-    },
+    { n: "01", text: "Real equity for the effort." },
+    { n: "02", text: "Pay tied to what you deliver." },
+    { n: "03", text: "Hours structured around the work, not the office." },
+    { n: "04", text: "Recognition for what you shipped, not how you performed." },
+  ];
+  const comparisons = [
+    { title: "Companies", range: "1 & 2", description: "Equity + pay. Not the rest.", equity: true, flexibility: false },
+    { title: "Gig Platforms", range: "3 & 4", description: "Flexibility + results. Not the rest.", equity: false, flexibility: true },
+    { title: "Future Modern", range: "All Four", description: "The whole deal, structurally.", equity: true, flexibility: true },
   ];
 
   return (
-    <section id="our-story" className="relative scroll-mt-24 overflow-hidden">
-      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
-        <div className="text-xs uppercase tracking-wider text-brand-magentaText">
-          Why we built this
-        </div>
-        <h2 className="mt-3 font-display text-3xl font-semibold leading-tight md:text-4xl">
-          Every worker knows the shape of the deal they&apos;d stay for.
-        </h2>
-
-        <ol className="mt-8 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+    <section id="our-story" className="scroll-mt-24">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+        <p className="text-xs uppercase tracking-wider text-brand-magentaText">Background</p>
+        <h2 className="mt-3 font-display text-3xl font-semibold md:text-4xl">Why we built this</h2>
+        <p className="mt-4 text-lg text-ink-muted md:text-xl">Every worker knows the deal worth staying for.</p>
+        <ol className="mt-8 grid gap-4 sm:grid-cols-2">
           {items.map((item) => (
-            <li
-              key={item.n}
-              className="flex items-start gap-4"
-            >
-              <span
-                className="mt-1 shrink-0 font-display text-base font-semibold leading-none"
-                style={{ color: item.color }}
-                aria-hidden="true"
-              >
-                {item.n}
-              </span>
-              <p className="text-base font-medium leading-relaxed text-ink">
-                {item.text}
-              </p>
+            <li key={item.n} className="relative flex min-h-28 items-center overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 md:min-h-32 md:p-8">
+              <span aria-hidden="true" className="pointer-events-none absolute -left-4 top-1/2 -translate-y-1/2 bg-gradient-to-br from-brand-blue to-brand-magenta bg-clip-text font-display text-[clamp(80px,10vw,140px)] font-bold leading-none text-transparent opacity-[0.12]">{item.n}</span>
+              <span className="relative text-base font-medium leading-relaxed text-ink">{item.text}</span>
             </li>
           ))}
         </ol>
-
-        {/* The reveal row — three cards showing the trade-off + FM's
-            answer. FM card gets the full palette treatment to make it
-            visually inevitable that this is the punchline. */}
-        <div className="mt-10 grid gap-6 border-y border-[var(--surface-border)] py-6 sm:grid-cols-3">
-          <div className="min-w-0">
-            <p className="text-[11px] uppercase tracking-wider text-ink-muted">
-              Companies give you
-            </p>
-            <p className="mt-2 font-display text-xl font-semibold">
-              <span style={{ color: "var(--fm-magenta-text)" }}>1</span>
-              <span className="text-ink-muted"> &amp; </span>
-              <span style={{ color: "var(--fm-blue-text)" }}>2</span>
-            </p>
-            <p className="mt-2 text-xs text-ink-faint">
-              Equity + pay. Not the rest.
-            </p>
-          </div>
-
-          <div className="min-w-0">
-            <p className="text-[11px] uppercase tracking-wider text-ink-muted">
-              Gig platforms give you
-            </p>
-            <p className="mt-2 font-display text-xl font-semibold">
-              <span style={{ color: "var(--fm-green-text)" }}>3</span>
-              <span className="text-ink-muted"> &amp; </span>
-              <span style={{ color: "var(--fm-magenta-text)" }}>4</span>
-            </p>
-            <p className="mt-2 text-xs text-ink-faint">
-              Flexibility + results. Not the rest.
-            </p>
-          </div>
-
-          <div
-            className="min-w-0"
-          >
-            <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
-              We give you
-            </p>
-            <p className="mt-2 font-display text-xl font-semibold">
-              <span
-                className="bg-gradient-to-r from-brand-magenta via-brand-blue to-brand-green bg-clip-text text-transparent"
-              >
-                All four
-              </span>
-            </p>
-            <p className="mt-2 text-xs text-ink">
-              The whole deal, structurally.
-            </p>
-          </div>
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          {comparisons.map((item) => (
+            <div key={item.title} className={`flex min-h-60 flex-col justify-between rounded-2xl border bg-[var(--surface)] p-6 ${item.title === "Future Modern" ? "border-brand-magenta/70" : "border-[var(--surface-border)]"}`}>
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-display text-xl font-semibold">{item.title}</h3>
+                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${item.title === "Future Modern" ? "bg-gradient-to-r from-brand-blue to-brand-magenta text-white" : "bg-white/5 text-ink-muted"}`}>{item.range}</span>
+                </div>
+                <p className="mt-4 leading-relaxed text-ink-muted">{item.description}</p>
+              </div>
+              <ul className="mt-6 space-y-2 text-sm">
+                {[["Equity & Pay", item.equity], ["Flexible Hours & Results", item.flexibility]].map(([label, included]) => (
+                  <li key={String(label)} className={`flex items-center gap-2 ${included ? "text-ink" : "text-ink-muted"}`}>
+                    <span className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border ${included ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-400" : "border-brand-magenta/30 bg-brand-magenta/15 text-brand-magentaText"}`}>
+                      {included ? <Check size={11} aria-hidden="true" /> : <X size={11} aria-hidden="true" />}
+                    </span>
+                    <span>{label}<span className="sr-only"> {included ? "included" : "not included"}</span></span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
-
-        {/* Founder confession + close */}
-        <div className="mt-10">
-          <p className="text-lg text-ink-muted md:text-xl">
-            We looked. We stopped looking. So we built it.
-          </p>
-          <p className="mt-4 text-lg font-medium text-ink md:text-xl">
-            If it&apos;s the deal you&apos;ve been waiting for, the door
-            is open.
-          </p>
+        <div className="mx-auto mt-10 max-w-2xl text-center">
+          <p className="text-xl italic text-ink-muted">&ldquo;We looked. We couldn&apos;t find it. So we built it.&rdquo;</p>
+          <p className="mt-4 text-lg text-ink-muted">We looked. We stopped looking. So we built it.</p>
+          <p className="mt-3 text-lg font-medium text-ink">If it&apos;s the deal you&apos;ve been waiting for, the door is open.</p>
         </div>
       </div>
     </section>
@@ -312,7 +238,7 @@ function PeoplePowered() {
   return (
     <section id="people" className="scroll-mt-24">
       <div className="mx-auto max-w-app px-6 py-12 md:py-14">
-        <div className="space-y-10">
+        <div className="space-y-12">
           <div>
             <div className="text-xs uppercase tracking-wider text-brand-greenText">
               People-powered, exclusively
@@ -320,7 +246,8 @@ function PeoplePowered() {
             <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
               The resumes speak for themselves.
             </h2>
-            <div className="mt-6 space-y-5 leading-relaxed text-ink-muted">
+            <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(16rem,0.75fr)] lg:gap-12">
+            <div className="max-w-prose space-y-5 leading-relaxed text-ink-muted">
               <p>
                 The people who built this are already reputed in their
                 fields. Top performers at the companies they passed through.
@@ -345,43 +272,47 @@ function PeoplePowered() {
                 relationships. Through the people who&apos;ve seen us
                 deliver and stayed in the room.
               </p>
-              <p>
+            </div>
+            <blockquote className="relative self-start overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-inset)] p-7 md:p-8">
+              <div aria-hidden="true" className="pointer-events-none absolute -bottom-20 -right-20 h-64 w-64 bg-[url('/brand/turtle.png')] bg-contain bg-no-repeat opacity-[0.05] grayscale" />
+              <p className="relative font-display text-xl leading-relaxed text-ink md:text-2xl">
                 $BUILD.Store is the platform we built so the next generation
                 of that talent doesn&apos;t have to leave a half-dozen
                 companies to be paid what their work is worth. The
                 cooperative is the structure. The people are the proof.
               </p>
+            </blockquote>
             </div>
           </div>
 
           <div>
             <p className="text-sm font-medium text-brand-greenText">What &quot;people-powered&quot; means</p>
             <h3 className="mt-2 font-display text-2xl font-semibold">Earned, not bought</h3>
-            <ul className="mt-4 space-y-4 leading-relaxed text-ink-muted">
-              <li>
+            <ul className="mt-6 grid gap-4 leading-relaxed text-ink-muted sm:grid-cols-2">
+              <li className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
                 <span className="text-ink">Access is earned.</span> Three
                 paths in: invitation from an existing member, application +
                 vetting, or contribution to the cooperative&apos;s
                 infrastructure. The whitelist is not for sale.
               </li>
-              <li>
+              <li className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
                 <span className="text-ink">Admin-authored framing.</span>{" "}
                 Members submit objective fields: price, timeline, work
                 samples. The cooperative authors the positioning so the work
                 speaks for itself, not the cold-pitch voice.
               </li>
-              <li>
+              <li className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
                 <span className="text-ink">85% to the people who shipped.</span>{" "}
                 One 15% house cut funds infrastructure, commissions, and
                 operations.
               </li>
-              <li>
+              <li className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
                 <span className="text-ink">Attribution is permanent.</span>{" "}
                 The ledger compounds across years. Contributions don&apos;t
                 reset to zero when a contract closes.
               </li>
             </ul>
-            <p className="mt-4 text-xs text-ink-faint">
+            <p className="mt-5 text-sm leading-relaxed text-ink-muted">
               We don&apos;t curate around credentials. We curate around
               people who&apos;ve done the work and care about doing it
               right.
@@ -397,8 +328,8 @@ function VentureLabor() {
   return (
     <section id="model" className="scroll-mt-24">
       <div className="mx-auto max-w-app px-6 py-12 md:py-14">
-        <div className="space-y-8 leading-relaxed">
-          <div>
+        <div className="grid items-start gap-8 leading-relaxed lg:grid-cols-2 lg:gap-12">
+          <div className="max-w-prose">
             <div className="text-xs uppercase tracking-wider text-brand-magentaText">
               The contract
             </div>
@@ -423,12 +354,17 @@ function VentureLabor() {
             </p>
           </div>
 
-          <div>
+          <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 md:p-8 lg:mt-8">
             <p className="text-sm font-medium text-brand-magentaText">The vetting bar</p>
             <h3 className="mt-2 font-display text-2xl font-semibold">
               Ideological as much as technical.
             </h3>
-            <p className="mt-3 leading-relaxed text-ink-muted">
+            <div aria-hidden="true" className="mt-5 flex items-center gap-3 text-xs font-medium text-ink-muted">
+              <span className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2">Craft</span>
+              <svg className="min-w-8 max-w-20 flex-1" viewBox="0 0 80 8" fill="none"><path d="M0 4H80" stroke="var(--fm-magenta-text)" strokeWidth="1.5" opacity=".6" /></svg>
+              <span className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2">Values</span>
+            </div>
+            <p className="mt-4 leading-relaxed text-ink-muted">
               The failure mode of pooled labor is not the people who
               cannot do the work. It is the people who can do the work
               and will throw out the agreement the moment a check

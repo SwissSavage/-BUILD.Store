@@ -109,70 +109,20 @@ export function VentureLaborDiagram() {
         <rect width="960" height="760" fill="#060a10" />
         <rect width="960" height="760" fill={`url(#${id}-dots)`} />
 
-        {/* TURTLE SILHOUETTE (ghost) */}
-        <ellipse
-          cx="480"
-          cy="400"
-          rx="182"
-          ry="200"
-          fill="none"
-          stroke="#0d1f30"
-          strokeWidth="1.2"
-          opacity="0.5"
-        />
-        <line x1="308" y1="330" x2="652" y2="330" stroke="#0d1f30" strokeWidth="0.9" opacity="0.4" />
-        <line x1="298" y1="400" x2="662" y2="400" stroke="#0d1f30" strokeWidth="0.9" opacity="0.4" />
-        <line x1="308" y1="470" x2="652" y2="470" stroke="#0d1f30" strokeWidth="0.9" opacity="0.4" />
-        <line x1="354" y1="210" x2="298" y2="590" stroke="#5070F0" strokeWidth="0.7" opacity="0.12" />
-        <line x1="480" y1="200" x2="302" y2="600" stroke="#5070F0" strokeWidth="0.7" opacity="0.12" />
-        <line x1="606" y1="210" x2="662" y2="590" stroke="#D828A0" strokeWidth="0.7" opacity="0.12" />
-        <line x1="480" y1="200" x2="658" y2="600" stroke="#D828A0" strokeWidth="0.7" opacity="0.12" />
-        <line x1="480" y1="200" x2="480" y2="600" stroke="#D828A0" strokeWidth="0.6" opacity="0.1" />
-        <ellipse
-          cx="737"
-          cy="307"
-          rx="72"
-          ry="40"
-          fill="none"
-          stroke="#007048"
-          strokeWidth="0.9"
-          opacity="0.1"
-          transform="rotate(30 737 307)"
-        />
-        <ellipse
-          cx="223"
-          cy="307"
-          rx="72"
-          ry="40"
-          fill="none"
-          stroke="#007048"
-          strokeWidth="0.9"
-          opacity="0.1"
-          transform="rotate(-30 223 307)"
-        />
-        <ellipse
-          cx="639"
-          cy="608"
-          rx="72"
-          ry="40"
-          fill="none"
-          stroke="#007048"
-          strokeWidth="0.9"
-          opacity="0.1"
-          transform="rotate(-20 639 608)"
-        />
-        <ellipse
-          cx="321"
-          cy="608"
-          rx="72"
-          ry="40"
-          fill="none"
-          stroke="#007048"
-          strokeWidth="0.9"
-          opacity="0.1"
-          transform="rotate(20 321 608)"
-        />
-        <ellipse cx="480" cy="126" rx="38" ry="30" fill="none" stroke="#007048" strokeWidth="0.9" opacity="0.12" />
+        {/* The brand turtle is a visual backdrop; flow arrows are drawn separately above it. */}
+        <g aria-hidden="true" fill="none" stroke="#8e99ad" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.35">
+          {/* Head and flippers echo the Future Modern turtle mark. */}
+          <path d="M450 245 Q445 210 463 196 Q480 182 497 196 Q515 210 510 245" />
+          <circle cx="468" cy="214" r="2.5" fill="#8e99ad" stroke="none" />
+          <circle cx="492" cy="214" r="2.5" fill="#8e99ad" stroke="none" />
+          <path d="M351 286 Q300 228 249 252 Q225 263 213 288 Q256 281 303 324" />
+          <path d="M609 286 Q660 228 711 252 Q735 263 747 288 Q704 281 657 324" />
+          <path d="M357 478 Q322 497 320 548 Q323 579 356 594 Q380 599 404 574" />
+          <path d="M603 478 Q638 497 640 548 Q637 579 604 594 Q580 599 556 574" />
+          {/* The faceted shell stays behind the actual connection paths. */}
+          <path d="M480 245 L607 281 L607 480 L480 552 L353 480 L353 281 Z" />
+          <path d="M353 281 L480 348 L607 281 M353 348 L480 415 L607 348 M353 415 L480 482 L607 415 M353 480 L480 415 L607 480 M480 245 V552" />
+        </g>
 
         {/* PENTAGON OUTER EDGES */}
 

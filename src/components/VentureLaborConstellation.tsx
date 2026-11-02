@@ -13,9 +13,12 @@
  * fall back to sans-serif / monospace when not loaded, which reads
  * cleanly in the diagram context.
  */
-export function VentureLaborConstellation() {
+import styles from "./VentureLaborConstellation.module.css";
+
+export function VentureLaborConstellation({ modern = false }: { modern?: boolean } = {}) {
   return (
     <div
+      className={modern ? styles.modern : undefined}
       style={{
         background: "#060a10",
         border: "1px solid #1a3060",

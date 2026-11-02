@@ -1,0 +1,54 @@
+/* About-page presentation; the governance diagram retains its original styling. */
+.modern {
+  border-color: var(--surface-border) !important;
+  border-radius: 16px !important;
+  background: var(--surface-inset) !important;
+}
+
+.modern svg,
+.modern svg > rect:first-of-type {
+  background: #0b0c10 !important;
+  fill: #0b0c10;
+}
+
+.modern svg [filter] {
+  filter: none;
+}
+
+.modern svg rect[rx="2"] {
+  rx: 10px;
+}
+
+.modern svg text {
+  font-family: var(--font-body), sans-serif;
+}
+
+.modern svg text[fill="#406050"],
+.modern svg text[fill="#405060"],
+.modern svg text[fill="#505060"],
+.modern svg text[fill="#604060"],
+.modern svg text[fill="#444"],
+.modern svg text[fill="#556"] {
+  fill: #b7bac5;
+}
+
+.modern svg rect[fill="#050e08"],
+.modern svg rect[fill="#060810"],
+.modern svg rect[fill="#090909"],
+.modern svg rect[fill="#0e060e"],
+.modern svg rect[fill="#080a10"] {
+  fill: #17181d;
+  stroke: #555963;
+}
+
+.modern svg text[fill="#007048"] {
+  fill: #66c9a0;
+}
+
+.modern svg text[fill="#5070F0"] {
+  fill: #9aabff;
+}
+
+.modern svg text[fill="#D828A0"] {
+  fill: #ee88cc;
+}

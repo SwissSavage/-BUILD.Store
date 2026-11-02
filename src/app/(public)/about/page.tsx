@@ -19,6 +19,7 @@ import { HomepageQuestionForm } from "@/components/HomepageQuestionForm";
 import { ButtonLink, buttonClassName } from "@/components/Button";
 import { ArrowDown, Check, Maximize2, X } from "lucide-react";
 import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
+import { DiagramZoom } from "@/components/DiagramZoom";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { TaglineRare } from "@/components/TaglineRare";
 import { DefinedTermSchema } from "@/components/DefinedTermSchema";
@@ -417,14 +418,11 @@ function VentureLaborOverview() {
         <details className="group mt-5 sm:mt-0">
           <summary className="inline-flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-[var(--surface-border)] px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-brand-magenta/60 hover:bg-[var(--surface-elevated)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue sm:absolute sm:right-8 sm:top-6 [&::-webkit-details-marker]:hidden">
             <Maximize2 size={16} aria-hidden="true" />
-            <span className="group-open:hidden">View detailed diagram</span>
-            <span className="hidden group-open:inline">Hide detailed diagram</span>
+            <span className="group-open:hidden">View diagram</span>
+            <span className="hidden group-open:inline">Hide diagram</span>
           </summary>
           <div className="mt-6">
-            <p className="mb-3 text-sm leading-relaxed text-ink-muted">Explore the Venture Labor constellation. On a small screen, scroll sideways to see the full diagram.</p>
-            <div role="region" aria-label="Detailed Venture Labor diagram, scroll horizontally" tabIndex={0} className="overflow-x-auto rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue">
-              <div className="min-w-[960px]"><VentureLaborConstellation modern /></div>
-            </div>
+            <DiagramZoom><VentureLaborConstellation modern /></DiagramZoom>
           </div>
         </details>
       </figcaption>

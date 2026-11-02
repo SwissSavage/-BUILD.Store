@@ -1154,14 +1154,14 @@ function CTA() {
             Ready to be part of it?
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-ink-muted">
-            Whether you&apos;re a contributor looking for a fairer model or a
-            client looking for a real team. Start here.
+            Apply to join or build a team, learn about membership, or talk
+            with us to find out more.
           </p>
         </div>
         <div className="mt-10 grid gap-4 md:grid-cols-3">
           <div className="flex h-full flex-col items-start rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 transition-transform duration-200 motion-safe:hover:-translate-y-1">
-            <p className="font-display text-xl font-semibold">Join as a contributor</p>
-            <p className="mt-2 flex-1 leading-relaxed text-ink-muted">Start your application to join Future Modern.</p>
+            <p className="font-display text-xl font-semibold">Join or build a team</p>
+            <p className="mt-2 flex-1 leading-relaxed text-ink-muted">Apply to contribute your skills or find the right team for your project.</p>
             <ButtonLink href="/signup" variant="primary" size="large" className="mt-6">Apply to join</ButtonLink>
           </div>
           <div className="flex h-full flex-col items-start rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 transition-transform duration-200 motion-safe:hover:-translate-y-1">
@@ -1170,8 +1170,8 @@ function CTA() {
             <ButtonLink href="/membership" variant="secondary" size="large" className="mt-6">See membership tiers</ButtonLink>
           </div>
           <div className="flex h-full flex-col items-start rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 transition-transform duration-200 motion-safe:hover:-translate-y-1">
-            <p className="font-display text-xl font-semibold">Build a team</p>
-            <p className="mt-2 flex-1 leading-relaxed text-ink-muted">Talk with us about the work you want to do.</p>
+            <p className="font-display text-xl font-semibold">Talk with us</p>
+            <p className="mt-2 flex-1 leading-relaxed text-ink-muted">Have questions? Schedule a call to learn more about Future Modern.</p>
             <a href={PUBLIC_BOOKING_URL} target="_blank" rel="noreferrer" className={buttonClassName({ variant: "secondary", size: "large", className: "mt-6" })}>{PUBLIC_BOOKING_CTA}</a>
           </div>
         </div>

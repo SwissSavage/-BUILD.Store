@@ -15,7 +15,7 @@
  * tagline "Rare∞."
  */
 import Link from "next/link";
-import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { HomepageQuestionForm } from "@/components/HomepageQuestionForm";
 import { ButtonLink, buttonClassName } from "@/components/Button";
 import { ArrowDown } from "lucide-react";
 import { Faq, type FaqItem } from "@/components/Faq";
@@ -110,7 +110,7 @@ function WhyWeBuiltThis() {
 
   return (
     <section id="our-story" className="relative scroll-mt-24 overflow-hidden">
-      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
+      <div className="relative mx-auto max-w-4xl px-6 py-12 md:py-14">
         <div className="text-xs uppercase tracking-wider text-brand-magentaText">
           Why we built this
         </div>
@@ -118,20 +118,20 @@ function WhyWeBuiltThis() {
           Every worker knows the shape of the deal they&apos;d stay for.
         </h2>
 
-        <ol className="mt-12 max-w-4xl space-y-6">
+        <ol className="mt-8 grid max-w-3xl gap-x-8 gap-y-4 sm:grid-cols-2">
           {items.map((item) => (
             <li
               key={item.n}
-              className="flex items-baseline gap-5 md:gap-8"
+              className="flex items-start gap-4"
             >
               <span
-                className="shrink-0 font-display text-5xl font-bold leading-none md:text-6xl"
+                className="mt-1 shrink-0 font-display text-base font-semibold leading-none"
                 style={{ color: item.color }}
                 aria-hidden="true"
               >
                 {item.n}
               </span>
-              <p className="text-lg font-medium text-ink md:text-2xl md:font-semibold">
+              <p className="text-base font-medium leading-relaxed text-ink">
                 {item.text}
               </p>
             </li>
@@ -141,12 +141,12 @@ function WhyWeBuiltThis() {
         {/* The reveal row — three cards showing the trade-off + FM's
             answer. FM card gets the full palette treatment to make it
             visually inevitable that this is the punchline. */}
-        <div className="mt-16 grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-6 py-6">
+        <div className="mt-10 grid gap-6 border-y border-[var(--surface-border)] py-6 sm:grid-cols-3">
+          <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-wider text-ink-muted">
               Companies give you
             </p>
-            <p className="mt-2 font-display text-3xl font-bold">
+            <p className="mt-2 font-display text-xl font-semibold">
               <span style={{ color: "var(--fm-magenta-text)" }}>1</span>
               <span className="text-ink-muted"> &amp; </span>
               <span style={{ color: "var(--fm-blue-text)" }}>2</span>
@@ -156,11 +156,11 @@ function WhyWeBuiltThis() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-6 py-6">
+          <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-wider text-ink-muted">
               Gig platforms give you
             </p>
-            <p className="mt-2 font-display text-3xl font-bold">
+            <p className="mt-2 font-display text-xl font-semibold">
               <span style={{ color: "var(--fm-green-text)" }}>3</span>
               <span className="text-ink-muted"> &amp; </span>
               <span style={{ color: "var(--fm-magenta-text)" }}>4</span>
@@ -171,12 +171,12 @@ function WhyWeBuiltThis() {
           </div>
 
           <div
-            className="rounded-2xl border border-brand-magenta bg-gradient-to-br from-brand-magenta/15 via-brand-blue/10 to-brand-green/10 px-6 py-6 shadow-lg shadow-brand-magenta/10"
+            className="min-w-0"
           >
             <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
               We give you
             </p>
-            <p className="mt-2 font-display text-3xl font-bold">
+            <p className="mt-2 font-display text-xl font-semibold">
               <span
                 className="bg-gradient-to-r from-brand-magenta via-brand-blue to-brand-green bg-clip-text text-transparent"
               >
@@ -190,7 +190,7 @@ function WhyWeBuiltThis() {
         </div>
 
         {/* Founder confession + close */}
-        <div className="mt-16 max-w-2xl">
+        <div className="mt-10 max-w-2xl">
           <p className="text-lg text-ink-muted md:text-xl">
             We looked. We stopped looking. So we built it.
           </p>
@@ -244,6 +244,7 @@ function FaqSection() {
         eyebrow="Common questions"
         heading="Questions the cooperative gets asked"
         items={items}
+        aside={<HomepageQuestionForm />}
       />
     </div>
   );
@@ -253,8 +254,8 @@ function Hero() {
   return (
     <section className="relative overflow-hidden">
       <div className="relative mx-auto max-w-app px-6 pb-14 pt-16 md:pb-16 md:pt-24">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-3 py-1 text-xs font-medium text-brand-magentaText">
-          <span className="fm-btn-primary h-1.5 w-1.5 rounded-full" />
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-greenText">
+          <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
           About Future Modern
         </div>
         <h1 className="font-display text-5xl font-bold leading-tight md:text-6xl">
@@ -276,14 +277,14 @@ function Hero() {
           We&apos;re not trying to be special. We are special. We don&apos;t
           care if anyone sees it.
         </p>
-        <div className="mt-8 flex flex-wrap items-center gap-3 text-xs">
-          <span className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-3 py-1 font-medium text-brand-magentaText">
+        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-muted">
+          <span className="before:mr-2 before:inline-block before:h-1.5 before:w-1.5 before:rounded-full before:bg-brand-magenta">
             For workers, not capitalists
           </span>
-          <span className="rounded-full border border-brand-blue/40 bg-brand-blue/10 px-3 py-1 font-medium text-brand-blue">
+          <span className="before:mr-2 before:inline-block before:h-1.5 before:w-1.5 before:rounded-full before:bg-brand-magenta">
             People-powered, exclusively
           </span>
-          <span className="rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 font-medium text-brand-green">
+          <span className="before:mr-2 before:inline-block before:h-1.5 before:w-1.5 before:rounded-full before:bg-brand-magenta">
             Access is earned, not sold
           </span>
         </div>
@@ -314,10 +315,10 @@ function Hero() {
 function PeoplePowered() {
   return (
     <section id="people" className="scroll-mt-24">
-      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
-        <div className="grid gap-10 md:grid-cols-[1.5fr,1fr]">
+      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
+        <div className="space-y-10">
           <div>
-            <div className="text-xs uppercase tracking-wider text-brand-green">
+            <div className="text-xs uppercase tracking-wider text-brand-greenText">
               People-powered, exclusively
             </div>
             <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
@@ -357,10 +358,10 @@ function PeoplePowered() {
             </div>
           </div>
 
-          <Card className="self-start">
-            <CardEyebrow>What &quot;people-powered&quot; means</CardEyebrow>
-            <CardTitle className="mt-2">Earned, not bought</CardTitle>
-            <ul className="mt-4 space-y-3 text-sm leading-relaxed text-ink-muted">
+          <div className="max-w-prose">
+            <p className="text-sm font-medium text-brand-greenText">What &quot;people-powered&quot; means</p>
+            <h3 className="mt-2 font-display text-2xl font-semibold">Earned, not bought</h3>
+            <ul className="mt-4 space-y-4 leading-relaxed text-ink-muted">
               <li>
                 <span className="text-ink">Access is earned.</span> Three
                 paths in: invitation from an existing member, application +
@@ -389,7 +390,7 @@ function PeoplePowered() {
               people who&apos;ve done the work and care about doing it
               right.
             </p>
-          </Card>
+          </div>
         </div>
       </div>
     </section>
@@ -399,8 +400,8 @@ function PeoplePowered() {
 function VentureLabor() {
   return (
     <section id="model" className="scroll-mt-24">
-      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
-        <div className="grid gap-10 md:grid-cols-[1fr,1.5fr]">
+      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
+        <div className="max-w-prose space-y-8 leading-relaxed">
           <div>
             <div className="text-xs uppercase tracking-wider text-brand-magentaText">
               The contract
@@ -426,12 +427,12 @@ function VentureLabor() {
             </p>
           </div>
 
-          <Card className="self-start">
-            <CardEyebrow>The vetting bar</CardEyebrow>
-            <CardTitle className="mt-2">
+          <div className="max-w-prose">
+            <p className="text-sm font-medium text-brand-magentaText">The vetting bar</p>
+            <h3 className="mt-2 font-display text-2xl font-semibold">
               Ideological as much as technical.
-            </CardTitle>
-            <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+            </h3>
+            <p className="mt-3 leading-relaxed text-ink-muted">
               The failure mode of pooled labor is not the people who
               cannot do the work. It is the people who can do the work
               and will throw out the agreement the moment a check
@@ -443,7 +444,7 @@ function VentureLabor() {
               they throw out all ideals for it, is not one of us. We
               don&apos;t care how good they are.
             </p>
-          </Card>
+          </div>
         </div>
 
         {/* Constellation diagram — the visual system that the
@@ -494,7 +495,7 @@ function WhatChanged() {
 
   return (
     <section>
-      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           What we changed
         </h2>
@@ -504,18 +505,18 @@ function WhatChanged() {
           plumbing.
         </p>
 
-        <div className="mt-10 grid gap-4 md:grid-cols-2">
+        <div className="mt-8 space-y-6">
           {rows.map((row, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
+              className="border-t border-[var(--surface-border)] pt-5"
             >
               <div
                 className={`text-xs uppercase tracking-wider ${accentClass[row.accent]}`}
               >
                 Old model → ours
               </div>
-              <div className="mt-3 text-sm leading-relaxed text-ink-muted">
+              <div className="mt-3 leading-relaxed text-ink-muted">
                 <span className="text-ink-faint">Before:</span> {row.old}
               </div>
               <div className="mt-3 text-sm">
@@ -568,7 +569,7 @@ function WhatWeSayNoTo() {
 
   return (
     <section id="standards" className="scroll-mt-24 relative overflow-hidden">
-      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
+      <div className="relative mx-auto max-w-4xl px-6 py-12 md:py-14">
         <p className="text-xs uppercase tracking-[0.18em] text-brand-magentaText">
           The discipline
         </p>
@@ -580,11 +581,11 @@ function WhatWeSayNoTo() {
           outcomes. Take one away and the model breaks.
         </p>
 
-        <ul className="mt-10 grid gap-4 md:grid-cols-2">
+        <ul className="mt-8 grid gap-x-8 gap-y-4 sm:grid-cols-2">
           {refusals.map((r) => (
             <li
               key={r}
-              className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6"
+              className="border-t border-[var(--surface-border)] pt-4"
             >
               <span className="text-lg font-medium text-ink">{r}</span>
             </li>
@@ -660,7 +661,7 @@ function CoreCompetencies() {
 
   return (
     <section>
-      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Core competencies
         </h2>
@@ -670,11 +671,11 @@ function CoreCompetencies() {
           the surfaces we&apos;ve actually shipped for.
         </p>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
+        <div className="mt-8 grid gap-8 md:grid-cols-3">
           {groups.map((g) => (
             <div
               key={g.label}
-              className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
+              className="min-w-0"
             >
               <div
                 className="text-xs uppercase tracking-wider"
@@ -682,7 +683,7 @@ function CoreCompetencies() {
               >
                 {g.label}
               </div>
-              <ul className="mt-4 space-y-1.5 text-sm leading-relaxed text-ink-muted">
+              <ul className="mt-4 space-y-2 leading-relaxed text-ink-muted">
                 {g.skills.map((s) => (
                   <li key={s} className="flex items-baseline gap-2">
                     <span
@@ -741,15 +742,9 @@ function Provenance() {
     },
   ] as const;
 
-  const accentClass = {
-    magenta: "border-t-brand-magenta",
-    blue: "border-t-brand-blue",
-    green: "border-t-brand-green",
-  } as const;
-
   return (
     <section>
-      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
         <div className="flex flex-wrap items-baseline gap-3">
           <span className="text-xs uppercase tracking-wider text-brand-magentaText">
             Core values
@@ -764,16 +759,16 @@ function Provenance() {
           ritual gets measured against these.
         </p>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-x-10 gap-y-7 sm:grid-cols-2">
           {principles.map((p) => (
             <div
               key={p.title}
-              className={`rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 ${accentClass[p.accent]}`}
+              className="border-t border-[var(--surface-border)] pt-5"
             >
               <h3 className="font-display text-lg font-semibold text-ink">
                 {p.title}
               </h3>
-              <p className="mt-3 text-sm leading-relaxed text-ink-muted">{p.body}</p>
+              <p className="mt-3 leading-relaxed text-ink-muted">{p.body}</p>
             </div>
           ))}
         </div>
@@ -829,7 +824,7 @@ function Credentials() {
 
   return (
     <section>
-      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Where the team cut its teeth
         </h2>
@@ -839,11 +834,11 @@ function Credentials() {
           before joining the cooperative.
         </p>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
+        <div className="mt-8 grid gap-8 md:grid-cols-3">
           {groups.map((g) => (
             <div
               key={g.label}
-              className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
+              className="min-w-0"
             >
               <div
                 className="text-xs uppercase tracking-wider"
@@ -851,9 +846,9 @@ function Credentials() {
               >
                 {g.label}
               </div>
-              <ul className="mt-3 space-y-1.5 text-sm text-ink">
+              <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-base leading-relaxed text-ink">
                 {g.items.map((item) => (
-                  <li key={item}>{item}</li>
+                  <li key={item} className="flex gap-4 last:[&>span]:hidden">{item}<span aria-hidden="true" className="text-ink-faint">/</span></li>
                 ))}
               </ul>
             </div>
@@ -873,7 +868,7 @@ function Credentials() {
 function Pillars() {
   return (
     <section id="expertise" className="scroll-mt-24">
-      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Three pillars, one cooperative
         </h2>
@@ -902,7 +897,7 @@ function Pillars() {
           />
         </div>
 
-        <div className="mt-12 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-8 md:p-10">
+        <div className="mt-12 border-t border-[var(--surface-border)] pt-8">
           <p className="text-xs uppercase tracking-wider text-brand-magentaText">
             The Future Modernist
           </p>
@@ -959,10 +954,7 @@ function OriginNote({
   body: string;
 }) {
   return (
-    <div
-      className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5"
-      style={{ borderLeftColor: color, borderLeftWidth: 3 }}
-    >
+    <div className="min-w-0">
       <p
         className="text-[11px] uppercase tracking-wider"
         style={{ color }}
@@ -984,10 +976,7 @@ function PillarCard({
   blurb: string;
 }) {
   return (
-    <div
-      className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6 transition-colors"
-      style={{ borderTopColor: color, borderTopWidth: 4 }}
-    >
+    <div className="border-t border-[var(--surface-border)] pt-5">
       <div
         className="flex items-center gap-2 text-xs uppercase tracking-wider"
         style={{ color }}
@@ -999,7 +988,7 @@ function PillarCard({
         Pillar
       </div>
       <h3 className="mt-2 font-display text-2xl font-semibold">{label}</h3>
-      <p className="mt-3 text-sm leading-relaxed text-ink-muted">{blurb}</p>
+      <p className="mt-3 leading-relaxed text-ink-muted">{blurb}</p>
     </div>
   );
 }
@@ -1007,7 +996,7 @@ function PillarCard({
 function RoadmapPeek() {
   return (
     <section className="relative overflow-hidden">
-      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
+      <div className="relative mx-auto max-w-4xl px-6 py-12 md:py-14">
         <div className="grid gap-14 md:grid-cols-[1fr,1.7fr]">
           <div>
             <div className="text-xs uppercase tracking-wider text-brand-magentaText">
@@ -1097,7 +1086,7 @@ function RoadmapRow({
       </div>
       {/* Card */}
       <div
-        className="rounded-2xl border bg-[var(--surface)] px-6 py-5"
+        className="border-t border-[var(--surface-border)] pt-4"
         style={{
           borderColor: `${accent}55`,
         }}
@@ -1110,7 +1099,7 @@ function RoadmapRow({
             {phase}
           </div>
           <span
-            className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wider"
+            className="text-xs font-medium uppercase tracking-wider"
             style={{
               borderColor: accent,
               color: accent,
@@ -1119,7 +1108,7 @@ function RoadmapRow({
             {status}
           </span>
         </div>
-        <p className="mt-3 text-sm leading-relaxed text-ink-muted">{body}</p>
+        <p className="mt-3 leading-relaxed text-ink-muted">{body}</p>
       </div>
     </div>
   );
@@ -1128,7 +1117,7 @@ function RoadmapRow({
 function ConstellationSection() {
   return (
     <section>
-      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
         <div className="max-w-2xl">
           <div className="text-xs uppercase tracking-wider text-brand-magentaText">
             Venture Labor OS
@@ -1145,19 +1134,19 @@ function ConstellationSection() {
         <div className="mt-8 flex flex-wrap gap-3 text-sm">
           <Link
             href="/governance"
-            className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-4 py-2 text-brand-magentaText hover:bg-brand-magenta/20"
+            className="text-brand-magentaText underline-offset-4 hover:underline"
           >
             See how the network works →
           </Link>
           <Link
             href="/policies/covenant"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
+            className="text-ink-muted underline-offset-4 hover:text-ink hover:underline"
           >
             Cooperative Covenant →
           </Link>
           <Link
             href="/trust"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
+            className="text-ink-muted underline-offset-4 hover:text-ink hover:underline"
           >
             Trust &amp; security →
           </Link>
@@ -1170,26 +1159,26 @@ function ConstellationSection() {
 function CTA() {
   return (
     <section>
-      <div className="mx-auto max-w-app px-6 py-12 md:py-14 text-center">
-        <h2 className="font-display text-3xl font-semibold md:text-4xl">
+      <div className="mx-auto max-w-app px-6 pb-20 pt-14 md:pb-28 md:pt-20 text-center">
+        <h2 className="font-display text-4xl font-semibold leading-tight md:text-6xl">
           Ready to be part of it?
         </h2>
-        <p className="mx-auto mt-3 max-w-xl text-ink-muted">
+        <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-ink-muted">
           Whether you&apos;re a contributor looking for a fairer model or a
           client looking for a real team. Start here.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <ButtonLink href="/signup" variant="primary" size="large">
+          <ButtonLink href="/signup" variant="primary" size="large" className="min-w-44 px-7">
             Apply to join
           </ButtonLink>
-          <ButtonLink href="/membership" variant="secondary" size="large">
+          <ButtonLink href="/membership" variant="secondary" size="large" className="min-w-44 px-7">
             See membership tiers
           </ButtonLink>
           <a
             href={PUBLIC_BOOKING_URL}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center justify-center rounded-full border border-[var(--surface-border)] px-8 py-3 font-medium text-ink transition-colors hover:bg-[var(--surface-elevated)]"
+            className={buttonClassName({ variant: "secondary", size: "large", className: "min-w-44 px-7" })}
           >
             {PUBLIC_BOOKING_CTA}
           </a>

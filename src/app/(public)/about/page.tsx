@@ -209,7 +209,7 @@ function Hero() {
               We&apos;re not trying to be special. We are special. We don&apos;t care if anyone sees it.
             </p>
             <ul className="mt-6 space-y-3 border-t border-[var(--surface-border)] pt-6 text-sm leading-relaxed text-ink-muted">
-              <li className="flex items-start gap-3"><span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-magenta" />For workers, not capitalists</li>
+              <li className="flex items-start gap-3"><span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-magenta" />Turning workers into owners</li>
               <li className="flex items-start gap-3"><span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-blue" />People-powered, exclusively</li>
               <li className="flex items-start gap-3"><span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-green" />Access is earned, not sold</li>
             </ul>

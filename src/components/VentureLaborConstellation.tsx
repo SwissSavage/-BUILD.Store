@@ -310,7 +310,7 @@ export function VentureLaborConstellation() {
           Revenue Generated
         </text>
         <text x="747" y="662" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="8" fill="#D828A0">
-          85 · 12 · 3 Split
+          85% to direct labor
         </text>
 
         {/* NODE 4: TREASURY — bottom left flipper */}
@@ -321,10 +321,10 @@ export function VentureLaborConstellation() {
           TREASURY
         </text>
         <text x="213" y="648" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="8" fill="#505060">
-          Collects 3% · 1.5% ops
+          Cooperative operations
         </text>
         <text x="213" y="662" textAnchor="middle" fontFamily="DM Mono, monospace" fontSize="8" fill="#505060">
-          1.5% → liquidity pool
+          Shared infrastructure
         </text>
 
         {/* NODE 5: LIQUIDITY POOL / $BUILD — top left flipper */}

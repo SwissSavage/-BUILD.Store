@@ -393,8 +393,8 @@ function VentureLaborOverview() {
   const parts = [
     { name: "Contributor", detail: "Skills · Relationships · Domain expertise" },
     { name: "Platform", detail: "Infrastructure · Brand · Distribution · Leverage" },
-    { name: "Client / deal", detail: "Revenue generated · 85 · 12 · 3 split" },
-    { name: "Treasury", detail: "Collects 3% · 1.5% operations · 1.5% to liquidity pool" },
+    { name: "Client / deal", detail: "Revenue generated · 85% to direct labor" },
+    { name: "Treasury", detail: "Cooperative operations · Shared infrastructure" },
     { name: "Liquidity pool / $BUILD token", detail: "Passive equity accrual · OTC mobilization" },
   ];
   const flows = [

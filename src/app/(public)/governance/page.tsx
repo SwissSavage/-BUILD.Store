@@ -235,23 +235,18 @@ export default function GovernancePage() {
       <Section
         eyebrow="Money · cooperative side"
         id="revenue"
-        title="85 / 12 / 3 split, disclosed"
+        title="How cooperative revenue is distributed"
         body={
           <>
-            <p>Every cooperative-collected dollar:</p>
+            <p>Cooperative revenue supports the people who deliver the work and the operations that make it possible:</p>
             <ul className="mt-2 space-y-1 pl-5 text-sm text-ink-muted list-disc">
               <li>
-                <strong className="text-ink">85%</strong> to the
-                contributor pool (talent + admin pool per contract).
+                <strong className="text-ink">85%</strong> to the people
+                doing the work.
               </li>
               <li>
-                <strong className="text-ink">12%</strong> to reserve.
-                Subdivides for treasury, LP for the token rail, and
-                cooperative benefits (health fund, sabbatical, etc.).
-              </li>
-              <li>
-                <strong className="text-ink">3%</strong> to admin
-                operations.
+                <strong className="text-ink">15%</strong> for cooperative
+                operations and shared infrastructure.
               </li>
             </ul>
             <p className="mt-3 text-sm text-ink-muted">

@@ -110,15 +110,15 @@ function WhyWeBuiltThis() {
 
   return (
     <section id="our-story" className="relative scroll-mt-24 overflow-hidden">
-      <div className="relative mx-auto max-w-4xl px-6 py-12 md:py-14">
+      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
         <div className="text-xs uppercase tracking-wider text-brand-magentaText">
           Why we built this
         </div>
-        <h2 className="mt-3 max-w-3xl font-display text-3xl font-semibold leading-tight md:text-4xl">
+        <h2 className="mt-3 font-display text-3xl font-semibold leading-tight md:text-4xl">
           Every worker knows the shape of the deal they&apos;d stay for.
         </h2>
 
-        <ol className="mt-8 grid max-w-3xl gap-x-8 gap-y-4 sm:grid-cols-2">
+        <ol className="mt-8 grid gap-x-8 gap-y-4 sm:grid-cols-2">
           {items.map((item) => (
             <li
               key={item.n}
@@ -190,7 +190,7 @@ function WhyWeBuiltThis() {
         </div>
 
         {/* Founder confession + close */}
-        <div className="mt-10 max-w-2xl">
+        <div className="mt-10">
           <p className="text-lg text-ink-muted md:text-xl">
             We looked. We stopped looking. So we built it.
           </p>
@@ -253,44 +253,41 @@ function FaqSection() {
 function Hero() {
   return (
     <section className="relative overflow-hidden">
-      <div className="relative mx-auto max-w-app px-6 pb-14 pt-16 md:pb-16 md:pt-24">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-greenText">
-          <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
-          About Future Modern
+      <div className="mx-auto max-w-app px-6 pb-10 pt-16 md:pb-12 md:pt-24">
+        <div className="grid items-end gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)] lg:gap-16">
+          <div>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-greenText">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
+              About Future Modern
+            </div>
+            <h1 className="font-display text-5xl font-bold leading-tight md:text-6xl">
+              The world&apos;s first{" "}
+              <span className="bg-gradient-to-r from-brand-magenta to-brand-blue bg-clip-text text-transparent">
+                Venture Labor Cooperative
+              </span>.
+            </h1>
+            <p className="mt-6 text-lg leading-relaxed text-ink-muted md:text-xl">
+              Curated crews. The people who ship keep 85%. That&apos;s what
+              gets the best in the room.
+            </p>
+            <p className="mt-3 text-base leading-relaxed text-ink-muted">
+              Read on to see how we work with clients, and how members earn theirs.
+            </p>
+            <a href="#our-story" className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-brand-blue underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-blue">
+              Explore the story <ArrowDown aria-hidden="true" size={16} />
+            </a>
+          </div>
+          <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-inset)] p-6 sm:p-8">
+            <p className="font-display text-xl leading-snug text-ink md:text-2xl">
+              We&apos;re not trying to be special. We are special. We don&apos;t care if anyone sees it.
+            </p>
+            <ul className="mt-6 space-y-3 border-t border-[var(--surface-border)] pt-6 text-sm leading-relaxed text-ink-muted">
+              <li className="flex items-start gap-3"><span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-magenta" />For workers, not capitalists</li>
+              <li className="flex items-start gap-3"><span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-blue" />People-powered, exclusively</li>
+              <li className="flex items-start gap-3"><span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-green" />Access is earned, not sold</li>
+            </ul>
+          </div>
         </div>
-        <h1 className="font-display text-5xl font-bold leading-tight md:text-6xl">
-          The world&apos;s first{" "}
-          <span className="bg-gradient-to-r from-brand-magenta to-brand-blue bg-clip-text text-transparent">
-            Venture Labor Cooperative
-          </span>
-          .
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg text-ink-muted md:text-xl">
-          Curated crews. The people who ship keep 85%. That&apos;s what
-          gets the best in the room.
-        </p>
-        <p className="mt-3 max-w-2xl text-base text-ink-muted">
-          Read on to see how we work with clients, and how members earn
-          theirs.
-        </p>
-        <p className="mt-6 max-w-2xl text-base text-ink-faint italic">
-          We&apos;re not trying to be special. We are special. We don&apos;t
-          care if anyone sees it.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-muted">
-          <span className="before:mr-2 before:inline-block before:h-1.5 before:w-1.5 before:rounded-full before:bg-brand-magenta">
-            For workers, not capitalists
-          </span>
-          <span className="before:mr-2 before:inline-block before:h-1.5 before:w-1.5 before:rounded-full before:bg-brand-magenta">
-            People-powered, exclusively
-          </span>
-          <span className="before:mr-2 before:inline-block before:h-1.5 before:w-1.5 before:rounded-full before:bg-brand-magenta">
-            Access is earned, not sold
-          </span>
-        </div>
-        <a href="#our-story" className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-brand-blue underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-blue">
-          Explore the story <ArrowDown aria-hidden="true" size={16} />
-        </a>
         <nav aria-label="About page sections" className="mt-10 flex flex-wrap gap-x-6 gap-y-3 border-t border-[var(--surface-border)] pt-5 text-sm text-ink-muted">
           <a className="hover:text-ink focus-visible:text-ink" href="#people">Our people</a>
           <a className="hover:text-ink focus-visible:text-ink" href="#model">Our model</a>
@@ -315,7 +312,7 @@ function Hero() {
 function PeoplePowered() {
   return (
     <section id="people" className="scroll-mt-24">
-      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <div className="space-y-10">
           <div>
             <div className="text-xs uppercase tracking-wider text-brand-greenText">
@@ -324,7 +321,7 @@ function PeoplePowered() {
             <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
               The resumes speak for themselves.
             </h2>
-            <div className="mt-6 max-w-prose space-y-5 leading-relaxed text-ink-muted">
+            <div className="mt-6 space-y-5 leading-relaxed text-ink-muted">
               <p>
                 The people who built this are already reputed in their
                 fields. Top performers at the companies they passed through.
@@ -358,7 +355,7 @@ function PeoplePowered() {
             </div>
           </div>
 
-          <div className="max-w-prose">
+          <div>
             <p className="text-sm font-medium text-brand-greenText">What &quot;people-powered&quot; means</p>
             <h3 className="mt-2 font-display text-2xl font-semibold">Earned, not bought</h3>
             <ul className="mt-4 space-y-4 leading-relaxed text-ink-muted">
@@ -400,8 +397,8 @@ function PeoplePowered() {
 function VentureLabor() {
   return (
     <section id="model" className="scroll-mt-24">
-      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
-        <div className="max-w-prose space-y-8 leading-relaxed">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+        <div className="space-y-8 leading-relaxed">
           <div>
             <div className="text-xs uppercase tracking-wider text-brand-magentaText">
               The contract
@@ -427,7 +424,7 @@ function VentureLabor() {
             </p>
           </div>
 
-          <div className="max-w-prose">
+          <div>
             <p className="text-sm font-medium text-brand-magentaText">The vetting bar</p>
             <h3 className="mt-2 font-display text-2xl font-semibold">
               Ideological as much as technical.
@@ -439,7 +436,7 @@ function VentureLabor() {
               clears. We vet for that first. The craft we can teach.
               The values we cannot, and we have stopped trying.
             </p>
-            <p className="mt-4 border-l-2 border-brand-magenta/40 pl-3 text-xs italic text-ink-faint">
+            <p className="mt-4 border-l-2 border-brand-magenta/40 pl-4 text-sm italic leading-relaxed text-ink-muted">
               Anyone who can&apos;t handle money, in the sense that
               they throw out all ideals for it, is not one of us. We
               don&apos;t care how good they are.
@@ -495,11 +492,11 @@ function WhatChanged() {
 
   return (
     <section>
-      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           What we changed
         </h2>
-        <p className="mt-2 max-w-2xl text-ink-muted">
+        <p className="mt-2 text-ink-muted">
           Concrete differences between the conventional freelance economy
           and the cooperative we built. Not rhetoric. Pricing, policy, and
           plumbing.
@@ -569,14 +566,14 @@ function WhatWeSayNoTo() {
 
   return (
     <section id="standards" className="scroll-mt-24 relative overflow-hidden">
-      <div className="relative mx-auto max-w-4xl px-6 py-12 md:py-14">
+      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
         <p className="text-xs uppercase tracking-[0.18em] text-brand-magentaText">
           The discipline
         </p>
         <h2 className="mt-3 font-display text-3xl font-semibold md:text-4xl">
           What we say no to.
         </h2>
-        <p className="mt-4 max-w-2xl text-ink-muted">
+        <p className="mt-4 text-ink-muted">
           Every refusal below is a discipline. The refusals produce the
           outcomes. Take one away and the model breaks.
         </p>
@@ -592,7 +589,7 @@ function WhatWeSayNoTo() {
           ))}
         </ul>
 
-        <p className="mt-8 max-w-2xl text-sm leading-relaxed text-ink-muted">
+        <p className="mt-8 text-sm leading-relaxed text-ink-muted">
           We cold pitch to get in the door. We don&apos;t cold close.
           That&apos;s the whole difference.
         </p>
@@ -661,11 +658,11 @@ function CoreCompetencies() {
 
   return (
     <section>
-      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Core competencies
         </h2>
-        <p className="mt-2 max-w-2xl text-ink-muted">
+        <p className="mt-2 text-ink-muted">
           We leverage a one-of-a-kind interdisciplinary network to deliver
           best-in-class service to a small list of select clients. These are
           the surfaces we&apos;ve actually shipped for.
@@ -675,7 +672,7 @@ function CoreCompetencies() {
           {groups.map((g) => (
             <div
               key={g.label}
-              className="min-w-0"
+              className="min-w-0 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 sm:p-6"
             >
               <div
                 className="text-xs uppercase tracking-wider"
@@ -744,7 +741,7 @@ function Provenance() {
 
   return (
     <section>
-      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <div className="flex flex-wrap items-baseline gap-3">
           <span className="text-xs uppercase tracking-wider text-brand-magentaText">
             Core values
@@ -753,7 +750,7 @@ function Provenance() {
         <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
           Provenance · Discernment · Equity
         </h2>
-        <p className="mt-3 max-w-2xl text-ink-muted">
+        <p className="mt-3 text-ink-muted">
           The non-negotiables. They&apos;re encoded in the product, not just
           the About page. Every engineering decision and every operations
           ritual gets measured against these.
@@ -824,11 +821,11 @@ function Credentials() {
 
   return (
     <section>
-      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Where the team cut its teeth
         </h2>
-        <p className="mt-2 max-w-2xl text-ink-muted">
+        <p className="mt-2 text-ink-muted">
           A non-exhaustive sample of the institutions, labs, and brands
           where Future Modern contributors have shipped serious work
           before joining the cooperative.
@@ -846,16 +843,16 @@ function Credentials() {
               >
                 {g.label}
               </div>
-              <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-base leading-relaxed text-ink">
+              <ul className="mt-4 flex flex-wrap gap-2 text-sm leading-relaxed text-ink">
                 {g.items.map((item) => (
-                  <li key={item} className="flex gap-4 last:[&>span]:hidden">{item}<span aria-hidden="true" className="text-ink-faint">/</span></li>
+                  <li key={item} className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2">{item}</li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
 
-        <p className="mt-6 max-w-3xl text-xs text-ink-faint">
+        <p className="mt-6 text-xs text-ink-faint">
           Inclusion in this list reflects past and current affiliations of
           cooperative contributors. It is not an endorsement by any of these
           organizations of Future Modern or $BUILD.Store.
@@ -868,11 +865,11 @@ function Credentials() {
 function Pillars() {
   return (
     <section id="expertise" className="scroll-mt-24">
-      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Three pillars, one cooperative
         </h2>
-        <p className="mt-2 max-w-2xl text-ink-muted">
+        <p className="mt-2 text-ink-muted">
           Every member sits in at least one pillar. Many sit across two. A
           handful move freely through all three. The pillar framing is how we
           route opportunities and how we build teams that can actually ship a
@@ -904,7 +901,7 @@ function Pillars() {
           <h3 className="mt-3 font-display text-2xl font-semibold md:text-3xl">
             A creator at heart. Artist, engineer, builder.
           </h3>
-          <p className="mt-4 max-w-3xl text-ink-muted">
+          <p className="mt-4 text-ink-muted">
             We have specialists, plenty of them. But the people who shape this
             cooperative are renaissance figures: comfortable directing a
             shoot in the morning, shipping a smart contract in the afternoon,
@@ -933,7 +930,7 @@ function Pillars() {
           </div>
         </div>
 
-        <p className="mt-8 max-w-2xl text-sm text-ink-faint">
+        <p className="mt-8 text-sm text-ink-faint">
           This isn&apos;t a marketplace listing of disconnected skills.
           It&apos;s a cooperative that staffs cross-pillar teams the way a
           high-end agency would, with the economics owed to the people doing
@@ -996,7 +993,7 @@ function PillarCard({
 function RoadmapPeek() {
   return (
     <section className="relative overflow-hidden">
-      <div className="relative mx-auto max-w-4xl px-6 py-12 md:py-14">
+      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
         <div className="grid gap-14 md:grid-cols-[1fr,1.7fr]">
           <div>
             <div className="text-xs uppercase tracking-wider text-brand-magentaText">
@@ -1117,8 +1114,8 @@ function RoadmapRow({
 function ConstellationSection() {
   return (
     <section>
-      <div className="mx-auto max-w-4xl px-6 py-12 md:py-14">
-        <div className="max-w-2xl">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+        <div>
           <div className="text-xs uppercase tracking-wider text-brand-magentaText">
             Venture Labor OS
           </div>

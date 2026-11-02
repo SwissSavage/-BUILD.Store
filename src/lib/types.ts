@@ -2923,6 +2923,7 @@ export type NotificationKind =
   | "seller_application"
   | "whitelist_decision"
   | "direct_message"
+  | "landing_submission"
   | "community_message"
   | "project_application"
   | "project_application_decision"
@@ -2989,6 +2990,7 @@ export const NOTIFICATION_KIND_LABELS: Record<NotificationKind, string> = {
   seller_application: "Seller application",
   whitelist_decision: "Whitelist",
   direct_message: "Direct message",
+  landing_submission: "Landing-page inquiry",
   community_message: "Community message",
   project_application: "Project application",
   project_application_decision: "Project decision",

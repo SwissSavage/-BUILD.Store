@@ -32,6 +32,7 @@ const KIND_ACCENT: Record<NotificationKind, string> = {
   seller_application: "#D828A0",
   whitelist_decision: "#007048",
   direct_message: "#D828A0",
+  landing_submission: "#5070F0",
   community_message: "#007048",
   project_application: "#5070F0",
   project_application_decision: "#D828A0",

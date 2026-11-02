@@ -241,6 +241,7 @@ function SubmissionRow({
 
   return (
     <Card>
+      <span id={row.id} />
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <CardEyebrow>{INBOUND_SUBMISSION_KIND_LABELS[row.kind]}</CardEyebrow>
@@ -297,9 +298,14 @@ function SubmissionRow({
       {row.attachments.length > 0 && (
         <p className="mt-2 text-xs text-ink-muted">
           Attachments:{" "}
-          {row.attachments
-            .map((a) => `${a.name} (${Math.round(a.size / 1024)}kb)`)
-            .join(", ")}
+          {row.attachments.map((a, index) => (
+            <span key={`${a.name}-${index}`}>
+              {index > 0 && ", "}
+              {row.id.startsWith("landing_") ? (
+                <a className="underline" href={`/api/admin/inbound/${encodeURIComponent(row.id)}/attachments/${index}`}>{a.name}</a>
+              ) : a.name} ({Math.round(a.size / 1024)}kb)
+            </span>
+          ))}
         </p>
       )}
 

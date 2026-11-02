@@ -20,7 +20,6 @@ import { ButtonLink, buttonClassName } from "@/components/Button";
 import { ArrowDown } from "lucide-react";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { TaglineRare } from "@/components/TaglineRare";
-import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
 import { DefinedTermSchema } from "@/components/DefinedTermSchema";
 import { getEntriesForPage } from "@/lib/glossary";
 import { PUBLIC_BOOKING_CTA, PUBLIC_BOOKING_URL } from "@/lib/public-booking";
@@ -444,14 +443,65 @@ function VentureLabor() {
           </div>
         </div>
 
-        {/* Constellation diagram — the visual system that the
-            Venture Labor concept above operates through. Exact port
-            of the settled reference framing; do not rework. */}
-        <div className="mt-16">
-          <VentureLaborConstellation />
-        </div>
+        <VentureLaborOverview />
       </div>
     </section>
+  );
+}
+
+function VentureLaborOverview() {
+  const parts = [
+    { name: "Contributor", detail: "Skills · Relationships · Domain expertise" },
+    { name: "Platform", detail: "Infrastructure · Brand · Distribution · Leverage" },
+    { name: "Client / deal", detail: "Revenue generated · 85 · 12 · 3 split" },
+    { name: "Treasury", detail: "Collects 3% · 1.5% operations · 1.5% to liquidity pool" },
+    { name: "Liquidity pool / $BUILD token", detail: "Passive equity accrual · OTC mobilization" },
+  ];
+  const flows = [
+    ["Contributor → Venture Labor OS", "Deal flow"],
+    ["Venture Labor OS → Contributor", "Cash / equity"],
+    ["Contributor → Platform", "Platform leverage"],
+    ["Venture Labor OS → Platform", "Platform leverage"],
+    ["Platform ↔ Client / deal", "Platform relationship"],
+    ["Venture Labor OS ↔ Client / deal", "Deal flow and cash"],
+    ["Client / deal → Treasury", "Cash payment"],
+    ["Treasury → Liquidity pool", "Treasury flow"],
+    ["Liquidity pool → Contributor", "Cash / equity"],
+    ["Venture Labor OS ↔ Treasury", "Reinvestment feedback"],
+    ["Venture Labor OS ↔ Liquidity pool", "Feedback loop"],
+  ];
+  return (
+    <figure className="mt-12 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)]">
+      <figcaption className="border-b border-[var(--surface-border)] px-6 py-6 sm:px-8">
+        <p className="text-sm font-medium text-brand-magentaText">Venture Labor OS</p>
+        <h3 className="mt-2 font-display text-2xl font-semibold md:text-3xl">How the system connects</h3>
+        <p className="mt-3 max-w-3xl leading-relaxed text-ink-muted">The contributors, platform, client, treasury, and liquidity pool connected through Venture Labor.</p>
+      </figcaption>
+      <div className="relative bg-[var(--surface)] px-6 pb-6 pt-6 sm:px-8">
+        <div className="relative z-10 mx-auto w-fit rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-5 py-3 text-center font-display text-lg font-semibold text-ink">Venture Labor OS</div>
+        <svg aria-hidden="true" className="pointer-events-none absolute left-[10%] top-12 hidden h-24 w-[80%] lg:block" viewBox="0 0 1000 64" preserveAspectRatio="none" fill="none">
+          <path d="M500 0 V18 M0 64 V48 Q0 32 20 32 H980 Q1000 32 1000 48 V64 M250 32 V64 M500 18 V64 M750 32 V64" stroke="var(--fm-blue-text)" strokeWidth="1.5" opacity="0.55" vectorEffect="non-scaling-stroke" />
+        </svg>
+        <div className="relative mt-6 grid gap-3 sm:grid-cols-2 lg:mt-16 lg:grid-cols-5">
+        {parts.map((part) => (
+          <div key={part.name} className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-inset)] px-4 py-5">
+            <h4 className="font-display text-lg font-semibold text-ink">{part.name}</h4>
+            <p className="mt-2 text-sm leading-relaxed text-ink-muted">{part.detail}</p>
+          </div>
+        ))}
+        </div>
+      </div>
+      <div className="border-t border-[var(--surface-border)] px-6 py-6 sm:px-8">
+        <p className="text-sm font-medium text-ink">Connections and flows</p>
+        <ul className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+          {flows.map(([connection, flow]) => (
+            <li key={connection} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-[var(--surface-border)] pb-3 text-sm leading-relaxed">
+              <span className="text-ink">{connection}</span><span className="text-ink-muted">{flow}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </figure>
   );
 }
 
@@ -1006,16 +1056,11 @@ function RoadmapPeek() {
           </div>
 
           <div className="relative">
-            {/* Vertical spine connecting the phase discs */}
-            <div
-              aria-hidden="true"
-              className="absolute left-[27px] top-6 bottom-6 w-px"
-              style={{
-                background:
-                  "linear-gradient(to bottom, #007048 0%, #D828A0 50%, #5070F0 100%)",
-                opacity: 0.35,
-              }}
-            />
+            <svg aria-hidden="true" className="pointer-events-none absolute left-0 top-7 h-[calc(100%-3.5rem)] w-14" viewBox="0 0 56 400" preserveAspectRatio="none" fill="none">
+              <path d="M25 0 C8 65 45 135 27 200 S9 335 25 400" stroke="var(--fm-blue-text)" strokeWidth="1.5" opacity="0.55" vectorEffect="non-scaling-stroke" />
+              <path d="M28 0 C12 65 48 135 30 200 S12 335 28 400" stroke="var(--fm-magenta-text)" strokeWidth="1.5" opacity="0.5" vectorEffect="non-scaling-stroke" />
+              <path d="M31 0 C15 65 51 135 33 200 S15 335 31 400" stroke="var(--fm-green-text)" strokeWidth="1.5" opacity="0.6" vectorEffect="non-scaling-stroke" />
+            </svg>
             <div className="space-y-6">
               <RoadmapRow
                 number="01"
@@ -1068,7 +1113,6 @@ function RoadmapRow({
           borderColor: accent,
           color: accent,
           backgroundColor: "var(--surface)",
-          boxShadow: `0 0 24px ${accent}33`,
         }}
       >
         {number}
@@ -1108,19 +1152,19 @@ function ConstellationSection() {
     <section>
       <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <div>
-          <div className="text-xs uppercase tracking-wider text-brand-magentaText">
+          <div className="text-sm font-medium text-brand-magentaText">
             Venture Labor OS
           </div>
           <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
             Owners ship better work than renters.
           </h2>
-          <p className="mt-3 text-lg text-ink-muted">
+          <p className="mt-4 text-lg leading-relaxed text-ink-muted md:text-xl">
             The upside on the work belongs to the people who shipped it.
             Provenance, Discernment, Equity.
           </p>
         </div>
 
-        <div className="mt-8 flex flex-wrap gap-3 text-sm">
+        <div className="mt-7 flex flex-wrap gap-x-7 gap-y-4 text-base font-medium">
           <Link
             href="/governance"
             className="text-brand-magentaText underline-offset-4 hover:underline"

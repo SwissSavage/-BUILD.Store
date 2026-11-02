@@ -1,80 +1,147 @@
 import { useId } from "react";
 
-/** The labeled nodes form the head and flippers; the central network forms the shell. */
+const colors = {
+  pink: "#ee65c0",
+  blue: "#8da4ff",
+  green: "#50cba2",
+  gray: "#a0adbf",
+};
+
+/** The five labeled nodes are the turtle's head and flippers; the network is its shell. */
 export function VentureLaborDiagram() {
   const id = useId().replace(/:/g, "");
-  const marker = (color: string) => `url(#${id}-${color})`;
+  const marker = (color: keyof typeof colors) => `url(#${id}-${color})`;
+
   return (
-    <svg viewBox="0 0 960 760" xmlns="http://www.w3.org/2000/svg" role="img"
-      aria-labelledby={`${id}-title ${id}-description`} style={{ display: "block", width: "100%", height: "auto", background: "#080a12" }}>
+    <svg
+      viewBox="0 0 960 760"
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-labelledby={`${id}-title ${id}-description`}
+      style={{ display: "block", width: "100%", height: "auto", background: "#080b11" }}
+    >
       <title id={`${id}-title`}>Venture Labor OS turtle constellation</title>
-      <desc id={`${id}-description`}>The contributor, platform, client, treasury and liquidity pool surround the Venture Labor OS. Colored, directed lines show cash and equity, platform, deal, treasury and feedback flows.</desc>
+      <desc id={`${id}-description`}>
+        The contributor forms the head, with liquidity pool and platform as the upper flippers,
+        treasury and client as the lower flippers, and Venture Labor OS at the center of the shell.
+        Directed pink lines show cash and equity, blue lines platform leverage, green lines deal
+        flow, and gray lines treasury flow. Dashed pink lines are reciprocal feedback; dashed blue
+        lines connect platform and client in both directions.
+      </desc>
       <defs>
-        <pattern id={`${id}-dots`} width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".7" fill="#7183ae" opacity=".22" /></pattern>
-        <radialGradient id={`${id}-shell`}><stop stopColor="#191027" /><stop offset=".7" stopColor="#101323" /><stop offset="1" stopColor="#090d18" /></radialGradient>
-        <linearGradient id={`${id}-outline`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#526bfa" /><stop offset=".5" stopColor="#bd3dae" /><stop offset="1" stopColor="#087f67" /></linearGradient>
-        <radialGradient id={`${id}-hub`}><stop stopColor="#32112d" /><stop offset="1" stopColor="#100d1a" /></radialGradient>
-        {[["pink", "#ef4bbd"], ["blue", "#708cff"], ["green", "#35bc91"], ["gray", "#9aa7bc"]].map(([name, color]) => (
-          <marker key={name} id={`${id}-${name}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill={color} /></marker>
+        <pattern id={`${id}-dots`} width="24" height="24" patternUnits="userSpaceOnUse">
+          <circle cx="12" cy="12" r="0.8" fill="#8094b4" opacity="0.21" />
+        </pattern>
+        {Object.entries(colors).map(([name, color]) => (
+          <marker
+            key={name}
+            id={`${id}-${name}`}
+            viewBox="0 0 10 10"
+            refX="10"
+            refY="5"
+            markerUnits="userSpaceOnUse"
+            markerWidth="10"
+            markerHeight="10"
+            orient="auto"
+            overflow="visible"
+          >
+            <path d="M0 0 L10 5 L0 10 L2.5 5 Z" fill={color} />
+          </marker>
         ))}
       </defs>
       <rect width="960" height="760" fill={`url(#${id}-dots)`} />
 
-      {/* The shell is the boundary of the system, not an additional flow. */}
-      <ellipse cx="480" cy="378" rx="235" ry="242" fill={`url(#${id}-shell)`} stroke={`url(#${id}-outline)`} strokeWidth="1.5" opacity=".55" />
-      <ellipse cx="480" cy="378" rx="222" ry="229" fill="none" stroke="#91a6e8" strokeOpacity=".16" />
-      <g fill="none" stroke="#99a4d9" strokeOpacity=".11" strokeWidth="1.2">
-        <path d="M480 148 L480 245 M480 510 L480 607 M260 378 H351 M609 378 H700" />
-        <path d="M328 205 L399 282 M632 205 L561 282 M328 551 L399 474 M632 551 L561 474" />
-        <path d="M395 237 L480 202 L565 237 L600 320 L565 343 M395 237 L360 320 L395 343 M360 436 L395 518 L480 554 L565 518 L600 436" />
+      {/* The quiet shell geometry is a silhouette, never a competing flow. */}
+      <g fill="none" stroke="#65748e" strokeWidth="1" strokeOpacity="0.18">
+        <ellipse cx="480" cy="376" rx="180" ry="192" />
+        <path d="M480 184 L480 246 M300 376 L366 376 M660 376 L594 376 M480 506 L480 568" />
+        <path d="M480 246 L572 290 L594 376 L552 466 L480 506 L408 466 L366 376 L388 290 Z" />
+        <path d="M388 290 L351 253 M572 290 L609 253 M408 466 L363 519 M552 466 L597 519" />
       </g>
 
-      {/* Outer routes and spokes retain the original's direction and line styles. */}
-      <g fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M569 110 C700 110 805 140 830 250" stroke="#708cff" markerEnd={marker("blue")} />
-        <path d="M800 334 C800 420 775 490 732 558" stroke="#708cff" strokeDasharray="6 5" markerEnd={marker("blue")} />
-        <path d="M745 558 C788 490 813 420 813 334" stroke="#708cff" strokeDasharray="6 5" markerEnd={marker("blue")} />
-        <path d="M740 634 C590 682 370 682 220 634" stroke="#ef4bbd" markerEnd={marker("pink")} />
-        <path d="M130 250 C155 140 260 110 391 110" stroke="#ef4bbd" markerEnd={marker("pink")} />
-        <path d="M486 156 V316" stroke="#35bc91" markerEnd={marker("green")} />
-        <path d="M474 316 V156" stroke="#ef4bbd" markerEnd={marker("pink")} />
-        <path d="M539 361 L734 306" stroke="#708cff" markerEnd={marker("blue")} />
-        <path d="M526 420 L667 558" stroke="#35bc91" markerEnd={marker("green")} />
-        <path d="M654 558 L520 425" stroke="#ef4bbd" markerEnd={marker("pink")} />
-        <path d="M220 558 C175 490 145 420 130 334" stroke="#9aa7bc" markerEnd={marker("gray")} />
-        <path d="M434 420 L293 558" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
-        <path d="M306 558 L440 425" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
-        <path d="M421 361 L226 306" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
-        <path d="M226 318 L419 371" stroke="#ef4bbd" strokeDasharray="6 5" markerEnd={marker("pink")} />
+      {/* Matching frames give the head and paired flippers a single visual language. */}
+      <g fill="#0c1417" stroke={colors.green} strokeOpacity="0.65" strokeWidth="1.25">
+        <path d="M368 64 H580 L592 76 V160 H368 Z" />
+        <path d="M616 546 H828 L840 558 V642 H616 Z" />
+      </g>
+      <path d="M40 260 H252 L264 272 V364 H40 Z" fill="#17101b" stroke={colors.pink} strokeOpacity="0.65" strokeWidth="1.25" />
+      <path d="M696 260 H908 L920 272 V364 H696 Z" fill="#101624" stroke={colors.blue} strokeOpacity="0.65" strokeWidth="1.25" />
+      <path d="M120 546 H332 L344 558 V642 H120 Z" fill="#11151d" stroke={colors.gray} strokeOpacity="0.65" strokeWidth="1.25" />
+
+      {/* A compact shell cell anchors the network without outweighing its participants. */}
+      <circle cx="480" cy="376" r="64" fill="#151019" stroke={colors.pink} strokeWidth="1.5" />
+      <path d="M437 329 L480 312 L523 329 M437 423 L480 440 L523 423" fill="none" stroke={colors.pink} strokeOpacity="0.28" strokeWidth="1" />
+
+      {/* Every route starts and ends on a node edge. Markers are drawn over the frames,
+          with their tip at the endpoint, so borders cannot hide or sever arrowheads. */}
+      <g fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        {/* Contributor → Platform; Liquidity → Contributor. */}
+        <path d="M592 112 C710 132 778 194 808 260" stroke={colors.blue} markerEnd={marker("blue")} />
+        <path d="M152 260 C182 194 250 132 368 112" stroke={colors.pink} markerEnd={marker("pink")} />
+
+        {/* Platform ↔ Client; Treasury → Liquidity; Client → Treasury. */}
+        <path d="M808 364 C802 432 772 492 740 546" stroke={colors.blue} strokeDasharray="6 5" markerEnd={marker("blue")} />
+        <path d="M754 546 C786 492 816 432 822 364" stroke={colors.blue} strokeDasharray="6 5" markerEnd={marker("blue")} />
+        <path d="M232 546 C194 486 158 426 152 364" stroke={colors.gray} markerEnd={marker("gray")} />
+        <path d="M616 604 C542 670 418 670 344 604" stroke={colors.pink} markerEnd={marker("pink")} />
+
+        {/* Contributor → OS; OS → Contributor; OS → Platform. */}
+        <path d="M488 160 V312.5" stroke={colors.green} markerEnd={marker("green")} />
+        <path d="M472 312.5 V160" stroke={colors.pink} markerEnd={marker("pink")} />
+        <path d="M541 356 L696 306" stroke={colors.blue} markerEnd={marker("blue")} />
+
+        {/* OS → Client; Client → OS. */}
+        <path d="M524 422 L654 546" stroke={colors.green} markerEnd={marker("green")} />
+        <path d="M640 546 L514 430" stroke={colors.pink} markerEnd={marker("pink")} />
+
+        {/* OS ↔ Treasury and OS ↔ Liquidity retain the original feedback semantics. */}
+        <path d="M436 422 L306 546" stroke={colors.pink} strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M320 546 L446 430" stroke={colors.pink} strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M419 356 L264 306" stroke={colors.pink} strokeDasharray="6 5" markerEnd={marker("pink")} />
+        <path d="M264 320 L417 366" stroke={colors.pink} strokeDasharray="6 5" markerEnd={marker("pink")} />
       </g>
 
-      {/* Placement gives the head and flippers their form; consistent frames keep the labels legible. */}
-      <g strokeWidth="1.5">
-        <rect x="391" y="80" width="178" height="76" rx="10" fill="#101b1a" stroke="#38b991" />
-        <rect x="32" y="250" width="194" height="84" rx="10" fill="#211322" stroke="#d94bb0" />
-        <rect x="734" y="250" width="194" height="84" rx="10" fill="#121a30" stroke="#6e88f7" />
-        <rect x="125" y="558" width="190" height="76" rx="10" fill="#181b25" stroke="#8994ab" />
-        <rect x="645" y="558" width="190" height="76" rx="10" fill="#10211e" stroke="#36ae8b" />
+      <g textAnchor="middle" fill="#f3f3f6" fontFamily="var(--font-abel), sans-serif" fontWeight="400" fontSize="19" letterSpacing="1.1">
+        <text x="480" y="96">CONTRIBUTOR</text>
+        <text x="152" y="288">LIQUIDITY POOL</text>
+        <text x="808" y="295">PLATFORM</text>
+        <text x="232" y="576">TREASURY</text>
+        <text x="728" y="576">CLIENT / DEAL</text>
       </g>
-      <g textAnchor="middle" fontFamily="Arial, sans-serif" fill="#f6f7ff">
-        <text x="480" y="103" fontSize="14" fontWeight="700" letterSpacing="1">CONTRIBUTOR</text>
-        <text x="480" y="123" fontSize="11" fill="#c7d4d2">Skills · Relationships</text><text x="480" y="140" fontSize="11" fill="#c7d4d2">Domain Expertise</text>
-        <text x="130" y="280" fontSize="13" fontWeight="700" letterSpacing=".5">LIQUIDITY POOL</text><text x="130" y="296" fontSize="11" fontWeight="700" fill="#ff8bd6">= $BUILD TOKEN</text><text x="130" y="312" fontSize="10.5" fill="#d3c5d0">Passive equity accrual</text><text x="130" y="327" fontSize="10.5" fill="#d3c5d0">OTC = mobilization</text>
-        <text x="830" y="281" fontSize="13" fontWeight="700" letterSpacing=".5">PLATFORM</text><text x="830" y="302" fontSize="11" fill="#c4cce2">Infrastructure · Brand</text><text x="830" y="319" fontSize="11" fill="#c4cce2">Distribution · Leverage</text>
-        <text x="220" y="584" fontSize="13" fontWeight="700" letterSpacing=".5">TREASURY</text><text x="220" y="604" fontSize="11" fill="#c8cbd5">Collects 3% · 1.5% ops</text><text x="220" y="621" fontSize="11" fill="#c8cbd5">1.5% → liquidity pool</text>
-        <text x="740" y="584" fontSize="13" fontWeight="700" letterSpacing=".5">CLIENT / DEAL</text><text x="740" y="604" fontSize="11" fill="#c5d5d0">Revenue Generated</text><text x="740" y="621" fontSize="11" fill="#ff8bd6">85 · 12 · 3 Split</text>
+      <g textAnchor="middle" fontFamily="var(--font-inter), sans-serif" fontSize="12.5" fill="#bcc9cd">
+        <text x="480" y="121">Skills · Relationships</text>
+        <text x="480" y="142">Domain Expertise</text>
+        <text x="152" y="308" fill={colors.pink} fontWeight="600">= $BUILD TOKEN</text>
+        <text x="152" y="332" fill="#cdbfcf">Passive equity accrual</text>
+        <text x="152" y="352" fill="#cdbfcf">OTC = mobilization</text>
+        <text x="808" y="323" fill="#c1cbe5">Infrastructure · Brand</text>
+        <text x="808" y="345" fill="#c1cbe5">Distribution · Leverage</text>
+        <text x="232" y="602" fill="#c4cbd7">Collects 3% · 1.5% ops</text>
+        <text x="232" y="624" fill="#c4cbd7">1.5% → liquidity pool</text>
+        <text x="728" y="602">Revenue Generated</text>
+        <text x="728" y="624" fill={colors.pink}>85 · 12 · 3 Split</text>
       </g>
-      <circle cx="480" cy="378" r="62" fill={`url(#${id}-hub)`} stroke="#ef4bbd" strokeWidth="2" />
-      <circle cx="480" cy="378" r="54" fill="none" stroke="#f18ad2" strokeOpacity=".25" />
-      <g textAnchor="middle" fontFamily="Arial, sans-serif"><text x="480" y="371" fill="#fff" fontWeight="700" fontSize="14">VENTURE</text><text x="480" y="390" fill="#ff8bd6" fontWeight="700" fontSize="14">LABOR OS</text><text x="480" y="407" fill="#c4b9c9" fontSize="10">Future Modern</text></g>
+      <g textAnchor="middle">
+        <text x="480" y="369" fontFamily="var(--font-abel), sans-serif" fontSize="19" letterSpacing="1" fill="#f3f3f6">VENTURE</text>
+        <text x="480" y="391" fontFamily="var(--font-abel), sans-serif" fontSize="19" letterSpacing="1" fill={colors.pink}>LABOR OS</text>
+        <text x="480" y="412" fontFamily="var(--font-inter), sans-serif" fontSize="10" fill="#c9b9cb">Future Modern</text>
+      </g>
 
-      <g fontFamily="Arial, sans-serif" fontSize="11" fill="#d5d8e7">
-        <path d="M103 692 h28" stroke="#ef4bbd" strokeWidth="2" /><text x="138" y="696">cash / equity</text>
-        <path d="M275 692 h28" stroke="#708cff" strokeWidth="2" /><text x="310" y="696">platform</text>
-        <path d="M425 692 h28" stroke="#35bc91" strokeWidth="2" /><text x="460" y="696">deal flow</text>
-        <path d="M580 692 h28" stroke="#9aa7bc" strokeWidth="2" /><text x="615" y="696">treasury flow</text>
-        <path d="M275 720 h28" stroke="#ef4bbd" strokeWidth="2" strokeDasharray="6 4" /><text x="310" y="724">feedback loop</text>
-        <path d="M487 720 h28" stroke="#708cff" strokeWidth="2" strokeDasharray="6 4" /><text x="522" y="724">platform ↔ client</text>
+      {/* The legend shares the route colors and dash patterns, including both dashed meanings. */}
+      <path d="M64 688 H896" stroke="#52617b" strokeOpacity="0.4" />
+      <g fontFamily="var(--font-inter), sans-serif" fontSize="12" fill="#c9cfdb">
+        <path d="M80 715 H112" stroke={colors.pink} strokeWidth="1.8" />
+        <text x="126" y="719">cash / equity</text>
+        <path d="M354 715 H386" stroke={colors.blue} strokeWidth="1.8" />
+        <text x="400" y="719">platform</text>
+        <path d="M628 715 H660" stroke={colors.green} strokeWidth="1.8" />
+        <text x="674" y="719">deal flow</text>
+        <path d="M80 748 H112" stroke={colors.gray} strokeWidth="1.8" />
+        <text x="126" y="752">treasury flow</text>
+        <path d="M354 748 H386" stroke={colors.pink} strokeWidth="1.8" strokeDasharray="6 5" />
+        <text x="400" y="752">feedback loop</text>
+        <path d="M628 748 H660" stroke={colors.blue} strokeWidth="1.8" strokeDasharray="6 5" />
+        <text x="674" y="752">platform ↔ client (dashed)</text>
       </g>
     </svg>
   );

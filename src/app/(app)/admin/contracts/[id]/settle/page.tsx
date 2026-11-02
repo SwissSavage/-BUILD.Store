@@ -372,9 +372,10 @@ export default async function SettlePage({
           Settle: {project.title}
         </h1>
         <p className="mt-2 text-ink-muted">
-          85% to delivery contributors, 12% commission split evenly across
-          the contract&apos;s admins, 3% auto-routed to Treasury + Liquidity
-          Pool. Override any line if the deal was negotiated differently.
+          85% to delivery contributors, 12% executive share split evenly
+          across the contract&apos;s executive list, 3% auto-routed to
+          Treasury + Liquidity Pool. Override any line if the deal was
+          negotiated differently.
         </p>
       </header>
 
@@ -390,7 +391,7 @@ export default async function SettlePage({
           color="#D828A0"
         />
         <PoolStat
-          label="Admin pool (12%)"
+          label="Executive share (12%)"
           value={`$${adminPool.toLocaleString()}`}
           color="#007048"
         />
@@ -504,10 +505,10 @@ export default async function SettlePage({
 
           <Card>
             <CardTitle>
-              Admin commission — 12% of revenue (${adminPool.toLocaleString()})
+              Executive share — 12% of revenue (${adminPool.toLocaleString()})
             </CardTitle>
             <p className="mt-1 text-xs text-ink-faint">
-              Splits evenly across everyone on the admin list. Add or remove
+              Splits evenly across everyone on the executive list. Add or remove
               admins as needed; only adjust individual percentages if the
               shares were negotiated.
             </p>
@@ -687,7 +688,7 @@ async function SettledView({
       </div>
 
       <Pool title="Contributor pool — 85%" rows={byPool("contributor")} labelForRecipient={labelForRecipient} />
-      <Pool title="Admin commission — 12% of revenue" rows={byPool("admin")} labelForRecipient={labelForRecipient} />
+      <Pool title="Executive share — 12% of revenue" rows={byPool("admin")} labelForRecipient={labelForRecipient} />
       <Pool title="Reserve — 3% of revenue" rows={byPool("reserve")} labelForRecipient={labelForRecipient} />
     </div>
   );

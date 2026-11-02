@@ -106,7 +106,7 @@ export default async function AdminContractsIndex() {
       </Link>
       <h1 className="mt-3 font-display text-4xl font-semibold">Contract operations</h1>
       <p className="mt-2 text-ink-muted">
-        Run the attribution ledger and the 85 / 15 split engine. Each contract
+        Run the attribution ledger and the 85 / 12 / 3 split engine. Each contract
         moves left → right through these stages.
       </p>
 

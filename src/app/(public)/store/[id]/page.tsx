@@ -135,7 +135,7 @@ export default async function ProductDetailPage({
               <span className="text-right">
                 ${split.seller.toLocaleString()}
               </span>
-              <span>Cooperative ops (12%)</span>
+              <span>Executive share (12%)</span>
               <span className="text-right">
                 ${split.admin.toLocaleString()}
               </span>

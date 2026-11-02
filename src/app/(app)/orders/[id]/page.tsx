@@ -242,7 +242,7 @@ export default async function OrderDetailPage({
         <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           <span>Seller (85%)</span>
           <span className="text-right">${split.seller.toLocaleString()}</span>
-          <span>Cooperative ops (12%)</span>
+          <span>Executive share (12%)</span>
           <span className="text-right">${split.admin.toLocaleString()}</span>
           <span>Treasury (1.5%)</span>
           <span className="text-right">${split.treasury.toLocaleString()}</span>

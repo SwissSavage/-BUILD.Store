@@ -116,7 +116,7 @@ export default async function SellerApplicationPage() {
     ? "Your seller home. Categories you've been approved for, fulfillment dashboard, and the option to request access to more categories."
     : isPending
       ? "Your application is with admin. Once it clears, this page becomes your seller home with categories, fulfillment, and the option to request more access."
-      : "$BUILD.Store accepts listings from vetted Future Modern members. Every approved listing contributes 15% to the cooperative; 85% routes to you. Tell us what you'd like to sell and how fulfillment works.";
+      : "$BUILD.Store accepts listings from vetted Future Modern members. 85% of every sale routes to you; 12% ops, 1.5% Treasury, 1.5% Liquidity Pool. Tell us what you'd like to sell and how fulfillment works.";
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">

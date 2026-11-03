@@ -501,8 +501,10 @@ export default async function ContractLedgerPage({
         <Card className="mt-6">
           <CardTitle>Add invoice (draft)</CardTitle>
           <p className="mt-1 text-xs text-ink-faint">
-            Drafts are admin-only — the client doesn&apos;t see them until you
-            issue. Default rail is Mercury; toggle CC after creating if needed.
+            Drafts are admin-only, so the client never sees one. This is a
+            record of the invoice, not the invoice: the real one comes out
+            of Found, and you attach its number and PDF to the row once the
+            draft exists. The rail is chosen when you mark it received.
           </p>
           <form action={createDraft}>
             <input type="hidden" name="contractId" value={project.id} />

@@ -25,6 +25,7 @@ import { Card, CardTitle } from "@/components/Card";
 import { ApplyToJobForm } from "@/components/ApplyToJobForm";
 import { OpportunityHeader } from "@/components/OpportunityHeader";
 import { ExpandableSkillTags } from "@/components/ExpandableSkillTags";
+import { DEFAULT_SOCIAL_IMAGE } from "@/lib/social-image";
 
 export const dynamic = "force-dynamic";
 
@@ -56,10 +57,15 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
   const { id } = await params;
   const job = await jobReader.byId(id);
   if (!job) return { title: "Role not found — Future Modern" };
+  const title = `${job.title} — Future Modern`;
+  const description = briefPlainText(job.description).slice(0, 155);
+  const url = `${SITE_URL}/jobs/${job.id}`;
   return {
-    title: `${job.title} — Future Modern`,
-    description: briefPlainText(job.description).slice(0, 155),
-    alternates: { canonical: `${SITE_URL}/jobs/${job.id}` },
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, images: [DEFAULT_SOCIAL_IMAGE] },
+    twitter: { card: "summary_large_image" as const, title, description, images: [DEFAULT_SOCIAL_IMAGE] },
   };
 }
 

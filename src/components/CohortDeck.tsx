@@ -52,7 +52,7 @@ export function CohortDeck({ builders }: { builders: CohortBuilder[] }) {
     : builders.slice(splitIndex);
 
   return (
-    <div className="mt-10 space-y-6 overflow-hidden py-2 md:space-y-7">
+    <div className="-mx-6 mt-10 space-y-6 overflow-hidden py-2 sm:mx-0 md:space-y-7">
       <BuilderRail builders={topBuilders} direction="right" />
       {bottomBuilders.length > 0 && (
         <BuilderRail builders={bottomBuilders} direction="left" />

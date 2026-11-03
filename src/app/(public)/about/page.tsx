@@ -462,7 +462,7 @@ function WhatChanged() {
   const rows: { old: string; ours: string; accent: "magenta" | "blue" | "green" }[] = [
     {
       old: "Platform takes ~10–20%, agency takes a margin, contributor gets the residual.",
-      ours: "Contributors keep 85% of contract revenue. The 15% house cut funds shared infrastructure, not outside shareholders.",
+      ours: "Contributors receive 85% of contract revenue. The remaining share supports the people who run the deal and cooperative operations.",
       accent: "magenta",
     },
     {

@@ -245,8 +245,8 @@ export default function GovernancePage() {
                 doing the work.
               </li>
               <li>
-                <strong className="text-ink">15%</strong> for cooperative
-                operations and shared infrastructure.
+                The remaining share supports the people who run the deal
+                and cooperative operations.
               </li>
             </ul>
             <p className="mt-3 text-sm text-ink-muted">

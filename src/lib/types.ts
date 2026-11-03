@@ -4713,7 +4713,13 @@ export type AuditLogAction =
    * under the 7-year retention window: this is the entry that ties a
    * settlement back to the document the client actually paid against.
    */
-  | "invoice.source_document_attached";
+  | "invoice.source_document_attached"
+  /**
+   * The invoice was emailed to the client from the app (2026-11-03).
+   * Financial subset: this is the record of who was billed, when, and
+   * which account they were told to pay into.
+   */
+  | "invoice.sent_to_client";
 
 export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "user.signed_in": "User signed in",
@@ -4842,6 +4848,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "remittance.acknowledged": "Payout statement confirmed by recipient",
   "remittance.disputed": "Payout statement disputed by recipient",
   "invoice.source_document_attached": "Real invoice attached to the record",
+  "invoice.sent_to_client": "Invoice emailed to the client",
 };
 
 /** Coarse resource kinds referenced from audit entries. Keep aligned

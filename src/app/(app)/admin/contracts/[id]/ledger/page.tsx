@@ -26,9 +26,11 @@ import { getProjectById } from "@/lib/readers/projects";
 import { randomUUID } from "crypto";
 import { InvoiceSourceDocumentForm } from "@/components/InvoiceSourceDocumentForm";
 import { remitAccounts } from "@/lib/remit-instructions";
+import { SendInvoiceToClient } from "@/components/SendInvoiceToClient";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
+  clients as clientsTable,
   invoices as invoicesTable,
   projects as projectsTable,
 } from "@/db/schema";
@@ -410,6 +412,26 @@ export default async function ContractLedgerPage({
   // is set in Dokploy, in which case the dropdown is hidden rather
   // than offering a choice that resolves to nothing.
   const remitOptions = remitAccounts();
+
+  // Prefilled into the send form so the common case is one click.
+  // Read off the row rather than the Project type, which only exposes
+  // the deprecated clientId; clientRefId is the real foreign key.
+  // Null is fine: the form lets an admin type an address, and the
+  // action says what is missing rather than failing silently.
+  const clientBillingEmail = await safely(async () => {
+    const [link] = await db
+      .select({ clientRefId: projectsTable.clientRefId })
+      .from(projectsTable)
+      .where(eq(projectsTable.id, id))
+      .limit(1);
+    if (!link?.clientRefId) return null;
+    const [client] = await db
+      .select({ email: clientsTable.primaryContactEmail })
+      .from(clientsTable)
+      .where(eq(clientsTable.id, link.clientRefId))
+      .limit(1);
+    return client?.email ?? null;
+  }, null);
 
   const [invoices, splits, { users: roster }, contractRates] =
     await Promise.all([
@@ -846,6 +868,14 @@ export default async function ContractLedgerPage({
                 {invoice.acceptsCard ? "Disable CC" : "Opt into CC (gross-up)"}
               </Button>
             </form>
+          )}
+
+          {!isDraft && (
+            <SendInvoiceToClient
+              invoiceId={invoice.id}
+              defaultEmail={clientBillingEmail}
+              isDraft={isDraft}
+            />
           )}
 
           {!isDraft && (

@@ -26,6 +26,7 @@ import { BriefTableOfContents } from "@/components/BriefTableOfContents";
 import { Card, CardTitle } from "@/components/Card";
 import { OpportunityHeader } from "@/components/OpportunityHeader";
 import { ExpandableSkillTags } from "@/components/ExpandableSkillTags";
+import { socialImage } from "@/lib/social-image";
 
 export const dynamic = "force-dynamic";
 
@@ -46,10 +47,15 @@ export async function generateMetadata({
   if (!p || p.status !== "completed") {
     return { title: "Case study not found — Future Modern" };
   }
+  const title = `${p.title} — Case study at Future Modern`;
+  const description = briefPlainText(p.description).slice(0, 155);
+  const image = socialImage(p.featuredImageUrl);
   return {
-    title: `${p.title} — Case study at Future Modern`,
-    description: briefPlainText(p.description).slice(0, 155),
+    title,
+    description,
     alternates: { canonical: `${SITE_URL}/case-studies/${p.id}` },
+    openGraph: { title, description, url: `${SITE_URL}/case-studies/${p.id}`, images: [image] },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
   };
 }
 

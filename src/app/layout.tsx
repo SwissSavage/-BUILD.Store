@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Abel, Inter, JetBrains_Mono } from "next/font/google";
 import { ColorClarityControl } from "@/components/ColorClarityControl";
+import { DEFAULT_SOCIAL_IMAGE } from "@/lib/social-image";
 import "./globals.css";
 
 /**
@@ -60,10 +61,7 @@ export const metadata: Metadata = {
   ],
   /**
    * Open Graph — how links unfurl in iMessage, Slack, LinkedIn, X.
-   * Points at `public/og-image.png`, which Bayu ships at 1200×630 as
-   * the branded share card. Google + all major social platforms handle
-   * a missing OG image gracefully, so this is non-blocking until the
-   * asset lands.
+   * Use the existing Future Modern homepage share image.
    */
   openGraph: {
     type: "website",
@@ -74,9 +72,9 @@ export const metadata: Metadata = {
       "A member-owned cooperative of Fortune 500-level STEM, Creative Media, and Professional Services talent. Built Web3-native.",
     images: [
       {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
+        url: DEFAULT_SOCIAL_IMAGE,
+        width: 1728,
+        height: 910,
         alt: "$BUILD.Store — a Future Modern cooperative",
       },
     ],
@@ -86,7 +84,7 @@ export const metadata: Metadata = {
     title: "$BUILD.Store — cooperative talent platform",
     description:
       "A member-owned cooperative of Fortune 500-level STEM, Creative Media, and Professional Services talent. Built Web3-native.",
-    images: ["/og-image.png"],
+    images: [DEFAULT_SOCIAL_IMAGE],
   },
   icons: {
     icon: "/brand/turtle.png",

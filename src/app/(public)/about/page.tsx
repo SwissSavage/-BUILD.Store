@@ -848,13 +848,12 @@ function RoadmapPeek() {
               Where we&apos;re going
             </h2>
             <p className="mt-6 text-ink-muted">
-              Access opens in three phases. The cooperative is
-              intentional about who joins when. Earlier phases are
-              denser signal. Later phases scale wider.
+              Access has opened in phases, from the initial whitelist
+              through open beta to the $BUILD.Store rollout.
             </p>
             <p className="mt-4 text-ink-muted">
-              Right now the whitelist is open. If you want a seat before
-              the doors widen, that&apos;s the door.
+              We&apos;re now in the rollout phase, building on what we
+              learned during beta.
             </p>
           </div>
 
@@ -868,23 +867,23 @@ function RoadmapPeek() {
               <RoadmapRow
                 number="01"
                 phase="Landing + whitelist"
-                status="Open now"
+                status="Completed"
                 accent="#007048"
-                body="Landing page live. Whitelist open to founding candidates who want a seat before the doors widen. First look at the cooperative model, first access to the invite pool."
+                body="The landing page and whitelist introduced the cooperative model and opened the first invite pool."
               />
               <RoadmapRow
                 number="02"
                 phase="Open Beta"
-                status="Next"
+                status="Completed"
                 accent="#D828A0"
-                body="Selected cohort operates the platform end-to-end. Real contracts, real payouts, real recognition rails firing. Feedback from this window shapes the ship for public rollout."
+                body="Open beta tested the platform end-to-end, with feedback helping shape the rollout."
               />
               <RoadmapRow
                 number="03"
                 phase="$BUILD.Store rollout"
-                status="On the horizon"
+                status="Current phase"
                 accent="#5070F0"
-                body="The full platform open to everyone who came in through the ladder. Invited, applied, or contributed. The cooperative running at scale."
+                body="The $BUILD.Store rollout is underway, bringing the cooperative platform beyond open beta."
               />
             </div>
           </div>

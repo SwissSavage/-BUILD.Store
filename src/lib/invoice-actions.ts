@@ -157,6 +157,10 @@ export async function createInternalInvoice(formData: FormData): Promise<void> {
     mercuryReference: null,
     paymentRail: null,
     externalReference: null,
+    remitAccountId: null,
+    sourceDocumentNumber: null,
+    sourceDocumentName: null,
+    sourceDocumentSize: null,
     stripePaymentIntentId: null,
     notes,
     // Signature workflow is not initiated for internal invoices.
@@ -344,6 +348,10 @@ export async function generateExternalInvoice(
     mercuryReference: null,
     paymentRail: null,
     externalReference: null,
+    remitAccountId: null,
+    sourceDocumentNumber: null,
+    sourceDocumentName: null,
+    sourceDocumentSize: null,
     stripePaymentIntentId: null,
     notes: `Aggregates ${internals.length} approved internal invoice${
       internals.length === 1 ? "" : "s"
@@ -606,6 +614,10 @@ export async function createMarketplaceReceiptInternal(input: {
     mercuryReference: null,
     paymentRail: null,
     externalReference: null,
+    remitAccountId: null,
+    sourceDocumentNumber: null,
+    sourceDocumentName: null,
+    sourceDocumentSize: null,
     stripePaymentIntentId: input.stripePaymentIntentId,
     notes: `Auto-generated receipt for order ${input.orderNumber}.`,
     // Marketplace receipts fire on Stripe-completed orders — no
@@ -673,6 +685,10 @@ export async function createRetroactiveReceipt(
     mercuryReference: null,
     paymentRail: null,
     externalReference: null,
+    remitAccountId: null,
+    sourceDocumentNumber: null,
+    sourceDocumentName: null,
+    sourceDocumentSize: null,
     stripePaymentIntentId: null,
     notes: `Retroactive rectification: ${rationale}`,
     // Signature workflow is not initiated at creation. Admin sends it

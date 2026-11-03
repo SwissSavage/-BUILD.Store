@@ -1136,6 +1136,22 @@ export const invoices = pgTable("invoices", {
     enum: ["mercury", "found", "check", "zelle", "stripe", "other"],
   }),
   externalReference: text("external_reference"),
+  /**
+   * The number on the document the client actually received, which is
+   * issued by Found, not by this app. `number` above is FM's own and
+   * is minted here. See drizzle/0043_invoice_source_document.sql.
+   */
+  /**
+   * Which configured account this invoice is payable into. Holds an
+   * id like "found" or "mercury"; the coordinates live in the
+   * REMIT_ACCOUNTS env var, never here. See 0044.
+   */
+  remitAccountId: text("remit_account_id"),
+  sourceDocumentNumber: text("source_document_number"),
+  /** The real invoice PDF. base64 in Postgres; 0043 explains why. */
+  sourceDocumentName: text("source_document_name"),
+  sourceDocumentSize: integer("source_document_size"),
+  sourceDocumentBase64: text("source_document_base64"),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   notes: text("notes"),
   // ── Documenso signature tracking ──────────────────────────────────

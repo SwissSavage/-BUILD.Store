@@ -24,6 +24,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
 import { randomUUID } from "crypto";
+import { InvoiceSourceDocumentForm } from "@/components/InvoiceSourceDocumentForm";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
@@ -816,6 +817,20 @@ export default async function ContractLedgerPage({
             </Link>
           )}
         </div>
+
+        {/* The real invoice (2026-11-03). This row is a RECORD of an
+            invoice, not the invoice. The number above is minted here;
+            the client paid against a Found number this app never
+            stored. Offered at every status, including after
+            settlement, because the usual case is filing the document
+            late, and refusing it then would leave the oldest records
+            permanently incomplete. */}
+        <InvoiceSourceDocumentForm
+          invoiceId={invoice.id}
+          ourNumber={invoice.number}
+          sourceDocumentNumber={invoice.sourceDocumentNumber}
+          sourceDocumentName={invoice.sourceDocumentName}
+        />
       </div>
     );
   }

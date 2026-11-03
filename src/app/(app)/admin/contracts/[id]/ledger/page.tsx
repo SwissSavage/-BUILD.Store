@@ -25,6 +25,7 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
 import { randomUUID } from "crypto";
 import { InvoiceSourceDocumentForm } from "@/components/InvoiceSourceDocumentForm";
+import { remitAccounts } from "@/lib/remit-instructions";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
@@ -350,6 +351,13 @@ async function createDraft(formData: FormData) {
     direction: "coop_to_client",
     documentKind: "invoice",
     contractId,
+    // Which account the client pays into. The id is all that is
+    // stored; coordinates live in REMIT_ACCOUNTS. A blank selection
+    // stays blank rather than guessing, so the client page falls back
+    // to "coordinates will be emailed" instead of naming the wrong
+    // payee.
+    remitAccountId:
+      String(formData.get("remitAccountId") ?? "").trim() || null,
     sourceRefId: null,
     sourceInvoiceIds: null,
     issuerId: admin.id,
@@ -397,6 +405,11 @@ export default async function ContractLedgerPage({
   const { id } = await params;
   const project = await getProjectById(id);
   if (!project || project.kind !== "contract") notFound();
+
+  // Accounts a client can be billed into. Empty until REMIT_ACCOUNTS
+  // is set in Dokploy, in which case the dropdown is hidden rather
+  // than offering a choice that resolves to nothing.
+  const remitOptions = remitAccounts();
 
   const [invoices, splits, { users: roster }, contractRates] =
     await Promise.all([
@@ -507,6 +520,32 @@ export default async function ContractLedgerPage({
             draft exists. The rail is chosen when you mark it received.
           </p>
           <form action={createDraft}>
+            {remitOptions.length > 0 && (
+              <div className="mb-4">
+                <label
+                  htmlFor="remitAccountId"
+                  className="text-[11px] uppercase tracking-wider text-ink-muted"
+                >
+                  Payable into
+                </label>
+                <select
+                  id="remitAccountId"
+                  name="remitAccountId"
+                  defaultValue={remitOptions[0]?.id ?? ""}
+                  className="mt-1 block w-full max-w-sm rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
+                >
+                  {remitOptions.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-ink-faint">
+                  The client sees this payee name on the invoice, so the
+                  name on their statement is never a surprise.
+                </p>
+              </div>
+            )}
             <input type="hidden" name="contractId" value={project.id} />
             <InvoiceLineBuilder rates={contractRates} roster={roster} />
             <button

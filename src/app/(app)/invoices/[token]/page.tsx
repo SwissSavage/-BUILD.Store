@@ -39,6 +39,10 @@ import {
   type InvoiceStatus,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import {
+  payeeExplanation,
+  remitAccountById,
+} from "@/lib/remit-instructions";
 
 // Friendly client labels — identical to the proposals surface.
 const CLIENT_LABELS: Record<string, string> = {
@@ -79,6 +83,12 @@ export default async function ClientInvoicePage({
 
   const clientLabel =
     (project && CLIENT_LABELS[project.clientId]) ?? "Valued client";
+
+  // Named on the invoice so the client is not surprised by the payee
+  // on their statement. Null when unconfigured, which renders the
+  // "coordinates will be emailed" fallback rather than a wrong name.
+  const remit = remitAccountById(record.remitAccountId);
+  const explanation = payeeExplanation(remit);
 
   const remaining = Number(invoice.total) - Number(invoice.paidAmount);
   const isPaid = invoice.status === "received";
@@ -252,37 +262,43 @@ export default async function ClientInvoicePage({
             </div>
           ) : (
             <div className="mt-4 space-y-3 text-sm text-ink-muted">
+              {/* Rail and payee come from env, not from this file.
+                  The repo is public, and the account that receives
+                  money is not always the one the company name points
+                  at. See src/lib/remit-instructions.ts. */}
               <p>
-                Please remit via ACH or wire to the cooperative&apos;s Mercury
-                account. There&apos;s no processing fee on this payment
-                method.
+                Please remit by {remit?.railLabel ?? "ACH or wire"}. There is no processing
+                fee on this payment method.
               </p>
+
+              {explanation && (
+                <p className="rounded-lg border-l-2 border-brand-magenta/50 bg-[var(--surface-inset)] px-3 py-2 text-sm text-ink">
+                  {explanation}
+                </p>
+              )}
+
               <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] p-4 font-mono text-xs leading-6">
                 <div>
-                  <span className="text-ink-faint">Account name:</span>{" "}
-                  Future Modern Builderberg LLC
+                  <span className="text-ink-faint">Payable to:</span>{" "}
+                  {remit?.payeeName ?? "Future Modern Builderberg LLC"}
                 </div>
-                <div>
-                  <span className="text-ink-faint">Bank:</span> Mercury
-                  (Choice Financial Group)
-                </div>
-                <div>
-                  <span className="text-ink-faint">Routing (ACH):</span>{" "}
-                  XXXXXXXXX
-                </div>
-                <div>
-                  <span className="text-ink-faint">Account number:</span>{" "}
-                  XXXXXXXXXXXX
-                </div>
+                {remit?.bankName && (
+                  <div>
+                    <span className="text-ink-faint">Bank:</span>{" "}
+                    {remit.bankName}
+                  </div>
+                )}
                 <div>
                   <span className="text-ink-faint">Reference:</span>{" "}
                   {invoice.number}
                 </div>
               </div>
+
               <p className="text-xs text-ink-faint">
-                Exact coordinates are emailed with the invoice. Include the
-                invoice number as the payment reference so we can mark the
-                contract as received without a callback.
+                Account and routing numbers are sent by email with this
+                invoice rather than shown on this page. Include the invoice
+                number as the payment reference so the contract can be
+                marked received without a callback.
               </p>
             </div>
           )}

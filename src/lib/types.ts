@@ -1600,6 +1600,12 @@ export interface Invoice {
    * Kept separate from externalReference, which is the PAYMENT
    * reference, so neither field has to carry two meanings.
    */
+  /**
+   * Which configured account this invoice is payable into. An id like
+   * "found" or "mercury"; coordinates live in REMIT_ACCOUNTS, never
+   * on this record.
+   */
+  remitAccountId: string | null;
   sourceDocumentNumber: string | null;
   /** Filename of the attached real invoice, or null if none. */
   sourceDocumentName: string | null;
@@ -1666,6 +1672,7 @@ export function clientInvoiceView(
     mercuryReference: invoice.mercuryReference,
     paymentRail: invoice.paymentRail,
     externalReference: invoice.externalReference,
+    remitAccountId: invoice.remitAccountId,
     sourceDocumentNumber: invoice.sourceDocumentNumber,
     sourceDocumentName: invoice.sourceDocumentName,
     sourceDocumentSize: invoice.sourceDocumentSize,

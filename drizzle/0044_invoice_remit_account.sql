@@ -1,0 +1,32 @@
+-- Which account this invoice is payable into.
+--
+-- ─────────────────────────────────────────────────────────────
+-- WHY (2026-11-03)
+--
+-- Jamar: "If we could have a dropdown for account association in the
+-- invoice creation process that would be ideal... So we could have a
+-- route for Mercury or Found now."
+--
+-- The receiving account is a per-invoice decision. More than one is
+-- live at a time, and while the Mercury account is contested the money
+-- lands somewhere whose name does not match the company the client
+-- contracted with. The invoice has to say which account it is payable
+-- into so the client-facing page can name the payee and explain the
+-- mismatch before the client has to ask.
+--
+-- ONLY THE ID IS STORED.
+--
+-- Routing and account numbers live in the REMIT_ACCOUNTS environment
+-- variable, not here. This repository is public, so they can never be
+-- in source; and putting them in the database would push them into
+-- every backup, every restore rehearsal, and any admin surface that
+-- renders them. This column holds a label like "found" or "mercury",
+-- which discloses nothing on its own. Adding an account later is an
+-- env change rather than a migration.
+--
+-- Nullable: invoices written before this existed have no account, and
+-- the client page falls back to saying coordinates arrive by email.
+-- ─────────────────────────────────────────────────────────────
+
+ALTER TABLE "invoices"
+  ADD COLUMN IF NOT EXISTS "remit_account_id" text;

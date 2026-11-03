@@ -56,7 +56,6 @@ export default function AboutPage() {
         <Hero />
         <WhyWeBuiltThis />
         <PeoplePowered />
-        <Credentials />
         <VentureLabor />
         <ConstellationSection />
         <DisciplineAndShift />
@@ -704,94 +703,6 @@ function Provenance() {
             </div>
           ))}
         </div>
-      </div>
-    </section>
-  );
-}
-
-function Credentials() {
-  // Institutions and brands the cooperative's contributors cut their teeth
-  // at. Sourced from Future Modern's agency boilerplate. Grouped roughly
-  // by domain so the reader can scan to the part they care about.
-  const groups: { label: string; items: string[]; color: string }[] = [
-    {
-      label: "Universities & research",
-      color: "var(--fm-blue-text)",
-      items: [
-        "Caltech",
-        "UChicago",
-        "Duke",
-        "UC Berkeley",
-        "USC",
-        "UCLA",
-        "The Smithsonian",
-      ],
-    },
-    {
-      label: "Industry & engineering",
-      color: "var(--fm-green-text)",
-      items: [
-        "Microsoft",
-        "Amazon",
-        "Lenovo",
-        "Align Technology",
-        "Bird Rides",
-        "Ontraport",
-        "Los Angeles Department of Water & Power",
-        "WebMD",
-      ],
-    },
-    {
-      label: "Music, media & culture",
-      color: "var(--fm-magenta-text)",
-      items: [
-        "Columbia Records",
-        "Bad Boy Records",
-        "Mad Decent Records",
-        "Complex Magazine",
-        "Lee Men’s Denim",
-      ],
-    },
-  ];
-
-  return (
-    <section>
-      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
-        <h2 className="font-display text-3xl font-semibold md:text-4xl">
-          Where the team cut its teeth
-        </h2>
-        <p className="mt-2 text-ink-muted">
-          A non-exhaustive sample of the institutions, labs, and brands
-          where Future Modern contributors have shipped serious work
-          before joining the cooperative.
-        </p>
-
-        <div className="mt-8 grid gap-8 md:grid-cols-3">
-          {groups.map((g) => (
-            <div
-              key={g.label}
-              className="min-w-0"
-            >
-              <div
-                className="text-xs uppercase tracking-wider"
-                style={{ color: g.color }}
-              >
-                {g.label}
-              </div>
-              <ul className="mt-4 flex flex-wrap gap-2 text-sm leading-relaxed text-ink">
-                {g.items.map((item) => (
-                  <li key={item} className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2">{item}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        <p className="mt-6 text-xs text-ink-faint">
-          Inclusion in this list reflects past and current affiliations of
-          cooperative contributors. It is not an endorsement by any of these
-          organizations of Future Modern or $BUILD.Store.
-        </p>
       </div>
     </section>
   );

@@ -9,7 +9,9 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const user = await getCurrentUser();
   if (!user?.isAdmin) return new Response("Not found", { status: 404 });
   const { id, idx } = await context.params;
-  if (!/^landing_[0-9a-f-]+$/i.test(id) || !/^\d+$/.test(idx)) return new Response("Not found", { status: 404 });
+  // `in_` accepted as of 2026-11-03: visitor job applications write to
+  // the same documents table and were 404ing on this prefix check.
+  if (!/^(landing|in)_[0-9a-f-]+$/i.test(id) || !/^\d+$/.test(idx)) return new Response("Not found", { status: 404 });
   const [row] = await db.select({ attachments: inboundSubmissions.attachments }).from(inboundSubmissions).where(eq(inboundSubmissions.id, id));
   const attachment = (row?.attachments as Array<{ name: string; type: string }> | undefined)?.[Number(idx)];
   if (!attachment || attachment.type !== "application/pdf") return new Response("Not found", { status: 404 });

@@ -87,6 +87,8 @@ export function ApplyToJobForm({ jobId, jobTitle, isSignedIn }: Props) {
           : "No account needed. Admin routes applications to the client lead within 48 hours, and applying here also puts you forward for Future Modern membership so you can be matched to future roles."}
       </p>
 
+      {/* React posts this as multipart automatically once a file input
+          is present, so no encType is needed. */}
       <form action={formAction} className="mt-6 space-y-4">
         <input type="hidden" name="jobId" value={jobId} />
         <input type="hidden" name="jobTitle" value={jobTitle} />
@@ -149,6 +151,22 @@ export function ApplyToJobForm({ jobId, jobTitle, isSignedIn }: Props) {
             placeholder="https://…"
             className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
           />
+        </div>
+
+        <div>
+          <label htmlFor="resume" className="text-sm font-medium">
+            Resume <span className="text-ink-muted">(optional, PDF)</span>
+          </label>
+          <input
+            id="resume"
+            name="resume"
+            type="file"
+            accept="application/pdf,.pdf"
+            className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-[var(--surface-elevated)] file:px-3 file:py-1 file:text-sm file:text-ink"
+          />
+          <p className="mt-1 text-xs text-ink-faint">
+            PDF only, up to 12MB. Only Future Modern admins can open it.
+          </p>
         </div>
 
         <div>

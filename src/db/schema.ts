@@ -1655,6 +1655,15 @@ export const jobApplications = pgTable("job_applications", {
   reviewedAt: timestamp("reviewed_at", { mode: "string", withTimezone: true }),
   adminNote: text("admin_note"),
   withdrawnAt: timestamp("withdrawn_at", { mode: "string", withTimezone: true }),
+  /**
+   * Resume, base64 in Postgres. See the WHY in
+   * drizzle/0042_application_resumes.sql: every storeFile() backend is
+   * either unprovisioned, public, or container-local, and a resume can
+   * be none of those. Nullable because a resume is optional.
+   */
+  resumeName: text("resume_name"),
+  resumeSize: integer("resume_size"),
+  resumeBase64: text("resume_base64"),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
 });
 

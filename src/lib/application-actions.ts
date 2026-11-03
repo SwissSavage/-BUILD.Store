@@ -17,6 +17,7 @@
 
 import { revalidatePath } from "next/cache";
 import { notify } from "@/lib/writers/notifications";
+import { validateLandingFiles } from "@/lib/landing-inbound-validation";
 import { redirect } from "next/navigation";
 import { randomBytes } from "crypto";
 import { eq, and, sql } from "drizzle-orm";
@@ -83,6 +84,28 @@ async function submitJobApplicationInner(
     };
   }
 
+  // Resume, validated at the trust boundary. validateLandingFiles
+  // checks the %PDF- magic bytes rather than trusting the MIME type
+  // the client sent, and caps the size. Shared with the visitor path
+  // so both forms enforce one rule.
+  const resume = formData.get("resume");
+  let resumeFile:
+    | { name: string; type: string; size: number; base64: string }
+    | null = null;
+  if (resume instanceof File && resume.size > 0) {
+    try {
+      resumeFile = (await validateLandingFiles([resume]))[0] ?? null;
+    } catch (err) {
+      return {
+        ok: false,
+        message:
+          err instanceof Error && /PDF/i.test(err.message)
+            ? "Resumes must be PDF files."
+            : "That file is too large. Keep it under 12MB.",
+      };
+    }
+  }
+
   const id = newApplicationId("app");
   const now = new Date().toISOString();
 
@@ -94,6 +117,9 @@ async function submitJobApplicationInner(
       pitch,
       portfolioLink: portfolioLink.length > 0 ? portfolioLink : null,
       desiredCompensation: desiredCompensation.length > 0 ? desiredCompensation : null,
+      resumeName: resumeFile?.name ?? null,
+      resumeSize: resumeFile?.size ?? null,
+      resumeBase64: resumeFile?.base64 ?? null,
       status: "pending",
       createdAt: now,
     });

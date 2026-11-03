@@ -106,19 +106,17 @@ function HomepageBackdrop({ tone }: { tone: HomepageTone }) {
  * Disclaimer stays visible so nobody reads the strip as endorsement
  * from the named institutions.
  *
- * When Bayu delivers logo assets they replace the wordmarks 1:1; the
- * layout and copy stay.
  */
 function ContributorAffiliations() {
   const AFFILIATIONS = [
-    "Microsoft",
-    "Amazon",
-    "Caltech",
-    "Cal Berkeley",
-    "Smithsonian",
-    "Columbia Records",
-    "WebMD",
-    "Complex",
+    { name: "Microsoft", logo: "microsoft" },
+    { name: "Amazon", logo: "amazon" },
+    { name: "Caltech", logo: "caltech" },
+    { name: "Cal Berkeley", logo: "berkeley" },
+    { name: "Smithsonian", logo: "smithsonian" },
+    { name: "Columbia Records", logo: "columbia-records" },
+    { name: "WebMD", logo: "webmd" },
+    { name: "Complex", logo: "complex" },
   ] as const;
 
   return (
@@ -127,13 +125,14 @@ function ContributorAffiliations() {
         <p className="text-center text-[11px] uppercase tracking-[0.18em] text-ink-muted">
           Contributors have shipped work at
         </p>
-        <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-medium text-ink-muted">
-          {AFFILIATIONS.map((name) => (
-            <li
-              key={name}
-              className="whitespace-nowrap transition-colors hover:text-ink"
-            >
-              {name}
+        <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-7 gap-y-5">
+          {AFFILIATIONS.map(({ name, logo }) => (
+            <li key={name} className="flex h-10 w-28 items-center justify-center">
+              <img
+                src={`/images/affiliations/${logo}.svg`}
+                alt={name}
+                className="max-h-full max-w-full object-contain [filter:grayscale(1)_brightness(0)_invert(.7)]"
+              />
             </li>
           ))}
         </ul>

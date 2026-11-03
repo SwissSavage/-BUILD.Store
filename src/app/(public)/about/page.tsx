@@ -56,14 +56,12 @@ export default function AboutPage() {
         <Hero />
         <WhyWeBuiltThis />
         <PeoplePowered />
-        <Credentials />
         <VentureLabor />
         <ConstellationSection />
-        <WhatChanged />
+        <DisciplineAndShift />
         <Provenance />
         <Pillars />
         <CoreCompetencies />
-        <WhatWeSayNoTo />
         <RoadmapPeek />
         <FaqSection />
         <CTA />
@@ -458,139 +456,77 @@ function VentureLaborOverview() {
   );
 }
 
-function WhatChanged() {
-  const rows: { old: string; ours: string; accent: "magenta" | "blue" | "green" }[] = [
-    {
-      old: "Platform takes ~10–20%, agency takes a margin, contributor gets the residual.",
-      ours: "Contributors receive 85% of contract revenue. The remaining share supports the people who run the deal and cooperative operations.",
-      accent: "magenta",
-    },
-    {
-      old: "Direct contact info is a leak vector. Clients and contributors both hide it to keep the door open for off-platform deals.",
-      ours: "Information is gated until engagement begins. Contributors get attribution without becoming a circumvention target.",
-      accent: "blue",
-    },
-    {
-      old: "Each contributor pitches themselves cold. Quality of self-presentation drowns out quality of work.",
-      ours: "Members submit objective fields: price, timeline, work samples. Executive Strategists author the positioning narrative consistently and honestly.",
-      accent: "green",
-    },
-    {
-      old: "Bidding platforms extract from both sides. Workers pay to be seen. Clients wade through 50+ proposals to find 3-5 matches.",
-      ours: "No bidding. No pay for access. The cooperative curates 3-5 qualified matches per skillset. Workers stay in delivery mode.",
-      accent: "blue",
-    },
-    {
-      old: "When the contract closes, the relationship resets to zero. No equity, no compounding ownership.",
-      ours: "Contributors accrue $BUILD tokens on every shipped contract. Real attribution, real co-ownership, and real governance.",
-      accent: "magenta",
-    },
-  ];
-
-
-  return (
-    <section>
-      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
-        <h2 className="font-display text-3xl font-semibold md:text-4xl">
-          What we changed
-        </h2>
-        <p className="mt-2 text-ink-muted">
-          Concrete differences between the conventional freelance economy
-          and the cooperative we built. Not rhetoric. Pricing, policy, and
-          plumbing.
-        </p>
-
-        <div className="mt-8 overflow-hidden rounded-2xl border border-[var(--surface-border)]">
-          <div className="hidden grid-cols-2 border-b border-[var(--surface-border)] bg-[var(--surface-inset)] text-sm font-medium sm:grid">
-            <span className="px-4 py-4 sm:px-6">Before</span>
-            <span className="border-l border-[var(--surface-border)] px-4 py-4 text-brand-magentaText sm:px-6">Now</span>
-          </div>
-          {rows.map((row) => (
-            <div key={row.old} className="grid grid-cols-1 border-b border-[var(--surface-border)] last:border-b-0 sm:grid-cols-2">
-              <div className="px-4 py-5 leading-relaxed text-ink-muted sm:px-6">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-ink-muted sm:hidden">Before</span>
-                {row.old}
-              </div>
-              <div className="border-t border-[var(--surface-border)] bg-[var(--surface-inset)] px-4 py-5 leading-relaxed text-ink sm:border-l sm:border-t-0 sm:px-6">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-brand-magentaText sm:hidden">Now</span>
-                {row.ours}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/**
- * What we say no to — the refusals as identity.
- *
- * Jamar's insight 2026-07-10: "realizing what we say no to is the real
- * value here." FM's identity is built more on the discipline of refusal
- * than on any positive value prop. The 85%, the curation, the token,
- * the constellation are all consequences; the refusals are the cause.
- * Steve Jobs' "focusing is about saying no" + Nassim Taleb's via
- * negativa are the closest precedents. Locked as the meta-principle in
- * `future-modern.md` → Brand voice → "The Refusals."
- *
- * Placed between Credentials and WhatChanged so the pattern is named
- * before the concrete trade-off rows are shown. Reads harder than a
- * positive value prop because every American operator has heard the
- * yes-list before; almost none have heard the no-list said out loud
- * with confidence.
- *
- * Sales-posture nuance (locked 2026-07-23): the sales-refusal card names
- * deceptive tactics, not sales itself. Jamar's long-game is a serious
- * sales org — positioning as anti-sales boxes that in. The card refuses
- * fake urgency, bait-and-switch, opaque pricing. Not selling. Also swaps
- * "honest timelines" for "honest tracking" — Builders own their delivery
- * commitments in the cooperative model, FM manages the relationship and
- * the transparent milestone tracker; promising delivery hits would
- * overclaim structural control FM doesn't have.
- */
-function WhatWeSayNoTo() {
+function DisciplineAndShift() {
   const refusals = [
-    "No pay for access. Membership is earned by contribution, not cash.",
-    "No paid tiers. Every member owns their own rate.",
-    "No sponsored listings. Curation isn't an auction.",
-    "No boosted profiles. Merit isn't a line item.",
-    "No selling user's personal data. Trust is not a revenue stream.",
-    "No sales theater. Honest pricing, honest tracking, honest scope. Every time.",
-    "No exit strategy. Ownership is permanent by design.",
-    "No discounts. Value is set by the creator, not haggled by the buyer.",
-    "No confusion about compensation. The split is published before the work starts.",
+    { title: "No pay for access.", description: "Membership is earned by contribution, not cash." },
+    { title: "No paid tiers.", description: "Every member owns their own rate." },
+    { title: "No sponsored listings.", description: "Curation isn't an auction." },
+    { title: "No boosted profiles.", description: "Merit isn't a line item." },
+    { title: "No selling user's personal data.", description: "Trust is not a revenue stream." },
+    { title: "No sales theater.", description: "Honest pricing, honest tracking, honest scope. Every time." },
+    { title: "No exit strategy.", description: "Ownership is permanent by design." },
+    { title: "No discounts.", description: "Value is set by the creator, not haggled by the buyer." },
+    { title: "No confusion about compensation.", description: "The split is published before the work starts." },
+  ];
+  const changes = [
+    {
+      before: "Platform takes ~10–20%, agency takes a margin, contributor gets the residual.",
+      now: "Contributors receive 85% of contract revenue. The remaining share supports the people who run the deal and cooperative operations.",
+    },
+    {
+      before: "Direct contact info is a leak vector. Clients and contributors both hide it to keep the door open for off-platform deals.",
+      now: "Information is gated until engagement begins. Contributors get attribution without becoming a circumvention target.",
+    },
+    {
+      before: "Each contributor pitches themselves cold. Quality of self-presentation drowns out quality of work.",
+      now: "Members submit objective fields: price, timeline, work samples. Executive Strategists author the positioning narrative consistently and honestly.",
+    },
+    {
+      before: "Bidding platforms extract from both sides. Workers pay to be seen. Clients wade through 50+ proposals to find 3-5 matches.",
+      now: "No bidding. No pay for access. The cooperative curates 3-5 qualified matches per skillset. Workers stay in delivery mode.",
+    },
+    {
+      before: "When the contract closes, the relationship resets to zero. No equity, no compounding ownership.",
+      now: "Contributors accrue $BUILD tokens on every shipped contract. Real attribution, real co-ownership, and real governance.",
+    },
   ];
 
   return (
-    <section id="standards" className="scroll-mt-24 relative overflow-hidden">
-      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
-        <p className="text-xs uppercase tracking-[0.18em] text-brand-magentaText">
-          The discipline
-        </p>
-        <h2 className="mt-3 font-display text-3xl font-semibold md:text-4xl">
-          What we say no to.
-        </h2>
-        <p className="mt-4 text-ink-muted">
-          Every refusal below is a discipline. The refusals produce the
-          outcomes. Take one away and the model breaks.
-        </p>
-
-        <ul className="mt-8 grid gap-x-8 gap-y-4 sm:grid-cols-2">
-          {refusals.map((r) => (
-            <li
-              key={r}
-              className="border-t border-[var(--surface-border)] pt-4"
-            >
-              <span className="text-lg font-medium text-ink">{r}</span>
-            </li>
-          ))}
-        </ul>
-
-        <p className="mt-8 text-sm leading-relaxed text-ink-muted">
-          We cold pitch to get in the door. We don&apos;t cold close.
-          That&apos;s the whole difference.
-        </p>
+    <section id="standards" className="scroll-mt-24">
+      <div className="mx-auto grid max-w-app gap-12 px-6 py-12 md:py-14 lg:grid-cols-2 lg:gap-8">
+        <div className="flex flex-col">
+          <p className="text-xs uppercase tracking-wider text-brand-magentaText">The discipline</p>
+          <h2 className="mt-3 font-display text-3xl font-semibold md:text-4xl">What we say no to.</h2>
+          <p className="mt-4 leading-relaxed text-ink-muted">Every refusal below is a discipline. The refusals produce the outcomes. Take one away and the model breaks.</p>
+          <ul className="mt-8 flex flex-1 flex-col gap-3">
+            {refusals.map(({ title, description }) => (
+              <li key={title} className="flex flex-1 flex-col justify-center rounded-xl border border-[var(--surface-border)] border-l-[3px] border-l-brand-blue bg-[var(--surface)] px-[18px] py-3.5">
+                <h3 className="text-sm font-semibold text-ink">{title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-ink-muted">{description}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6 text-sm leading-relaxed text-ink-muted">We cold pitch to get in the door. We don&apos;t cold close. That&apos;s the whole difference.</p>
+        </div>
+        <div className="flex flex-col">
+          <p className="text-xs uppercase tracking-wider text-brand-magentaText">Structural shift</p>
+          <h2 className="mt-3 font-display text-3xl font-semibold md:text-4xl">What we changed</h2>
+          <p className="mt-4 leading-relaxed text-ink-muted">Concrete differences between the conventional freelance economy and the cooperative we built.</p>
+          <ol className="mt-8 flex flex-1 flex-col gap-4">
+            {changes.map(({ before, now }) => (
+              <li key={before} className="flex flex-1 flex-col justify-center gap-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-4">
+                <div className="flex items-baseline gap-3">
+                  <span className="shrink-0 rounded-full bg-brand-magenta/10 px-2.5 py-1 text-xs font-medium text-brand-magentaText">Before</span>
+                  <p className="text-sm leading-relaxed text-ink-muted">{before}</p>
+                </div>
+                <div className="flex items-baseline gap-3 border-t border-[var(--surface-border)] pt-3">
+                  <span className="shrink-0 rounded-full bg-brand-green/10 px-2.5 py-1 text-xs font-medium text-brand-greenText">Now</span>
+                  <p className="text-sm font-medium leading-relaxed text-ink">{now}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
       </div>
     </section>
   );
@@ -772,94 +708,6 @@ function Provenance() {
   );
 }
 
-function Credentials() {
-  // Institutions and brands the cooperative's contributors cut their teeth
-  // at. Sourced from Future Modern's agency boilerplate. Grouped roughly
-  // by domain so the reader can scan to the part they care about.
-  const groups: { label: string; items: string[]; color: string }[] = [
-    {
-      label: "Universities & research",
-      color: "var(--fm-blue-text)",
-      items: [
-        "Caltech",
-        "UChicago",
-        "Duke",
-        "UC Berkeley",
-        "USC",
-        "UCLA",
-        "The Smithsonian",
-      ],
-    },
-    {
-      label: "Industry & engineering",
-      color: "var(--fm-green-text)",
-      items: [
-        "Microsoft",
-        "Amazon",
-        "Lenovo",
-        "Align Technology",
-        "Bird Rides",
-        "Ontraport",
-        "Los Angeles Department of Water & Power",
-        "WebMD",
-      ],
-    },
-    {
-      label: "Music, media & culture",
-      color: "var(--fm-magenta-text)",
-      items: [
-        "Columbia Records",
-        "Bad Boy Records",
-        "Mad Decent Records",
-        "Complex Magazine",
-        "Lee Men’s Denim",
-      ],
-    },
-  ];
-
-  return (
-    <section>
-      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
-        <h2 className="font-display text-3xl font-semibold md:text-4xl">
-          Where the team cut its teeth
-        </h2>
-        <p className="mt-2 text-ink-muted">
-          A non-exhaustive sample of the institutions, labs, and brands
-          where Future Modern contributors have shipped serious work
-          before joining the cooperative.
-        </p>
-
-        <div className="mt-8 grid gap-8 md:grid-cols-3">
-          {groups.map((g) => (
-            <div
-              key={g.label}
-              className="min-w-0"
-            >
-              <div
-                className="text-xs uppercase tracking-wider"
-                style={{ color: g.color }}
-              >
-                {g.label}
-              </div>
-              <ul className="mt-4 flex flex-wrap gap-2 text-sm leading-relaxed text-ink">
-                {g.items.map((item) => (
-                  <li key={item} className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2">{item}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        <p className="mt-6 text-xs text-ink-faint">
-          Inclusion in this list reflects past and current affiliations of
-          cooperative contributors. It is not an endorsement by any of these
-          organizations of Future Modern or $BUILD.Store.
-        </p>
-      </div>
-    </section>
-  );
-}
-
 function Pillars() {
   return (
     <section id="expertise" className="scroll-mt-24">
@@ -1000,13 +848,12 @@ function RoadmapPeek() {
               Where we&apos;re going
             </h2>
             <p className="mt-6 text-ink-muted">
-              Access opens in three phases. The cooperative is
-              intentional about who joins when. Earlier phases are
-              denser signal. Later phases scale wider.
+              Access has opened in phases, from the initial whitelist
+              through open beta to the $BUILD.Store rollout.
             </p>
             <p className="mt-4 text-ink-muted">
-              Right now the whitelist is open. If you want a seat before
-              the doors widen, that&apos;s the door.
+              We&apos;re now in the rollout phase, building on what we
+              learned during beta.
             </p>
           </div>
 
@@ -1020,23 +867,23 @@ function RoadmapPeek() {
               <RoadmapRow
                 number="01"
                 phase="Landing + whitelist"
-                status="Open now"
+                status="Completed"
                 accent="#007048"
-                body="Landing page live. Whitelist open to founding candidates who want a seat before the doors widen. First look at the cooperative model, first access to the invite pool."
+                body="The landing page and whitelist introduced the cooperative model and opened the first invite pool."
               />
               <RoadmapRow
                 number="02"
                 phase="Open Beta"
-                status="Next"
+                status="Completed"
                 accent="#D828A0"
-                body="Selected cohort operates the platform end-to-end. Real contracts, real payouts, real recognition rails firing. Feedback from this window shapes the ship for public rollout."
+                body="Open beta tested the platform end-to-end, with feedback helping shape the rollout."
               />
               <RoadmapRow
                 number="03"
                 phase="$BUILD.Store rollout"
-                status="On the horizon"
+                status="Current phase"
                 accent="#5070F0"
-                body="The full platform open to everyone who came in through the ladder. Invited, applied, or contributed. The cooperative running at scale."
+                body="The $BUILD.Store rollout is underway, bringing the cooperative platform beyond open beta."
               />
             </div>
           </div>

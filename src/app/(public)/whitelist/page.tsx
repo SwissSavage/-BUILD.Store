@@ -315,8 +315,8 @@ export default async function WhitelistPage() {
             <CardTitle className="mt-3 text-2xl">Contribute to a project</CardTitle>
             <p className="mt-2 text-sm text-ink-muted">
               Pick up a piece of work on an open co-op initiative.
-              Real work, paid to the same 85/12/3 split everyone else
-              uses. Standing accrues from the ledger.
+              Real work, with 85% of revenue going to the people doing
+              the work. Standing accrues from the ledger.
             </p>
             <p className="mt-2 text-xs text-ink-faint">
               No account needed to offer help. Pick a project and

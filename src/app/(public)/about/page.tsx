@@ -15,10 +15,14 @@
  * tagline "Rare∞."
  */
 import Link from "next/link";
-import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { HomepageQuestionForm } from "@/components/HomepageQuestionForm";
+import { ButtonLink, buttonClassName } from "@/components/Button";
+import { ArrowDown, Check, Maximize2, X } from "lucide-react";
+import { VentureLaborDiagram } from "@/components/VentureLaborDiagram";
+import { DiagramZoom } from "@/components/DiagramZoom";
+import { DiagramMobileViewer } from "@/components/DiagramMobileViewer";
 import { Faq, type FaqItem } from "@/components/Faq";
 import { TaglineRare } from "@/components/TaglineRare";
-import { VentureLaborConstellation } from "@/components/VentureLaborConstellation";
 import { DefinedTermSchema } from "@/components/DefinedTermSchema";
 import { getEntriesForPage } from "@/lib/glossary";
 import { PUBLIC_BOOKING_CTA, PUBLIC_BOOKING_URL } from "@/lib/public-booking";
@@ -48,164 +52,79 @@ export default function AboutPage() {
         entries={getEntriesForPage("/about")}
         pageUrl={`${SITE_URL}/about`}
       />
-      <Hero />
-      <WhyWeBuiltThis />
-      <PeoplePowered />
-      <VentureLabor />
-      <ConstellationSection />
-      <CoreCompetencies />
-      <Provenance />
-      <Credentials />
-      <WhatWeSayNoTo />
-      <WhatChanged />
-      <Pillars />
-      <RoadmapPeek />
-      <FaqSection />
-      <CTA />
+      <div className="bg-[#06070a]">
+        <Hero />
+        <WhyWeBuiltThis />
+        <PeoplePowered />
+        <Credentials />
+        <VentureLabor />
+        <ConstellationSection />
+        <WhatChanged />
+        <Provenance />
+        <Pillars />
+        <CoreCompetencies />
+        <WhatWeSayNoTo />
+        <RoadmapPeek />
+        <FaqSection />
+        <CTA />
+      </div>
     </>
   );
 }
 
-/**
- * Why we built this — founder's confession + numbered deal frame.
- *
- * The Challenger-Sale move: names the shape of the deal every worker
- * already knows they'd stay for, walks the reader through the trade-
- * off they've been forced to accept elsewhere (companies give you 1
- * and 2; gig platforms give you 3 and 4), then reveals FM as the
- * place that gives all four. Founder confession beat + low-friction
- * close.
- *
- * Visual weight designed to make skimming impossible — big numeric
- * marks in FM palette, gradient wash behind, comparison row with FM
- * card standing out via full palette treatment.
- */
 function WhyWeBuiltThis() {
   const items = [
-    {
-      n: "1)",
-      color: "var(--fm-magenta-text)",
-      text: "Real equity for the effort.",
-    },
-    {
-      n: "2)",
-      color: "var(--fm-blue-text)",
-      text: "Pay tied to what you deliver.",
-    },
-    {
-      n: "3)",
-      color: "var(--fm-green-text)",
-      text: "Hours structured around the work, not the office.",
-    },
-    {
-      n: "4)",
-      color: "var(--fm-magenta-text)",
-      text: "Recognition for what you shipped, not how you performed.",
-    },
+    { n: "01", text: "Real equity for the effort." },
+    { n: "02", text: "Pay tied to what you deliver." },
+    { n: "03", text: "Hours structured around the work, not the office." },
+    { n: "04", text: "Recognition for what you shipped, not how you performed." },
+  ];
+  const comparisons = [
+    { title: "Companies", range: "1 & 2", description: "Equity + pay. Not the rest.", equity: true, flexibility: false },
+    { title: "Gig Platforms", range: "3 & 4", description: "Flexibility + results. Not the rest.", equity: false, flexibility: true },
+    { title: "Future Modern", range: "All Four", description: "The whole deal, structurally.", equity: true, flexibility: true },
   ];
 
   return (
-    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      {/* Gradient wash — subtle radial from magenta to blue, echoes
-          the hero's own wash so the visual language stays consistent
-          while this block reads as its own moment. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.14]"
-        style={{
-          background:
-            "radial-gradient(65% 65% at 15% 20%, #D828A0 0%, transparent 60%), radial-gradient(50% 50% at 85% 85%, #5070F0 0%, transparent 60%)",
-        }}
-      />
-
-      <div className="relative mx-auto max-w-app px-6 py-24 md:py-32">
-        <div className="text-xs uppercase tracking-wider text-brand-magentaText">
-          Why we built this
-        </div>
-        <h2 className="mt-3 max-w-3xl font-display text-3xl font-semibold leading-tight md:text-4xl">
-          Every worker knows the shape of the deal they&apos;d stay for.
-        </h2>
-
-        <ol className="mt-12 max-w-4xl space-y-6">
+    <section id="our-story" className="scroll-mt-24">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+        <p className="text-xs uppercase tracking-wider text-brand-magentaText">Background</p>
+        <h2 className="mt-3 font-display text-3xl font-semibold md:text-4xl">Why we built this</h2>
+        <p className="mt-4 text-lg text-ink-muted md:text-xl">Every worker knows the deal worth staying for.</p>
+        <ol className="mt-8 grid gap-4 sm:grid-cols-2">
           {items.map((item) => (
-            <li
-              key={item.n}
-              className="flex items-baseline gap-5 md:gap-8"
-            >
-              <span
-                className="shrink-0 font-display text-5xl font-bold leading-none md:text-6xl"
-                style={{ color: item.color }}
-                aria-hidden="true"
-              >
-                {item.n}
-              </span>
-              <p className="text-lg font-medium text-ink md:text-2xl md:font-semibold">
-                {item.text}
-              </p>
+            <li key={item.n} className="relative flex min-h-28 items-center overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 md:min-h-32 md:p-8">
+              <span aria-hidden="true" className="pointer-events-none absolute -left-4 top-1/2 -translate-y-1/2 bg-gradient-to-br from-brand-blue to-brand-magenta bg-clip-text font-display text-[clamp(80px,10vw,140px)] font-bold leading-none text-transparent opacity-[0.12]">{item.n}</span>
+              <span className="relative text-base font-medium leading-relaxed text-ink">{item.text}</span>
             </li>
           ))}
         </ol>
-
-        {/* The reveal row — three cards showing the trade-off + FM's
-            answer. FM card gets the full palette treatment to make it
-            visually inevitable that this is the punchline. */}
-        <div className="mt-16 grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-6 py-6">
-            <p className="text-[11px] uppercase tracking-wider text-ink-muted">
-              Companies give you
-            </p>
-            <p className="mt-2 font-display text-3xl font-bold">
-              <span style={{ color: "var(--fm-magenta-text)" }}>1</span>
-              <span className="text-ink-muted"> &amp; </span>
-              <span style={{ color: "var(--fm-blue-text)" }}>2</span>
-            </p>
-            <p className="mt-2 text-xs text-ink-faint">
-              Equity + pay. Not the rest.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] px-6 py-6">
-            <p className="text-[11px] uppercase tracking-wider text-ink-muted">
-              Gig platforms give you
-            </p>
-            <p className="mt-2 font-display text-3xl font-bold">
-              <span style={{ color: "var(--fm-green-text)" }}>3</span>
-              <span className="text-ink-muted"> &amp; </span>
-              <span style={{ color: "var(--fm-magenta-text)" }}>4</span>
-            </p>
-            <p className="mt-2 text-xs text-ink-faint">
-              Flexibility + results. Not the rest.
-            </p>
-          </div>
-
-          <div
-            className="rounded-2xl border border-brand-magenta bg-gradient-to-br from-brand-magenta/15 via-brand-blue/10 to-brand-green/10 px-6 py-6 shadow-lg shadow-brand-magenta/10"
-          >
-            <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
-              We give you
-            </p>
-            <p className="mt-2 font-display text-3xl font-bold">
-              <span
-                className="bg-gradient-to-r from-brand-magenta via-brand-blue to-brand-green bg-clip-text text-transparent"
-              >
-                All four
-              </span>
-            </p>
-            <p className="mt-2 text-xs text-ink">
-              The whole deal, structurally.
-            </p>
-          </div>
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          {comparisons.map((item) => (
+            <div key={item.title} className={`flex min-h-60 flex-col justify-between rounded-2xl border bg-[var(--surface)] p-6 ${item.title === "Future Modern" ? "border-brand-magenta/70" : "border-[var(--surface-border)]"}`}>
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-display text-xl font-semibold">{item.title}</h3>
+                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${item.title === "Future Modern" ? "bg-gradient-to-r from-brand-blue to-brand-magenta text-white" : "bg-white/5 text-ink-muted"}`}>{item.range}</span>
+                </div>
+                <p className="mt-4 leading-relaxed text-ink-muted">{item.description}</p>
+              </div>
+              <ul className="mt-6 space-y-2 text-sm">
+                {[["Equity & Pay", item.equity], ["Flexible Hours & Results", item.flexibility]].map(([label, included]) => (
+                  <li key={String(label)} className={`flex items-center gap-2 ${included ? "text-ink" : "text-ink-muted"}`}>
+                    <span className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border ${included ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-400" : "border-brand-magenta/30 bg-brand-magenta/15 text-brand-magentaText"}`}>
+                      {included ? <Check size={11} aria-hidden="true" /> : <X size={11} aria-hidden="true" />}
+                    </span>
+                    <span>{label}<span className="sr-only"> {included ? "included" : "not included"}</span></span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
-
-        {/* Founder confession + close */}
-        <div className="mt-16 max-w-2xl">
-          <p className="text-lg text-ink-muted md:text-xl">
-            We looked. We stopped looking. So we built it.
-          </p>
-          <p className="mt-4 text-lg font-medium text-ink md:text-xl">
-            If it&apos;s the deal you&apos;ve been waiting for, the door
-            is open.
-          </p>
+        <div className="mx-auto mt-10 max-w-2xl text-center">
+          <p className="text-xl italic text-ink-muted">&ldquo;We looked. We couldn&apos;t find it. So we built it.&rdquo;</p>
+          <p className="mt-3 text-lg font-medium text-ink">If it&apos;s the deal you&apos;ve been waiting for, the door is open.</p>
         </div>
       </div>
     </section>
@@ -247,60 +166,64 @@ function FaqSection() {
   ];
 
   return (
-    <Faq
-      eyebrow="Common questions"
-      heading="Questions the cooperative gets asked"
-      items={items}
-    />
+    <div id="questions" className="scroll-mt-24 [&>section]:border-0 [&>section]:bg-transparent">
+      <Faq
+        eyebrow="Common questions"
+        heading="Questions the cooperative gets asked"
+        items={items}
+        aside={<HomepageQuestionForm />}
+      />
+    </div>
   );
 }
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.10]"
-        style={{
-          background:
-            "radial-gradient(60% 60% at 80% 20%, #D828A0 0%, transparent 60%), radial-gradient(50% 50% at 10% 90%, #007048 0%, transparent 60%)",
-        }}
-      />
-      <div className="relative mx-auto max-w-app px-6 py-20 md:py-28">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-3 py-1 text-xs font-medium text-brand-magentaText">
-          <span className="fm-btn-primary h-1.5 w-1.5 rounded-full" />
-          About Future Modern
+    <section className="relative overflow-hidden">
+      <div className="mx-auto max-w-app px-6 pb-10 pt-16 md:pb-12 md:pt-24">
+        <div className="grid items-end gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)] lg:gap-16">
+          <div>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-greenText">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand-green" />
+              About Future Modern
+            </div>
+            <h1 className="font-display text-5xl font-bold leading-tight md:text-6xl">
+              The world&apos;s first{" "}
+              <span className="bg-gradient-to-r from-brand-magenta to-brand-blue bg-clip-text text-transparent">
+                Venture Labor Cooperative
+              </span>.
+            </h1>
+            <p className="mt-6 text-lg leading-relaxed text-ink-muted md:text-xl">
+              Future Modern is a cooperative talent agency operating at the intersection
+              of art, tech and culture to deliver creative strategy, managed services,
+              and labor solutions through a nexus of 1,000+ members and partners, many
+              with Unicorn startup, FAANG, and Fortune 500 experience.
+            </p>
+            <p className="mt-3 text-base leading-relaxed text-ink-muted">
+              Read on to see how we work with clients, and how members earn theirs.
+            </p>
+            <a href="#our-story" className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-brand-blue underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-blue">
+              Explore the story <ArrowDown aria-hidden="true" size={16} />
+            </a>
+          </div>
+          <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-inset)] p-6 sm:p-8">
+            <p className="font-display text-xl leading-snug text-ink md:text-2xl">
+              We&apos;re not trying to be special. We are special. We don&apos;t care if anyone sees it.
+            </p>
+            <ul className="mt-6 space-y-3 border-t border-[var(--surface-border)] pt-6 text-sm leading-relaxed text-ink-muted">
+              <li className="flex items-start gap-3"><span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-magenta" />Turning workers into owners</li>
+              <li className="flex items-start gap-3"><span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-blue" />People-powered, exclusively</li>
+              <li className="flex items-start gap-3"><span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-green" />Access is earned, not sold</li>
+            </ul>
+          </div>
         </div>
-        <h1 className="font-display text-5xl font-bold leading-tight md:text-6xl">
-          The world&apos;s first{" "}
-          <span className="bg-gradient-to-r from-brand-magenta to-brand-blue bg-clip-text text-transparent">
-            Venture Labor Cooperative
-          </span>
-          .
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg text-ink-muted md:text-xl">
-          Curated crews. The people who ship keep 85%. That&apos;s what
-          gets the best in the room.
-        </p>
-        <p className="mt-3 max-w-2xl text-base text-ink-muted">
-          Read on to see how we work with clients, and how members earn
-          theirs.
-        </p>
-        <p className="mt-6 max-w-2xl text-base text-ink-faint italic">
-          We&apos;re not trying to be special. We are special. We don&apos;t
-          care if anyone sees it.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center gap-3 text-xs">
-          <span className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-3 py-1 font-medium text-brand-magentaText">
-            For workers, not capitalists
-          </span>
-          <span className="rounded-full border border-brand-blue/40 bg-brand-blue/10 px-3 py-1 font-medium text-brand-blue">
-            People-powered, exclusively
-          </span>
-          <span className="rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 font-medium text-brand-green">
-            Access is earned, not sold
-          </span>
-        </div>
+        <nav aria-label="About page sections" className="mt-10 flex flex-wrap gap-x-6 gap-y-3 border-t border-[var(--surface-border)] pt-5 text-sm text-ink-muted">
+          <a className="hover:text-ink focus-visible:text-ink" href="#people">Our people</a>
+          <a className="hover:text-ink focus-visible:text-ink" href="#model">Our model</a>
+          <a className="hover:text-ink focus-visible:text-ink" href="#expertise">Our expertise</a>
+          <a className="hover:text-ink focus-visible:text-ink" href="#standards">Our standards</a>
+          <a className="hover:text-ink focus-visible:text-ink" href="#questions">Questions</a>
+        </nav>
       </div>
     </section>
   );
@@ -317,17 +240,18 @@ function Hero() {
 
 function PeoplePowered() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
-        <div className="grid gap-10 md:grid-cols-[1.5fr,1fr]">
+    <section id="people" className="scroll-mt-24">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+        <div className="space-y-12">
           <div>
-            <div className="text-xs uppercase tracking-wider text-brand-green">
+            <div className="text-xs uppercase tracking-wider text-brand-greenText">
               People-powered, exclusively
             </div>
             <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
               The resumes speak for themselves.
             </h2>
-            <div className="mt-6 space-y-5 text-ink-muted">
+            <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(16rem,0.75fr)] lg:gap-12">
+            <div className="max-w-prose space-y-5 leading-relaxed text-ink-muted">
               <p>
                 The people who built this are already reputed in their
                 fields. Top performers at the companies they passed through.
@@ -352,48 +276,52 @@ function PeoplePowered() {
                 relationships. Through the people who&apos;ve seen us
                 deliver and stayed in the room.
               </p>
-              <p>
+            </div>
+            <blockquote className="relative self-start overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-inset)] p-7 md:p-8">
+              <div aria-hidden="true" className="pointer-events-none absolute -bottom-20 -right-20 h-64 w-64 bg-[url('/brand/turtle.png')] bg-contain bg-no-repeat opacity-[0.05] grayscale" />
+              <p className="relative font-display text-xl leading-relaxed text-ink md:text-2xl">
                 $BUILD.Store is the platform we built so the next generation
                 of that talent doesn&apos;t have to leave a half-dozen
                 companies to be paid what their work is worth. The
                 cooperative is the structure. The people are the proof.
               </p>
+            </blockquote>
             </div>
           </div>
 
-          <Card className="self-start">
-            <CardEyebrow>What &quot;people-powered&quot; means</CardEyebrow>
-            <CardTitle className="mt-2">Earned, not bought</CardTitle>
-            <ul className="mt-4 space-y-3 text-sm text-ink-muted">
-              <li>
-                <span className="text-ink">Access is earned.</span> Three
-                paths in: invitation from an existing member, application +
-                vetting, or contribution to the cooperative&apos;s
-                infrastructure. The whitelist is not for sale.
+          <div>
+            <p className="text-sm font-medium text-brand-greenText">What &quot;people-powered&quot; means</p>
+            <h3 className="mt-2 font-display text-2xl font-semibold">Earned, not bought</h3>
+            <ul className="mt-6 grid gap-4 leading-relaxed text-ink-muted sm:grid-cols-2">
+              <li className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
+                <span className="text-ink">Earned, not bought.</span>{" "}
+                Access is earned through invitation, application and vetting,
+                or contribution to the cooperative&apos;s infrastructure. The
+                whitelist is not for sale.
               </li>
-              <li>
+              <li className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
                 <span className="text-ink">Admin-authored framing.</span>{" "}
                 Members submit objective fields: price, timeline, work
-                samples. The cooperative authors the positioning so the work
-                speaks for itself, not the cold-pitch voice.
+                samples. The cooperative authors positioning so the work
+                speaks for itself.
               </li>
-              <li>
+              <li className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
                 <span className="text-ink">85% to the people who shipped.</span>{" "}
-                One 15% house cut funds infrastructure, commissions, and
-                operations.
+                Eighty-five percent of all client revenue goes directly to the
+                member teams who delivered the work.
               </li>
-              <li>
+              <li className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
                 <span className="text-ink">Attribution is permanent.</span>{" "}
-                The ledger compounds across years. Contributions don&apos;t
+                The ledger compounds across years. Contributions do not
                 reset to zero when a contract closes.
               </li>
             </ul>
-            <p className="mt-4 text-xs text-ink-faint">
+            <p className="mt-5 text-sm leading-relaxed text-ink-muted">
               We don&apos;t curate around credentials. We curate around
               people who&apos;ve done the work and care about doing it
               right.
             </p>
-          </Card>
+          </div>
         </div>
       </div>
     </section>
@@ -402,10 +330,10 @@ function PeoplePowered() {
 
 function VentureLabor() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      <div className="mx-auto max-w-app px-6 py-20">
-        <div className="grid gap-10 md:grid-cols-[1fr,1.5fr]">
-          <div>
+    <section id="model" className="scroll-mt-24">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+        <div className="grid items-start gap-8 leading-relaxed lg:grid-cols-2 lg:gap-12">
+          <div className="max-w-prose">
             <div className="text-xs uppercase tracking-wider text-brand-magentaText">
               The contract
             </div>
@@ -414,50 +342,119 @@ function VentureLabor() {
             </h2>
             <p className="mt-5 text-ink-muted">
               Venture Capital pools money and goes looking for labor to
-              multiply it. Venture Labor is the inversion. People who can
-              do the work pool their skill and time, and the upside on
-              what gets shipped belongs to the people who shipped it.
+              multiply it. Venture Labor is the inversion. Skilled labor pools
+              its time and effort, and the upside on what gets shipped belongs
+              to the people who shipped it.
             </p>
             <p className="mt-4 text-ink-muted">
               The phrase is honest about where we came from. Patrons
               used to buy into an artist&apos;s work to keep it moving
-              until it sold. The tradition is real, and the controls
+              until it sold. The tradition is old, and the controls
               around it were historically lazy: no point-of-sale
               discipline, contracts that read like favors, profit
               conversations that did not happen until the money was
               already gone. We kept the underlying idea and fixed the
-              controls. We stopped pretending the labor was not equity.
+              controls. We understand that workers are creating the value and
+              deserve the upside of their contributions.
             </p>
           </div>
 
-          <Card className="self-start">
-            <CardEyebrow>The vetting bar</CardEyebrow>
-            <CardTitle className="mt-2">
+          <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 md:p-8 lg:mt-8">
+            <p className="text-sm font-medium text-brand-magentaText">The vetting bar</p>
+            <h3 className="mt-2 font-display text-2xl font-semibold">
               Ideological as much as technical.
-            </CardTitle>
-            <p className="mt-3 text-sm text-ink-muted">
-              The failure mode of pooled labor is not the people who
-              cannot do the work. It is the people who can do the work
-              and will throw out the agreement the moment a check
-              clears. We vet for that first. The craft we can teach.
+            </h3>
+            <div aria-hidden="true" className="mt-5 flex items-center gap-3 text-xs font-medium text-ink-muted">
+              <span className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2">Craft</span>
+              <svg className="min-w-8 max-w-20 flex-1" viewBox="0 0 80 8" fill="none"><path d="M0 4H80" stroke="var(--fm-magenta-text)" strokeWidth="1.5" opacity=".6" /></svg>
+              <span className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2">Values</span>
+            </div>
+            <p className="mt-4 leading-relaxed text-ink-muted">
+              The failure of pooled labor is not lack of talent, but talented
+              people who disregard the agreement the moment a check clears.
+              We vet for that first. The craft we can teach.
               The values we cannot, and we have stopped trying.
             </p>
-            <p className="mt-4 border-l-2 border-brand-magenta/40 pl-3 text-xs italic text-ink-faint">
+            <p className="mt-4 border-l-2 border-brand-magenta/40 pl-4 text-sm italic leading-relaxed text-ink-muted">
               Anyone who can&apos;t handle money, in the sense that
               they throw out all ideals for it, is not one of us. We
               don&apos;t care how good they are.
             </p>
-          </Card>
+          </div>
         </div>
 
-        {/* Constellation diagram — the visual system that the
-            Venture Labor concept above operates through. Exact port
-            of the settled reference framing; do not rework. */}
-        <div className="mt-16">
-          <VentureLaborConstellation />
-        </div>
+        <VentureLaborOverview />
       </div>
     </section>
+  );
+}
+
+function VentureLaborOverview() {
+  const parts = [
+    { name: "Contributor", detail: "Skills · Relationships · Domain expertise" },
+    { name: "Platform", detail: "Infrastructure · Brand · Distribution · Leverage" },
+    { name: "Client / deal", detail: "Revenue generated · 85% to direct labor" },
+    { name: "Treasury", detail: "Cooperative operations · Shared infrastructure" },
+    { name: "Liquidity pool / $BUILD token", detail: "Passive equity accrual · OTC mobilization" },
+  ];
+  const flows = [
+    ["Contributor → Venture Labor OS", "Deal flow"],
+    ["Venture Labor OS → Contributor", "Cash / equity"],
+    ["Contributor → Platform", "Platform leverage"],
+    ["Venture Labor OS → Platform", "Platform leverage"],
+    ["Platform ↔ Client / deal", "Platform relationship"],
+    ["Venture Labor OS ↔ Client / deal", "Deal flow and cash"],
+    ["Client / deal → Treasury", "Cash payment"],
+    ["Treasury → Liquidity pool", "Treasury flow"],
+    ["Liquidity pool → Contributor", "Cash / equity"],
+    ["Venture Labor OS ↔ Treasury", "Reinvestment feedback"],
+    ["Venture Labor OS ↔ Liquidity pool", "Feedback loop"],
+  ];
+  return (
+    <figure className="mt-12 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)]">
+      <figcaption className="relative border-b border-[var(--surface-border)] px-6 py-6 sm:px-8">
+        <div className="sm:pr-52">
+          <p className="text-sm font-medium text-brand-magentaText">Venture Labor OS</p>
+          <h3 className="mt-2 font-display text-2xl font-semibold md:text-3xl">How the system connects</h3>
+          <p className="mt-3 max-w-3xl leading-relaxed text-ink-muted">The contributors, platform, client, treasury, and liquidity pool connected through Venture Labor.</p>
+        </div>
+        <DiagramMobileViewer><VentureLaborDiagram /></DiagramMobileViewer>
+        <details open className="group hidden sm:block">
+          <summary className="inline-flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-[var(--surface-border)] px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-brand-magenta/60 hover:bg-[var(--surface-elevated)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue sm:absolute sm:right-8 sm:top-6 [&::-webkit-details-marker]:hidden">
+            <Maximize2 size={16} aria-hidden="true" />
+            <span className="group-open:hidden">View diagram</span>
+            <span className="hidden group-open:inline">Hide diagram</span>
+          </summary>
+          <div className="mt-6">
+            <DiagramZoom><VentureLaborDiagram /></DiagramZoom>
+          </div>
+        </details>
+      </figcaption>
+      <div className="relative bg-[var(--surface)] px-6 pb-6 pt-6 sm:px-8">
+        <div className="relative z-10 mx-auto w-fit rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-5 py-3 text-center font-display text-lg font-semibold text-ink">Venture Labor OS</div>
+        <svg aria-hidden="true" className="pointer-events-none absolute left-[10%] top-12 hidden h-24 w-[80%] lg:block" viewBox="0 0 1000 64" preserveAspectRatio="none" fill="none">
+          <path d="M500 0 V18 M0 64 V48 Q0 32 20 32 H980 Q1000 32 1000 48 V64 M250 32 V64 M500 18 V64 M750 32 V64" stroke="var(--fm-blue-text)" strokeWidth="1.5" opacity="0.55" vectorEffect="non-scaling-stroke" />
+        </svg>
+        <div className="relative mt-6 grid gap-3 sm:grid-cols-2 lg:mt-16 lg:grid-cols-5">
+        {parts.map((part) => (
+          <div key={part.name} className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-inset)] px-4 py-5">
+            <h4 className="font-display text-lg font-semibold text-ink">{part.name}</h4>
+            <p className="mt-2 text-sm leading-relaxed text-ink-muted">{part.detail}</p>
+          </div>
+        ))}
+        </div>
+      </div>
+      <div className="border-t border-[var(--surface-border)] px-6 py-6 sm:px-8">
+        <p className="text-sm font-medium text-ink">Connections and flows</p>
+        <ul className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+          {flows.map(([connection, flow]) => (
+            <li key={connection} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-[var(--surface-border)] pb-3 text-sm leading-relaxed">
+              <span className="text-ink">{connection}</span><span className="text-ink-muted">{flow}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </figure>
   );
 }
 
@@ -465,66 +462,58 @@ function WhatChanged() {
   const rows: { old: string; ours: string; accent: "magenta" | "blue" | "green" }[] = [
     {
       old: "Platform takes ~10–20%, agency takes a margin, contributor gets the residual.",
-      ours: "Contributors keep 85% of contract revenue. The 15% house cut funds shared infrastructure. Not shareholders.",
+      ours: "Contributors receive 85% of contract revenue. The remaining share supports the people who run the deal and cooperative operations.",
       accent: "magenta",
     },
     {
       old: "Direct contact info is a leak vector. Clients and contributors both hide it to keep the door open for off-platform deals.",
-      ours: "Admins scrub direct-contact info on the way out so contributors get attribution without becoming a circumvention target. PII removal is never a rejection. Admins just remove it inline.",
+      ours: "Information is gated until engagement begins. Contributors get attribution without becoming a circumvention target.",
       accent: "blue",
     },
     {
       old: "Each contributor pitches themselves cold. Quality of self-presentation drowns out quality of work.",
-      ours: "Members submit objective fields: price, timeline, work samples. Admins author the positioning narrative consistently across every quote sheet so nobody undersells or overclaims themselves.",
+      ours: "Members submit objective fields: price, timeline, work samples. Executive Strategists author the positioning narrative consistently and honestly.",
       accent: "green",
     },
     {
-      old: "Bidding platforms extract from both sides. Workers pay to be seen (bids, boosts, subscriptions, verifications). Clients wade through 50+ proposals per RFP to find the 3-5 qualified matches.",
-      ours: "No bidding. No pay for access. Ever. We do the vetting for you. The cooperative curates 3-5 qualified matches per skillset. Workers stay in delivery mode. Clients get the shortlist, not the slush pile.",
+      old: "Bidding platforms extract from both sides. Workers pay to be seen. Clients wade through 50+ proposals to find 3-5 matches.",
+      ours: "No bidding. No pay for access. The cooperative curates 3-5 qualified matches per skillset. Workers stay in delivery mode.",
       accent: "blue",
     },
     {
       old: "When the contract closes, the relationship resets to zero. No equity, no compounding ownership.",
-      ours: "Contributors accrue $BUILD tokens on every shipped contract. Real attribution, real co-ownership, real governance rights as you move up the membership tiers.",
+      ours: "Contributors accrue $BUILD tokens on every shipped contract. Real attribution, real co-ownership, and real governance.",
       accent: "magenta",
     },
   ];
 
-  const accentClass = {
-    magenta: "text-brand-magentaText",
-    blue: "text-brand-blue",
-    green: "text-brand-green",
-  } as const;
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section>
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           What we changed
         </h2>
-        <p className="mt-2 max-w-2xl text-ink-muted">
+        <p className="mt-2 text-ink-muted">
           Concrete differences between the conventional freelance economy
           and the cooperative we built. Not rhetoric. Pricing, policy, and
           plumbing.
         </p>
 
-        <div className="mt-10 grid gap-4 md:grid-cols-2">
-          {rows.map((row, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
-            >
-              <div
-                className={`text-xs uppercase tracking-wider ${accentClass[row.accent]}`}
-              >
-                Old model → ours
+        <div className="mt-8 overflow-hidden rounded-2xl border border-[var(--surface-border)]">
+          <div className="hidden grid-cols-2 border-b border-[var(--surface-border)] bg-[var(--surface-inset)] text-sm font-medium sm:grid">
+            <span className="px-4 py-4 sm:px-6">Before</span>
+            <span className="border-l border-[var(--surface-border)] px-4 py-4 text-brand-magentaText sm:px-6">Now</span>
+          </div>
+          {rows.map((row) => (
+            <div key={row.old} className="grid grid-cols-1 border-b border-[var(--surface-border)] last:border-b-0 sm:grid-cols-2">
+              <div className="px-4 py-5 leading-relaxed text-ink-muted sm:px-6">
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-ink-muted sm:hidden">Before</span>
+                {row.old}
               </div>
-              <div className="mt-3 text-sm text-ink-muted">
-                <span className="text-ink-faint">Before:</span> {row.old}
-              </div>
-              <div className="mt-3 text-sm">
-                <span className="text-ink-faint">Now:</span>{" "}
-                <span className="text-ink">{row.ours}</span>
+              <div className="border-t border-[var(--surface-border)] bg-[var(--surface-inset)] px-4 py-5 leading-relaxed text-ink sm:border-l sm:border-t-0 sm:px-6">
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-brand-magentaText sm:hidden">Now</span>
+                {row.ours}
               </div>
             </div>
           ))}
@@ -562,50 +551,43 @@ function WhatChanged() {
  */
 function WhatWeSayNoTo() {
   const refusals = [
-    "No bidding. No pay for access. Ever.",
-    "No paid tiers. No sponsored listings. No boosted profiles.",
+    "No pay for access. Membership is earned by contribution, not cash.",
+    "No paid tiers. Every member owns their own rate.",
+    "No sponsored listings. Curation isn't an auction.",
+    "No boosted profiles. Merit isn't a line item.",
+    "No selling user's personal data. Trust is not a revenue stream.",
     "No sales theater. Honest pricing, honest tracking, honest scope. Every time.",
-    "No exit strategy. No dilution of cooperative ownership.",
-    "No discounts. Rarity is the pricing model.",
-    "No opaque compensation. Talent sees the gate before it fires.",
+    "No exit strategy. Ownership is permanent by design.",
+    "No discounts. Value is set by the creator, not haggled by the buyer.",
+    "No confusion about compensation. The split is published before the work starts.",
   ];
 
   return (
-    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      {/* Subtle magenta wash — this is the identity moment, so the
-          brand color shows up quietly behind the type. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.10]"
-        style={{
-          background:
-            "radial-gradient(60% 60% at 50% 30%, #D828A0 0%, transparent 65%)",
-        }}
-      />
-      <div className="relative mx-auto max-w-app px-6 py-20">
+    <section id="standards" className="scroll-mt-24 relative overflow-hidden">
+      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
         <p className="text-xs uppercase tracking-[0.18em] text-brand-magentaText">
           The discipline
         </p>
         <h2 className="mt-3 font-display text-3xl font-semibold md:text-4xl">
           What we say no to.
         </h2>
-        <p className="mt-4 max-w-2xl text-ink-muted">
+        <p className="mt-4 text-ink-muted">
           Every refusal below is a discipline. The refusals produce the
           outcomes. Take one away and the model breaks.
         </p>
 
-        <ul className="mt-10 grid gap-4 md:grid-cols-2">
+        <ul className="mt-8 grid gap-x-8 gap-y-4 sm:grid-cols-2">
           {refusals.map((r) => (
             <li
               key={r}
-              className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6"
+              className="border-t border-[var(--surface-border)] pt-4"
             >
               <span className="text-lg font-medium text-ink">{r}</span>
             </li>
           ))}
         </ul>
 
-        <p className="mt-8 max-w-2xl text-sm text-ink-muted">
+        <p className="mt-8 text-sm leading-relaxed text-ink-muted">
           We cold pitch to get in the door. We don&apos;t cold close.
           That&apos;s the whole difference.
         </p>
@@ -673,23 +655,22 @@ function CoreCompetencies() {
   ];
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section>
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Core competencies
         </h2>
-        <p className="mt-2 max-w-2xl text-ink-muted">
+        <p className="mt-2 text-ink-muted">
           We leverage a one-of-a-kind interdisciplinary network to deliver
           best-in-class service to a small list of select clients. These are
           the surfaces we&apos;ve actually shipped for.
         </p>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
+        <div className="mt-8 grid gap-8 md:grid-cols-3">
           {groups.map((g) => (
             <div
               key={g.label}
-              className="rounded-2xl border border-t-4 border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
-              style={{ borderTopColor: g.color }}
+              className="min-w-0 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 sm:p-6"
             >
               <div
                 className="text-xs uppercase tracking-wider"
@@ -697,7 +678,7 @@ function CoreCompetencies() {
               >
                 {g.label}
               </div>
-              <ul className="mt-4 space-y-1.5 text-sm text-ink-muted">
+              <ul className="mt-4 space-y-2 leading-relaxed text-ink-muted">
                 {g.skills.map((s) => (
                   <li key={s} className="flex items-baseline gap-2">
                     <span
@@ -721,31 +702,31 @@ function Provenance() {
     {
       title: "Provenance.",
       body:
-        "Resources and acknowledgement flow back to original ideas and the labor that moves culture forward. Attribution is permanent and the ledger is public to the contributors on each engagement. Nobody chases anyone for credit, and contributions compound across years.",
+        "Resources and acknowledgement flow back to original ideas and the labor that moves culture forward. Attribution is permanent.",
       accent: "magenta",
     },
     {
       title: "Discernment.",
       body:
-        "We curate. The cooperative isn’t a marketplace of disconnected skills. Admins frame contributors consistently, vet incoming RFPs, and assemble cross-pillar teams the way a good agency partner would. We create the wave that others ride.",
+        "Future Modern curates contributors, vets incoming RFPs, and assembles cross-pillar teams the way a strong agency partner would.",
       accent: "blue",
     },
     {
       title: "Equity.",
       body:
-        "Eighty-five percent of contract revenue flows to the people who shipped. $BUILD tokens accrue with contribution. Membership tiers map to governance rights. The platform is owned by the people building it. By design, not as a marketing claim.",
+        "Eighty-five percent of contract revenue flows to the people who shipped. $BUILD tokens accrue with contribution. The platform is owned by the people building it.",
       accent: "green",
     },
     {
       title: "Truth and inquiry.",
       body:
-        "We value freedom and responsibility of expression, alongside honesty, transparency, and experimentation. Where we’re unsure, we say so. Where we’re certain, we ship. The roadmap is public; the open frictions are too.",
+        "Where we are unsure, we say so. Where we are certain, we ship.",
       accent: "magenta",
     },
     {
       title: "Tried and true × cutting edge.",
       body:
-        "We’re innovative in how we combine proven methods with new technology and strategy. We aren’t shipping a tech demo. We’re running an agency on top of a cooperative model and the engineering follows the operations, not the other way around.",
+        "Future Modern combines proven operations with new technology and strategy. The engineering follows the operations, not the other way around.",
       accent: "blue",
     },
     {
@@ -756,15 +737,9 @@ function Provenance() {
     },
   ] as const;
 
-  const accentClass = {
-    magenta: "border-t-brand-magenta",
-    blue: "border-t-brand-blue",
-    green: "border-t-brand-green",
-  } as const;
-
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section>
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <div className="flex flex-wrap items-baseline gap-3">
           <span className="text-xs uppercase tracking-wider text-brand-magentaText">
             Core values
@@ -773,22 +748,22 @@ function Provenance() {
         <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
           Provenance · Discernment · Equity
         </h2>
-        <p className="mt-3 max-w-2xl text-ink-muted">
+        <p className="mt-3 text-ink-muted">
           The non-negotiables. They&apos;re encoded in the product, not just
           the About page. Every engineering decision and every operations
           ritual gets measured against these.
         </p>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-x-10 gap-y-7 sm:grid-cols-2">
           {principles.map((p) => (
             <div
               key={p.title}
-              className={`rounded-2xl border border-t-4 border-[var(--surface-border)] bg-[var(--surface)] p-6 ${accentClass[p.accent]}`}
+              className="border-t border-[var(--surface-border)] pt-5"
             >
               <h3 className="font-display text-lg font-semibold text-ink">
                 {p.title}
               </h3>
-              <p className="mt-3 text-sm text-ink-muted">{p.body}</p>
+              <p className="mt-3 leading-relaxed text-ink-muted">{p.body}</p>
             </div>
           ))}
         </div>
@@ -843,23 +818,22 @@ function Credentials() {
   ];
 
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section>
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Where the team cut its teeth
         </h2>
-        <p className="mt-2 max-w-2xl text-ink-muted">
+        <p className="mt-2 text-ink-muted">
           A non-exhaustive sample of the institutions, labs, and brands
           where Future Modern contributors have shipped serious work
           before joining the cooperative.
         </p>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
+        <div className="mt-8 grid gap-8 md:grid-cols-3">
           {groups.map((g) => (
             <div
               key={g.label}
-              className="rounded-2xl border border-l-4 border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6"
-              style={{ borderLeftColor: g.color }}
+              className="min-w-0"
             >
               <div
                 className="text-xs uppercase tracking-wider"
@@ -867,16 +841,16 @@ function Credentials() {
               >
                 {g.label}
               </div>
-              <ul className="mt-3 space-y-1.5 text-sm text-ink">
+              <ul className="mt-4 flex flex-wrap gap-2 text-sm leading-relaxed text-ink">
                 {g.items.map((item) => (
-                  <li key={item}>{item}</li>
+                  <li key={item} className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] px-3 py-2">{item}</li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
 
-        <p className="mt-6 max-w-3xl text-xs text-ink-faint">
+        <p className="mt-6 text-xs text-ink-faint">
           Inclusion in this list reflects past and current affiliations of
           cooperative contributors. It is not an endorsement by any of these
           organizations of Future Modern or $BUILD.Store.
@@ -888,44 +862,43 @@ function Credentials() {
 
 function Pillars() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
+    <section id="expertise" className="scroll-mt-24">
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
         <h2 className="font-display text-3xl font-semibold md:text-4xl">
           Three pillars, one cooperative
         </h2>
-        <p className="mt-2 max-w-2xl text-ink-muted">
+        <p className="mt-2 text-ink-muted">
           Every member sits in at least one pillar. Many sit across two. A
-          handful move freely through all three. The pillar framing is how we
-          route opportunities and how we build teams that can actually ship a
-          Fortune-500-grade brief.
+          handful move freely through all three. The pillar framing is how
+          opportunities are routed and how teams are built for serious briefs.
         </p>
 
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           <PillarCard
             label="STEM"
             color="#5070F0"
-            blurb="Full-stack engineering, AI/ML, blockchain, security, data, research."
+            blurb="Full-stack engineering, AI/ML, blockchain, security, data, research, and more."
           />
           <PillarCard
             label="Creative Media"
             color="#D828A0"
-            blurb="Music, film, editorial, design, direction, post-production."
+            blurb="Music, film, editorial, design, direction, post-production, and more."
           />
           <PillarCard
             label="Professional Services"
             color="#007048"
-            blurb="Strategy, legal, finance, operations, management consulting."
+            blurb="Strategy, legal, finance, operations, management consulting, and more."
           />
         </div>
 
-        <div className="mt-12 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-8 md:p-10">
+        <div className="mt-12 border-t border-[var(--surface-border)] pt-8">
           <p className="text-xs uppercase tracking-wider text-brand-magentaText">
             The Future Modernist
           </p>
           <h3 className="mt-3 font-display text-2xl font-semibold md:text-3xl">
             A creator at heart. Artist, engineer, builder.
           </h3>
-          <p className="mt-4 max-w-3xl text-ink-muted">
+          <p className="mt-4 text-ink-muted">
             We have specialists, plenty of them. But the people who shape this
             cooperative are renaissance figures: comfortable directing a
             shoot in the morning, shipping a smart contract in the afternoon,
@@ -954,7 +927,7 @@ function Pillars() {
           </div>
         </div>
 
-        <p className="mt-8 max-w-2xl text-sm text-ink-faint">
+        <p className="mt-8 text-sm text-ink-faint">
           This isn&apos;t a marketplace listing of disconnected skills.
           It&apos;s a cooperative that staffs cross-pillar teams the way a
           high-end agency would, with the economics owed to the people doing
@@ -975,17 +948,14 @@ function OriginNote({
   body: string;
 }) {
   return (
-    <div
-      className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5"
-      style={{ borderLeftColor: color, borderLeftWidth: 3 }}
-    >
+    <div className="min-w-0">
       <p
         className="text-[11px] uppercase tracking-wider"
         style={{ color }}
       >
         {eyebrow}
       </p>
-      <p className="mt-2 text-sm text-ink-muted">{body}</p>
+      <p className="mt-2 text-sm leading-relaxed text-ink-muted">{body}</p>
     </div>
   );
 }
@@ -1000,10 +970,7 @@ function PillarCard({
   blurb: string;
 }) {
   return (
-    <div
-      className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-6 transition-colors"
-      style={{ borderTopColor: color, borderTopWidth: 4 }}
-    >
+    <div className="border-t border-[var(--surface-border)] pt-5">
       <div
         className="flex items-center gap-2 text-xs uppercase tracking-wider"
         style={{ color }}
@@ -1015,24 +982,15 @@ function PillarCard({
         Pillar
       </div>
       <h3 className="mt-2 font-display text-2xl font-semibold">{label}</h3>
-      <p className="mt-3 text-sm text-ink-muted">{blurb}</p>
+      <p className="mt-3 leading-relaxed text-ink-muted">{blurb}</p>
     </div>
   );
 }
 
 function RoadmapPeek() {
   return (
-    <section className="relative overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-elevated)]">
-      {/* Subtle radial wash — brand palette rhythm */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.08]"
-        style={{
-          background:
-            "radial-gradient(50% 60% at 15% 20%, #007048 0%, transparent 60%), radial-gradient(50% 60% at 85% 90%, #5070F0 0%, transparent 60%)",
-        }}
-      />
-      <div className="relative mx-auto max-w-app px-6 py-24">
+    <section className="relative overflow-hidden">
+      <div className="relative mx-auto max-w-app px-6 py-12 md:py-14">
         <div className="grid gap-14 md:grid-cols-[1fr,1.7fr]">
           <div>
             <div className="text-xs uppercase tracking-wider text-brand-magentaText">
@@ -1053,16 +1011,11 @@ function RoadmapPeek() {
           </div>
 
           <div className="relative">
-            {/* Vertical spine connecting the phase discs */}
-            <div
-              aria-hidden="true"
-              className="absolute left-[27px] top-6 bottom-6 w-px"
-              style={{
-                background:
-                  "linear-gradient(to bottom, #007048 0%, #D828A0 50%, #5070F0 100%)",
-                opacity: 0.35,
-              }}
-            />
+            <svg aria-hidden="true" className="pointer-events-none absolute left-0 top-7 h-[calc(100%-3.5rem)] w-14" viewBox="0 0 56 400" preserveAspectRatio="none" fill="none">
+              <path d="M25 0 C8 65 45 135 27 200 S9 335 25 400" stroke="var(--fm-blue-text)" strokeWidth="1.5" opacity="0.55" vectorEffect="non-scaling-stroke" />
+              <path d="M28 0 C12 65 48 135 30 200 S12 335 28 400" stroke="var(--fm-magenta-text)" strokeWidth="1.5" opacity="0.5" vectorEffect="non-scaling-stroke" />
+              <path d="M31 0 C15 65 51 135 33 200 S15 335 31 400" stroke="var(--fm-green-text)" strokeWidth="1.5" opacity="0.6" vectorEffect="non-scaling-stroke" />
+            </svg>
             <div className="space-y-6">
               <RoadmapRow
                 number="01"
@@ -1115,14 +1068,13 @@ function RoadmapRow({
           borderColor: accent,
           color: accent,
           backgroundColor: "var(--surface)",
-          boxShadow: `0 0 24px ${accent}33`,
         }}
       >
         {number}
       </div>
       {/* Card */}
       <div
-        className="rounded-2xl border bg-[var(--surface)] px-6 py-5"
+        className="border-t border-[var(--surface-border)] pt-4"
         style={{
           borderColor: `${accent}55`,
         }}
@@ -1135,7 +1087,7 @@ function RoadmapRow({
             {phase}
           </div>
           <span
-            className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wider"
+            className="text-xs font-medium uppercase tracking-wider"
             style={{
               borderColor: accent,
               color: accent,
@@ -1144,7 +1096,7 @@ function RoadmapRow({
             {status}
           </span>
         </div>
-        <p className="mt-3 text-sm text-ink-muted">{body}</p>
+        <p className="mt-3 leading-relaxed text-ink-muted">{body}</p>
       </div>
     </div>
   );
@@ -1152,37 +1104,37 @@ function RoadmapRow({
 
 function ConstellationSection() {
   return (
-    <section className="border-b border-[var(--surface-border)] bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20">
-        <div className="max-w-2xl">
-          <div className="text-xs uppercase tracking-wider text-brand-magentaText">
+    <section>
+      <div className="mx-auto max-w-app px-6 py-12 md:py-14">
+        <div>
+          <div className="text-sm font-medium text-brand-magentaText">
             Venture Labor OS
           </div>
           <h2 className="mt-2 font-display text-3xl font-semibold md:text-4xl">
             Owners ship better work than renters.
           </h2>
-          <p className="mt-3 text-lg text-ink-muted">
+          <p className="mt-4 text-lg leading-relaxed text-ink-muted md:text-xl">
             The upside on the work belongs to the people who shipped it.
             Provenance, Discernment, Equity.
           </p>
         </div>
 
-        <div className="mt-8 flex flex-wrap gap-3 text-sm">
+        <div className="mt-7 flex flex-wrap gap-x-7 gap-y-4 text-base font-medium">
           <Link
             href="/governance"
-            className="rounded-full border border-brand-magenta/40 bg-brand-magenta/10 px-4 py-2 text-brand-magentaText hover:bg-brand-magenta/20"
+            className="text-brand-magentaText underline-offset-4 hover:underline"
           >
             See how the network works →
           </Link>
           <Link
             href="/policies/covenant"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
+            className="text-ink-muted underline-offset-4 hover:text-ink hover:underline"
           >
             Cooperative Covenant →
           </Link>
           <Link
             href="/trust"
-            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-ink-muted hover:border-brand-magenta hover:text-brand-magentaText"
+            className="text-ink-muted underline-offset-4 hover:text-ink hover:underline"
           >
             Trust &amp; security →
           </Link>
@@ -1194,40 +1146,36 @@ function ConstellationSection() {
 
 function CTA() {
   return (
-    <section className="bg-[var(--surface)]">
-      <div className="mx-auto max-w-app px-6 py-20 text-center">
-        <h2 className="font-display text-3xl font-semibold md:text-4xl">
-          Ready to be part of it?
-        </h2>
-        <p className="mx-auto mt-3 max-w-xl text-ink-muted">
-          Whether you&apos;re a contributor looking for a fairer model or a
-          client looking for a real team. Start here.
-        </p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link
-            href="/signup"
-            className="fm-btn-primary inline-flex items-center justify-center rounded-full px-8 py-3 font-medium shadow-lg shadow-brand-magenta/20 transition-colors"
-          >
-            Apply to join
-          </Link>
-          <Link
-            href="/membership"
-            className="inline-flex items-center justify-center rounded-full border border-brand-blue/60 px-8 py-3 font-medium text-brand-blue transition-colors hover:bg-brand-blue/10"
-          >
-            See membership tiers
-          </Link>
-          <a
-            href={PUBLIC_BOOKING_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center justify-center rounded-full border border-[var(--surface-border)] px-8 py-3 font-medium text-ink transition-colors hover:bg-[var(--surface-elevated)]"
-          >
-            {PUBLIC_BOOKING_CTA}
-          </a>
+    <section className="relative isolate overflow-hidden bg-[var(--surface-inset)]">
+      <div aria-hidden="true" className="pointer-events-none absolute -bottom-44 -left-32 h-[28rem] w-[28rem] bg-[url('/brand/turtle.png')] bg-contain bg-no-repeat opacity-[0.06] grayscale motion-safe:transition-opacity" />
+      <div className="relative mx-auto max-w-app px-6 py-16 md:py-24">
+        <div className="max-w-3xl">
+          <h2 className="font-display text-4xl font-semibold leading-tight md:text-6xl">
+            Ready to be part of it?
+          </h2>
+          <p className="mt-5 text-lg leading-relaxed text-ink-muted">
+            Apply to join or build a team, learn about membership, or talk
+            with us to find out more.
+          </p>
         </div>
-        <p className="mt-8 text-xs text-ink-faint">
-          Future Modern · A cooperative talent platform.
-        </p>
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="flex h-full flex-col items-start rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 transition-transform duration-200 motion-safe:hover:-translate-y-1">
+            <p className="font-display text-xl font-semibold">Join or build a team</p>
+            <p className="mt-2 flex-1 leading-relaxed text-ink-muted">Apply to contribute your skills or find the right team for your project.</p>
+            <ButtonLink href="/signup" variant="primary" size="large" className="mt-6">Apply to join</ButtonLink>
+          </div>
+          <div className="flex h-full flex-col items-start rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 transition-transform duration-200 motion-safe:hover:-translate-y-1">
+            <p className="font-display text-xl font-semibold">Explore membership</p>
+            <p className="mt-2 flex-1 leading-relaxed text-ink-muted">Learn about the different membership tiers.</p>
+            <ButtonLink href="/membership" variant="secondary" size="large" className="mt-6">See membership tiers</ButtonLink>
+          </div>
+          <div className="flex h-full flex-col items-start rounded-2xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 transition-transform duration-200 motion-safe:hover:-translate-y-1">
+            <p className="font-display text-xl font-semibold">Talk with us</p>
+            <p className="mt-2 flex-1 leading-relaxed text-ink-muted">Have questions? Schedule a call to learn more about Future Modern.</p>
+            <a href={PUBLIC_BOOKING_URL} target="_blank" rel="noreferrer" className={buttonClassName({ variant: "secondary", size: "large", className: "mt-6" })}>{PUBLIC_BOOKING_CTA}</a>
+          </div>
+        </div>
+        <p className="mt-8 text-sm text-ink-muted">Future Modern · A cooperative talent platform.</p>
       </div>
     </section>
   );

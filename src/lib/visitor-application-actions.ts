@@ -43,7 +43,10 @@
  */
 "use server";
 
-import { insertInboundSubmission } from "@/lib/writers/inbound-submissions";
+import { randomUUID } from "crypto";
+import { db } from "@/db/client";
+import { inboundSubmissions, landingSubmissionDocuments } from "@/db/schema";
+import { validateLandingFiles } from "@/lib/landing-inbound-validation";
 import { extractKeywords } from "@/lib/talent-match";
 import { createHubspotLead } from "@/lib/crm-stub";
 
@@ -105,29 +108,75 @@ export async function submitVisitorJobApplication(
     .filter((line) => line !== null)
     .join("\n");
 
-  await insertInboundSubmission({
-    kind: "job_application",
-    status: "new",
-    title: `${name} applied to ${jobTitle || jobId}`,
-    submitter: name,
-    submitterEmail: email,
-    submitterCompany: null,
-    pillarTags: [],
-    // Derived only. A visitor cannot self-assign canonical tags, same
-    // rule the signup intake follows.
-    keywordTags: [],
-    proposedKeywordTags: extractKeywords(
-      `${pitch} ${portfolioLink}`,
-    ).slice(0, 20),
-    body,
-    attachments: [],
-    // Unassigned on purpose. A dangling id would violate the users
-    // foreign key and reject the whole row; triage picks the owner.
-    assignedAdminId: null,
-    triageNote: null,
-    deepLinkHref: `/jobs/${jobId}`,
-    linkedResourceId: jobId,
-    derived: false,
+  // The resume, validated at the trust boundary. validateLandingFiles
+  // checks the %PDF- magic bytes rather than trusting the MIME type a
+  // client sent, and caps size. A bad file fails the application
+  // rather than being dropped silently.
+  const resume = formData.get("resume");
+  let documents: { name: string; type: string; size: number; base64: string }[] =
+    [];
+  if (resume instanceof File && resume.size > 0) {
+    try {
+      documents = await validateLandingFiles([resume]);
+    } catch (err) {
+      return {
+        ok: false,
+        message:
+          err instanceof Error && /PDF/i.test(err.message)
+            ? "Resumes must be PDF files."
+            : "That file is too large. Keep it under 12MB.",
+      };
+    }
+  }
+
+  const rowId = `in_${randomUUID()}`;
+  const now = new Date().toISOString();
+
+  // Row and document commit together. A submission that shows an
+  // attachment with no bytes behind it is the "looked accepted and
+  // was not" failure the inbound writer exists to prevent.
+  await db.transaction(async (tx) => {
+    await tx.insert(inboundSubmissions).values({
+      id: rowId,
+      kind: "job_application",
+      status: "new",
+      title: `${name} applied to ${jobTitle || jobId}`,
+      submitter: name,
+      submitterEmail: email,
+      submitterCompany: null,
+      pillarTags: [],
+      // Derived only. A visitor cannot self-assign canonical tags,
+      // same rule the signup intake follows.
+      keywordTags: [],
+      proposedKeywordTags: extractKeywords(`${pitch} ${portfolioLink}`).slice(
+        0,
+        20,
+      ),
+      body,
+      attachments: documents.map(({ name: n, size, type }) => ({
+        name: n,
+        size,
+        type,
+      })),
+      // Unassigned on purpose. A dangling id would violate the users
+      // foreign key and reject the whole row; triage picks the owner.
+      assignedAdminId: null,
+      triageNote: null,
+      deepLinkHref: `/jobs/${jobId}`,
+      linkedResourceId: jobId,
+      derived: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+    if (documents.length > 0) {
+      await tx.insert(landingSubmissionDocuments).values(
+        documents.map((file, index) => ({
+          submissionId: rowId,
+          documentIndex: index,
+          contentBase64: file.base64,
+        })),
+      );
+    }
   });
 
   // Best-effort. A CRM outage must not cost us the application, which

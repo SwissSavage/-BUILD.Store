@@ -235,7 +235,7 @@ function ApplicationCard({
         </span>
       </div>
 
-      {(row.desiredCompensation || row.portfolioLink) && (
+      {(row.desiredCompensation || row.portfolioLink || row.resumeName) && (
         <div className="mt-2 flex flex-wrap gap-4 text-[11px] text-ink-muted">
           {row.desiredCompensation && (
             <span>
@@ -251,6 +251,14 @@ function ApplicationCard({
               className="text-brand-magentaText hover:underline"
             >
               Portfolio ↗
+            </a>
+          )}
+          {row.resumeName && (
+            <a
+              href={`/api/admin/job-applications/${encodeURIComponent(row.id)}/resume`}
+              className="text-brand-magentaText hover:underline"
+            >
+              Resume ({row.resumeName}) ↓
             </a>
           )}
         </div>

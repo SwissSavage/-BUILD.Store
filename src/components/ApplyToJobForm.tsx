@@ -2,9 +2,23 @@
 import { Button } from "@/components/Button";
 
 /**
- * Public /jobs/[id] apply form. Rendered only for signed-in users;
- * the parent page gates on getCurrentUser() and shows a "sign in to
- * apply" card otherwise.
+ * Public /jobs/[id] apply form. Rendered for EVERYONE as of
+ * 2026-11-03. It used to render only for signed-in users, and a
+ * signed-out reader got a card telling them to sign in to see a brief
+ * that was already fully on screen above it, which turned away the
+ * exact person the posting was written for.
+ *
+ * Two submit paths behind one form:
+ *   - signed in  -> submitJobApplication, a real job_applications row.
+ *   - visitor    -> submitVisitorJobApplication, which lands in the
+ *                   inbound triage queue AND stands as their
+ *                   membership application. job_applications.user_id
+ *                   is a non-null FK, so a visitor cannot hold a row
+ *                   there until they are a member.
+ *
+ * The visitor variant asks for name and email because there is no
+ * session to read them from. It says plainly that applying also puts
+ * them forward for membership, rather than enrolling them quietly.
  *
  * Uses useActionState (React 19) to surface validation errors from
  * the server action inline, without navigating away from the
@@ -15,11 +29,14 @@ import { Button } from "@/components/Button";
 import { useActionState } from "react";
 import { submitJobApplication } from "@/lib/application-actions";
 import type { ProposalResult } from "@/lib/application-actions";
+import { submitVisitorJobApplication } from "@/lib/visitor-application-actions";
 import { Card } from "@/components/Card";
 
 interface Props {
   jobId: string;
   jobTitle: string;
+  /** False for a signed-out visitor. Chooses the submit path. */
+  isSignedIn: boolean;
 }
 
 type FormState = ProposalResult | null;
@@ -32,12 +49,25 @@ type FormState = ProposalResult | null;
  * arrived as "An error occurred in the Server Components render."
  * A real fault now carries a reference that matches the server log.
  */
-async function action(_prev: FormState, formData: FormData): Promise<FormState> {
+async function memberAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
   return submitJobApplication(formData);
 }
 
-export function ApplyToJobForm({ jobId, jobTitle }: Props) {
-  const [state, formAction, isPending] = useActionState(action, null);
+async function visitorAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  return submitVisitorJobApplication(formData);
+}
+
+export function ApplyToJobForm({ jobId, jobTitle, isSignedIn }: Props) {
+  const [state, formAction, isPending] = useActionState(
+    isSignedIn ? memberAction : visitorAction,
+    null,
+  );
 
   if (state?.ok) {
     return (
@@ -52,11 +82,46 @@ export function ApplyToJobForm({ jobId, jobTitle }: Props) {
     <Card>
       <p className="text-lg font-medium">Apply for {jobTitle}</p>
       <p className="mt-2 text-sm text-ink-muted">
-        Admin routes applications to the client lead within 48 hours.
+        {isSignedIn
+          ? "Admin routes applications to the client lead within 48 hours."
+          : "No account needed. Admin routes applications to the client lead within 48 hours, and applying here also puts you forward for Future Modern membership so you can be matched to future roles."}
       </p>
 
       <form action={formAction} className="mt-6 space-y-4">
         <input type="hidden" name="jobId" value={jobId} />
+        <input type="hidden" name="jobTitle" value={jobTitle} />
+
+        {!isSignedIn && (
+          <>
+            <div>
+              <label htmlFor="name" className="text-sm font-medium">
+                Your name <span className="text-ink-muted">(required)</span>
+              </label>
+              <input
+                id="name"
+                name="name"
+                required
+                minLength={2}
+                autoComplete="name"
+                className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="email" className="text-sm font-medium">
+                Email <span className="text-ink-muted">(required)</span>
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-input)] px-3 py-2 text-sm"
+              />
+            </div>
+          </>
+        )}
 
         <div>
           <label htmlFor="pitch" className="text-sm font-medium">

@@ -3,16 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { extractKeywords } from "@/lib/talent-match";
 import { insertInboundSubmission } from "@/lib/writers/inbound-submissions";
+import type { HomepageQuestionState } from "./homepage-question-state";
 
-export type HomepageQuestionState = {
-  status: "idle" | "error" | "success";
-  message: string;
-};
-
-export const initialHomepageQuestionState: HomepageQuestionState = {
-  status: "idle",
-  message: "",
-};
 
 /** Writes homepage questions to the same admin inbox as every other public lead. */
 export async function submitHomepageQuestion(

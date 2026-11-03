@@ -3,10 +3,8 @@
 import { useActionState } from "react";
 import { CardEyebrow } from "@/components/Card";
 import { SubmitButton } from "@/components/SubmitButton";
-import {
-  initialHomepageQuestionState,
-  submitHomepageQuestion,
-} from "@/app/(public)/homepage-question-actions";
+import { submitHomepageQuestion } from "@/app/(public)/homepage-question-actions";
+import { initialHomepageQuestionState } from "@/app/(public)/homepage-question-state";
 
 const fieldClassName =
   "w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-brand-magenta focus:outline-none";

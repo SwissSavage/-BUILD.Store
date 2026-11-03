@@ -69,7 +69,7 @@ export default async function StorePage({
         </h1>
         <p className="mt-2 max-w-2xl text-ink-muted">
           {activeCategory?.description ??
-            "Products from vetted Future Modern members. Every listing contributes 15% back to the cooperative; 85% routes to the seller."}
+            "Products from vetted Future Modern members. 85% of every sale routes to the seller; 12% ops, 1.5% Treasury, 1.5% Liquidity Pool."}
         </p>
       </header>
 

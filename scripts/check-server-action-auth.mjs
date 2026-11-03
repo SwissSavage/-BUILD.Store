@@ -151,6 +151,7 @@ const LIB_PUBLIC = new Map([
   ["submitProspectiveContribution", "public contribution form on a project"],
   ["sendInviteLoiForSignature", "the invite code is the credential; validated unrevoked, unconsumed, unexpired"],
   ["handleSignup", "public signup intake"],
+  ["submitVisitorJobApplication", "public role posting; writes one inbound triage row, creates no account, grants nothing, and answers identically whether or not the email is known"],
 ]);
 
 function libFiles(dir, out = []) {

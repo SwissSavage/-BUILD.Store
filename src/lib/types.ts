@@ -3196,6 +3196,18 @@ export type InboundSubmissionKind =
   | "chat_inquiry"
   | "store_inquiry"
   | "booking_request"
+  /**
+   * A visitor applied to a public role without an account (2026-11-03).
+   * job_applications.user_id is a non-null FK to users.id, so someone
+   * with no account cannot have a row there. The application lands
+   * here instead, carrying the job on linkedResourceId, and becomes a
+   * real job_applications row once the invite is accepted.
+   *
+   * It is a membership application at the same time, by design: the
+   * job is the top of the funnel, and asking someone to apply twice
+   * for one role is how you lose the good ones.
+   */
+  | "job_application"
   | "other";
 
 export const INBOUND_SUBMISSION_KIND_LABELS: Record<InboundSubmissionKind, string> = {
@@ -3208,6 +3220,7 @@ export const INBOUND_SUBMISSION_KIND_LABELS: Record<InboundSubmissionKind, strin
   chat_inquiry: "Live chat inquiry",
   store_inquiry: "Store inquiry",
   booking_request: "EPK booking request",
+  job_application: "Role application (no account)",
   other: "Other",
 };
 

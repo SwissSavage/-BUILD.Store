@@ -250,8 +250,10 @@ export default function GovernancePage() {
               </li>
             </ul>
             <p className="mt-3 text-sm text-ink-muted">
-              Disclosed on every contract. Members see the split on
-              wallet history in compStage detail. No silent skim.
+              Disclosed on every contract. When a contract settles,
+              everyone paid gets a statement showing their share, what
+              it was calculated from, and any $BUILD issued alongside
+              it. No silent skim.
             </p>
           </>
         }

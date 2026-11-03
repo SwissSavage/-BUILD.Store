@@ -119,21 +119,18 @@ export default async function JobDetailPage({
                 </span>
               </CardTitle>
               <p className="mt-3 text-sm leading-relaxed text-ink-muted">
-                Send an application with your pitch and relevant work. The
-                cooperative routes suitable candidates to the client lead.
+                Send an application with your pitch and relevant work. No
+                account needed. Future Modern routes suitable candidates to
+                the client lead.
               </p>
-              {isSignedIn ? (
-                <a href="#job-application" className="fm-btn-primary mt-auto rounded-full px-4 py-2 text-center text-sm">
-                  Apply to this role
-                </a>
-              ) : (
-                <Link
-                  href={`/signin?next=/jobs/${job.id}`}
-                  className="fm-btn-primary mt-auto rounded-full px-4 py-2 text-center text-sm"
-                >
-                  Sign in to apply
-                </Link>
-              )}
+              {/* One destination now. "Sign in to apply" sent a reader
+                  away from a form they are allowed to use. */}
+              <a
+                href="#job-application"
+                className="fm-btn-primary mt-auto rounded-full px-4 py-2 text-center text-sm"
+              >
+                Apply to this role
+              </a>
             </Card>
 
             <Card>
@@ -168,33 +165,29 @@ export default async function JobDetailPage({
         <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_20rem]">
           <div className="hidden lg:block" aria-hidden="true" />
           <section id="job-application" className="min-w-0 scroll-mt-24">
-            {isSignedIn ? (
-              <ApplyToJobForm jobId={job.id} jobTitle={job.title} />
-            ) : (
-              <Card>
-                <p className="text-lg font-medium">
-                  Sign in to see the full brief and apply.
-                </p>
-                <p className="mt-2 text-sm text-ink-muted">
-                  Full-brief details (deliverables, timeline, contact) live
-                  behind the member surface. If you&apos;re not a member yet,
-                  you can request an invite.
-                </p>
-                <div className="mt-4 flex gap-3">
-                  <Link
-                    href={`/signin?next=/jobs/${job.id}`}
-                    className="fm-btn-primary rounded-full px-5 py-2 text-sm"
-                  >
-                    Sign in
-                  </Link>
-                  <Link
-                    href="/signup/join"
-                    className="rounded-full border border-[var(--surface-border)] px-5 py-2 text-sm text-ink hover:border-brand-magenta"
-                  >
-                    Request invite
-                  </Link>
-                </div>
-              </Card>
+            {/* 2026-11-03: this rendered the form only when signed in,
+                and otherwise a card reading "Sign in to see the full
+                brief and apply." The full brief renders
+                unconditionally above, so that sentence was false, and
+                the only thing actually behind the gate was the form.
+                A visitor can now apply, and that application is also
+                their membership application. */}
+            <ApplyToJobForm
+              jobId={job.id}
+              jobTitle={job.title}
+              isSignedIn={isSignedIn}
+            />
+            {!isSignedIn && (
+              <p className="mt-3 text-sm text-ink-muted">
+                Already a member?{" "}
+                <Link
+                  href={`/signin?next=/jobs/${job.id}`}
+                  className="text-brand-magentaText hover:underline"
+                >
+                  Sign in
+                </Link>{" "}
+                so this lands against your profile and standing.
+              </p>
             )}
           </section>
           <div className="hidden lg:block" aria-hidden="true" />

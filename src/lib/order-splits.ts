@@ -4,8 +4,16 @@
  * Same structural pattern as contract settlement, with one party in
  * each pool:
  *   - seller (85%) — the builder who listed the product/service.
- *   - admin pool (12%) — operating share for the cooperative.
- *   - reserve (3%)  — 50/50 Treasury + Liquidity Pool, non-negotiable.
+ *   - executive share (12%) — whoever brought in the product
+ *     relationship. Corrected 2026-11-02: this line used to read
+ *     "operating share for the cooperative", which is wrong and sent
+ *     at least one reader down the wrong path. A store sale has an
+ *     executive the same way a contract does. The cooperative only
+ *     catches this share when no executive is attributable or
+ *     eligible, and that fallback is itself broken — see task #108.
+ *   - cooperative ops (3%) — 50/50 Treasury + Liquidity Pool,
+ *     non-negotiable. "Cooperative ops" names this 3% and only this
+ *     3%.
  *
  * `houseFee` on the Order record is the gross 15% the cooperative
  * collects (admin + reserve combined). This module just breaks that

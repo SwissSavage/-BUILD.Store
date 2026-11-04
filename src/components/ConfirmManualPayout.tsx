@@ -18,6 +18,14 @@
  * answer that looks like a right one, and the whole point of this
  * field is that the record carries the real date.
  *
+ * WHY THE FEE FIELD IS OPTIONAL AND BLANK BY DEFAULT
+ *
+ * Blank means there was no fee, which is a different claim from 0.00.
+ * Domestic Found and ACH cost nothing to send; a wire or a
+ * cross-border rail does. It is recorded whoever bears it, because a
+ * payment fee is a deductible expense and a deduction needs a number
+ * and a date rather than a bank statement reconstructed a year later.
+ *
  * Presentational only: every value arrives as a prop, so this never
  * reaches the database and check-client-boundary stays green.
  * ─────────────────────────────────────────────────────────────
@@ -86,6 +94,24 @@ export function ConfirmManualPayout({ splitId }: { splitId: string }) {
             required
             placeholder="Confirmation #"
             className="mt-1 w-40 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor={`fee-${splitId}`}
+            className="block text-[11px] uppercase tracking-wider text-ink-muted"
+          >
+            Fee
+          </label>
+          <input
+            id={`fee-${splitId}`}
+            name="payoutFee"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            className="mt-1 w-24 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
           />
         </div>
 

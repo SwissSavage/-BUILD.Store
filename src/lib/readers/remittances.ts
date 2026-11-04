@@ -42,6 +42,8 @@ export interface RemittanceRow {
    */
   payoutStatus: PayoutStatus | null;
   payoutSentAt: string | null;
+  /** What it cost to send. Null means there was no fee. */
+  payoutFee: number | null;
 }
 
 /** numeric() comes back as a string from node-postgres. See task #94. */
@@ -62,6 +64,7 @@ function shape(r: typeof remittances.$inferSelect): RemittanceRow {
     disputeNote: r.disputeNote,
     payoutStatus: null,
     payoutSentAt: null,
+    payoutFee: null,
   };
 }
 
@@ -85,6 +88,7 @@ export async function getRemittancesForRecipient(
       pool: revenueSplits.pool,
       payoutStatus: revenueSplits.payoutStatus,
       payoutSentAt: revenueSplits.payoutSentAt,
+      payoutFee: revenueSplits.payoutFee,
     })
     .from(revenueSplits)
     .where(eq(revenueSplits.recipientId, recipientId));
@@ -101,6 +105,9 @@ export async function getRemittancesForRecipient(
       ...base,
       payoutStatus: (sp?.payoutStatus as PayoutStatus) ?? null,
       payoutSentAt: sp?.payoutSentAt ?? null,
+      payoutFee: sp?.payoutFee === null || sp?.payoutFee === undefined
+        ? null
+        : Number(sp.payoutFee),
     };
   });
 }

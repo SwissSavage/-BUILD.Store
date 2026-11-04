@@ -46,6 +46,8 @@ export interface StatementView {
   /** Live payment state. Null means not yet paid. See #113. */
   isPaid: boolean;
   paidOn: string | null;
+  /** Cost of sending, borne by whoever requires the method. */
+  payoutFee: number | null;
 }
 
 const POOL_LABEL: Record<string, string> = {
@@ -214,7 +216,17 @@ function Statement({ statement: s }: { statement: StatementView }) {
 
       {s.isPaid && s.paidOn && !s.acknowledgedAt && (
         <p className="mt-4 text-sm text-ink-muted">
-          Sent on {day(s.paidOn)}.
+          Sent on {day(s.paidOn)}
+          {/* Shown because the person reading this is the one who bore
+              it. A fee that only exists on a bank statement is a
+              number they cannot check. */}
+          {s.payoutFee !== null && s.payoutFee > 0 && (
+            <>
+              {" "}· {usd(s.payoutFee)} transfer fee on this method, so{" "}
+              {usd(s.cashAmount - s.payoutFee)} net.
+            </>
+          )}
+          .
         </p>
       )}
 

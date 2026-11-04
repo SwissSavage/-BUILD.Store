@@ -34,6 +34,29 @@
  * lesson as REMIT_ACCOUNTS: the split row stores a method id, and the
  * definition carries the behaviour.
  *
+ * WHO BEARS THE FEE (decided by Jamar, 2026-11-03)
+ *
+ * Anticipated digital-payment fees are priced into the contract
+ * upfront, so the client covers them — the same move the card gross-up
+ * already makes on the inbound side.
+ *
+ * Backend fees fall on whoever requires the method. Treasury only when
+ * no one can be assigned.
+ *
+ * This includes geography, deliberately. Jamar: "we know Bayu is
+ * outside the US, so he bills accordingly. He's already making a
+ * premium by operating in our market, which is why he does." Someone
+ * pricing their work for this market has already priced in the cost of
+ * being paid from it, so the rate carries the fee and the split does
+ * not need to subsidise it. An earlier draft of this note argued that
+ * a sole eligible rail means the method was required OF someone rather
+ * than BY them; that is answered by the rate, not by the pool.
+ *
+ * The fee is recorded on the split either way, because it is a
+ * deductible business expense for whoever paid it and a deduction
+ * needs a number and a date. Confirm with the accountant before
+ * treating that as settled: it is a tax question, not a code one.
+ *
  * ELIGIBILITY IS PART OF THE DEFINITION
  *
  * Found and Zelle are US-domestic. Offering a rail that cannot reach

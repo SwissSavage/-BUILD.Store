@@ -400,6 +400,13 @@ export const revenueSplits = pgTable("revenue_splits", {
   /** Bank confirmation, check number, or the rail's own reference. */
   payoutReference: text("payout_reference"),
   /**
+   * What it cost to send. Borne by whoever requires the method, but
+   * recorded regardless: a payment fee is a deductible expense and a
+   * deduction needs a number. Null means no fee, which is a different
+   * claim from zero. See 0046.
+   */
+  payoutFee: numeric("payout_fee", { precision: 12, scale: 2 }),
+  /**
    * The real payout record, for methods the app did not execute.
    * Evidence in proportion to ignorance: inbound attaches the invoice
    * we did not issue, outbound the payout we did not send.

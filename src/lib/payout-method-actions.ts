@@ -347,6 +347,7 @@ export async function confirmManualPayout(
   const splitId = String(formData.get("splitId") ?? "");
   const reference = String(formData.get("reference") ?? "").trim();
   const sentOn = String(formData.get("sentOn") ?? "").trim();
+  const feeRaw = String(formData.get("payoutFee") ?? "").trim();
   const file = formData.get("payoutDocument");
 
   if (!splitId) return { ok: false, message: "Missing split id." };
@@ -371,6 +372,17 @@ export async function confirmManualPayout(
   }
   if (sentAt.getTime() > Date.now() + 86_400_000) {
     return { ok: false, message: "That date is in the future." };
+  }
+
+  // Blank means there was no fee, which is a different claim from
+  // "0.00". Only a parseable positive number is recorded.
+  let fee: string | null = null;
+  if (feeRaw) {
+    const parsed = Number(feeRaw);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return { ok: false, message: "That fee is not a number." };
+    }
+    fee = parsed.toFixed(2);
   }
 
   const [split] = await db
@@ -407,6 +419,7 @@ export async function confirmManualPayout(
       payoutStatus: "sent",
       payoutSentAt: sentAt.toISOString(),
       payoutReference: reference,
+      payoutFee: fee,
       ...(document
         ? {
             payoutDocumentName: document.name,
@@ -431,6 +444,7 @@ export async function confirmManualPayout(
       payoutStatus: "sent",
       reference,
       payoutSentAt: sentAt.toISOString(),
+      payoutFee: fee,
       document: document?.name ?? null,
     },
     reason: `Record-mode payout confirmed sent by ${admin.firstName ?? admin.id}`,

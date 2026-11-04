@@ -923,6 +923,13 @@ export interface RevenueSplit {
   /** Bank confirmation, check number, or the rail's own reference. */
   payoutReference: string | null;
   /**
+   * What it cost to send, as a numeric string. Borne by whoever
+   * requires the method; recorded regardless because it is a
+   * deductible expense. Null means there was no fee, which is a
+   * different claim from "0.00".
+   */
+  payoutFee: string | null;
+  /**
    * The real payout record, for methods the app did not execute.
    * Evidence in proportion to ignorance.
    */

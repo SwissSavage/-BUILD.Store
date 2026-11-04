@@ -32,7 +32,7 @@ import {
   railIsAutomated,
   type RailHealth,
 } from "@/lib/payments";
-import { confirmManualPayout } from "@/lib/payout-method-actions";
+import { ConfirmManualPayout } from "@/components/ConfirmManualPayout";
 import { getPendingSplits, safely } from "@/lib/readers";
 import { getAllUsers } from "@/lib/readers/users";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
@@ -196,25 +196,7 @@ export default async function AdminPaymentsPage() {
                     </p>
                   </div>
 
-                  <form
-                    action={confirmManualPayout}
-                    className="flex shrink-0 items-center gap-2"
-                  >
-                    <input type="hidden" name="splitId" value={split.id} />
-                    <input
-                      name="reference"
-                      type="text"
-                      required
-                      placeholder="Confirmation #"
-                      className="w-40 rounded-lg border border-[var(--surface-border)] px-3 py-1.5 text-sm"
-                    />
-                    <Button
-                      type="submit"
-                      className="rounded-lg bg-[var(--brand-magenta)] px-3 py-1.5 text-sm font-medium text-white"
-                    >
-                      Mark sent
-                    </Button>
-                  </form>
+                  <ConfirmManualPayout splitId={split.id} />
                 </li>
               );
             })}

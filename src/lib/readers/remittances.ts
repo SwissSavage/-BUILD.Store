@@ -16,7 +16,8 @@
  */
 import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { remittances } from "@/db/schema";
+import { remittances, revenueSplits } from "@/db/schema";
+import type { PayoutStatus } from "@/lib/types";
 
 export interface RemittanceRow {
   id: string;
@@ -32,6 +33,19 @@ export interface RemittanceRow {
   acknowledgedAt: string | null;
   disputedAt: string | null;
   disputeNote: string | null;
+  /**
+   * Payment state of the underlying split. The statement issues at
+   * settle saying what is OWED; for a record-mode rail the money has
+   * usually not moved yet. Confirm does not unlock until this is sent,
+   * so confirming always means both "the amount is right" and "I
+   * received it". See #113.
+   */
+  payoutStatus: PayoutStatus | null;
+  payoutSentAt: string | null;
+  /** What it cost to send. Null means there was no fee. */
+  payoutFee: number | null;
+  /** Who paid it. The deduction follows the payer. */
+  payoutFeeBorneBy: "recipient" | "treasury" | null;
 }
 
 /** numeric() comes back as a string from node-postgres. See task #94. */
@@ -50,6 +64,10 @@ function shape(r: typeof remittances.$inferSelect): RemittanceRow {
     acknowledgedAt: r.acknowledgedAt,
     disputedAt: r.disputedAt,
     disputeNote: r.disputeNote,
+    payoutStatus: null,
+    payoutSentAt: null,
+    payoutFee: null,
+    payoutFeeBorneBy: null,
   };
 }
 
@@ -62,7 +80,41 @@ export async function getRemittancesForRecipient(
     .from(remittances)
     .where(eq(remittances.recipientId, recipientId))
     .orderBy(desc(remittances.issuedAt));
-  return rows.map(shape);
+
+  // The payment state is live while the basis stays frozen. A
+  // statement is still evidence of what somebody was told at the time;
+  // only "has it been paid yet" moves.
+  const splits = await db
+    .select({
+      contractId: revenueSplits.contractId,
+      recipientId: revenueSplits.recipientId,
+      pool: revenueSplits.pool,
+      payoutStatus: revenueSplits.payoutStatus,
+      payoutSentAt: revenueSplits.payoutSentAt,
+      payoutFee: revenueSplits.payoutFee,
+      payoutFeeBorneBy: revenueSplits.payoutFeeBorneBy,
+    })
+    .from(revenueSplits)
+    .where(eq(revenueSplits.recipientId, recipientId));
+
+  const key = (c: string | null, p: string) => `${c ?? ""}:${p}`;
+  const byKey = new Map(
+    splits.map((sp) => [key(sp.contractId, sp.pool), sp]),
+  );
+
+  return rows.map((r) => {
+    const base = shape(r);
+    const sp = byKey.get(key(r.contractId, r.pool));
+    return {
+      ...base,
+      payoutStatus: (sp?.payoutStatus as PayoutStatus) ?? null,
+      payoutSentAt: sp?.payoutSentAt ?? null,
+      payoutFee: sp?.payoutFee === null || sp?.payoutFee === undefined
+        ? null
+        : Number(sp.payoutFee),
+      payoutFeeBorneBy: sp?.payoutFeeBorneBy ?? null,
+    };
+  });
 }
 
 /** The admin side: every statement on one deal, with its state. */

@@ -43,6 +43,11 @@ export interface StatementView {
   acknowledgedAt: string | null;
   disputedAt: string | null;
   disputeNote: string | null;
+  /** Live payment state. Null means not yet paid. See #113. */
+  isPaid: boolean;
+  paidOn: string | null;
+  /** Cost of sending, borne by whoever requires the method. */
+  payoutFee: number | null;
 }
 
 const POOL_LABEL: Record<string, string> = {
@@ -67,8 +72,10 @@ export function RemittanceStatements({
 }: {
   statements: StatementView[];
 }) {
+  // Only statements that can actually be confirmed. One that is owed
+  // but unpaid is not waiting on the recipient, it is waiting on us.
   const unconfirmed = statements.filter(
-    (s) => !s.acknowledgedAt && !s.disputedAt,
+    (s) => s.isPaid && !s.acknowledgedAt && !s.disputedAt,
   ).length;
 
   return (
@@ -113,11 +120,17 @@ export function RemittanceStatements({
 function Statement({ statement: s }: { statement: StatementView }) {
   const [disputing, setDisputing] = useState(false);
 
+  // Owed until the money actually moves. The statement issues at
+  // settle, and for a rail with no API the payment follows later, so
+  // saying "paid" here would be the same lie as an invoice that claims
+  // to have been issued.
   const status = s.disputedAt
     ? { label: "Disputed", color: "#E53E3E" }
     : s.acknowledgedAt
       ? { label: "Confirmed", color: "#007048" }
-      : { label: "Awaiting your confirmation", color: "#5070F0" };
+      : s.isPaid
+        ? { label: "Paid — confirm when you have it", color: "#5070F0" }
+        : { label: "Owed", color: "#8A8A8A" };
 
   return (
     <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-inset)] p-5">
@@ -193,7 +206,32 @@ function Statement({ statement: s }: { statement: StatementView }) {
         </p>
       )}
 
-      {!s.acknowledgedAt && (
+      {!s.isPaid && !s.disputedAt && (
+        <p className="mt-4 text-sm text-ink-muted">
+          This is what you are owed and how it was worked out. You can
+          confirm it once the payment has gone out, so confirming means
+          both that the amount is right and that you received it.
+        </p>
+      )}
+
+      {s.isPaid && s.paidOn && !s.acknowledgedAt && (
+        <p className="mt-4 text-sm text-ink-muted">
+          Sent on {day(s.paidOn)}
+          {/* Shown because the person reading this is the one who bore
+              it. A fee that only exists on a bank statement is a
+              number they cannot check. */}
+          {s.payoutFee !== null && s.payoutFee > 0 && (
+            <>
+              {" "}· {usd(s.payoutFee)} transfer fee on this method, so{" "}
+              {usd(s.cashAmount - s.payoutFee)} net.
+            </>
+          )}
+          .
+        </p>
+      )}
+
+      {/* Confirm does not unlock until the split says sent. */}
+      {s.isPaid && !s.acknowledgedAt && (
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <form action={acknowledgeRemittance}>
             <input type="hidden" name="remittanceId" value={s.id} />
@@ -217,7 +255,7 @@ function Statement({ statement: s }: { statement: StatementView }) {
         </div>
       )}
 
-      {disputing && (
+      {disputing && s.isPaid && (
         <form action={disputeRemittance} className="mt-4">
           <input type="hidden" name="remittanceId" value={s.id} />
           <label

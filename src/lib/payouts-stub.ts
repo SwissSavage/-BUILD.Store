@@ -32,6 +32,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { revenueSplits, users } from "@/db/schema";
 import { getUserById } from "@/lib/readers/users";
+import { isRecordMode } from "@/lib/payout-protocols";
 import { splitReader } from "@/lib/readers";
 import type { PayoutStatus } from "@/lib/types";
 
@@ -108,8 +109,29 @@ export async function dispatchTransfer(
   const split = await splitReader.byId(splitId);
   if (!split) throw new Error("Split row not found");
 
+  // A record-mode method is sent by a human elsewhere. Attempting a
+  // transfer here produced the two failures this guard exists to stop:
+  // every Found recipient marked `failed` for a transfer nobody meant
+  // to make, and house_treasury / house_liquidity_pool sailing past
+  // the Stripe check below — because getUserById returns nothing for a
+  // sentinel, so `recipient` was falsy — to be marked `sent` with an
+  // invented tr_<uuid>. The rows needing no transfer were the only
+  // ones claiming a successful one. See task #113.
+  if (isRecordMode(split.payoutMethodId)) {
+    return {
+      status: split.payoutStatus,
+      transferId: null,
+      reason: "record_mode",
+    };
+  }
+
   const recipient = await getUserById(split.recipientId);
-  if (recipient && !recipient.stripePayoutsEnabled) {
+  if (!recipient) {
+    // A routing method pointed at an id that is not a user. Never
+    // mint a transfer for it.
+    return { status: split.payoutStatus, transferId: null, reason: "no_recipient" };
+  }
+  if (!recipient.stripePayoutsEnabled) {
     await db
       .update(revenueSplits)
       .set({

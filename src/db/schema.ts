@@ -372,11 +372,56 @@ export const revenueSplits = pgTable("revenue_splits", {
   auto: boolean("auto").notNull().default(false),
   decidedBy: text("decided_by").references(() => users.id),
   decidedAt: timestamp("decided_at", { mode: "string", withTimezone: true }),
+  /**
+   * See drizzle/0045_payout_protocols.sql and task #113.
+   *   allocated       house pools; terminal, no transfer exists
+   *   awaiting_manual a person on a record-mode method, not yet sent
+   *   sent            confirmed, with date, reference and document
+   *   failed          a routing method that tried and failed
+   */
   payoutStatus: text("payout_status", {
-    enum: ["pending", "queued", "sent", "failed"],
+    enum: [
+      "pending",
+      "queued",
+      "allocated",
+      "awaiting_manual",
+      "sent",
+      "failed",
+    ],
   }).notNull(),
   payoutSentAt: timestamp("payout_sent_at", { mode: "string", withTimezone: true }),
   stripeTransferId: text("stripe_transfer_id"),
+  /**
+   * Which method this payout goes out on, chosen per participant at
+   * settle. An id validated against configured methods, not a pg enum,
+   * so adding Wise or Whop is config rather than a migration.
+   */
+  payoutMethodId: text("payout_method_id"),
+  /** Bank confirmation, check number, or the rail's own reference. */
+  payoutReference: text("payout_reference"),
+  /**
+   * What it cost to send. Borne by whoever requires the method, but
+   * recorded regardless: a payment fee is a deductible expense and a
+   * deduction needs a number. Null means no fee, which is a different
+   * claim from zero. See 0046.
+   */
+  payoutFee: numeric("payout_fee", { precision: 12, scale: 2 }),
+  /**
+   * Who actually paid the fee, because the deduction follows the
+   * payer. "recipient" is the rule; "treasury" is the exception for
+   * when nobody can be assigned. Null when there was no fee.
+   */
+  payoutFeeBorneBy: text("payout_fee_borne_by", {
+    enum: ["recipient", "treasury"],
+  }),
+  /**
+   * The real payout record, for methods the app did not execute.
+   * Evidence in proportion to ignorance: inbound attaches the invoice
+   * we did not issue, outbound the payout we did not send.
+   */
+  payoutDocumentName: text("payout_document_name"),
+  payoutDocumentSize: integer("payout_document_size"),
+  payoutDocumentBase64: text("payout_document_base64"),
   notes: text("notes"),
 });
 

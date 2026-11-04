@@ -18,7 +18,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { payoutMethods } from "@/db/schema";
+import { payoutMethods, revenueSplits } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import {
   RAIL_SPECS,
@@ -27,7 +27,14 @@ import {
   verifyPayoutMethod,
 } from "@/lib/payments";
 import type { PayoutMethod, PayoutRail } from "@/lib/payments";
+import { validateLandingFiles } from "@/lib/landing-inbound-validation";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+
+/** Returned rather than thrown: Next strips action errors in prod. */
+export interface ManualPayoutResult {
+  ok: boolean;
+  message: string;
+}
 
 /** Field keys that are safe to persist in the metadata jsonb column. */
 const METADATA_SAFE_KEYS = new Set([
@@ -302,29 +309,137 @@ export async function removePayoutMethod(formData: FormData): Promise<void> {
 }
 
 /**
- * Admin: confirm an assisted-rail payout actually went out.
+ * Admin: confirm a record-mode payout actually went out.
  *
- * Zelle and check payouts sit in `awaiting_manual` until a human sends
- * them from the cooperative's bank and records the reference here.
- * This is the only path that moves such a split to `sent`.
+ * ─────────────────────────────────────────────────────────────
+ * WHY IT NOW WRITES THE SPLIT (2026-11-03)
  *
- * REPLACE WITH: once this lands alongside the settlement engine, also
- * update the revenue_splits row (payout_status, payout_sent_at) in the
- * same transaction. Kept separate for now so the hub can ship without
- * touching settlement.
+ * This used to log an audit entry and nothing else. Its own docblock
+ * said so: "REPLACE WITH: once this lands alongside the settlement
+ * engine, also update the revenue_splits row (payout_status,
+ * payout_sent_at)". The settlement engine landed and nobody came back,
+ * so confirming a payout changed nothing. The audit log said confirmed
+ * while the data still said failed, and lifetime paid stayed at zero
+ * for money that had actually left the account.
+ *
+ * WHY IT TAKES A DATE
+ *
+ * Found has no API, so the money moves before anyone opens the app —
+ * routinely days before. Stamping now() would record the moment
+ * somebody got round to the paperwork, not the moment the recipient
+ * was paid. Retroactive is the normal case for a record method, not an
+ * exception.
+ *
+ * WHY IT TAKES A DOCUMENT
+ *
+ * Evidence in proportion to ignorance. The app did not witness this
+ * payment, so a reference string is a claim and the payout record is
+ * evidence. Mirrors the invoice source document in 0043: inbound
+ * attaches the invoice we did not issue, outbound the payout we did
+ * not send.
+ * ─────────────────────────────────────────────────────────────
  */
-export async function confirmManualPayout(formData: FormData): Promise<void> {
+export async function confirmManualPayout(
+  formData: FormData,
+): Promise<ManualPayoutResult> {
   const admin = await requireAdmin();
 
   const splitId = String(formData.get("splitId") ?? "");
   const reference = String(formData.get("reference") ?? "").trim();
+  const sentOn = String(formData.get("sentOn") ?? "").trim();
+  const feeRaw = String(formData.get("payoutFee") ?? "").trim();
+  const feeBorneRaw = String(formData.get("payoutFeeBorneBy") ?? "").trim();
+  const file = formData.get("payoutDocument");
 
-  if (!splitId) throw new Error("Missing split id");
+  if (!splitId) return { ok: false, message: "Missing split id." };
   if (!reference) {
-    throw new Error(
-      "Record the bank confirmation or check number so the payout is auditable.",
-    );
+    return {
+      ok: false,
+      message:
+        "Record the bank confirmation or check number so the payout is auditable.",
+    };
   }
+  if (!sentOn) {
+    return {
+      ok: false,
+      message:
+        "Enter the date the money actually went out, not today. Found payouts are recorded after the fact.",
+    };
+  }
+
+  const sentAt = new Date(`${sentOn}T12:00:00Z`);
+  if (Number.isNaN(sentAt.getTime())) {
+    return { ok: false, message: "That date is not valid." };
+  }
+  if (sentAt.getTime() > Date.now() + 86_400_000) {
+    return { ok: false, message: "That date is in the future." };
+  }
+
+  // Blank means there was no fee, which is a different claim from
+  // "0.00". Only a parseable positive number is recorded.
+  let fee: string | null = null;
+  if (feeRaw) {
+    const parsed = Number(feeRaw);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return { ok: false, message: "That fee is not a number." };
+    }
+    fee = parsed.toFixed(2);
+  }
+
+  // The deduction follows the payer, so a fee with no payer is a
+  // number rather than a record. Defaults to the recipient, which is
+  // the rule; treasury is the exception and has to be chosen.
+  const feeBorneBy: "recipient" | "treasury" | null = fee
+    ? feeBorneRaw === "treasury"
+      ? "treasury"
+      : "recipient"
+    : null;
+
+  const [split] = await db
+    .select({ id: revenueSplits.id, status: revenueSplits.payoutStatus })
+    .from(revenueSplits)
+    .where(eq(revenueSplits.id, splitId))
+    .limit(1);
+  if (!split) return { ok: false, message: "That payout row does not exist." };
+
+  // Same validator the application and invoice forms use: PDF only,
+  // checked against the %PDF- magic bytes rather than the MIME type a
+  // browser claimed.
+  let document: { name: string; size: number; base64: string } | null = null;
+  if (file instanceof File && file.size > 0) {
+    try {
+      const [validated] = await validateLandingFiles([file]);
+      document = validated
+        ? { name: validated.name, size: validated.size, base64: validated.base64 }
+        : null;
+    } catch (err) {
+      return {
+        ok: false,
+        message:
+          err instanceof Error && /PDF/i.test(err.message)
+            ? "The payout record has to be a PDF."
+            : "That file is too large. Keep it under 12MB.",
+      };
+    }
+  }
+
+  await db
+    .update(revenueSplits)
+    .set({
+      payoutStatus: "sent",
+      payoutSentAt: sentAt.toISOString(),
+      payoutReference: reference,
+      payoutFee: fee,
+      payoutFeeBorneBy: feeBorneBy,
+      ...(document
+        ? {
+            payoutDocumentName: document.name,
+            payoutDocumentSize: document.size,
+            payoutDocumentBase64: document.base64,
+          }
+        : {}),
+    })
+    .where(eq(revenueSplits.id, splitId));
 
   await logAuditEvent({
     actorUserId: admin.id,
@@ -332,10 +447,23 @@ export async function confirmManualPayout(formData: FormData): Promise<void> {
     action: "payout.manual_confirmed",
     resourceKind: "revenue_split",
     resourceId: splitId,
-    before: null,
-    after: { reference },
-    reason: `Assisted-rail payout confirmed sent by ${admin.firstName ?? admin.id}`,
+    before: { payoutStatus: split.status },
+    // The reference and the date are the record of what was done. The
+    // document itself is not repeated here: the audit log is read by
+    // more people than the payout row is.
+    after: {
+      payoutStatus: "sent",
+      reference,
+      payoutSentAt: sentAt.toISOString(),
+      payoutFee: fee,
+      payoutFeeBorneBy: feeBorneBy,
+      document: document?.name ?? null,
+    },
+    reason: `Record-mode payout confirmed sent by ${admin.firstName ?? admin.id}`,
   });
 
   revalidatePath("/admin/payments");
+  revalidatePath("/profile/payouts");
+
+  return { ok: true, message: `Recorded as sent on ${sentOn}.` };
 }

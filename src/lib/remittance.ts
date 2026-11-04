@@ -234,11 +234,15 @@ export async function issueRemittancesForSettlement(
     await pushNotification({
       userId: split.recipientId,
       kind: "split_distributed",
-      title: `You were paid on ${input.contractTitle}`,
+      // "Owed", not "paid". The statement issues at settle, and for a
+      // record-mode rail the money has usually not moved yet. Saying
+      // paid here is the same class of lie as an invoice that claims
+      // to have been issued. See #113.
+      title: `Your share of ${input.contractTitle} is settled`,
       body:
         build > 0
-          ? `${usd(cash)} plus ${build.toLocaleString()} $BUILD. Check the statement and confirm it looks right.`
-          : `${usd(cash)}. Check the statement and confirm it looks right.`,
+          ? `${usd(cash)} plus ${build.toLocaleString()} $BUILD. You can confirm it once the payment goes out.`
+          : `${usd(cash)}. You can confirm it once the payment goes out.`,
       href: "/profile/payouts",
     });
   }

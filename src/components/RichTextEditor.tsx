@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/Button";
 
-import { type MouseEvent, useState } from "react";
+import { type MouseEvent, useEffect, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -93,12 +93,18 @@ export function RichTextEditor({
   required = false,
   minLength,
   validationKey,
+  ariaLabel,
+  ariaDescribedBy,
+  invalid,
 }: {
   name: string;
   initialValue: string;
   required?: boolean;
   minLength?: number;
   validationKey?: string;
+  ariaLabel?: string;
+  ariaDescribedBy?: string;
+  invalid?: boolean;
 }) {
   const initial = richTextInitialValue(initialValue);
   const [value, setValue] = useState(() => serializeRichText(initial));
@@ -141,6 +147,15 @@ export function RichTextEditor({
       setPlainText(richTextPlainText(document).trim());
     },
   });
+
+  useEffect(() => {
+    if (!editor) return;
+    const element = editor.view.dom;
+    if (ariaLabel) element.setAttribute("aria-label", ariaLabel);
+    if (ariaDescribedBy) element.setAttribute("aria-describedby", ariaDescribedBy);
+    if (invalid) element.setAttribute("aria-invalid", "true");
+    else element.removeAttribute("aria-invalid");
+  }, [editor, ariaLabel, ariaDescribedBy, invalid]);
 
   const addLink = () => {
     const href = window.prompt("Link URL");

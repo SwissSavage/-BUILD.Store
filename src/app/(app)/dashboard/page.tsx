@@ -28,6 +28,8 @@ import {
   userPillars,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { briefSummary } from "@/components/Brief";
+import { ButtonLink } from "@/components/Button";
 import { TierBadge } from "@/components/TierBadge";
 import { Avatar } from "@/components/Avatar";
 import {
@@ -239,12 +241,14 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
-        <Link
+        <ButtonLink
           href="/contracts/new"
-          className="fm-btn-primary self-start rounded-full px-6 py-2.5 text-sm font-medium"
+          variant="primary"
+          size="large"
+          className="self-start"
         >
           Submit an RFP
-        </Link>
+        </ButtonLink>
       </div>
 
       {showWalkthroughCallout && (
@@ -464,7 +468,7 @@ export default async function DashboardPage() {
                     <CardEyebrow>{INDUSTRY_LABELS[p.industry]}</CardEyebrow>
                     <CardTitle className="mt-1 truncate">{p.title}</CardTitle>
                     <p className="mt-2 text-sm text-ink-muted line-clamp-2">
-                      {p.description}
+                      {briefSummary(p.description, { skipTitle: p.title })}
                     </p>
                   </div>
                   <HubspotStageBadge stage={p.hubspotStage} />

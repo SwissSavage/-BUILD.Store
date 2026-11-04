@@ -106,9 +106,30 @@ export function publicNameDisambiguated(
  * Full name, used only in admin surfaces and on the signed-in user's own
  * dashboard/profile. Never leak this to public pages.
  */
-export function adminName(u: Pick<User, "firstName" | "lastName"> | null | undefined): string {
+export function adminName(
+  u: Pick<User, "firstName" | "lastName" | "handle"> | null | undefined,
+): string {
   if (!u) return "Unknown";
-  return `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || "Unknown";
+  const full = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim();
+  if (full) return full;
+
+  // Fall back to the handle, which users.handle guarantees: it is NOT
+  // NULL and unique, generated from the email at account creation.
+  //
+  // publicName() was given this fallback and adminName() was not, so
+  // the same account read "@ogokyurek" in the invoice composer and
+  // "Unknown" on the attribution page. Unknown is what you call an id
+  // that resolves to nothing, and reading it on a contributor about to
+  // be paid 85% of a contract sends you looking for a dead user id
+  // rather than a blank name field.
+  //
+  // Magic-link signup supplies no name at all, so an account with
+  // empty name fields is the normal case rather than an anomaly. See
+  // the name-population work for closing that at the source.
+  const handle = u.handle?.trim();
+  if (handle) return `@${handle}`;
+
+  return "Unknown";
 }
 
 export interface User {

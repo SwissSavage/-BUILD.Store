@@ -805,11 +805,38 @@ export interface AttributionEntry {
  */
 export type SplitPool = "contributor" | "admin" | "reserve";
 
-export type PayoutStatus = "pending" | "queued" | "sent" | "failed";
+/**
+ * Four of these mean one thing each. See task #113.
+ *
+ * `failed` used to mean two opposite things: a transfer that broke,
+ * and a transfer never attempted because the recipient is not paid
+ * that way at all. Splitting them out is the point of this union.
+ */
+export type PayoutStatus =
+  | "pending"
+  | "queued"
+  /**
+   * House pools. Terminal at settlement: no transfer exists, because
+   * house_treasury and house_liquidity_pool are sentinels rather than
+   * people. Treasury funds business expenses, but that outflow is an
+   * expense ledger reconciled from the bank, not settlement's job.
+   */
+  | "allocated"
+  /**
+   * A person on a record-mode method. The money has not been confirmed
+   * sent, and the app will not attempt to send it: Found has no API,
+   * so a human moves it and records the evidence afterwards.
+   */
+  | "awaiting_manual"
+  | "sent"
+  /** A routing method that actually tried and actually failed. */
+  | "failed";
 
 export const PAYOUT_STATUS_LABELS: Record<PayoutStatus, string> = {
   pending: "Pending decision",
   queued: "Queued for transfer",
+  allocated: "Allocated",
+  awaiting_manual: "Awaiting manual send",
   sent: "Sent",
   failed: "Failed",
 };
@@ -878,9 +905,29 @@ export interface RevenueSplit {
   decidedBy: string | null;
   decidedAt: string | null;
   payoutStatus: PayoutStatus;
+  /**
+   * The REAL date the money moved, which is routinely before anyone
+   * opened the app: Found has no API, so a payout is recorded after
+   * the fact and frequently days later.
+   */
   payoutSentAt: string | null;
   /** Stripe Connect transfer ID once the payout is dispatched. */
   stripeTransferId: string | null;
+  /**
+   * Which method this payout goes out on, chosen per participant at
+   * settle rather than read off the recipient's profile. See #113:
+   * payout_methods is a registry members do not maintain, and a
+   * registry nobody fills in cannot decide where money goes.
+   */
+  payoutMethodId: string | null;
+  /** Bank confirmation, check number, or the rail's own reference. */
+  payoutReference: string | null;
+  /**
+   * The real payout record, for methods the app did not execute.
+   * Evidence in proportion to ignorance.
+   */
+  payoutDocumentName: string | null;
+  payoutDocumentSize: number | null;
   notes: string | null;
 }
 

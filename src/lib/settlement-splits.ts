@@ -35,6 +35,7 @@
  * db.transaction so the two settle atomically.
  */
 import { db } from "@/db/client";
+import { initialPayoutStatus } from "@/lib/payout-protocols";
 import { revenueSplits } from "@/db/schema";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { getUserById } from "@/lib/readers/users";
@@ -124,6 +125,17 @@ export interface WriteStandardSplitsInput {
   actorUserId: string;
   /** Optional per-row note context. */
   noteContext?: string;
+  /**
+   * Which payout method each recipient is paid on, keyed by user id.
+   * Chosen per participant at settle rather than read off a profile:
+   * payout_methods is a registry members do not maintain, and a
+   * registry nobody fills in cannot decide where money goes. See #113.
+   *
+   * A recipient missing from the map, or mapped to an unknown id,
+   * falls to record mode and lands awaiting_manual. The safe default
+   * is "a human looks at it", never "dispatch and hope".
+   */
+  payoutMethodByUserId?: Record<string, string>;
 }
 
 export interface WriteSplitsResult {
@@ -162,6 +174,10 @@ export async function writeStandardSettlementSplits(
   const liquidityPool = round2(input.gross * LP_PCT);
 
   const now = new Date().toISOString();
+
+  /** The method chosen for this recipient, or null for none. */
+  const methodFor = (userId: string): string | null =>
+    input.payoutMethodByUserId?.[userId] ?? null;
   // Reader swap 2026-08-29: the actor stamped on every split row was
   // looked up in the seed array, so a real admin settling a contract
   // was recorded as null in the audit trail.
@@ -197,9 +213,16 @@ export async function writeStandardSettlementSplits(
       auto: false,
       decidedBy: input.actorUserId,
       decidedAt: now,
-      payoutStatus: "queued",
+      // Derived from the chosen method: a record method lands in
+      // awaiting_manual, never queued. Queued implies something will
+      // pick it up, and for Found nothing will.
+      payoutStatus: initialPayoutStatus(methodFor(userId)),
+      payoutMethodId: methodFor(userId),
       payoutSentAt: null,
       stripeTransferId: null,
+      payoutReference: null,
+      payoutDocumentName: null,
+      payoutDocumentSize: null,
       notes: input.noteContext ?? null,
     });
   });
@@ -232,9 +255,13 @@ export async function writeStandardSettlementSplits(
       auto: false,
       decidedBy: input.actorUserId,
       decidedAt: now,
-      payoutStatus: "queued",
+      payoutStatus: initialPayoutStatus(methodFor(userId)),
+      payoutMethodId: methodFor(userId),
       payoutSentAt: null,
       stripeTransferId: null,
+      payoutReference: null,
+      payoutDocumentName: null,
+      payoutDocumentSize: null,
       notes: input.noteContext ?? null,
     });
   });
@@ -306,9 +333,17 @@ function makeReserveRow(args: {
     auto: true,
     decidedBy: null,
     decidedAt: null,
-    payoutStatus: "queued",
+    // Terminal. house_treasury and house_liquidity_pool are sentinels,
+    // not people, so there is no transfer to attempt and none to fail.
+    // Treasury funds business expenses, but that outflow is an expense
+    // ledger reconciled from the bank, not settlement's business.
+    payoutStatus: "allocated",
     payoutSentAt: null,
     stripeTransferId: null,
+    payoutMethodId: null,
+    payoutReference: null,
+    payoutDocumentName: null,
+    payoutDocumentSize: null,
     notes: `Auto-routed: 1.5% of gross to ${args.label}.`,
   };
 }
@@ -351,9 +386,13 @@ export async function writeDonationSplit(
       auto: true,
       decidedBy: null,
       decidedAt: null,
-      payoutStatus: "queued",
+      payoutStatus: "allocated",
       payoutSentAt: null,
       stripeTransferId: null,
+      payoutMethodId: null,
+      payoutReference: null,
+      payoutDocumentName: null,
+      payoutDocumentSize: null,
       notes: input.noteContext ?? "War-chest donation: 50% to Treasury.",
     },
     {
@@ -368,9 +407,13 @@ export async function writeDonationSplit(
       auto: true,
       decidedBy: null,
       decidedAt: null,
-      payoutStatus: "queued",
+      payoutStatus: "allocated",
       payoutSentAt: null,
       stripeTransferId: null,
+      payoutMethodId: null,
+      payoutReference: null,
+      payoutDocumentName: null,
+      payoutDocumentSize: null,
       notes: input.noteContext ?? "War-chest donation: 50% to LP.",
     },
   ];

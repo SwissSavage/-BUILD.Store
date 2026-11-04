@@ -1,4 +1,6 @@
 "use client";
+
+import { PayoutMethodPicker } from "@/components/PayoutMethodPicker";
 import { Button } from "@/components/Button";
 
 /**
@@ -122,14 +124,10 @@ export function AdminAllocator({
                   <td className="py-3">
                     <input type="hidden" name="adminId" value={row.userId} />
                     <div className="font-medium">{c?.name ?? row.userId}</div>
-                    {c && !c.stripePayoutsEnabled && (
-                      <p
-                        className="mt-0.5 text-xs"
-                        style={{ color: "var(--fm-red-text)" }}
-                      >
-                        Stripe payouts not enabled. Transfer will fail.
-                      </p>
-                    )}
+                    {/* Replaced the "Stripe payouts not enabled" line,
+                        which was shown to everyone and described a
+                        transfer nobody intended to make. See #113. */}
+                    <PayoutMethodPicker userId={row.userId} />
                   </td>
                   <td className="py-3 text-right">
                     <input

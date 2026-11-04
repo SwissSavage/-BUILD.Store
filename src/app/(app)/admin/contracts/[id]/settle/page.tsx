@@ -51,6 +51,7 @@ import {
   writeStandardSettlementSplits,
 } from "@/lib/settlement-splits";
 import { hasValidPayoutDocument } from "@/lib/payout-gate";
+import { PayoutMethodPicker } from "@/components/PayoutMethodPicker";
 import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
 import { issueRemittancesForSettlement } from "@/lib/remittance";
 import { getAllUsers } from "@/lib/readers/users";
@@ -86,6 +87,10 @@ import { AdminAllocator } from "@/components/AdminAllocator";
 const PAYOUT_COLOR: Record<PayoutStatus, string> = {
   pending: "#5070F0",
   queued: "#5070F0",
+  // Terminal for house pools; no transfer exists to succeed or fail.
+  allocated: "#8A8A8A",
+  // A person on a record-mode rail: a human sends it. See #113.
+  awaiting_manual: "#B8860B",
   sent: "#007048",
   failed: "#E53E3E",
 };
@@ -146,6 +151,20 @@ async function settleContract(formData: FormData) {
     .map((id, i) => ({ id, pct: adminPcts[i] ?? 0 }))
     .filter((r) => r.id && r.pct > 0);
 
+  // Which rail each participant is paid on, chosen per person rather
+  // than read off their profile. See #113: payout_methods is a
+  // registry members do not maintain, and a registry nobody fills in
+  // cannot decide where money goes. A missing or unknown value falls
+  // to record mode, so the split lands awaiting_manual rather than
+  // being dispatched on a guess.
+  const payoutMethodByUserId: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith("payoutMethod:")) continue;
+    const userId = key.slice("payoutMethod:".length);
+    const methodId = String(value).trim();
+    if (userId && methodId) payoutMethodByUserId[userId] = methodId;
+  }
+
   const now = new Date().toISOString();
 
   // Persist the admin list back onto the project so the next settle
@@ -175,6 +194,7 @@ async function settleContract(formData: FormData) {
       percentages: adminRows.map((r) => r.pct),
     },
     actorUserId: admin.id,
+    payoutMethodByUserId,
     noteContext: `Contract settlement — ${project.title}`,
   });
 
@@ -465,14 +485,15 @@ export default async function SettlePage({
                           value={row.userId}
                         />
                         <div className="font-medium">{adminName(u)}</div>
-                        {u && !u.stripePayoutsEnabled && (
-                          <p
-                            className="mt-0.5 text-xs"
-                            style={{ color: "var(--fm-red-text)" }}
-                          >
-                            Stripe payouts not enabled — transfer will fail.
-                          </p>
-                        )}
+                        {/* The Stripe warning that used to live here was
+                            wrong for everyone it was shown to. Nobody is
+                            paid through Connect unless they opted in, so
+                            "transfer will fail" described a transfer
+                            nobody intended to make. The method picker
+                            below replaces it: pick the rail, and the
+                            split lands awaiting_manual instead of
+                            failed. See #113. */}
+                        <PayoutMethodPicker userId={row.userId} />
                       </td>
                       <td className="py-3 text-xs text-ink-muted">{roles}</td>
                       <td className="py-3 text-right">

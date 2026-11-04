@@ -65,6 +65,10 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 const PAYOUT_COLOR: Record<PayoutStatus, string> = {
   pending: "#5070F0",
   queued: "#5070F0",
+  // Terminal for house pools; no transfer exists to succeed or fail.
+  allocated: "#8A8A8A",
+  // A person on a record-mode rail: a human sends it. See #113.
+  awaiting_manual: "#B8860B",
   sent: "#007048",
   failed: "#E53E3E",
 };
@@ -131,6 +135,8 @@ export default async function PayoutsPage() {
     acknowledgedAt: r.acknowledgedAt,
     disputedAt: r.disputedAt,
     disputeNote: r.disputeNote,
+    isPaid: r.payoutStatus === "sent",
+    paidOn: r.payoutSentAt,
   }));
 
   const myPayouts = [...rawPayouts].sort(

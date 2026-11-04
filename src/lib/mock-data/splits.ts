@@ -57,6 +57,10 @@ export const MOCK_SPLITS: RevenueSplit[] = [
     payoutStatus: "sent",
     payoutSentAt: "2026-02-22T09:00:00Z",
     stripeTransferId: "tr_1Q9aliza_p004",
+    payoutMethodId: null,
+    payoutReference: null,
+    payoutDocumentName: null,
+    payoutDocumentSize: null,
     notes: "Sole delivery contributor.",
   },
 
@@ -76,6 +80,10 @@ export const MOCK_SPLITS: RevenueSplit[] = [
     payoutStatus: "sent",
     payoutSentAt: "2026-02-22T09:00:00Z",
     stripeTransferId: "tr_1Q9jamar_p004",
+    payoutMethodId: null,
+    payoutReference: null,
+    payoutDocumentName: null,
+    payoutDocumentSize: null,
     notes: "Sole admin on the deal — URL Media intro.",
   },
 
@@ -95,6 +103,10 @@ export const MOCK_SPLITS: RevenueSplit[] = [
     payoutStatus: "sent",
     payoutSentAt: "2026-02-22T09:00:00Z",
     stripeTransferId: "tr_1Q9treasury_p004",
+    payoutMethodId: null,
+    payoutReference: null,
+    payoutDocumentName: null,
+    payoutDocumentSize: null,
     notes: "Auto-routed: 50% of reserve to operating treasury.",
   },
   {
@@ -112,6 +124,10 @@ export const MOCK_SPLITS: RevenueSplit[] = [
     payoutStatus: "sent",
     payoutSentAt: "2026-02-22T09:00:00Z",
     stripeTransferId: "tr_1Q9lp_p004",
+    payoutMethodId: null,
+    payoutReference: null,
+    payoutDocumentName: null,
+    payoutDocumentSize: null,
     notes: "Auto-routed: 50% of reserve to $BUILD liquidity pool.",
   },
 ];

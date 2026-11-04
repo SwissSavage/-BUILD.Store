@@ -1272,9 +1272,27 @@ export type PaymentMethod =
   | "check"
   | "other";
 
+/**
+ * The instrument, not the institution (2026-11-03).
+ *
+ * These read "ACH (Mercury)" and "Wire (Mercury)" and so named a bank
+ * on every invoice regardless of where the money was actually going.
+ * Which account receives it is invoices.remit_account_id now, and that
+ * is the field the client-facing page reads. A label that also names a
+ * bank is the same one-field-two-meanings failure as
+ * external_reference before 0041.
+ *
+ * Stripe stays named because it is the processor for a card payment,
+ * not our bank.
+ *
+ * The enum VALUES still say ach_mercury and wire_mercury. Renaming
+ * them means a migration plus a data rewrite on live rows, and the
+ * label is what anybody actually reads, so that is deferred rather
+ * than bundled into a copy fix.
+ */
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  ach_mercury: "ACH (Mercury)",
-  wire_mercury: "Wire (Mercury)",
+  ach_mercury: "ACH",
+  wire_mercury: "Wire",
   cc_stripe: "Credit card (Stripe)",
   check: "Check",
   other: "Other",

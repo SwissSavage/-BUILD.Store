@@ -33,6 +33,8 @@ import {
   type RailHealth,
 } from "@/lib/payments";
 import { ConfirmManualPayout } from "@/components/ConfirmManualPayout";
+import { payoutMethodById } from "@/lib/payout-protocols";
+import { PAYOUT_STATUS_LABELS } from "@/lib/types";
 import { getPendingSplits, safely } from "@/lib/readers";
 import { getAllUsers } from "@/lib/readers/users";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
@@ -188,11 +190,14 @@ export default async function AdminPaymentsPage() {
                         minimumFractionDigits: 2,
                       })}
                     </p>
+                    {/* Name the method and the deal rather than a
+                        hardcoded "assisted rail" that was true of
+                        Zelle and asserted of everything. */}
                     <p className="mt-0.5 text-sm text-ink-muted">
-                      Split {split.id} ·{" "}
-                      {RAIL_DISPATCH_MODE.zelle === "assisted"
-                        ? "assisted rail"
-                        : ""}
+                      {payoutMethodById(split.payoutMethodId)?.label ??
+                        "No method chosen"}
+                      {split.contractId ? ` · ${split.contractId}` : ""} ·{" "}
+                      {PAYOUT_STATUS_LABELS[split.payoutStatus]}
                     </p>
                   </div>
 

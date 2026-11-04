@@ -372,9 +372,25 @@ export function getSplitsForRecipient(
 }
 
 /** Splits still awaiting dispatch — the payments admin queue. */
+/**
+ * The manual-send queue: splits a human still has to act on.
+ *
+ * `awaiting_manual` added 2026-11-03. Record-mode methods land there
+ * rather than `queued`, because queued implies something will pick it
+ * up and for Found nothing will. Without it here, every Found payout
+ * would have been invisible on /admin/payments — settled, owed, and
+ * with nowhere to confirm it.
+ *
+ * `allocated` is deliberately absent: house pools are terminal and
+ * there is no send to make.
+ */
 export function getPendingSplits(): Promise<RevenueSplit[]> {
   return splitReader.where(
-    inArray(revenueSplits.payoutStatus, ["pending", "queued"]),
+    inArray(revenueSplits.payoutStatus, [
+      "pending",
+      "queued",
+      "awaiting_manual",
+    ]),
   );
 }
 

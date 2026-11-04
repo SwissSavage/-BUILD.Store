@@ -513,8 +513,10 @@ export default async function ContractLedgerPage({
           <div>
             <h2 className="font-display text-2xl font-semibold">Invoices</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Send invoices to the client, mark them received once Mercury
-              shows the deposit, or opt this invoice into card payment.
+              The record of what was billed on this contract. Future
+              Modern does not generate the invoice the client receives,
+              so each row carries the real one&apos;s number and
+              document, and the account it is payable into.
             </p>
           </div>
         </div>
@@ -797,19 +799,38 @@ export default async function ContractLedgerPage({
 
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--surface-border)] pt-4">
           {isDraft && (
-            <form action={issueInvoice} className="flex items-center gap-2">
+            <form action={issueInvoice} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="invoiceId" value={invoice.id} />
-              <input
-                name="dueAt"
-                type="date"
-                className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
-              />
+              <div>
+                <label
+                  htmlFor={`dueAt-${invoice.id}`}
+                  className="block text-[11px] uppercase tracking-wider text-ink-muted"
+                >
+                  Due date
+                </label>
+                <input
+                  id={`dueAt-${invoice.id}`}
+                  name="dueAt"
+                  type="date"
+                  className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-xs"
+                />
+              </div>
+              {/* Renamed 2026-11-03. This read "Issue invoice", which
+                  named something the button does not do: it sets
+                  issuedAt and dueAt, flips the status, and drops
+                  DRAFT- from the number. Nothing leaves the building.
+                  Sending is the separate action below, and the
+                  document the client pays against comes from Found. */}
               <Button
                 type="submit"
                 className="fm-btn-primary rounded-full px-3 py-1.5 text-xs font-medium"
               >
-                Issue invoice
+                Finalize the record
               </Button>
+              <span className="text-[11px] text-ink-faint">
+                Locks the number and opens the client link. Does not send
+                anything.
+              </span>
             </form>
           )}
 

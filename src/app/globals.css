@@ -20,7 +20,8 @@
   --surface-border: #2A2A2A;
   --ink: #FFFFFF;
   --ink-muted: #A3A3A3;
-  --ink-faint: #666666;
+  --ink-faint: #969696;
+  --control-border: #767676;
   --control-radius: 8px;
   --panel-radius: 12px;
   --motion-fast: 150ms;
@@ -72,6 +73,7 @@ html[data-color-clarity="on"] {
   --surface-elevated: #000000;
   --surface-inset: #000000;
   --surface-border: #FFFFFF;
+  --control-border: #FFFFFF;
   --ink: #FFFFFF;
   --ink-muted: #FFFFFF;
   --ink-faint: #D9D9D9;

@@ -28,6 +28,7 @@ import {
   userPillars,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { ButtonLink } from "@/components/Button";
 import { TierBadge } from "@/components/TierBadge";
 import { Avatar } from "@/components/Avatar";
 import {
@@ -239,12 +240,14 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
-        <Link
+        <ButtonLink
           href="/contracts/new"
-          className="fm-btn-primary self-start rounded-full px-6 py-2.5 text-sm font-medium"
+          variant="primary"
+          size="large"
+          className="self-start"
         >
           Submit an RFP
-        </Link>
+        </ButtonLink>
       </div>
 
       {showWalkthroughCallout && (

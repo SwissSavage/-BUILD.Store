@@ -26,6 +26,11 @@
  * payment fee is a deductible expense and a deduction needs a number
  * and a date rather than a bank statement reconstructed a year later.
  *
+ * And it records WHO paid, because the deduction follows the payer.
+ * Jamar: "we wouldn't deduct fees, the deduction would go to whoever
+ * incurred the fee." Recipient is the default because it is the rule;
+ * treasury is the exception and has to be chosen deliberately.
+ *
  * Presentational only: every value arrives as a prop, so this never
  * reaches the database and check-client-boundary stays green.
  * ─────────────────────────────────────────────────────────────
@@ -113,6 +118,24 @@ export function ConfirmManualPayout({ splitId }: { splitId: string }) {
             placeholder="0.00"
             className="mt-1 w-24 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
           />
+        </div>
+
+        <div>
+          <label
+            htmlFor={`feeBorne-${splitId}`}
+            className="block text-[11px] uppercase tracking-wider text-ink-muted"
+          >
+            Fee paid by
+          </label>
+          <select
+            id={`feeBorne-${splitId}`}
+            name="payoutFeeBorneBy"
+            defaultValue="recipient"
+            className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
+          >
+            <option value="recipient">Recipient</option>
+            <option value="treasury">Treasury</option>
+          </select>
         </div>
 
         <div>

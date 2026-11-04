@@ -348,6 +348,7 @@ export async function confirmManualPayout(
   const reference = String(formData.get("reference") ?? "").trim();
   const sentOn = String(formData.get("sentOn") ?? "").trim();
   const feeRaw = String(formData.get("payoutFee") ?? "").trim();
+  const feeBorneRaw = String(formData.get("payoutFeeBorneBy") ?? "").trim();
   const file = formData.get("payoutDocument");
 
   if (!splitId) return { ok: false, message: "Missing split id." };
@@ -385,6 +386,15 @@ export async function confirmManualPayout(
     fee = parsed.toFixed(2);
   }
 
+  // The deduction follows the payer, so a fee with no payer is a
+  // number rather than a record. Defaults to the recipient, which is
+  // the rule; treasury is the exception and has to be chosen.
+  const feeBorneBy: "recipient" | "treasury" | null = fee
+    ? feeBorneRaw === "treasury"
+      ? "treasury"
+      : "recipient"
+    : null;
+
   const [split] = await db
     .select({ id: revenueSplits.id, status: revenueSplits.payoutStatus })
     .from(revenueSplits)
@@ -420,6 +430,7 @@ export async function confirmManualPayout(
       payoutSentAt: sentAt.toISOString(),
       payoutReference: reference,
       payoutFee: fee,
+      payoutFeeBorneBy: feeBorneBy,
       ...(document
         ? {
             payoutDocumentName: document.name,
@@ -445,6 +456,7 @@ export async function confirmManualPayout(
       reference,
       payoutSentAt: sentAt.toISOString(),
       payoutFee: fee,
+      payoutFeeBorneBy: feeBorneBy,
       document: document?.name ?? null,
     },
     reason: `Record-mode payout confirmed sent by ${admin.firstName ?? admin.id}`,

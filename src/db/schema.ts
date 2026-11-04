@@ -407,6 +407,14 @@ export const revenueSplits = pgTable("revenue_splits", {
    */
   payoutFee: numeric("payout_fee", { precision: 12, scale: 2 }),
   /**
+   * Who actually paid the fee, because the deduction follows the
+   * payer. "recipient" is the rule; "treasury" is the exception for
+   * when nobody can be assigned. Null when there was no fee.
+   */
+  payoutFeeBorneBy: text("payout_fee_borne_by", {
+    enum: ["recipient", "treasury"],
+  }),
+  /**
    * The real payout record, for methods the app did not execute.
    * Evidence in proportion to ignorance: inbound attaches the invoice
    * we did not issue, outbound the payout we did not send.

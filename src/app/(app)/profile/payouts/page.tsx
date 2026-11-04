@@ -137,7 +137,8 @@ export default async function PayoutsPage() {
     disputeNote: r.disputeNote,
     isPaid: r.payoutStatus === "sent",
     paidOn: r.payoutSentAt,
-    payoutFee: r.payoutFee,
+    // Only their business when they are the one who paid it.
+    payoutFee: r.payoutFeeBorneBy === "recipient" ? r.payoutFee : null,
   }));
 
   const myPayouts = [...rawPayouts].sort(

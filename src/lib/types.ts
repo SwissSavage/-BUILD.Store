@@ -930,6 +930,12 @@ export interface RevenueSplit {
    */
   payoutFee: string | null;
   /**
+   * Who paid the fee. The deduction follows the payer, so an amount
+   * without this is a number rather than a record. Null when there
+   * was no fee.
+   */
+  payoutFeeBorneBy: "recipient" | "treasury" | null;
+  /**
    * The real payout record, for methods the app did not execute.
    * Evidence in proportion to ignorance.
    */

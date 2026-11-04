@@ -28,6 +28,7 @@ import {
   userPillars,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { briefSummary } from "@/components/Brief";
 import { ButtonLink } from "@/components/Button";
 import { TierBadge } from "@/components/TierBadge";
 import { Avatar } from "@/components/Avatar";
@@ -467,7 +468,7 @@ export default async function DashboardPage() {
                     <CardEyebrow>{INDUSTRY_LABELS[p.industry]}</CardEyebrow>
                     <CardTitle className="mt-1 truncate">{p.title}</CardTitle>
                     <p className="mt-2 text-sm text-ink-muted line-clamp-2">
-                      {p.description}
+                      {briefSummary(p.description, { skipTitle: p.title })}
                     </p>
                   </div>
                   <HubspotStageBadge stage={p.hubspotStage} />

@@ -145,7 +145,7 @@ export function PendingRow({
             {applicant?.skills?.join(", ") || "—"}
           </p>
           {applicant?.bio && (
-            <p className="mt-3 italic text-ink-muted">"{applicant.bio}"</p>
+            <StructuredText text={applicant.bio} className="text-ink-muted" />
           )}
         </div>
       </div>

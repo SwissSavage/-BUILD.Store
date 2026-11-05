@@ -784,6 +784,22 @@ html {
   outline-offset: 2px;
 }
 
+.fm-btn-blue {
+  background-color: #5070F0;
+  border: 1px solid #5070F0;
+  color: #000000;
+}
+
+.fm-btn-blue:hover {
+  filter: brightness(1.08);
+}
+
+html[data-color-clarity="on"] .fm-btn-blue {
+  background-color: #FFFFFF;
+  border-color: #FFFFFF;
+  color: #000000;
+}
+
 /* The visitor-chat launcher sits flush with the viewport edge so it cannot
    cover the footer's social and policy links. */
 .fm-chat-launcher {
@@ -795,12 +811,6 @@ html {
   opacity: 0.74;
   filter: saturate(0.78) contrast(0.9);
   transform: scale(1.04);
-}
-
-.hero-video-stage--mobile .hero-video-stage-media {
-  -webkit-mask-image: none;
-  mask-image: none;
-  opacity: 0.48;
 }
 
 @media (prefers-reduced-motion: reduce) {

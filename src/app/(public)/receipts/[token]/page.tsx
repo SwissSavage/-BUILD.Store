@@ -217,7 +217,7 @@ export default async function CooperativeReceiptPage({
           </Link>
           <Link
             href="/cohort"
-            className="inline-flex items-center rounded-full border border-brand-blue/60 px-5 py-2 text-sm font-medium text-brand-blue transition-colors hover:bg-brand-blue/10"
+            className="fm-btn-blue inline-flex items-center rounded-full px-5 py-2 text-sm font-medium transition-colors"
           >
             See who&apos;s joining →
           </Link>

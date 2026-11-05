@@ -164,7 +164,7 @@ function HeroVideo({ mobile = false }: { mobile?: boolean }) {
       className={
         mobile
           ? "hero-video-stage hero-video-stage--mobile absolute inset-0 overflow-hidden md:hidden"
-          : "hero-video-stage absolute inset-y-0 left-[42%] right-0 hidden overflow-hidden md:block"
+          : "hero-video-stage absolute inset-0 hidden overflow-hidden md:block"
       }
     >
       <video
@@ -179,20 +179,10 @@ function HeroVideo({ mobile = false }: { mobile?: boolean }) {
       >
         <source src="/videos/future-modern-hero.mp4" type="video/mp4" />
       </video>
-      {mobile ? (
-        <>
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,8,0.90)_0%,rgba(5,5,8,0.84)_42%,rgba(5,5,8,0.74)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(115%_80%_at_8%_92%,rgba(80,112,240,0.25)_0%,rgba(5,5,8,0.92)_58%,transparent_100%)]" />
-          <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-[#050508]/85 to-transparent" />
-        </>
-      ) : (
-        <>
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,8,0.94)_0%,rgba(5,5,8,0.78)_28%,rgba(5,5,8,0.40)_65%,rgba(5,5,8,0.18)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_48%,rgba(216,40,160,0.10),transparent_62%)]" />
-          <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#050508] via-[#050508]/85 to-transparent" />
-          <div className="absolute inset-x-0 top-0 h-1/5 bg-gradient-to-b from-[#050508]/55 to-transparent" />
-        </>
-      )}
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,8,0.94)_0%,rgba(5,5,8,0.78)_28%,rgba(5,5,8,0.40)_65%,rgba(5,5,8,0.18)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_72%_48%,rgba(216,40,160,0.10),transparent_62%)]" />
+      <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#050508] via-[#050508]/85 to-transparent" />
+      <div className="absolute inset-x-0 top-0 h-1/5 bg-gradient-to-b from-[#050508]/55 to-transparent" />
     </div>
   );
 }
@@ -203,10 +193,6 @@ function Hero() {
       <HomepageBackdrop tone="hero" />
       <HeroVideo />
       <HeroVideo mobile />
-      <div
-        aria-hidden="true"
-        className="hero-video-left-veil pointer-events-none absolute inset-y-0 left-0 z-[1] hidden w-[72%] md:block"
-      />
       <div className="relative z-10 mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
         <div className="max-w-2xl">
           <div className="mb-6 inline-flex self-start items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-greenText">
@@ -239,7 +225,7 @@ function Hero() {
               rel="noreferrer"
               variant="secondary"
               size="large"
-              className="border-brand-blue/60 px-8 py-3 text-brand-blue hover:bg-brand-blue/10"
+              className="fm-btn-blue px-8 py-3"
             >
               {PUBLIC_BOOKING_CTA}
             </ButtonLink>

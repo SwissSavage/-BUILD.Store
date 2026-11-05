@@ -164,7 +164,7 @@ function HeroVideo({ mobile = false }: { mobile?: boolean }) {
       className={
         mobile
           ? "hero-video-stage hero-video-stage--mobile absolute inset-0 overflow-hidden md:hidden"
-          : "hero-video-stage absolute inset-y-0 left-[42%] right-0 hidden overflow-hidden md:block"
+          : "hero-video-stage absolute inset-0 hidden overflow-hidden md:block"
       }
     >
       <video
@@ -203,10 +203,6 @@ function Hero() {
       <HomepageBackdrop tone="hero" />
       <HeroVideo />
       <HeroVideo mobile />
-      <div
-        aria-hidden="true"
-        className="hero-video-left-veil pointer-events-none absolute inset-y-0 left-0 z-[1] hidden w-[72%] md:block"
-      />
       <div className="relative z-10 mx-auto flex w-full max-w-app flex-1 flex-col justify-center px-6 py-20 md:py-24">
         <div className="max-w-2xl">
           <div className="mb-6 inline-flex self-start items-center gap-2 rounded-full border border-brand-green/40 bg-brand-green/10 px-3 py-1 text-xs font-medium text-brand-greenText">

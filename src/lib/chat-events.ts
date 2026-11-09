@@ -72,8 +72,8 @@ export type ChatEvent =
 
 /** What actually crosses the wire. Identifiers, nothing else. */
 interface ChatNotification {
-  kind: ChatEvent["kind"];
-  threadId: string;
+  kind: ChatEvent["kind"] | "community.updated";
+  threadId?: string;
   messageId?: string;
   /** Which replica published it, so it can ignore its own echo. */
   origin: string;
@@ -189,6 +189,26 @@ export function subscribeChatEvents(
   return () => {
     ee.off("chat", handler);
   };
+}
+
+/** Community updates carry no message content over the shared channel. */
+export function emitCommunityUpdate(): void {
+  getEmitter().emit("community");
+  void pool
+    .query("select pg_notify($1, $2)", [
+      CHANNEL,
+      JSON.stringify({ kind: "community.updated", origin: origin() }),
+    ])
+    .catch((err: unknown) => {
+      console.error("[community] notify failed", err);
+    });
+}
+
+export function subscribeCommunityUpdates(handler: () => void): () => void {
+  void startListener();
+  const ee = getEmitter();
+  ee.on("community", handler);
+  return () => ee.off("community", handler);
 }
 
 /**
@@ -307,6 +327,10 @@ async function handleNotification(raw: string): Promise<void> {
   }
   // Our own echo. The local emit already happened in emitChatEvent.
   if (payload.origin === origin()) return;
+  if (payload.kind === "community.updated") {
+    getEmitter().emit("community");
+    return;
+  }
   if (!payload.threadId) return;
 
   try {

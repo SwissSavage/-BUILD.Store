@@ -24,6 +24,7 @@
  * two sides of the same 3D-transformed container.
  */
 import { cn } from "@/lib/cn";
+import { useId } from "react";
 import type { TradingCardTier } from "@/components/TradingCard";
 import { TaglineRare } from "@/components/TaglineRare";
 
@@ -74,6 +75,7 @@ export function CardBack({
   className,
   aspectRatio = "3/4",
 }: CardBackProps) {
+  const patternId = `fm-fractal-hex-${useId().replace(/:/g, "")}`;
   const aspectClass =
     aspectRatio === "square"
       ? "aspect-square"
@@ -112,7 +114,7 @@ export function CardBack({
       >
         <defs>
           <pattern
-            id={`fm-fractal-hex-${tier}`}
+            id={patternId}
             x="0"
             y="0"
             width="18"
@@ -148,7 +150,7 @@ export function CardBack({
         <rect
           width="100"
           height="100"
-          fill={`url(#fm-fractal-hex-${tier})`}
+          fill={`url(#${patternId})`}
         />
       </svg>
 

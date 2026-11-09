@@ -20,6 +20,7 @@ import { getCurrentUser } from "@/lib/auth-stub";
 import { publicName } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { CommunityLiveUpdates } from "@/components/CommunityLiveUpdates";
 import {
   postCommunityMessage,
   deleteCommunityMessage,
@@ -77,6 +78,7 @@ export default async function CommunityChatPage() {
   // Fallback nav for the join CTA to soft-nudge viewers into signup.
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
+      <CommunityLiveUpdates />
       <div className="text-xs uppercase tracking-wider text-brand-magentaText">
         Community
       </div>

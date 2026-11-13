@@ -68,23 +68,52 @@ export default async function ProjectsPage() {
         )}
       </div>
 
+      {/*
+        Two ways forward, never a dead end. Before 2026-11-13 the
+        middleware matcher bounced every signed-out visitor to /signin,
+        so this branch had never rendered and the only thing a visitor
+        saw was a sign-in form telling them to go find whoever
+        introduced them. Jamar: "There should be two options, sign in
+        or apply to join."
+
+        Sign in carries ?next so a member who was simply logged out
+        lands back here instead of on /dashboard.
+      */}
       {!user && (
         <Card className="mt-6 border-[#007048]/40">
           <CardEyebrow>Outside the cooperative? You can still help.</CardEyebrow>
           <p className="mt-2 max-w-3xl text-sm text-ink-muted">
-            Path 3 from the whitelist lands here. Pick an open initiative
-            below, open it, and use the "Offer to help" form on the
-            project page. No account required to send the offer — just
-            tell us how you'd contribute and admin will follow up by
-            email. Standing in the cooperative is still earned the same
-            way it is for everyone else (see{" "}
+            Pick an open initiative below, open it, and use the
+            &ldquo;Offer to help&rdquo; form on the project page. No
+            account required to send the offer — tell us how you&apos;d
+            contribute and admin follows up by email.
+          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Link
+              href="/signin?next=/projects"
+              className="rounded-full px-5 py-2.5 text-sm font-medium text-white"
+              style={{ backgroundColor: "#5070F0" }}
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/signup"
+              className="rounded-full border border-[var(--surface-border)] px-5 py-2.5 text-sm font-medium transition-colors hover:border-brand-magenta"
+            >
+              Apply to join
+            </Link>
+          </div>
+          <p className="mt-4 max-w-3xl text-xs text-ink-faint">
+            Already a member? Sign in. Otherwise apply with your work —
+            standing is earned the same way for everyone, which{" "}
             <Link
               href="/whitelist"
               className="text-brand-magentaText hover:underline"
             >
               /whitelist
-            </Link>
-            ); this just opens the door for a single project.
+            </Link>{" "}
+            lays out in full. Offering help on one project does not
+            require either.
           </p>
         </Card>
       )}

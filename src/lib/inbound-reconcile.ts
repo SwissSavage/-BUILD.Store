@@ -48,8 +48,15 @@
  */
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { inboundSubmissions } from "@/db/schema";
+import { inboundSubmissions, users } from "@/db/schema";
 import { ADMISSION_KINDS, INBOUND_APPROVED } from "@/lib/inbound-triage";
+import {
+  describeMerge,
+  mergePatch,
+  planMerge,
+  type MergeSourceApplication,
+  type MergeTargetUser,
+} from "@/lib/application-merge";
 
 /** Statuses that still look like a decision is owed. */
 export const UNRESOLVED_INBOUND = ["new", "in_triage", "needs_info"] as const;
@@ -72,7 +79,22 @@ export async function reconcileInboundForNewMember(input: {
 
   try {
     const rows = await db
-      .select({ id: inboundSubmissions.id, note: inboundSubmissions.triageNote })
+      .select({
+        id: inboundSubmissions.id,
+        note: inboundSubmissions.triageNote,
+        // ── Added 2026-11-16 ──────────────────────────────────
+        // Closing the row was only ever half the job. Everything
+        // the applicant wrote lived on it and went in the bin, so
+        // the account was created empty and then the person got an
+        // email asking them to type it all in again. Ari Kamlani's
+        // skills were in this table when that email was sent.
+        kind: inboundSubmissions.kind,
+        submitter: inboundSubmissions.submitter,
+        submitterEmail: inboundSubmissions.submitterEmail,
+        keywordTags: inboundSubmissions.keywordTags,
+        pillarTags: inboundSubmissions.pillarTags,
+        body: inboundSubmissions.body,
+      })
       .from(inboundSubmissions)
       .where(
         and(
@@ -87,10 +109,21 @@ export async function reconcileInboundForNewMember(input: {
 
     const now = new Date().toISOString();
     for (const row of rows) {
+      // Carry the application onto the account before closing it.
+      // Fill-blanks only, skills by union: see application-merge.ts
+      // for why the member's own values always win.
+      //
+      // Re-read inside the loop on purpose. Two applications from one
+      // email are rare but possible, and the second must plan against
+      // what the first just wrote rather than a stale snapshot.
+      const merged = await carryApplicationOntoAccount(row, input.userId);
+
       // Appended, not replaced. Whatever an admin wrote while triaging
       // is the reasoning behind a decision and outlives the row's
       // status.
-      const note = [row.note?.trim(), input.reason].filter(Boolean).join("\n\n");
+      const note = [row.note?.trim(), input.reason, merged]
+        .filter(Boolean)
+        .join("\n\n");
       await db
         .update(inboundSubmissions)
         .set({
@@ -107,5 +140,65 @@ export async function reconcileInboundForNewMember(input: {
     // eslint-disable-next-line no-console
     console.error("[inbound] reconcile failed", err);
     return 0;
+  }
+}
+
+/**
+ * Write an application's content onto the account it belongs to.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY IT RETURNS A SENTENCE RATHER THAN THROWING (2026-11-16)
+ *
+ * This runs inside completeInviteSignup, on the one page standing
+ * between an invited person and joining. The surrounding reconcile is
+ * already best-effort for that reason, and the same logic applies
+ * harder here: a failure to copy a bio across must never be the thing
+ * that stops somebody becoming a member. The worst outcome is the
+ * profile they would have filled in by hand anyway.
+ *
+ * The returned string goes on the submission's triage note, so an
+ * admin reading the row later can see what was carried across without
+ * diffing two records.
+ *
+ * NOT EXPORTED AS AN ACTION. Same reason as the function above: the
+ * caller here is an invitee who is not signed in yet, so there is no
+ * admin to check. The admin-facing version lives behind requireAdmin
+ * in application-merge-actions.ts.
+ * ─────────────────────────────────────────────────────────────
+ */
+async function carryApplicationOntoAccount(
+  app: MergeSourceApplication,
+  userId: string,
+): Promise<string | null> {
+  try {
+    const [target] = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        bio: users.bio,
+        skills: users.skills,
+        primaryIndustry: users.primaryIndustry,
+        secondaryIndustries: users.secondaryIndustries,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!target) return null;
+
+    const plan = planMerge(app, target as MergeTargetUser);
+    if (plan.changes.length === 0) return null;
+
+    await db
+      .update(users)
+      .set(mergePatch(plan))
+      .where(eq(users.id, userId));
+
+    return `From the application: ${describeMerge(plan)}.`;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[inbound] carrying application onto account failed", err);
+    return null;
   }
 }

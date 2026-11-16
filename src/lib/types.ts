@@ -4783,6 +4783,7 @@ export type AuditLogAction =
   // Public apply/bid + inbound triage bridges (tasks #30, #43)
   | "user.applied"
   | "inbound.promoted_to_invite"
+  | "inbound.merged_into_account"
   | "inbound.tag_proposed"
   | "inbound.tag_accepted"
   | "inbound.tag_rejected"
@@ -4938,6 +4939,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "config.access_reviewed": "Access review completed",
   "user.applied": "Applied to public job or contract",
   "inbound.promoted_to_invite": "Inbound submission promoted to invite",
+  "inbound.merged_into_account": "Application carried onto an existing account",
   "inbound.tag_proposed": "Applicant proposed new skill tag",
   "inbound.tag_accepted": "Admin accepted proposed tag into canonical set",
   "inbound.tag_rejected": "Admin rejected proposed tag",

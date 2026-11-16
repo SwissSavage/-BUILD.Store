@@ -143,3 +143,45 @@ export async function getAdminUsers(): Promise<UserRead> {
   const { users, source } = await getAllUsers();
   return { users: users.filter((u) => u.isAdmin), source };
 }
+
+/**
+ * Accounts matching a set of email addresses, keyed by lowercased
+ * email.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-11-16)
+ *
+ * /admin/inbound needs to know, per application, whether the person
+ * who sent it already has an account, so the "Link to existing
+ * account" control appears only where there is something to link to.
+ * Offering it on every row and failing on press is how an admin
+ * learns to ignore a button.
+ *
+ * Batched deliberately. The obvious version queries once per row and
+ * turns a page listing fifty applications into fifty round trips.
+ *
+ * Lowercased and trimmed on both sides, same rule as
+ * inbound-reconcile: these addresses were typed into a public form
+ * and a capital letter is not a different person.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function getUsersByEmails(
+  emails: string[],
+): Promise<Map<string, User>> {
+  const wanted = Array.from(
+    new Set(
+      emails
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => e.length > 0),
+    ),
+  );
+  const out = new Map<string, User>();
+  if (wanted.length === 0) return out;
+
+  const { users } = await getAllUsers();
+  for (const u of users) {
+    const key = (u.email ?? "").trim().toLowerCase();
+    if (key && wanted.includes(key) && !out.has(key)) out.set(key, u);
+  }
+  return out;
+}

@@ -99,7 +99,11 @@ export function ProfileMenu({
 
   return (
     <details className="relative">
+      {/* data-coach: the setup coach spotlights this to show a new
+          member where everything of theirs lives. Declared anchor,
+          not a class-name guess. See src/lib/setup-coach.ts. */}
       <summary
+        data-coach="profile-menu"
         className={cn(
           "flex cursor-pointer list-none items-center gap-1.5 select-none",
           "rounded-full transition-opacity hover:opacity-80",

@@ -301,6 +301,14 @@ export interface User {
   documensoInvitedAt?: string | null;
   documensoAccountLinkedAt?: string | null;
   documensoUserId?: string | null;
+  /**
+   * Setup coach dismissal, drizzle/0048. Null means never dismissed.
+   * Only the dismissal lives here: which steps the coach shows is
+   * derived from firstName, tagline, the photo fields, discipline and
+   * skills, so no stored flag can claim a field is filled when it is
+   * not. See src/lib/setup-coach.ts.
+   */
+  setupCoachDismissedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

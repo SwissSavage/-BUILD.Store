@@ -112,6 +112,39 @@ export function middleware(req: NextRequest) {
  * /contracts and /contracts/[id] stay public: Google Jobs indexes them.
  * /contracts/new and /contracts/:id/quote stay gated, because those are
  * member surfaces, not client ones.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * AND THEN /projects CAME OUT THE SAME WAY (2026-11-13)
+ *
+ * Same bug, same cause, found by Rob clicking the Projects tab while
+ * signed out and getting bounced to /signin.
+ *
+ * "/projects/:path*" matches /projects itself as well as everything
+ * under it, so the entire Phase 2.8 public posture on that surface was
+ * dead on arrival. /projects has a written !user branch and
+ * /projects/[id] serves internal projects to logged-out visitors with
+ * an "Offer to help" form. Neither had ever been reachable.
+ *
+ * Worse, /whitelist Path 3 "Contribute to a project" links straight to
+ * /projects and tells the visitor "No account needed to offer help."
+ * Following our own instructions landed them on a sign-in page whose
+ * closing line is "Only invited members and partners can sign in."
+ *
+ * Every subroute already gates itself, more precisely than a path
+ * pattern can:
+ *
+ *   /projects                 renders a !user branch
+ *   /projects/[id]            `if (!user && !isInternal)` — internal
+ *                             projects public, contract work is not
+ *   /projects/[id]/contribute/thanks
+ *                             public by design, it is where that
+ *                             public form lands
+ *   /projects/new             redirects to /signin itself
+ *   /projects/[id]/review     redirects to /signin itself
+ *
+ * So the two member surfaces are listed below individually and the
+ * wildcard is gone. They keep their own redirects too; this is belt
+ * and braces, not the only gate.
  * ─────────────────────────────────────────────────────────────
  */
 export const config = {
@@ -124,7 +157,8 @@ export const config = {
     "/activity/:path*",
     "/team/:path*",
     "/wallet/:path*",
-    "/projects/:path*",
+    "/projects/new",
+    "/projects/:id/review",
     "/contracts/new",
     "/contracts/:id/quote",
     "/locker/:path*",

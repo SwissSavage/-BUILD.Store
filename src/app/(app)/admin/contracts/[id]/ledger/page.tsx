@@ -486,26 +486,35 @@ export default async function ContractLedgerPage({
           {project.title}
         </h1>
         <p className="mt-2 text-ink-muted">
-          Invoices, payments, and outbound payouts in one place. Mercury is
-          the default rail — flip the CC toggle on any individual invoice when
-          a client needs card payment, and the gross-up line item gets baked
-          in so the cooperative still nets the original subtotal.
+          Invoices, payments, and outbound payouts in one place. The
+          account a client pays into is chosen per invoice, and the real
+          invoice they received is attached to its record here. Flip the
+          CC toggle on an individual invoice when a client needs card
+          payment: the gross-up line gets baked in so Future Modern still
+          nets the original subtotal.
         </p>
       </header>
 
+      {/* "Issued (AR)" next to "Received" read as two competing
+          statuses. They are cumulative totals at different stages of
+          the same money: everything billed, everything collected, and
+          the gap between them. A received invoice is still billed, so
+          Billed never goes down. Renamed 2026-11-04 after Jamar read
+          the two as a contradiction, which is a fair reading of the
+          old labels. */}
       <div className="mt-8 grid gap-4 md:grid-cols-3">
         <Stat
-          label="Issued (AR)"
+          label="Billed"
           value={`$${totalIssued.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
           color="#5070F0"
         />
         <Stat
-          label="Received"
+          label="Collected"
           value={`$${totalReceived.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
           color="#007048"
         />
         <Stat
-          label="Outstanding AR"
+          label="Still owed"
           value={`$${outstandingAR.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
           color={outstandingAR > 0 ? "#D828A0" : "#007048"}
         />

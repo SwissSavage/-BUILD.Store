@@ -76,6 +76,25 @@ export interface SetupCoachStep {
   /** Where the step is actually completed. */
   href: string;
   ctaLabel: string;
+  /**
+   * "fill" writes something to the profile, so the step disappears on
+   * its own once the field is set and the coach moves on without
+   * being told. "orient" only points at something, so nothing will
+   * ever mark it done and the member advances it by hand.
+   *
+   * This distinction is why the first version stalled. Every step was
+   * treated as a fill, so the two that can never complete sat there
+   * looking broken when the button was pressed.
+   */
+  kind: "fill" | "orient";
+  /**
+   * Pointless on these paths, so skip it. Telling someone standing on
+   * their profile how to reach their profile is how a tutorial loses
+   * the person it is talking to.
+   */
+  skipWhenOn?: readonly string[];
+  /** Shown while the member is inside the editor for this step. */
+  workingLabel: string;
 }
 
 /**
@@ -111,18 +130,24 @@ export const SETUP_COACH_STEPS: readonly SetupCoachStep[] = [
     // circle beats describing it, which is the entire idea.
     //
     // route null because the nav is on every page, so this works
-    // wherever the member happens to land after signing in.
+    // wherever the member happens to land after signing in. Skipped
+    // outright once they are already on the profile, where it would
+    // be giving directions to the room they are standing in.
     id: "coach_where",
+    kind: "orient",
     anchor: COACH_ANCHORS.profileMenu,
     route: null,
+    skipWhenOn: ["/profile"],
     title: "Everything of yours is behind this circle",
     body:
-      "Profile, notifications, wallet, your signed agreements, the jobs you are on. It is the one menu worth knowing. Open it and pick Profile, and we will keep going from there.",
+      "Profile, notifications, wallet, your signed agreements, the jobs you are on. It is the one menu worth knowing. We will start on your profile.",
     href: "/profile",
-    ctaLabel: "Open my profile",
+    ctaLabel: "Take me to my profile",
+    workingLabel: "Open the menu and pick Profile.",
   },
   {
     id: "coach_identity",
+    kind: "fill",
     anchor: COACH_ANCHORS.identity,
     route: "/profile",
     title: "Start with your name",
@@ -130,9 +155,12 @@ export const SETUP_COACH_STEPS: readonly SetupCoachStep[] = [
       "Your name, photo and tagline. The tagline is the line a client reads first, under your name, before anything else on the page. Everywhere the app credits you, invoices you or pays you reads from here.",
     href: "/profile/edit/identity",
     ctaLabel: "Edit name, photo and tagline",
+    workingLabel:
+      "Fill these in and save. I will pick up at the next step when you are done.",
   },
   {
     id: "coach_tags",
+    kind: "fill",
     anchor: COACH_ANCHORS.tags,
     route: "/profile",
     title: "Say what you do",
@@ -140,9 +168,12 @@ export const SETUP_COACH_STEPS: readonly SetupCoachStep[] = [
       "Your discipline and your skills. These are not decoration. They are what the matcher reads when work comes in, so a blank set here means you are not considered for it.",
     href: "/profile/edit/talent-tags",
     ctaLabel: "Edit discipline and skills",
+    workingLabel:
+      "Pick your discipline and add skills, then save. I will carry on from there.",
   },
   {
     id: "coach_portfolio",
+    kind: "fill",
     anchor: COACH_ANCHORS.portfolio,
     route: "/profile",
     title: "Show the work",
@@ -150,16 +181,20 @@ export const SETUP_COACH_STEPS: readonly SetupCoachStep[] = [
       "This page is the one a client lands on after a quote sheet, so the portfolio is doing the selling. Admin scrubs personal details and external links before anything publishes, so put up what you have.",
     href: "/profile/portfolio",
     ctaLabel: "Add work",
+    workingLabel:
+      "Add a piece of work. Drafts count, admin publishes.",
   },
   {
     id: "coach_payout",
+    kind: "orient",
     anchor: COACH_ANCHORS.payout,
     route: "/profile",
     title: "And this is where payouts live",
     body:
-      "Nothing to do here today. You get paid on the default rail without connecting anything, and admin handles dispatch. Connecting Stripe is only worth it for card-paid invoices and marketplace sales. Worth knowing where the page is.",
+      "Nothing to do here today. You get paid on the default rail without connecting anything, and admin handles dispatch. Connecting Stripe is only worth it for card-paid invoices and marketplace sales. Worth knowing the page exists.",
     href: "/profile/payouts",
-    ctaLabel: "Look at payouts",
+    ctaLabel: "Show me the payouts page",
+    workingLabel: "This is it. Nothing needed today.",
   },
 ] as const;
 
@@ -200,17 +235,4 @@ export function outstandingSteps(
     coach_payout: identity && tags && portfolio,
   };
   return SETUP_COACH_STEPS.filter((s) => !done[s.id]);
-}
-
-/**
- * How far along, for the progress line in the overlay. Counts the
- * whole step list, not the outstanding ones, so "2 of 4" does not
- * silently become "2 of 2" as steps are completed.
- */
-export function setupProgress(snapshot: SetupSnapshot): {
-  done: number;
-  total: number;
-} {
-  const total = SETUP_COACH_STEPS.length;
-  return { done: total - outstandingSteps(snapshot).length, total };
 }

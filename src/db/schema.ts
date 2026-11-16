@@ -105,6 +105,19 @@ export const users = pgTable("users", {
   documensoInvitedAt: timestamp("documenso_invited_at", { mode: "string", withTimezone: true }),
   documensoAccountLinkedAt: timestamp("documenso_account_linked_at", { mode: "string", withTimezone: true }),
   documensoUserId: text("documenso_user_id"),
+  /**
+   * Setup coach, drizzle/0048. Null means it has never been dismissed.
+   *
+   * Only a dismissal, not progress. Which steps the coach shows is
+   * derived from the columns above — firstName, tagline,
+   * profileImageUrl, discipline, skills — so a step vanishes the
+   * moment the field it asks for is filled, and no second record can
+   * disagree with the profile itself.
+   */
+  setupCoachDismissedAt: timestamp("setup_coach_dismissed_at", {
+    mode: "string",
+    withTimezone: true,
+  }),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
     .notNull()
     .defaultNow(),

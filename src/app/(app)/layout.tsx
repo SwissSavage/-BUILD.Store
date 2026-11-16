@@ -19,6 +19,7 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { ViewingAsBanner } from "@/components/ViewingAsBanner";
 import { DevelopmentBuildBanner } from "@/components/DevelopmentBuildBanner";
+import { SetupCoachMount } from "@/components/SetupCoachMount";
 
 export default function AppLayout({
   children,
@@ -30,6 +31,14 @@ export default function AppLayout({
       <Nav />
       <main>{children}</main>
       <Footer />
+      {/*
+        Setup coach, last so it layers over everything, and in the
+        layout rather than on a page because it has to survive the
+        navigation it asks for: it points at the nav, then at sections
+        on /profile, while the member walks between them. Renders
+        nothing for anyone signed out, dismissed, or already set up.
+      */}
+      <SetupCoachMount />
     </>
   );
 }

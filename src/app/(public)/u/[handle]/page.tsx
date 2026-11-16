@@ -320,7 +320,13 @@ export default async function PublicProfilePage({
           </div>
         </TradingCard3D>
         <div className="flex-1">
-          <div className="flex items-start justify-between gap-3">
+          {/* data-coach: spotlight anchor for the setup coach. Declared
+              contract, not a class-name guess, so a design pass cannot
+              silently break the tour. See src/lib/setup-coach.ts. */}
+          <div
+            data-coach="profile-identity"
+            className="flex items-start justify-between gap-3"
+          >
             <h1 className="font-display text-4xl font-semibold md:text-5xl">
               {displayName}
             </h1>
@@ -370,25 +376,72 @@ export default async function PublicProfilePage({
           {user.bio && (
             <StructuredText text={user.bio} className="text-ink-muted" />
           )}
-          {user.skills.length > 0 && (
-            <section className="mt-4" aria-labelledby="profile-skills">
-              <h2 id="profile-skills" className="sr-only">
-                Skills
-              </h2>
-              <ul className="flex flex-wrap gap-1.5">
-                {user.skills.map((s) => (
-                  <li
-                    key={s}
-                    className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted"
-                  >
-                    {s}
-                  </li>
-                ))}
-              </ul>
+          {/*
+            Skills had no pencil at all until 2026-11-16, which made
+            "press the pens to the right of each section" untrue for
+            the one section that feeds the talent matcher. It also
+            rendered only when skills already existed, so the member
+            who most needed to add some saw nothing to click.
+
+            Now: visible to the owner whether or not it is populated,
+            with the same empty-state treatment the tagline gets.
+            Still hidden from the public when empty, since an empty
+            skills rail tells a client nothing.
+          */}
+          {(user.skills.length > 0 || owner) && (
+            <section
+              data-coach="profile-tags"
+              className="mt-4"
+              aria-labelledby="profile-skills"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <h2 id="profile-skills" className="sr-only">
+                  Skills
+                </h2>
+                {user.skills.length > 0 ? (
+                  <ul className="flex flex-wrap gap-1.5">
+                    {user.skills.map((s) => (
+                      <li
+                        key={s}
+                        className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted"
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm italic text-ink-faint">
+                    No skills listed yet. These are what the matcher
+                    reads when work comes in.
+                  </p>
+                )}
+                {owner && (
+                  <EditPencil
+                    href="/profile/edit/talent-tags"
+                    label="Edit your discipline and skills"
+                  />
+                )}
+              </div>
             </section>
           )}
-          <div className="mt-5">
+          <div className="mt-5 flex flex-wrap items-center gap-3">
             <ProfileShareButton handle={user.handle} />
+            {/*
+              Owner-only, and never rendered on the public route.
+              The partner walkthrough has always pointed its payout
+              step at /profile, but nothing on /profile linked to
+              payouts, so that step dead-ended. Also the anchor the
+              setup coach closes on.
+            */}
+            {owner && (
+              <Link
+                data-coach="profile-payout"
+                href="/profile/payouts"
+                className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs text-ink-muted transition-colors hover:border-brand-magenta hover:text-brand-magentaText"
+              >
+                Payout settings
+              </Link>
+            )}
           </div>
           {canDm && (
             <details className="mt-5 max-w-md">
@@ -661,7 +714,7 @@ export default async function PublicProfilePage({
         </section>
       )}
 
-      <section className="mt-14">
+      <section className="mt-14" data-coach="profile-portfolio">
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-2xl font-semibold">
             {showEpk ? "Cooperative portfolio" : "Portfolio"}

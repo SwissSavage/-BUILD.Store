@@ -38,6 +38,8 @@
  * ─────────────────────────────────────────────────────────────
  */
 import { scrubForClient } from "@/lib/pii-scrub";
+import { parseRichText } from "@/lib/rich-text";
+import type { JSONContent } from "@tiptap/core";
 
 export type DisclosureCode =
   | "email"
@@ -134,7 +136,27 @@ export function findSelfDisclosure(
   text: string | null | undefined,
   author: { firstName?: string | null; lastName?: string | null },
 ): DisclosureFinding[] {
-  const value = (text ?? "").trim();
+  const raw = (text ?? "").trim();
+  const document = parseRichText(raw);
+  let visibleText = "";
+  const linkTargets: string[] = [];
+  if (document) {
+    const visit = (node: JSONContent) => {
+      const block = ["paragraph", "heading", "blockquote", "listItem"].includes(node.type ?? "");
+      if (block) visibleText += "\n";
+      if (node.type === "hardBreak") visibleText += "\n";
+      if (typeof node.text === "string") visibleText += node.text;
+      for (const mark of node.marks ?? []) {
+        if (mark.type === "link" && typeof mark.attrs?.href === "string") {
+          linkTargets.push(mark.attrs.href);
+        }
+      }
+      for (const child of node.content ?? []) visit(child);
+      if (block) visibleText += "\n";
+    };
+    visit(document);
+  }
+  const value = document ? [visibleText, ...linkTargets].join("\n").trim() : raw;
   if (!value) return [];
 
   const codes = new Set<DisclosureCode>(scrubForClient(value).hits);

@@ -28,6 +28,7 @@ import {
   type Article,
 } from "@/lib/mock-data/articles";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { DEFAULT_SOCIAL_IMAGE } from "@/lib/social-image";
 
 /**
  * Canonical site URL — mirrors the root layout constant so JSON-LD
@@ -52,6 +53,7 @@ export const metadata: Metadata = {
     description:
       "Release retrospectives, curatorial notes, and Future Modern principles. From paragraph.com/@future-modern.",
     url: "/articles",
+    images: [DEFAULT_SOCIAL_IMAGE],
   },
 };
 

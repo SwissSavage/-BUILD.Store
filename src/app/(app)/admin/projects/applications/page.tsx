@@ -146,7 +146,7 @@ function QueueRow({ summary }: { summary: QueueSummary }) {
   return (
     <Link
       href={`/admin/projects/${project.id}/applications`}
-      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-5 py-4 hover:border-brand-magenta"
+      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--control-border)] bg-[var(--surface-elevated)] px-5 py-4 hover:border-brand-magentaText"
     >
       <div className="min-w-0">
         <p className="truncate font-medium">{project.title}</p>
@@ -158,7 +158,7 @@ function QueueRow({ summary }: { summary: QueueSummary }) {
       </div>
       {pending > 0 ? (
         <span
-          className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium text-white"
+          className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium text-black"
           style={{ backgroundColor: "#5070F0" }}
         >
           {pending} pending

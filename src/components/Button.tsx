@@ -8,7 +8,7 @@ type ButtonSize = "compact" | "default" | "large" | "icon";
 const variantClass: Record<ButtonVariant, string> = {
   primary: "fm-btn-primary border-transparent",
   secondary:
-    "border border-[var(--surface-border)] bg-transparent text-ink hover:border-brand-magenta/60 hover:bg-[var(--surface-elevated)]",
+    "border border-[var(--control-border)] bg-transparent text-ink hover:border-brand-magentaText hover:bg-[var(--surface-elevated)]",
   ghost:
     "border-transparent bg-transparent text-ink-muted hover:bg-[var(--surface-elevated)] hover:text-ink",
 };
@@ -30,7 +30,7 @@ export function buttonClassName({
   className?: string;
 } = {}) {
   return cn(
-    "fm-button inline-flex items-center justify-center gap-2 font-medium leading-5 transition-[background-color,border-color,color,filter,transform,box-shadow] duration-150 ease-out active:translate-y-px focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60",
+    "fm-button inline-flex items-center justify-center gap-2 font-medium leading-5 transition-[background-color,border-color,color,filter,transform,box-shadow] duration-150 ease-out active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60",
     variant ? variantClass[variant] : undefined,
     size ? sizeClass[size] : undefined,
     className,

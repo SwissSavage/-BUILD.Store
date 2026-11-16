@@ -22,6 +22,7 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { Avatar } from "@/components/Avatar";
 import { OnChainBadge } from "@/components/OnChainBadge";
 import { PARAGRAPH_BASE } from "@/lib/mock-data/articles";
+import { StructuredText } from "@/components/StructuredText";
 
 export const dynamic = "force-dynamic";
 
@@ -144,9 +145,7 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
                         </p>
                       )}
                       {user.bio && (
-                        <p className="mt-2 text-sm text-ink-muted">
-                          {user.bio}
-                        </p>
+                        <StructuredText text={user.bio} className="text-ink-muted" />
                       )}
                       {publicProfileEligible(user, recognizedIds) && (
                         <Link

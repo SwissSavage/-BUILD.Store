@@ -1,4 +1,5 @@
 import { Button } from "@/components/Button";
+import { StructuredText } from "@/components/StructuredText";
 /**
  * Admin: who is naming themselves in their own profile, and what to do
  * about it.
@@ -251,7 +252,11 @@ function FieldBlock({
       <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
         {label}
       </p>
-      <p className="mt-1 whitespace-pre-wrap text-sm text-ink">{text}</p>
+      {field === "bio" && text ? (
+        <StructuredText text={text} className="text-ink" />
+      ) : (
+        <p className="mt-1 whitespace-pre-wrap text-sm text-ink">{text}</p>
+      )}
       <ul className="mt-2 space-y-1">
         {findings.map((f) => (
           <li key={f.code} className="text-xs text-ink-muted">

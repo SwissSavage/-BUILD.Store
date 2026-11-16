@@ -1,4 +1,5 @@
 import { Button } from "@/components/Button";
+import { StructuredText } from "@/components/StructuredText";
 /**
  * Admin team management (sandbox).
  *
@@ -153,7 +154,7 @@ export default async function AdminTeamPage() {
                 )}
               </div>
               {u.bio && (
-                <p className="mt-3 text-sm text-ink-muted">{u.bio}</p>
+                <StructuredText text={u.bio} className="text-ink-muted" />
               )}
               <form action={revokeAdmin} className="mt-4">
                 <input type="hidden" name="userId" value={u.id} />

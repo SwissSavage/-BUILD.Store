@@ -500,7 +500,7 @@ export function QuoteInteractiveSurface({
           </Button>
           <a
             href="mailto:hello@buildstore.example"
-            className="inline-flex items-center rounded-full border border-brand-blue/60 px-6 py-2.5 text-sm font-medium text-brand-blue transition-colors hover:bg-brand-blue/10"
+            className="fm-btn-blue inline-flex items-center rounded-full px-6 py-2.5 text-sm font-medium transition-colors"
           >
             Talk it through first
           </a>

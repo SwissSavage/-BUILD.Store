@@ -1,5 +1,6 @@
 "use client";
 import { Button } from "@/components/Button";
+import { RichTextEditor } from "@/components/RichTextEditor";
 
 /**
  * The identity editor's save form.
@@ -266,24 +267,24 @@ export function IdentityForm({ user }: { user: IdentityFormUser }) {
         defaultValue={user.portfolioUrl ?? ""}
       />
 
-      <label className="block">
+      <div>
         <span className="text-xs uppercase tracking-wider text-ink-muted">
           Bio
         </span>
-        <textarea
+        <RichTextEditor
           name="bio"
-          rows={4}
-          defaultValue={user.bio ?? ""}
-          aria-invalid={blockedIn("bio").length > 0 || undefined}
-          className="mt-2 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2"
+          initialValue={user.bio ?? ""}
+          ariaLabel="Bio"
+          ariaDescribedBy="bio-help"
+          invalid={blockedIn("bio").length > 0}
         />
-        <p className="mt-1.5 text-xs text-ink-faint">
+        <p id="bio-help" className="mt-1.5 text-xs text-ink-faint">
           Written for a client who has not met you. Leave out your full
           name, your own company, and any way to reach you directly:
           engagements route through the cooperative, and that is what
           protects the rate.
         </p>
-      </label>
+      </div>
 
       <Button
         type="submit"

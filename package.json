@@ -20,7 +20,6 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx src/db/seed.ts",
     "check:use-server": "node scripts/check-use-server.mjs",
     "db:purge-seed": "node scripts/purge-seed.mjs"
   },

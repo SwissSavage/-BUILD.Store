@@ -10,6 +10,7 @@ import { Button } from "@/components/Button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { publicName } from "@/lib/types";
+import { quoteCardName } from "@/lib/quote-card-name";
 import { CardBack } from "@/components/CardBack";
 import { TradingCard3D } from "@/components/TradingCard3D";
 import type { TalentHandDecision } from "@/components/TalentHand";
@@ -141,17 +142,19 @@ export function QuoteFlipReveal({ crew, onDecision }: QuoteFlipRevealProps) {
           </div>
           <div className="fm-card-face fm-card-face--front">
             <TradingCard3D user={member.user} tier={member.tier}>
-              <div className="mt-auto flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate font-display text-xl font-semibold text-white">{name}</p>
-                  <p className={`mt-1 line-clamp-2 text-[10px] font-medium uppercase tracking-wider ${TIER_LABEL_CLASS[member.tier]}`}>
-                    {membershipLabel(member)}
+              <div className="mt-auto min-w-0">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
+                  <p title={name} className="min-w-0 break-words text-left font-display text-lg font-semibold leading-tight text-white">
+                    {quoteCardName(member.user)}
+                  </p>
+                  <p className="max-w-24 break-words text-right font-display text-base font-semibold leading-tight text-white">
+                    {member.quoteLine.pricingHeadline}
                   </p>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="font-display text-base font-semibold text-white">{member.quoteLine.pricingHeadline}</p>
-                  <p className="mt-1 text-[9px] uppercase tracking-wider text-white/65">{member.quoteLine.pricingUnit}</p>
-                </div>
+                <p className={`mt-1 break-words text-left text-[10px] font-medium uppercase tracking-wider ${TIER_LABEL_CLASS[member.tier]}`}>
+                  {membershipLabel(member)}
+                </p>
+                <p className="mt-1 break-words text-left text-[9px] uppercase tracking-wider text-white/65">{member.quoteLine.pricingUnit}</p>
               </div>
             </TradingCard3D>
           </div>

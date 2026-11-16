@@ -235,49 +235,18 @@ export default function GovernancePage() {
       <Section
         eyebrow="Money · cooperative side"
         id="revenue"
-        title="85 / 12 / 3 split, disclosed"
+        title="How cooperative revenue is distributed"
         body={
           <>
-            {/* ─────────────────────────────────────────────────────
-                Corrected 2026-11-02 to match settlement-splits.ts.
-
-                This card had the 12 and the 3 doing each other's jobs:
-                it read "12% to reserve" and "3% to admin operations",
-                and it folded the executive share into the 85%. The
-                engine does the opposite. CONTRIBUTOR_PCT 0.85 is the
-                people who delivered, ADMIN_PCT 0.12 is the executive
-                share paid on top, and cooperative ops is the 3% —
-                TREASURY_PCT 0.015 + LP_PCT 0.015, nothing else.
-                "Cooperative ops" names that 3% and only that 3%.
-
-                It also promised a health fund and a sabbatical pool
-                out of the reserve. There is no such pool: the only
-                structural sentinels are HOUSE_TREASURY_ID and
-                HOUSE_LP_ID. A benefit nothing is accruing
-                toward does not belong on the page that explains where
-                the money goes.
-
-                Anything stated here has to be checkable against the
-                constants in src/lib/settlement-splits.ts. If the
-                numbers move, they move there first.
-                ───────────────────────────────────────────────────── */}
-            <p>Every dollar Future Modern collects on a contract:</p>
+            <p>Cooperative revenue supports the people who deliver the work and the operations that make it possible:</p>
             <ul className="mt-2 space-y-1 pl-5 text-sm text-ink-muted list-disc">
               <li>
-                <strong className="text-ink">85%</strong> to the
-                contributor pool, divided between the people who
-                delivered the work in proportion to the attribution
-                ledger.
+                <strong className="text-ink">85%</strong> to the people
+                doing the work.
               </li>
               <li>
-                <strong className="text-ink">12%</strong> to the
-                executive share, split evenly across the people who ran
-                the deal. Paid on top of the 85%, not out of it.
-              </li>
-              <li>
-                <strong className="text-ink">3%</strong> to cooperative
-                ops, as 1.5% treasury and 1.5% liquidity pool for the
-                token rail.
+                The remaining share supports the people who run the deal
+                and cooperative operations.
               </li>
             </ul>
             <p className="mt-3 text-sm text-ink-muted">

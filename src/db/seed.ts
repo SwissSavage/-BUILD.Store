@@ -14,8 +14,9 @@
  *   → chat_messages (reference chat_threads)
  *   → attribution_entries, revenue_splits (reference projects + users)
  *
- * Run via:
- *   npm run db:seed
+ * Disabled by default. If seed data is needed, uncomment the entry
+ * point at the bottom and run `npx tsx src/db/seed.ts` against a
+ * development database.
  *
  * Requires DATABASE_URL in env. Drizzle will use the pool defined in
  * client.ts.
@@ -274,6 +275,7 @@ async function main() {
   console.log("\n=== seed complete ===");
 }
 
+/* Uncomment if seed needed, and run only against a development database.
 main()
   .then(async () => {
     await pool.end();
@@ -284,3 +286,4 @@ main()
     await pool.end();
     process.exit(1);
   });
+*/

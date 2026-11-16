@@ -26,6 +26,7 @@ import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { scrubForClient } from "@/lib/pii-scrub";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { notifyMany } from "@/lib/writers/notifications";
+import { emitCommunityUpdate } from "@/lib/chat-events";
 
 const MAX_BODY_CHARS = 1000;
 const POST_COOLDOWN_MS = 30 * 1000;
@@ -94,6 +95,7 @@ export async function postCommunityMessage(formData: FormData) {
     deletionReason: null,
     createdAt: now,
   });
+  emitCommunityUpdate();
 
   // Members and partners can participate in the board; admins are
   // included even if their membership tier is viewer. The author does
@@ -156,6 +158,7 @@ export async function deleteCommunityMessage(formData: FormData) {
       deletionReason: reason,
     })
     .where(eq(communityMessages.id, id));
+  emitCommunityUpdate();
 
   await logAuditEvent({
     actorUserId: user.id,
@@ -191,6 +194,7 @@ export async function restoreCommunityMessage(formData: FormData) {
       deletionReason: null,
     })
     .where(eq(communityMessages.id, id));
+  emitCommunityUpdate();
 
   await logAuditEvent({
     actorUserId: admin.id,

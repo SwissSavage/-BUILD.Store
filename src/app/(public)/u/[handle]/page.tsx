@@ -636,7 +636,7 @@ export default async function PublicProfilePage({
                   name="requesterName"
                   type="text"
                   required
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-[var(--control-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 />
               </label>
               <label className="block">
@@ -647,7 +647,7 @@ export default async function PublicProfilePage({
                   name="requesterEmail"
                   type="email"
                   required
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-[var(--control-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 />
               </label>
               <label className="block md:col-span-2">
@@ -657,7 +657,7 @@ export default async function PublicProfilePage({
                 <input
                   name="requesterCompany"
                   type="text"
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-[var(--control-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 />
               </label>
               <label className="block md:col-span-2">
@@ -670,7 +670,7 @@ export default async function PublicProfilePage({
                   minLength={30}
                   rows={5}
                   placeholder="Example: We'd like to book a 60-minute scoping call about a feature placement for our brand campaign. Budget range $X. Looking at a Q3 timeline."
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-[var(--control-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 />
               </label>
               <label className="block">
@@ -681,7 +681,7 @@ export default async function PublicProfilePage({
                   name="startsAt"
                   type="datetime-local"
                   required
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-[var(--control-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 />
               </label>
               <label className="block">
@@ -692,7 +692,7 @@ export default async function PublicProfilePage({
                   name="endsAt"
                   type="datetime-local"
                   required
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-lg border border-[var(--control-border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 />
               </label>
               <div className="md:col-span-2">

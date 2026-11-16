@@ -24,6 +24,7 @@ import {
   type DisclosureFinding,
 } from "@/lib/self-disclosure-guard";
 import type { Industry } from "@/lib/types";
+import { richTextValuePlainText } from "@/lib/rich-text";
 
 const ALL_INDUSTRIES: Industry[] = [
   "stem",
@@ -86,7 +87,8 @@ export async function saveProfile(
         ? requestedAlias
         : null
       : (currentUser.displayName ?? null);
-  const bio = String(formData.get("bio") ?? "").trim() || null;
+  const bioInput = String(formData.get("bio") ?? "").trim();
+  const bio = richTextValuePlainText(bioInput) ? bioInput : null;
   const rawTagline = String(formData.get("tagline") ?? "").trim();
   const tagline = rawTagline ? rawTagline.slice(0, 120) : null;
   const portfolioUrl =

@@ -30,6 +30,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projectApplications } from "@/db/schema";
 import { safely } from "@/lib/readers/factory";
+import { socialImage } from "@/lib/social-image";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -46,10 +47,15 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
   if (!p || p.kind !== "contract") {
     return { title: "Contract not found — Future Modern" };
   }
+  const title = `${p.title} — Contract at Future Modern`;
+  const description = briefPlainText(p.description).slice(0, 155);
+  const image = socialImage(p.featuredImageUrl);
   return {
-    title: `${p.title} — Contract at Future Modern`,
-    description: briefPlainText(p.description).slice(0, 155),
+    title,
+    description,
     alternates: { canonical: `${SITE_URL}/contracts/${p.id}` },
+    openGraph: { title, description, url: `${SITE_URL}/contracts/${p.id}`, images: [image] },
+    twitter: { card: "summary_large_image" as const, title, description, images: [image] },
   };
 }
 

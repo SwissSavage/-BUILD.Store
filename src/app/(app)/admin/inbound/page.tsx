@@ -20,7 +20,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-stub";
 import { memberLabel } from "@/lib/member-label";
 import { listInboundSubmissionsLive } from "@/lib/readers/inbound-submissions";
-import { getAdminUsers } from "@/lib/readers/users";
+import { getAdminUsers, getUsersByEmails } from "@/lib/readers/users";
 import { safely } from "@/lib/readers";
 import { scoreTalentMatch } from "@/lib/talent-match";
 import {
@@ -34,6 +34,7 @@ import {
   acceptProposedInboundTag,
   rejectProposedInboundTag,
 } from "@/lib/inbound-submission-actions";
+import { mergeApplicationIntoAccount } from "@/lib/application-merge-actions";
 import {
   approveBookingRequest,
   declineBookingRequest,
@@ -109,6 +110,21 @@ export default async function AdminInboundPage({
     users: [],
     source: "postgres" as const,
   });
+
+  // Does the person who sent each application already have an
+  // account? Batched into one read rather than one per row, and used
+  // only to decide whether the link control is worth rendering. An
+  // admin who presses a button that cannot work learns to ignore the
+  // button.
+  const accountByEmail = await safely(
+    () =>
+      getUsersByEmails(
+        rows
+          .map((r) => r.submitterEmail ?? "")
+          .filter((e) => e.length > 0),
+      ),
+    new Map<string, User>(),
+  );
 
   // Top-of-page counts.
   const allRows = await safely(() => listInboundSubmissionsLive(), []);
@@ -195,7 +211,12 @@ export default async function AdminInboundPage({
           </Card>
         ) : (
           rows.map((row) => (
-            <SubmissionRow key={row.id} row={row} admins={admins} />
+            <SubmissionRow
+              key={row.id}
+              row={row}
+              admins={admins}
+              accountByEmail={accountByEmail}
+            />
           ))
         )}
       </section>
@@ -229,9 +250,14 @@ function FilterChip({
 function SubmissionRow({
   row,
   admins,
+  accountByEmail,
 }: {
   row: InboundSubmission;
   admins: User[];
+  /** Accounts matching submitter emails, so the link control only
+   *  renders where there is something to link to. Resolved once for
+   *  the whole page rather than per row. */
+  accountByEmail: Map<string, User>;
 }) {
   const matches = scoreTalentMatch(
     { pillars: row.pillarTags, keywordTags: row.keywordTags },
@@ -476,16 +502,25 @@ function SubmissionRow({
                       {inboundStatusLabel(row.kind, row.status)} · the
                       applicant was not notified.
                     </div>
-                    <form action={setInboundStatus} className="mt-2">
-                      <input type="hidden" name="id" value={row.id} />
-                      <input type="hidden" name="status" value="in_triage" />
-                      <Button
-                        type="submit"
-                        className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
-                      >
-                        Reopen
-                      </Button>
-                    </form>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <form action={setInboundStatus}>
+                        <input type="hidden" name="id" value={row.id} />
+                        <input type="hidden" name="status" value="in_triage" />
+                        <Button
+                          type="submit"
+                          className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-[11px] hover:border-brand-magenta hover:text-brand-magentaText"
+                        >
+                          Reopen
+                        </Button>
+                      </form>
+                      {/* The backlog case. These rows were closed
+                          before the merge existed, so the automatic
+                          path at invite acceptance will never revisit
+                          them: it only sweeps rows still awaiting a
+                          decision. This is how what the applicant
+                          wrote finally reaches their profile. */}
+                      <MergeIntoAccount row={row} accountByEmail={accountByEmail} />
+                    </div>
                   </div>
                 ) : (
                   <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -518,6 +553,7 @@ function SubmissionRow({
                         </Button>
                       </form>
                     )}
+                    <MergeIntoAccount row={row} accountByEmail={accountByEmail} />
                     <form action={decideInboundAdmission}>
                       <input type="hidden" name="id" value={row.id} />
                       <input type="hidden" name="decision" value="rejected" />
@@ -695,4 +731,81 @@ function isKind(v: string | undefined): v is InboundSubmissionKind {
 }
 function isStatus(v: string | undefined): v is InboundSubmissionStatus {
   return !!v && (STATUS_OPTIONS as string[]).includes(v);
+}
+
+/**
+ * "This application belongs to somebody who already has an account."
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY (2026-11-16)
+ *
+ * Jamar: "we have folks that accepted invite that went through the
+ * signup." Two paths into the cooperative run in parallel, so an
+ * application and an account for the same person is routine rather
+ * than exceptional.
+ *
+ * reconcileInboundForNewMember has closed these rows since October,
+ * and as of today it also carries the application's content onto the
+ * new account. Neither helps the people it already happened to: their
+ * rows were resolved long ago and the sweep only looks at submissions
+ * still awaiting a decision. This is the manual path for those.
+ *
+ * WHY IT RENDERS NOTHING WITHOUT A MATCH
+ *
+ * The control appears only where an account with that exact email
+ * exists, and says whose account it is in the button itself. An admin
+ * is about to write to somebody else's profile; naming the target
+ * beats a generic "Link account" that could land anywhere.
+ *
+ * WHY IT IS SAFE TO PRESS
+ *
+ * planMerge fills blanks and unions skills. It cannot overwrite
+ * anything the member set themselves, so the worst outcome of a
+ * misclick is an audit entry and some tags. Already-linked rows are
+ * skipped so it cannot run twice.
+ * ─────────────────────────────────────────────────────────────
+ */
+function MergeIntoAccount({
+  row,
+  accountByEmail,
+}: {
+  row: { id: string; kind: string; submitterEmail: string | null; linkedResourceId: string | null };
+  accountByEmail: Map<string, User>;
+}) {
+  if (!isAdmissionKind(row.kind as InboundSubmissionKind)) return null;
+  const email = (row.submitterEmail ?? "").trim().toLowerCase();
+  if (!email) return null;
+
+  const account = accountByEmail.get(email);
+  if (!account) return null;
+
+  // Already pointed at this account, so there is nothing to attach.
+  if (row.linkedResourceId === account.id) {
+    return (
+      <span className="text-[11px] text-ink-faint">
+        Attached to{" "}
+        <Link
+          href={`/admin/members/${account.id}`}
+          className="text-brand-magentaText hover:underline"
+        >
+          {publicName(account)}
+        </Link>
+        .
+      </span>
+    );
+  }
+
+  return (
+    <form action={mergeApplicationIntoAccount}>
+      <input type="hidden" name="submissionId" value={row.id} />
+      <input type="hidden" name="userId" value={account.id} />
+      <Button
+        type="submit"
+        className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-[11px] font-medium hover:border-brand-magenta hover:text-brand-magentaText"
+        title={`Attach this application to ${publicName(account)} (${account.email}) and copy across anything their profile is still missing. Existing values are never overwritten; skills are added to what is already there.`}
+      >
+        Link to {publicName(account)} →
+      </Button>
+    </form>
+  );
 }

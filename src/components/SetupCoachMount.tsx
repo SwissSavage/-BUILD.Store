@@ -34,11 +34,7 @@
  */
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getPortfolioForUser, safely } from "@/lib/readers";
-import {
-  outstandingSteps,
-  setupProgress,
-  type SetupSnapshot,
-} from "@/lib/setup-coach";
+import { outstandingSteps, type SetupSnapshot } from "@/lib/setup-coach";
 import { dismissSetupCoach } from "@/lib/setup-coach-actions";
 import { SetupCoach } from "@/components/SetupCoach";
 import type { User } from "@/lib/types";
@@ -77,14 +73,14 @@ export async function SetupCoachMount() {
   const steps = outstandingSteps(snapshot);
   if (steps.length === 0) return null;
 
-  const { done, total } = setupProgress(snapshot);
-
+  // No counts passed. The overlay numbers the run from the list
+  // itself, because a count computed here against the full step set
+  // reported "3 of 5" on the first card a member ever saw: it was
+  // counting two steps they had already satisfied before arriving.
   return (
     <SetupCoach
       steps={steps}
       firstName={user.firstName ?? null}
-      doneCount={done}
-      totalCount={total}
       onDismiss={dismissSetupCoach}
     />
   );

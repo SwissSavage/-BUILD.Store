@@ -4783,6 +4783,9 @@ export type AuditLogAction =
   // Public apply/bid + inbound triage bridges (tasks #30, #43)
   | "user.applied"
   | "inbound.promoted_to_invite"
+  | "inbound.merged_into_account"
+  | "timesheet.entry_logged"
+  | "timesheet.issued"
   | "inbound.tag_proposed"
   | "inbound.tag_accepted"
   | "inbound.tag_rejected"
@@ -4938,6 +4941,9 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "config.access_reviewed": "Access review completed",
   "user.applied": "Applied to public job or contract",
   "inbound.promoted_to_invite": "Inbound submission promoted to invite",
+  "inbound.merged_into_account": "Application carried onto an existing account",
+  "timesheet.entry_logged": "Time logged against an engagement",
+  "timesheet.issued": "Timesheet issued to the client",
   "inbound.tag_proposed": "Applicant proposed new skill tag",
   "inbound.tag_accepted": "Admin accepted proposed tag into canonical set",
   "inbound.tag_rejected": "Admin rejected proposed tag",
@@ -5033,4 +5039,61 @@ export interface AuditLogEntry {
    *  requires one (e.g. compliance penalty rationale). */
   reason: string | null;
   createdAt: string;
+}
+
+// ──────────────────────────────────────────────────────────────
+//  Timesheets — drizzle/0049. Reasoning in src/lib/timesheet.ts.
+// ──────────────────────────────────────────────────────────────
+
+/** A logged piece of work. The live, editable record. */
+export interface TimeEntry {
+  id: string;
+  projectId: string;
+  /** Who did the work. */
+  userId: string;
+  /** Who typed it in, when that is somebody else. */
+  loggedByUserId: string | null;
+  /** YYYY-MM-DD. A calendar day, not an instant. */
+  workDate: string;
+  /** numeric() arrives as a string from node-postgres. See #94. */
+  hours: string;
+  description: string;
+  precision: "exact" | "estimated" | "provisional";
+  /** False for no-charge, written-off and unpriced work. */
+  billable: boolean;
+  exclusionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * A timesheet issued from those entries. Snapshots its lines, so the
+ * figures a client was shown never move. Same rule as remittances.
+ */
+export interface Timesheet {
+  id: string;
+  projectId: string;
+  /** Null while a draft. Issuing makes it a document. */
+  issuedAt: string | null;
+  supersedesId: string | null;
+  title: string;
+  periodStart: string;
+  periodEnd: string;
+  /** Client-facing gross. The Builder's net is derived, never stored. */
+  hourlyRate: string;
+  lines: {
+    workDate: string;
+    description: string;
+    hours: number;
+    precision: "exact" | "estimated" | "provisional";
+  }[];
+  excluded: { workDate: string; description: string; reason: string }[];
+  totalHours: string;
+  totalAmount: string;
+  priorHours: string;
+  methodNote: string | null;
+  invoiceId: string | null;
+  clientToken: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

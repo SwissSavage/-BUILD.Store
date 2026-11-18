@@ -145,7 +145,7 @@ export function TimesheetDocument({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <PrismMark />
+          <BrandMark />
           <div>
             <h1
               style={{
@@ -202,11 +202,13 @@ export function TimesheetDocument({
       >
         <thead>
           <tr>
-            <Th style={{ width: 92 }}>
-              Date
-              <br />
-              <span style={{ fontSize: 9 }}>({periodStart.slice(0, 4)})</span>
-            </Th>
+            {/*
+              Just "Date". The year used to be stacked underneath in
+              smaller type, which looked like a mistake on the page and
+              repeated what the masthead already says in full: "August
+              25 – November 17, 2026" is directly above this table.
+            */}
+            <Th style={{ width: 92 }}>Date</Th>
             <Th>Work performed</Th>
             <Th align="right" style={{ width: 86 }}>
               Hours
@@ -350,8 +352,13 @@ export function TimesheetDocument({
           letterSpacing: "0.08em",
         }}
       >
-        <span style={{ textTransform: "uppercase" }}>
-          Future Modern Builderberg LLC
+        <span
+          style={{ display: "flex", alignItems: "center", gap: 12 }}
+        >
+          <Wordmark />
+          <span style={{ textTransform: "uppercase" }}>
+            Future Modern Builderberg LLC
+          </span>
         </span>
         <span style={{ letterSpacing: "0.02em" }}>
           Jamar@afuturemodern.com · (919) 830-2903 · afuturemodern.com
@@ -449,42 +456,46 @@ function Td({
 }
 
 /**
- * The prism mark, drawn rather than loaded.
+ * The real mark, from public/brand.
  *
- * An <img> would need a URL that resolves wherever this document is
- * opened, including a print dialogue and a saved PDF, and a broken
- * logo on a billing document is worse than none. Inline SVG travels
- * with the markup.
+ * ─────────────────────────────────────────────────────────────
+ * WHY THIS IS AN IMG AND NOT DRAWN (2026-11-18)
+ *
+ * The first version drew a hexagon in inline SVG, on the reasoning
+ * that an <img> might not resolve in a print dialogue or a saved PDF.
+ * Jamar, on seeing it: "the logos are gone."
+ *
+ * He was right, and the reasoning was wrong twice over. The real mark
+ * is a turtle whose shell is a blue and magenta isometric lattice,
+ * and the hexagon looked nothing like it, so the document went out
+ * wearing a logo Future Modern does not use. And the worry does not
+ * apply: these are same-origin assets on a page this app serves, so
+ * they load and print like any other image.
+ *
+ * Approximating a brand mark in code is worse than having no mark.
+ * The assets exist; use them.
+ * ─────────────────────────────────────────────────────────────
  */
-function PrismMark() {
+/* eslint-disable @next/next/no-img-element */
+function BrandMark() {
   return (
-    <svg
-      width="44"
-      height="44"
-      viewBox="0 0 44 44"
-      aria-hidden="true"
-      style={{ flexShrink: 0 }}
-    >
-      <defs>
-        <linearGradient id="fm-prism" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={MAGENTA} />
-          <stop offset="55%" stopColor={BLUE} />
-          <stop offset="100%" stopColor={GREEN} />
-        </linearGradient>
-      </defs>
-      <path
-        d="M22 4 L38 13 L38 31 L22 40 L6 31 L6 13 Z"
-        fill="none"
-        stroke="url(#fm-prism)"
-        strokeWidth="1.6"
-      />
-      <path
-        d="M22 4 L22 40 M6 13 L38 31 M38 13 L6 31"
-        stroke="url(#fm-prism)"
-        strokeWidth="1"
-        opacity="0.65"
-      />
-      <circle cx="22" cy="22" r="3.4" fill={MAGENTA} />
-    </svg>
+    <img
+      src="/brand/turtle.png"
+      alt="Future Modern"
+      width={46}
+      height={46}
+      style={{ flexShrink: 0, display: "block" }}
+    />
+  );
+}
+
+function Wordmark() {
+  return (
+    <img
+      src="/brand/wordmark.png"
+      alt="Future Modern"
+      height={22}
+      style={{ height: 22, width: "auto", display: "block" }}
+    />
   );
 }

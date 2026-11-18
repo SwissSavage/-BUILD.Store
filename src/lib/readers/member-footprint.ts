@@ -71,6 +71,7 @@ import {
   portfolioItems,
   sessions,
   walkthroughProgress,
+  timeEntries,
   profileDisclosureReviews,
 } from "@/db/schema";
 
@@ -132,6 +133,7 @@ export async function getMemberFootprint(
     blockCount,
     walkthroughCount,
     disclosureReviewCount,
+    timeEntryCount,
   ] = await Promise.all([
     countRows(agreements, agreements.userId, uid),
     countRows(payoutMethods, payoutMethods.userId, uid),
@@ -152,6 +154,7 @@ export async function getMemberFootprint(
     countRows(calendarBlocks, calendarBlocks.userId, uid),
     countRows(walkthroughProgress, walkthroughProgress.userId, uid),
     countRows(profileDisclosureReviews, profileDisclosureReviews.userId, uid),
+    countRows(timeEntries, timeEntries.userId, uid),
   ]);
 
   const balance = Number(buildTokenBalance ?? 0);
@@ -176,6 +179,17 @@ export async function getMemberFootprint(
       table: "community_messages",
       label: "Community messages",
       count: messageCount,
+    },
+    // A blocker, and not a close call. Logged hours are the evidence
+    // behind an invoice a client has already been sent: the lines on
+    // an issued timesheet are frozen, but the entries they were drawn
+    // from are what answers "prove it" if the bill is ever queried.
+    // Deleting the member who did the work would quietly remove the
+    // backing for money we have taken.
+    {
+      table: "time_entries",
+      label: "Logged hours on engagements",
+      count: timeEntryCount,
     },
   ].filter((e) => e.count > 0);
 

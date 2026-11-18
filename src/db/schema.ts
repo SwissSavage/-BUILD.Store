@@ -28,6 +28,7 @@
  */
 import {
   boolean,
+  date,
   integer,
   jsonb,
   numeric,
@@ -2448,3 +2449,95 @@ export const schema = {
   sowVersions,
   cooperativeQuoteVersions,
 } as const;
+
+// ──────────────────────────────────────────────────────────────
+//  Timesheets — drizzle/0049. See that file for the reasoning.
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * The live record of work done. Editable while the engagement runs.
+ *
+ * work_date is a DATE and not a timestamp on purpose: the document
+ * says "Aug 25", and storing an instant would invent a precision
+ * nobody recorded.
+ */
+export const timeEntries = pgTable("time_entries", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  /** Who did the work. */
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** Who typed it in, when that is somebody else. */
+  loggedByUserId: text("logged_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  workDate: date("work_date").notNull(),
+  hours: numeric("hours", { precision: 6, scale: 2 }).notNull(),
+  description: text("description").notNull(),
+  /** Drives the * and † marks on the rendered sheet. */
+  precision: text("precision", {
+    enum: ["exact", "estimated", "provisional"],
+  })
+    .notNull()
+    .default("exact"),
+  /** No-charge, written-off and unpriced work. Shown, not hidden. */
+  billable: boolean("billable").notNull().default(true),
+  exclusionReason: text("exclusion_reason"),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * A timesheet issued from those entries at a moment in time.
+ *
+ * Snapshots its lines rather than joining back, same rule as
+ * remittances: a document that recomputes from current state is not
+ * evidence. A client holding a sheet saying 14.25 hours must still
+ * see 14.25 next year.
+ */
+export const timesheets = pgTable("timesheets", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  /** Null while a draft. Issuing makes it a document. */
+  issuedAt: timestamp("issued_at", { mode: "string", withTimezone: true }),
+  /** The revision chain, so the reconciliation line is computed. */
+  supersedesId: text("supersedes_id"),
+  title: text("title").notNull(),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  /** Client-facing gross, snapshotted. The net is derived, never stored. */
+  hourlyRate: numeric("hourly_rate", { precision: 12, scale: 2 }).notNull(),
+  /** Frozen lines. Shape matches TimesheetLine in src/lib/timesheet.ts. */
+  lines: jsonb("lines").notNull().default([]),
+  /** Work done and deliberately not charged. */
+  excluded: jsonb("excluded").notNull().default([]),
+  totalHours: numeric("total_hours", { precision: 8, scale: 2 }).notNull(),
+  totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
+  /** Hours already reported on the sheet this one supersedes. */
+  priorHours: numeric("prior_hours", { precision: 8, scale: 2 })
+    .notNull()
+    .default("0"),
+  /** "Eastern Time · nearest quarter-hour". A claim about method. */
+  methodNote: text("method_note"),
+  /** The invoice this sheet is the evidence for. */
+  invoiceId: text("invoice_id").references(() => invoices.id, {
+    onDelete: "set null",
+  }),
+  /** Credential for the client-facing view. Null until issued. */
+  clientToken: text("client_token").unique(),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

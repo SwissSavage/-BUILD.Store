@@ -591,7 +591,22 @@ export async function completeInviteSignup(formData: FormData): Promise<void> {
   // account already exists with the same email (someone signed in
   // before completing the ceremony), reuse it and promote the tier.
   const [existing] = await db
-    .select({ id: users.id })
+    .select({
+      id: users.id,
+      // ── #112, fixed 2026-11-19 ─────────────────────────────
+      // Read these so the name can be split the way createFmUser
+      // splits it below. This branch set `name` and nothing else, so
+      // anyone who signed in before finishing the ceremony ended up
+      // with an Auth.js name and null firstName/lastName.
+      //
+      // publicName() and adminName() read firstName/lastName and fall
+      // back to the handle, which is why Ozy appears as "@ogokyurek"
+      // on a settled contract rather than by name. The comment above
+      // says signing in first is the expected path, so this was the
+      // common case rather than an edge one.
+      firstName: users.firstName,
+      lastName: users.lastName,
+    })
     .from(users)
     .where(eq(users.email, invite.targetEmail))
     .limit(1);
@@ -599,11 +614,25 @@ export async function completeInviteSignup(formData: FormData): Promise<void> {
   let userId: string;
   if (existing) {
     userId = existing.id;
+
+    // Fill blanks only. Someone who has already set their own name,
+    // or an alias, outranks whatever an admin typed into the invite
+    // form weeks earlier. Same rule as the application merge.
+    const invited = (invite.targetName ?? "").trim();
+    const parts = invited.split(/\s+/).filter(Boolean);
+    const blank = (v: string | null) => !v || v.trim().length === 0;
+
     await db
       .update(users)
       .set({
         membershipTier: invite.targetTier,
         name: invite.targetName ?? undefined,
+        ...(parts.length > 0 && blank(existing.firstName)
+          ? { firstName: parts[0] }
+          : {}),
+        ...(parts.length > 1 && blank(existing.lastName)
+          ? { lastName: parts.slice(1).join(" ") }
+          : {}),
       })
       .where(eq(users.id, userId));
   } else {

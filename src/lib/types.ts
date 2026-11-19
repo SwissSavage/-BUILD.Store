@@ -1025,6 +1025,8 @@ export interface PortfolioItem {
   projectUrl: string | null;
   industry: Industry;
   technologies: string[];
+  /** Additional pillars. Mirrors users.secondaryIndustries. */
+  secondaryIndustries: string[];
   featured: boolean;
   createdAt: string;
 

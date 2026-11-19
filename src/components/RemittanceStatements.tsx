@@ -27,7 +27,8 @@ import { useState } from "react";
 import { Button } from "@/components/Button";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import {
-  acknowledgeRemittance,
+  agreeRemittanceAmount,
+  confirmRemittanceReceipt,
   disputeRemittance,
 } from "@/lib/remittance-actions";
 
@@ -41,6 +42,10 @@ export interface StatementView {
   basis: { label: string; value: string }[];
   issuedAt: string;
   acknowledgedAt: string | null;
+  /** "The figure is correct." Available from issue, no payment gate. */
+  amountAgreedAt: string | null;
+  /** "The money arrived." Only once the split is sent. */
+  receiptConfirmedAt: string | null;
   disputedAt: string | null;
   disputeNote: string | null;
   /** Live payment state. Null means not yet paid. See #113. */
@@ -72,10 +77,16 @@ export function RemittanceStatements({
 }: {
   statements: StatementView[];
 }) {
-  // Only statements that can actually be confirmed. One that is owed
-  // but unpaid is not waiting on the recipient, it is waiting on us.
+  // Anything with a half the recipient can act on right now.
+  //
+  // Used to require isPaid, on the theory that an unpaid statement is
+  // waiting on us rather than on them. That was the ordering bug: the
+  // amount can be checked against the rate and the attribution ledger
+  // the day it is issued, long before any money moves. See #120.
   const unconfirmed = statements.filter(
-    (s) => s.isPaid && !s.acknowledgedAt && !s.disputedAt,
+    (s) =>
+      !s.disputedAt &&
+      (!s.amountAgreedAt || (s.isPaid && !s.receiptConfirmedAt)),
   ).length;
 
   return (
@@ -128,9 +139,13 @@ function Statement({ statement: s }: { statement: StatementView }) {
     ? { label: "Disputed", color: "#E53E3E" }
     : s.acknowledgedAt
       ? { label: "Confirmed", color: "#007048" }
-      : s.isPaid
-        ? { label: "Paid — confirm when you have it", color: "#5070F0" }
-        : { label: "Owed", color: "#8A8A8A" };
+      : s.amountAgreedAt && !s.receiptConfirmedAt
+        ? { label: "Amount agreed — waiting on the money", color: "#5070F0" }
+        : s.receiptConfirmedAt && !s.amountAgreedAt
+          ? { label: "Received — amount not yet agreed", color: "#B4740F" }
+          : s.isPaid
+            ? { label: "Paid — confirm when you have it", color: "#5070F0" }
+            : { label: "Owed", color: "#8A8A8A" };
 
   return (
     <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-inset)] p-5">
@@ -200,21 +215,26 @@ function Statement({ statement: s }: { statement: StatementView }) {
         </div>
       )}
 
-      {s.acknowledgedAt && (
+      {(s.amountAgreedAt || s.receiptConfirmedAt) && (
         <p className="mt-4 text-xs text-ink-faint">
-          You confirmed this on {day(s.acknowledgedAt)}.
+          {s.amountAgreedAt && (
+            <>You agreed the amount on {day(s.amountAgreedAt)}. </>
+          )}
+          {s.receiptConfirmedAt && (
+            <>You confirmed the money arrived on {day(s.receiptConfirmedAt)}.</>
+          )}
         </p>
       )}
 
       {!s.isPaid && !s.disputedAt && (
         <p className="mt-4 text-sm text-ink-muted">
           This is what you are owed and how it was worked out. You can
-          confirm it once the payment has gone out, so confirming means
-          both that the amount is right and that you received it.
+          agree the amount now; confirming you received it unlocks once
+          the payment has gone out.
         </p>
       )}
 
-      {s.isPaid && s.paidOn && !s.acknowledgedAt && (
+      {s.isPaid && s.paidOn && !s.receiptConfirmedAt && (
         <p className="mt-4 text-sm text-ink-muted">
           Sent on {day(s.paidOn)}
           {/* Shown because the person reading this is the one who bore
@@ -230,19 +250,41 @@ function Statement({ statement: s }: { statement: StatementView }) {
         </p>
       )}
 
-      {/* Confirm does not unlock until the split says sent. */}
-      {s.isPaid && !s.acknowledgedAt && (
+      {/*
+        Two confirmations, either order. See #120.
+
+        The amount button has no payment gate: the figure can be
+        checked against the rate and the attribution ledger the day
+        the statement issues. The receipt button appears once the
+        split says sent. Grandfathered work, where the money landed
+        before the statement existed, just shows both at once.
+      */}
+      {(!s.amountAgreedAt || (s.isPaid && !s.receiptConfirmedAt)) && (
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <form action={acknowledgeRemittance}>
-            <input type="hidden" name="remittanceId" value={s.id} />
-            <Button
-              type="submit"
-              className="rounded-full px-5 py-2 text-sm font-medium text-white"
-              style={{ backgroundColor: "#007048" }}
-            >
-              This is right
-            </Button>
-          </form>
+          {!s.amountAgreedAt && (
+            <form action={agreeRemittanceAmount}>
+              <input type="hidden" name="remittanceId" value={s.id} />
+              <Button
+                type="submit"
+                className="rounded-full px-5 py-2 text-sm font-medium text-white"
+                style={{ backgroundColor: "#007048" }}
+              >
+                The amount is right
+              </Button>
+            </form>
+          )}
+          {s.isPaid && !s.receiptConfirmedAt && (
+            <form action={confirmRemittanceReceipt}>
+              <input type="hidden" name="remittanceId" value={s.id} />
+              <Button
+                type="submit"
+                className="rounded-full px-5 py-2 text-sm font-medium text-white"
+                style={{ backgroundColor: "#5070F0" }}
+              >
+                I received it
+              </Button>
+            </form>
+          )}
           {!disputing && !s.disputedAt && (
             <Button
               type="button"

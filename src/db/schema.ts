@@ -722,6 +722,15 @@ export const portfolioItems = pgTable("portfolio_items", {
     enum: ["stem", "creative-media", "professional-services"],
   }).notNull(),
   technologies: jsonb("technologies").$type<string[]>().notNull().default([]),
+  /**
+   * Additional pillars this piece belongs to. Mirrors
+   * users.secondaryIndustries so there is one mental model rather
+   * than two. See drizzle/0051.
+   */
+  secondaryIndustries: jsonb("secondary_industries")
+    .$type<string[]>()
+    .notNull()
+    .default([]),
   featured: boolean("featured").notNull().default(false),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
   publishedAt: timestamp("published_at", { mode: "string", withTimezone: true }),
@@ -1519,7 +1528,22 @@ export const remittances = pgTable("remittances", {
     onDelete: "set null",
   }),
   /** The half of self-billing that matters: they saw it and agreed. */
+  /**
+   * Fully settled: BOTH agreed and received. Set when the second of
+   * the two below lands, so every pre-existing read keeps working
+   * untouched. See drizzle/0050.
+   */
   acknowledgedAt: timestamp("acknowledged_at", {
+    mode: "string",
+    withTimezone: true,
+  }),
+  /** "The figure is correct." No payment gate; available from issue. */
+  amountAgreedAt: timestamp("amount_agreed_at", {
+    mode: "string",
+    withTimezone: true,
+  }),
+  /** "The money arrived." Only answerable once the split is sent. */
+  receiptConfirmedAt: timestamp("receipt_confirmed_at", {
     mode: "string",
     withTimezone: true,
   }),

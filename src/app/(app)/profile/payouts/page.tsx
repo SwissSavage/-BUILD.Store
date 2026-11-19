@@ -133,6 +133,8 @@ export default async function PayoutsPage() {
     basis: r.basis.filter((b) => b.label !== "Engagement"),
     issuedAt: r.issuedAt,
     acknowledgedAt: r.acknowledgedAt,
+    amountAgreedAt: r.amountAgreedAt,
+    receiptConfirmedAt: r.receiptConfirmedAt,
     disputedAt: r.disputedAt,
     disputeNote: r.disputeNote,
     isPaid: r.payoutStatus === "sent",

@@ -20,6 +20,37 @@
  * the recipient says about it and puts a dispute in front of an admin.
  * Correcting an actual error stays a deliberate act on the settlement
  * surface, with the allocator in front of you.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * TWO CONFIRMATIONS, EITHER ORDER (2026-11-19)
+ *
+ * Jamar: "the review process should also typically happen first, but
+ * we need a flow that lands either in optional order specifically for
+ * grandfather situations like this."
+ *
+ * There was one acknowledgeRemittance standing for two different
+ * statements:
+ *
+ *   the figure is correct   answerable the moment the statement
+ *                           exists, before any money moves
+ *   the money arrived       only answerable once it has been sent
+ *
+ * On a normal engagement they collapse into one act, which is why the
+ * single button looked right. Two cases break it.
+ *
+ * Grandfathered work: the money landed before the app had a statement
+ * for it, so the recipient was blocked from agreeing a figure they
+ * were paid for weeks ago until an admin back-filled the send record.
+ *
+ * Dispute after payment: being paid the wrong amount is the most
+ * likely moment for a dispute, and it was inexpressible, because
+ * agree and dispute wrote the same field and that field was gated on
+ * payment.
+ *
+ * So: agreeRemittanceAmount has no payment gate, confirmReceipt does,
+ * and either may land first. acknowledgedAt is not dropped; it now
+ * means "both", written when the second one arrives, so existing
+ * reads like getOpenRemittanceDisputes keep working.
  * ─────────────────────────────────────────────────────────────
  */
 "use server";
@@ -27,7 +58,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { remittances } from "@/db/schema";
+import { remittances, revenueSplits } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { projectAdminUserIds, fanOut } from "@/lib/milestone-core";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
@@ -47,7 +78,17 @@ async function loadOwn(remittanceId: string, userId: string) {
   return row;
 }
 
-export async function acknowledgeRemittance(formData: FormData): Promise<void> {
+/**
+ * "The figure is correct."
+ *
+ * No payment gate, on purpose. A statement can be checked against the
+ * rate, the attribution ledger and the milestone record the moment it
+ * is issued, and whether the money has moved yet has no bearing on
+ * whether the arithmetic is right.
+ */
+export async function agreeRemittanceAmount(
+  formData: FormData,
+): Promise<void> {
   // getCurrentUser inline rather than through a helper: a module-level
   // "use server" file publishes every export as a POST endpoint, and
   // check-server-action-auth looks for the gate in each function body.
@@ -55,13 +96,21 @@ export async function acknowledgeRemittance(formData: FormData): Promise<void> {
   if (!user) throw new Error("Not signed in");
   const id = String(formData.get("remittanceId") ?? "").trim();
   const row = await loadOwn(id, user.id);
-  if (row.acknowledgedAt) return;
+  if (row.amountAgreedAt) return;
 
   const now = new Date().toISOString();
   await db
     .update(remittances)
-    .set({ acknowledgedAt: now, disputedAt: null, disputeNote: null })
-    .where(and(eq(remittances.id, id), isNull(remittances.acknowledgedAt)));
+    .set({
+      amountAgreedAt: now,
+      // Agreeing withdraws a dispute. The two are contradictory
+      // claims about the same number.
+      disputedAt: null,
+      disputeNote: null,
+      // Settled only once both halves are in.
+      ...(row.receiptConfirmedAt ? { acknowledgedAt: now } : {}),
+    })
+    .where(and(eq(remittances.id, id), isNull(remittances.amountAgreedAt)));
 
   await logAuditEvent({
     actorUserId: user.id,
@@ -70,8 +119,105 @@ export async function acknowledgeRemittance(formData: FormData): Promise<void> {
     resourceKind: "project",
     resourceId: row.contractId,
     before: null,
-    after: { remittanceId: id, cashAmount: row.cashAmount, pool: row.pool },
-    reason: `${row.recipientLabel} confirmed their statement`,
+    after: {
+      remittanceId: id,
+      cashAmount: row.cashAmount,
+      pool: row.pool,
+      confirmed: "amount",
+    },
+    reason: `${row.recipientLabel} agreed the amount on their statement`,
+  });
+
+  revalidatePath("/profile/payouts");
+}
+
+/**
+ * "The money arrived."
+ *
+ * Gated on the split actually being marked sent, because this is a
+ * claim about the real world and the app has no other way to know.
+ * The gate is here in the action rather than only in the UI: the old
+ * ordering rule lived in a template, which is why it could not be
+ * reasoned about.
+ */
+export async function confirmRemittanceReceipt(
+  formData: FormData,
+): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not signed in");
+  const id = String(formData.get("remittanceId") ?? "").trim();
+  const row = await loadOwn(id, user.id);
+  if (row.receiptConfirmedAt) return;
+
+  // The split this statement was cut from, matched on contract, pool
+  // and recipient: the same key the statement was issued on.
+  //
+  // The two tables do NOT share a pool vocabulary. revenue_splits
+  // folds treasury and the liquidity pool into one "reserve" bucket;
+  // remittances names them separately, because a statement is
+  // addressed to somebody and those two are addressed to house
+  // sentinels. Hence the map rather than a direct comparison.
+  //
+  // In practice neither sentinel reaches here: loadOwn above requires
+  // the signed-in user to BE the recipient, and HOUSE_TREASURY_ID and
+  // HOUSE_LP_ID are not accounts anyone signs in as. The mapping is
+  // for correctness of the query, not for a path a person walks.
+  const SPLIT_POOL: Record<string, "contributor" | "admin" | "reserve"> = {
+    contributor: "contributor",
+    admin: "admin",
+    treasury: "reserve",
+    liquidity_pool: "reserve",
+  };
+  const splitPool = SPLIT_POOL[row.pool];
+  if (!splitPool) {
+    throw new Error("That statement has no matching payout to confirm.");
+  }
+
+  const [split] = await db
+    .select({ payoutStatus: revenueSplits.payoutStatus })
+    .from(revenueSplits)
+    .where(
+      and(
+        eq(revenueSplits.recipientId, row.recipientId),
+        eq(revenueSplits.pool, splitPool),
+        row.contractId
+          ? eq(revenueSplits.contractId, row.contractId)
+          : isNull(revenueSplits.contractId),
+      ),
+    )
+    .limit(1);
+
+  if (split?.payoutStatus !== "sent") {
+    throw new Error(
+      "This one has not been sent yet. You can still confirm the amount is right in the meantime.",
+    );
+  }
+
+  const now = new Date().toISOString();
+  await db
+    .update(remittances)
+    .set({
+      receiptConfirmedAt: now,
+      ...(row.amountAgreedAt ? { acknowledgedAt: now } : {}),
+    })
+    .where(
+      and(eq(remittances.id, id), isNull(remittances.receiptConfirmedAt)),
+    );
+
+  await logAuditEvent({
+    actorUserId: user.id,
+    actorRoleSnapshot: snapshotActorRole(user),
+    action: "remittance.acknowledged",
+    resourceKind: "project",
+    resourceId: row.contractId,
+    before: null,
+    after: {
+      remittanceId: id,
+      cashAmount: row.cashAmount,
+      pool: row.pool,
+      confirmed: "receipt",
+    },
+    reason: `${row.recipientLabel} confirmed the money arrived`,
   });
 
   revalidatePath("/profile/payouts");
@@ -92,7 +238,17 @@ export async function disputeRemittance(formData: FormData): Promise<void> {
   const now = new Date().toISOString();
   await db
     .update(remittances)
-    .set({ disputedAt: now, disputeNote: note, acknowledgedAt: null })
+    .set({
+      disputedAt: now,
+      disputeNote: note,
+      // Clears the agreement about the FIGURE, and the combined
+      // settled flag with it. receiptConfirmedAt deliberately
+      // survives: "I got the money and it is the wrong amount" is a
+      // real and common thing to say, and it used to be impossible
+      // to express because both halves shared one column.
+      amountAgreedAt: null,
+      acknowledgedAt: null,
+    })
     .where(eq(remittances.id, id));
 
   // Straight to the people who own the deal. A dispute that sits in a

@@ -34,7 +34,13 @@ import {
   invoices as invoicesTable,
   projects as projectsTable,
 } from "@/db/schema";
-import { invoiceReader, splitReader, safely } from "@/lib/readers";
+import {
+  invoiceReader,
+  splitReader,
+  getVouchersForSource,
+  safely,
+} from "@/lib/readers";
+import { IssueSettlementVouchers } from "@/components/IssueSettlementVouchers";
 import { getAllUsers } from "@/lib/readers/users";
 import { secureToken } from "@/lib/secure-token";
 import {
@@ -437,7 +443,7 @@ export default async function ContractLedgerPage({
     return client?.email ?? null;
   }, null);
 
-  const [invoices, splits, { users: roster }, contractRates] =
+  const [invoices, splits, { users: roster }, contractRates, vouchers] =
     await Promise.all([
       safely(() => invoiceReader.where(eq(invoicesTable.contractId, id)), []),
       safely(() => splitReader.all(), []).then((rows) =>
@@ -447,6 +453,11 @@ export default async function ContractLedgerPage({
       // The client-facing rate per Builder, from the approved quote or
       // the engagement terms. Drives the invoice line form.
       safely(() => contractRatesForProject(id), []),
+      // The $BUILD half of the settlement, which this page never
+      // showed. Settlement issues it best-effort and swallows
+      // failures into a console.error, so "did the cascade run" was
+      // unanswerable from the UI. See voucher-backfill-actions.ts.
+      safely(() => getVouchersForSource(id), []),
     ]);
   const userById = new Map(roster.map((u) => [u.id, u]));
 
@@ -673,6 +684,49 @@ export default async function ContractLedgerPage({
             >
               Mark payouts sent →
             </Link>
+          </div>
+        )}
+
+        {/*
+          The $BUILD half. Settlement fires the cascade alongside the
+          cash split, but inside a try whose catch is a console.error,
+          so a failure leaves the contract looking settled while the
+          contributors are owed vouchers that were never written.
+          Nothing on any surface said so. Jamar: "the token vouchers
+          should flow at completion as well."
+        */}
+        {splits.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-[var(--surface-border)] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+                  $BUILD from this settlement
+                </p>
+                <p className="mt-1 text-sm">
+                  {vouchers.length > 0 ? (
+                    <>
+                      {vouchers
+                        .reduce((acc, v) => acc + Number(v.amount), 0)
+                        .toLocaleString(undefined, {
+                          maximumFractionDigits: 2,
+                        })}{" "}
+                      $BUILD across {vouchers.length} voucher
+                      {vouchers.length === 1 ? "" : "s"}.
+                    </>
+                  ) : (
+                    <span className="text-ink-muted">
+                      No $BUILD was issued. The cascade is supposed to
+                      run at settlement and did not, so the
+                      contributors on this contract are owed vouchers
+                      that do not exist yet.
+                    </span>
+                  )}
+                </p>
+              </div>
+              {vouchers.length === 0 && (
+                <IssueSettlementVouchers contractId={id} />
+              )}
+            </div>
           </div>
         )}
 

@@ -4764,6 +4764,7 @@ export type AuditLogAction =
   | "document.signature_voided"
   // $BUILD voucher ledger (off-chain claim mirror)
   | "voucher.issued"
+  | "voucher.issued_from_settlement"
   | "voucher.marked_pending_swap"
   | "voucher.swapped"
   | "voucher.forfeited"
@@ -4926,6 +4927,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "document.signature_rejected": "Signer rejected the envelope (Documenso)",
   "document.signature_voided": "Signature envelope voided (Documenso)",
   "voucher.issued": "$BUILD voucher issued",
+  "voucher.issued_from_settlement": "$BUILD issued for a settlement that missed it",
   "voucher.marked_pending_swap": "$BUILD voucher marked pending swap",
   "voucher.swapped": "$BUILD voucher swapped for real token",
   "voucher.forfeited": "$BUILD voucher forfeited",

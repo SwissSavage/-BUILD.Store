@@ -461,8 +461,25 @@ export default async function ContractLedgerPage({
   const outstandingAR = totalIssued - totalReceived;
 
   // AP roll-ups (what the cooperative still owes out).
+  //
+  // awaiting_manual added 2026-11-18. Without it this read $0 owed on
+  // the AWS settlement while $520 sat unsent on the same page, three
+  // sections below, each row plainly labelled "Awaiting manual send".
+  //
+  // Record-mode rails are the normal case, not the exception: Found
+  // has no API, so every payout it handles passes through this status
+  // on its way to sent. A roll-up that skips it is not reporting on a
+  // corner case, it is under-reporting most of what we owe.
+  //
+  // Same omission as getPendingSplits, fixed there in #113 and missed
+  // here because the two lists were written months apart.
   const apQueued = splits
-    .filter((s) => s.payoutStatus === "queued" || s.payoutStatus === "pending")
+    .filter(
+      (s) =>
+        s.payoutStatus === "queued" ||
+        s.payoutStatus === "pending" ||
+        s.payoutStatus === "awaiting_manual",
+    )
     .reduce((acc, s) => acc + Number(s.amount), 0);
   const apSent = splits
     .filter((s) => s.payoutStatus === "sent")
@@ -616,6 +633,48 @@ export default async function ContractLedgerPage({
           </Link>
           .
         </p>
+
+        {/*
+          Where the money actually gets marked sent.
+
+          This page showed "Awaiting manual send" against every row and
+          offered no way to act on it, so the only route to the control
+          was knowing /admin/payments existed. Jamar: "It should be
+          accessible through multiple entries."
+
+          Only rendered when something is actually waiting, so it is a
+          prompt rather than permanent furniture.
+        */}
+        {apQueued > 0 && (
+          <div
+            className="mt-4 flex flex-col gap-3 rounded-2xl border p-4 text-sm md:flex-row md:items-center md:justify-between"
+            style={{
+              borderColor: "rgba(216, 40, 160, 0.35)",
+              backgroundColor: "rgba(216, 40, 160, 0.06)",
+            }}
+          >
+            <div>
+              <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
+                Waiting on you
+              </p>
+              <p className="mt-1">
+                $
+                {apQueued.toLocaleString(undefined, {
+                  maximumFractionDigits: 2,
+                })}{" "}
+                still to send on this contract. Record the date and
+                reference once the money has actually moved.
+              </p>
+            </div>
+            <Link
+              href="/admin/payments"
+              className="shrink-0 self-start rounded-full px-4 py-2 text-xs font-medium text-white md:self-auto"
+              style={{ backgroundColor: "#D828A0" }}
+            >
+              Mark payouts sent →
+            </Link>
+          </div>
+        )}
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <Stat

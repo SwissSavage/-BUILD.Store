@@ -18,7 +18,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { payoutMethods, revenueSplits } from "@/db/schema";
+import { payoutMethods, revenueSplits, users } from "@/db/schema";
 import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import {
   RAIL_SPECS,
@@ -352,13 +352,6 @@ export async function confirmManualPayout(
   const file = formData.get("payoutDocument");
 
   if (!splitId) return { ok: false, message: "Missing split id." };
-  if (!reference) {
-    return {
-      ok: false,
-      message:
-        "Record the bank confirmation or check number so the payout is auditable.",
-    };
-  }
   if (!sentOn) {
     return {
       ok: false,
@@ -396,11 +389,59 @@ export async function confirmManualPayout(
     : null;
 
   const [split] = await db
-    .select({ id: revenueSplits.id, status: revenueSplits.payoutStatus })
+    .select({
+      id: revenueSplits.id,
+      status: revenueSplits.payoutStatus,
+      // Read for the generated reference below.
+      recipientId: revenueSplits.recipientId,
+      amount: revenueSplits.amount,
+      methodId: revenueSplits.payoutMethodId,
+    })
     .from(revenueSplits)
     .where(eq(revenueSplits.id, splitId))
     .limit(1);
   if (!split) return { ok: false, message: "That payout row does not exist." };
+
+  // ── The reference, generated when the rail does not give one ──
+  //
+  // Jamar: "I think it would be better if the system generates a
+  // record instead."
+  //
+  // This field was required and the placeholder said "Confirmation
+  // #", which is what Stripe and Mercury hand you. Found does not:
+  // its receipts carry no confirmation number, so on the rail we
+  // actually use, the one required field had nothing true to put in
+  // it. A required field with no correct answer gets filled with
+  // junk, and junk in an audit trail is worse than a blank.
+  //
+  // So an admin may still paste a real identifier when one exists,
+  // and when they do not we compose one that is DETERMINISTIC: the
+  // same payout always produces the same string, so two people
+  // reconciling against Found a year apart arrive at the same place.
+  //
+  // Rail, date sent, who, how much. Those four identify a transfer
+  // unambiguously in practice, and they are all searchable in Found.
+  // It is an index into the bank record rather than a claim to be a
+  // bank reference, which is why it is prefixed with the rail and
+  // slashed rather than dressed up to look like a confirmation code.
+  let payoutReference = reference;
+  if (!payoutReference) {
+    const [who] = await db
+      .select({ handle: users.handle })
+      .from(users)
+      .where(eq(users.id, split.recipientId))
+      .limit(1);
+    const rail = (split.methodId ?? "manual").replace(/_/g, "-");
+    // Sentinels have no users row. house_treasury and
+    // house_liquidity_pool are destinations, not people, so the id
+    // IS the readable name and falling back to it is correct rather
+    // than a degraded case.
+    const subject = who?.handle ?? split.recipientId;
+    const amt = Number(split.amount);
+    payoutReference = `${rail}/${sentOn}/${subject}/${
+      Number.isFinite(amt) ? amt.toFixed(2) : "0.00"
+    }`;
+  }
 
   // Same validator the application and invoice forms use: PDF only,
   // checked against the %PDF- magic bytes rather than the MIME type a
@@ -428,7 +469,7 @@ export async function confirmManualPayout(
     .set({
       payoutStatus: "sent",
       payoutSentAt: sentAt.toISOString(),
-      payoutReference: reference,
+      payoutReference: payoutReference,
       payoutFee: fee,
       payoutFeeBorneBy: feeBorneBy,
       ...(document
@@ -453,7 +494,7 @@ export async function confirmManualPayout(
     // more people than the payout row is.
     after: {
       payoutStatus: "sent",
-      reference,
+      reference: payoutReference,
       payoutSentAt: sentAt.toISOString(),
       payoutFee: fee,
       payoutFeeBorneBy: feeBorneBy,

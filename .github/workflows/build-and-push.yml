@@ -31,7 +31,51 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ──────────────────────────────────────────────────────────────
+  # Types and guards, before anything is published.
+  #
+  # Added 2026-11-20. Until now this workflow never type-checked at
+  # all: the only place `tsc` ever ran was inside `next build` in the
+  # Docker image, which meant two things.
+  #
+  # A type error could only be discovered by a deploy, and the six
+  # guard scripts chained into `npm run typecheck` — use-server
+  # exports, the client/database boundary, fixture usage, cascade
+  # coverage, server-action auth, admin-nav reachability — never ran
+  # in CI at all. Those guards have caught real bugs: a cascade off
+  # users.id that would have destroyed the hours behind a paid
+  # invoice, an ungated server action, a client component reaching
+  # the database.
+  #
+  # Running them here also makes it safe to stop type-checking inside
+  # the image build, which is the step that has been killing deploys
+  # on the server: `next build` runs a second full tsc pass after
+  # compiling, and that is the memory peak of the whole build.
+  # ──────────────────────────────────────────────────────────────
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # The full chain: six guard scripts, then tsc --noEmit. Takes
+      # minutes on a laptop and about one on a runner.
+      - name: Typecheck and guards
+        run: npm run typecheck
+
   build-and-push:
+    # Nothing is published unless the guards pass. A green image next
+    # to a broken branch is worse than no image.
+    needs: typecheck
     runs-on: ubuntu-latest
     permissions:
       contents: read

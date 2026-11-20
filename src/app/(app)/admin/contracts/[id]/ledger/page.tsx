@@ -41,6 +41,12 @@ import {
   safely,
 } from "@/lib/readers";
 import { IssueSettlementVouchers } from "@/components/IssueSettlementVouchers";
+import { IssueTimesheet } from "@/components/IssueTimesheet";
+import {
+  getTimeEntriesForProject,
+  getTimesheetsForProject,
+} from "@/lib/readers/timesheets";
+import { formatHours, num as tnum, shortDate } from "@/lib/timesheet";
 import { getAllUsers } from "@/lib/readers/users";
 import { secureToken } from "@/lib/secure-token";
 import {
@@ -443,8 +449,15 @@ export default async function ContractLedgerPage({
     return client?.email ?? null;
   }, null);
 
-  const [invoices, splits, { users: roster }, contractRates, vouchers] =
-    await Promise.all([
+  const [
+    invoices,
+    splits,
+    { users: roster },
+    contractRates,
+    vouchers,
+    timeEntries,
+    timesheets,
+  ] = await Promise.all([
       safely(() => invoiceReader.where(eq(invoicesTable.contractId, id)), []),
       safely(() => splitReader.all(), []).then((rows) =>
         rows.filter((r) => r.contractId === id),
@@ -458,6 +471,11 @@ export default async function ContractLedgerPage({
       // failures into a console.error, so "did the cascade run" was
       // unanswerable from the UI. See voucher-backfill-actions.ts.
       safely(() => getVouchersForSource(id), []),
+      // Hours and issued sheets. The timesheet model shipped with no
+      // admin surface, so there was no way to see logged time or turn
+      // it into the client's document.
+      safely(() => getTimeEntriesForProject(id), []),
+      safely(() => getTimesheetsForProject(id), []),
     ]);
   const userById = new Map(roster.map((u) => [u.id, u]));
 
@@ -630,6 +648,125 @@ export default async function ContractLedgerPage({
           </form>
         </Card>
       </section>
+
+      {/* ──────────────────────  Timesheet section  ─────────────────── */}
+      {/*
+        The evidence behind an hourly invoice. Before this the model,
+        the arithmetic and the client-facing form all existed and
+        nothing called them, so hours could not be seen and a sheet
+        could not be issued.
+
+        Only on hourly engagements: a fixed-price deal bills a figure
+        agreed up front, and a timesheet against it would contradict
+        the contract.
+      */}
+      {project.engagementBasis === "hourly" && (
+        <section className="mt-12">
+          <h2 className="font-display text-2xl font-semibold">Timesheet</h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            Hours logged by the crew. Issuing freezes them into the
+            black form the client receives with the invoice.
+          </p>
+
+          <Card className="mt-4">
+            {timeEntries.length === 0 ? (
+              <p className="text-sm text-ink-muted">
+                Nothing logged yet. Builders enter their own hours on
+                the engagement page; the rate comes off the contract,
+                not from them.
+              </p>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-ink-muted">
+                      Billable
+                    </div>
+                    <div className="font-display text-2xl font-semibold">
+                      {formatHours(
+                        timeEntries
+                          .filter((e) => e.billable)
+                          .reduce((a, e) => a + tnum(e.hours), 0),
+                      )}
+                    </div>
+                  </div>
+                  {timeEntries.some((e) => !e.billable) && (
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-ink-muted">
+                        Not charged
+                      </div>
+                      <div className="font-display text-2xl font-semibold text-ink-muted">
+                        {formatHours(
+                          timeEntries
+                            .filter((e) => !e.billable)
+                            .reduce((a, e) => a + tnum(e.hours), 0),
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <ul className="mt-4 divide-y divide-[var(--surface-border)] text-sm">
+                  {timeEntries.map((e) => (
+                    <li key={e.id} className="flex flex-wrap gap-x-4 gap-y-1 py-2">
+                      <span className="w-16 shrink-0 text-ink-muted">
+                        {shortDate(e.workDate)}
+                      </span>
+                      <span className="w-24 shrink-0 truncate text-ink-muted">
+                        {adminName(userById.get(e.userId))}
+                      </span>
+                      <span className="w-14 shrink-0 tabular-nums">
+                        {formatHours(tnum(e.hours))}
+                      </span>
+                      <span className="min-w-0 flex-1">{e.description}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <IssueTimesheet
+                  projectId={id}
+                  isRevision={timesheets.some((t) => t.issuedAt)}
+                />
+              </>
+            )}
+
+            {timesheets.filter((t) => t.issuedAt).length > 0 && (
+              <div className="mt-5 border-t border-[var(--surface-border)] pt-4">
+                <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+                  Issued
+                </p>
+                <ul className="mt-2 space-y-1.5 text-sm">
+                  {timesheets
+                    .filter((t) => t.issuedAt)
+                    .map((t) => (
+                      <li key={t.id} className="flex flex-wrap gap-x-3">
+                        <span className="text-ink-muted">
+                          {shortDate(t.periodStart)} – {shortDate(t.periodEnd)}
+                        </span>
+                        <span className="tabular-nums">
+                          {formatHours(tnum(t.totalHours))}h
+                        </span>
+                        <span className="tabular-nums">
+                          ${tnum(t.totalAmount).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
+                        {t.clientToken && (
+                          <Link
+                            href={`/timesheets/${t.clientToken}`}
+                            className="text-brand-magentaText hover:underline"
+                          >
+                            Client copy →
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
+          </Card>
+        </section>
+      )}
 
       {/* ────────────────────────  AP section  ──────────────────────── */}
       <section className="mt-12">

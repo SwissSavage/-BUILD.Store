@@ -29,6 +29,7 @@ import Link from "next/link";
 import { ShieldCheck, Tags, Users } from "lucide-react";
 import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { EngagementTermsPanel } from "@/components/EngagementTermsPanel";
+import { ProjectTimeSection } from "@/components/ProjectTimeSection";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
@@ -211,6 +212,20 @@ export default async function ProjectDetailPage({
                 }
               />
             </section>
+          )}
+
+          {/* ── Hours, on hourly engagements ───────────
+              The timesheet model shipped 2026-11-18 with nothing
+              calling it, so a Builder had no way to enter an hour
+              and the whole feature was unreachable. Renders itself
+              away unless this person is on the job and the
+              engagement is actually billed hourly. */}
+          {user && (
+            <ProjectTimeSection
+              project={project}
+              user={user}
+              onTeam={onTeam}
+            />
           )}
 
           {/* ── Milestone tracker (Domino's-style) ───── */}

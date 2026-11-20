@@ -90,7 +90,24 @@ export function HoverDropdown({
           width,
         )}
       >
-        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2 text-sm shadow-lg">
+        {/*
+          Scroll when the menu is taller than the window.
+
+          The Admin menu renders every destination in ADMIN_NAV, 52 of
+          them across seven groups, so on a laptop it ran off the
+          bottom of the screen with no way to reach the last entries.
+          Nothing was broken; they were simply unreachable, which is
+          the same thing from the admin's side.
+
+          Capped against the viewport rather than a fixed pixel height
+          so it adapts to the window, and only kicks in when the
+          content actually exceeds it. Shorter menus are untouched.
+
+          overscroll-contain stops the page behind scrolling on when
+          the menu hits its end, which on a hover menu reads as the
+          whole screen lurching.
+        */}
+        <div className="max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain rounded-xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2 text-sm shadow-lg">
           {children}
         </div>
       </div>

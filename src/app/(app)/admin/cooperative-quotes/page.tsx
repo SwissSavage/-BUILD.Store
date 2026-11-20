@@ -34,7 +34,10 @@ import {
   projects as projectsTable,
 } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
-import { type ProposedBuilder } from "@/lib/types";
+import { publicName, type ProposedBuilder, type User } from "@/lib/types";
+import { getAllUsers } from "@/lib/readers/users";
+import { safely } from "@/lib/readers";
+import { ReplaceQuoteBuilder } from "@/components/ReplaceQuoteBuilder";
 import {
   removeCooperativeQuote,
   returnQuoteToDraft,
@@ -141,6 +144,26 @@ export default async function AdminCooperativeQuotesPage() {
   const quoteProjectById = new Map(
     quoteProjects.map((p) => [p.id, p]),
   );
+
+  // ── #281 ────────────────────────────────────────────────────
+  // The roster, for two things this page could not do before:
+  // naming the Builders on a quote (it showed a count and nothing
+  // else, so "who is actually on this" was unanswerable here), and
+  // offering replacements on a draft.
+  //
+  // One read for the whole page rather than per quote. Suspended
+  // accounts are filtered out: a swap is a forward-looking choice
+  // and somebody suspended is not a candidate for client work.
+  const { users: roster } = await safely(() => getAllUsers(), {
+    users: [],
+    source: "postgres" as const,
+  });
+  const selectableRoster = roster.filter(
+    (u) =>
+      !(u as User & { suspendedAt?: string | null }).suspendedAt &&
+      u.membershipTier !== "viewer",
+  );
+  const rosterById = new Map(roster.map((u) => [u.id, u]));
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
@@ -271,6 +294,63 @@ export default async function AdminCooperativeQuotesPage() {
                       Client sees {aggregateLine}. Builders are paid{" "}
                       {payoutLine}.
                     </p>
+
+                    {/* ── Who is actually on it (#281) ──────────────
+                        This page showed a count and nothing else, so
+                        the one question an admin has in front of a
+                        draft, "who is on this", could not be answered
+                        here. Names now, and on a draft each carries
+                        the Replace control the issue asks for.
+
+                        Draft only. Once sent, proposedBuilders is what
+                        a client was shown and editing it would make
+                        the record disagree with the document, which is
+                        what drizzle/0036 introduced versioning to
+                        prevent. */}
+                    <ul className="mt-3 space-y-2">
+                      {proposedBuilders.map((b) => {
+                        const who = rosterById.get(b.userId);
+                        const name = who ? publicName(who) : b.userId;
+                        return (
+                          <li
+                            key={b.userId}
+                            className="rounded-lg border border-[var(--surface-border)] px-3 py-2"
+                          >
+                            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                              <span className="text-sm font-medium">
+                                {name}
+                              </span>
+                              <span className="text-[11px] text-ink-faint">
+                                {b.timeline}
+                              </span>
+                            </div>
+                            {b.relevance && (
+                              <p className="mt-1 text-xs text-ink-muted">
+                                {b.relevance}
+                              </p>
+                            )}
+                            {quote.status === "draft" && (
+                              <ReplaceQuoteBuilder
+                                quoteId={quote.id}
+                                outgoingUserId={b.userId}
+                                outgoingName={name}
+                                candidates={selectableRoster
+                                  .filter(
+                                    (u) =>
+                                      !proposedBuilders.some(
+                                        (p) => p.userId === u.id,
+                                      ),
+                                  )
+                                  .map((u) => ({
+                                    id: u.id,
+                                    name: publicName(u),
+                                  }))}
+                              />
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
                     {quote.status === "draft" ? (
                       <p className="mt-3 text-xs text-ink-muted">
                         Internal draft. The client link is inactive and selected bids remain editable.

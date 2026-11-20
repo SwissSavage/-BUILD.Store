@@ -18,6 +18,7 @@ import {
   productReader,
 } from "@/lib/readers";
 import { getAllApplications } from "@/lib/readers/project-applications";
+import { getPendingSplits } from "@/lib/readers";
 import { count as sqlCount, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { inboundSubmissions } from "@/db/schema";
@@ -41,6 +42,7 @@ export async function getAdminQueueCounts(): Promise<AdminQueueCounts> {
     feedback,
     testimonials,
     inbound,
+    pendingSplits,
   ] = await Promise.all([
     safely(() => membershipApplicationReader.all(), []),
     safely(() => getAllApplications(), []),
@@ -59,6 +61,19 @@ export async function getAdminQueueCounts(): Promise<AdminQueueCounts> {
       const [result] = await db.select({ value: sqlCount() }).from(inboundSubmissions).where(inArray(inboundSubmissions.status, ["new", "in_triage", "needs_info"]));
       return result.value;
     }, 0),
+    // Money owed and not yet sent. Added 2026-11-18 after the AWS
+    // settlement sat in "Awaiting manual send" with nothing anywhere
+    // saying so: the only way to know was to open the page and look.
+    //
+    // Jamar: "a notification in Admin payments would be helpful if
+    // that's where it lands. It should be accessible through multiple
+    // entries."
+    //
+    // It is one line because of how this file is keyed. Counts are
+    // keyed by Admin DESTINATION, so a number here badges the nav
+    // dropdown, the mobile menu and the admin home tile at once.
+    // Nothing else needs touching.
+    safely(() => getPendingSplits(), []),
   ]);
 
   const count = (value: number) => (value > 0 ? value : undefined);
@@ -81,5 +96,11 @@ export async function getAdminQueueCounts(): Promise<AdminQueueCounts> {
     "/admin/epk": count(epks.filter((row) => row.status === "submitted").length),
     "/admin/testimonials": count(testimonials.filter((row) => row.publishedAt === null).length),
     "/admin/feedback": count(feedback.filter((row) => row.status === "new").length),
+    // Unlike the queues above, this one is money that has been
+    // promised to somebody and not yet moved. It stays lit until an
+    // admin records the send, which is the behaviour the header of
+    // this file describes: a badge remains until the underlying
+    // record is acted on.
+    "/admin/payments": count(pendingSplits.length),
   };
 }

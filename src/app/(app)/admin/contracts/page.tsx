@@ -59,10 +59,38 @@ export default async function AdminContractsIndex() {
   const settledContractIds = new Set(
     splits.map((s) => s.contractId).filter((id): id is string => Boolean(id)),
   );
-  const settled = contracts.filter((p) => settledContractIds.has(p.id));
+  const hasSplits = contracts.filter((p) => settledContractIds.has(p.id));
   const collectedUnsettled = contracts.filter(
-    (p) => p.collectedRevenue && !settled.includes(p),
+    (p) => p.collectedRevenue && !hasSplits.includes(p),
   );
+
+  // ── Settled is not the same as paid (2026-11-19) ─────────────
+  //
+  // Jamar: "I meant move past the settlement or log payments where
+  // things show awaiting."
+  //
+  // Running settlement writes the splits. On a rail with an API that
+  // also moves the money, so the two were treated as one thing and
+  // the Settled section called itself "Splits dispatched. Read-only
+  // audit view."
+  //
+  // Found has no API. Its payouts land in awaiting_manual and sit
+  // there until an admin records the send. So the AWS contract was
+  // filed under Settled, described as dispatched and read-only,
+  // while $520 had not moved and three rows on its own ledger said
+  // "Awaiting manual send".
+  //
+  // A contract with money still to go out is not finished, and the
+  // board should not be the last place to find that out.
+  const unsentOn = (p: { id: string }) =>
+    (splitsBy.get(p.id) ?? []).filter(
+      (sp) =>
+        sp.payoutStatus === "awaiting_manual" ||
+        sp.payoutStatus === "queued" ||
+        sp.payoutStatus === "pending",
+    );
+  const awaitingPayout = hasSplits.filter((p) => unsentOn(p).length > 0);
+  const settled = hasSplits.filter((p) => unsentOn(p).length === 0);
 
   // ── Buckets ──────────────────────────────────────────────────
   //
@@ -146,10 +174,21 @@ export default async function AdminContractsIndex() {
         />
       )}
 
+      {awaitingPayout.length > 0 && (
+        <Section
+          title={`Awaiting payout (${awaitingPayout.length})`}
+          subtitle="Split, not yet sent. Record the payment once the money has actually moved."
+          accent="#B4740F"
+          contracts={awaitingPayout}
+          attributionsBy={attributionsBy}
+          splitsBy={splitsBy}
+        />
+      )}
+
       {settled.length > 0 && (
         <Section
           title={`Settled (${settled.length})`}
-          subtitle="Splits dispatched. Read-only audit view."
+          subtitle="Split and paid out. Read-only audit view."
           accent="#007048"
           contracts={settled}
           attributionsBy={attributionsBy}
@@ -224,6 +263,15 @@ function ContractRow({
   attributions: AttributionEntry[];
   splits: RevenueSplit[];
 }) {
+  // Allocated on this contract and not yet sent. Drives the "Log
+  // payments" action below, so the row offers a way out of the state
+  // it is reporting rather than just naming it.
+  const unsent = splits.filter(
+    (sp) =>
+      sp.payoutStatus === "awaiting_manual" ||
+      sp.payoutStatus === "queued" ||
+      sp.payoutStatus === "pending",
+  ).length;
 
   return (
     <Card>
@@ -314,6 +362,26 @@ function ContractRow({
           >
             {splits.length > 0 ? "View settlement" : "Settle revenue"}
           </Link>
+          {/*
+            The step after settlement, which had no entry point from
+            here at all. Settling writes the splits; on a rail with no
+            API somebody then has to record that the money actually
+            moved, and until now the only route to that control was
+            already knowing /admin/payments exists.
+
+            Shown only while something on THIS contract is unsent, so
+            it disappears once the work is done rather than sitting
+            there as another permanent button.
+          */}
+          {unsent > 0 && (
+            <Link
+              href="/admin/payments"
+              className="rounded-full px-3 py-1.5 text-xs font-medium text-white"
+              style={{ backgroundColor: "#B4740F" }}
+            >
+              Log {unsent} payment{unsent === 1 ? "" : "s"} →
+            </Link>
+          )}
         </div>
       )}
 

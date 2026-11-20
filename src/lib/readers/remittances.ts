@@ -30,7 +30,12 @@ export interface RemittanceRow {
   basis: { label: string; value: string }[];
   recipientLabel: string;
   issuedAt: string;
+  /** Both halves in. See drizzle/0050. */
   acknowledgedAt: string | null;
+  /** "The figure is correct." No payment gate. */
+  amountAgreedAt: string | null;
+  /** "The money arrived." Requires the split to be sent. */
+  receiptConfirmedAt: string | null;
   disputedAt: string | null;
   disputeNote: string | null;
   /**
@@ -62,6 +67,8 @@ function shape(r: typeof remittances.$inferSelect): RemittanceRow {
     recipientLabel: r.recipientLabel,
     issuedAt: r.issuedAt,
     acknowledgedAt: r.acknowledgedAt,
+    amountAgreedAt: r.amountAgreedAt,
+    receiptConfirmedAt: r.receiptConfirmedAt,
     disputedAt: r.disputedAt,
     disputeNote: r.disputeNote,
     payoutStatus: null,

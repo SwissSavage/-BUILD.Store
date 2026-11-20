@@ -34,7 +34,19 @@ import {
   invoices as invoicesTable,
   projects as projectsTable,
 } from "@/db/schema";
-import { invoiceReader, splitReader, safely } from "@/lib/readers";
+import {
+  invoiceReader,
+  splitReader,
+  getVouchersForSource,
+  safely,
+} from "@/lib/readers";
+import { IssueSettlementVouchers } from "@/components/IssueSettlementVouchers";
+import { IssueTimesheet } from "@/components/IssueTimesheet";
+import {
+  getTimeEntriesForProject,
+  getTimesheetsForProject,
+} from "@/lib/readers/timesheets";
+import { formatHours, num as tnum, shortDate } from "@/lib/timesheet";
 import { getAllUsers } from "@/lib/readers/users";
 import { secureToken } from "@/lib/secure-token";
 import {
@@ -437,8 +449,15 @@ export default async function ContractLedgerPage({
     return client?.email ?? null;
   }, null);
 
-  const [invoices, splits, { users: roster }, contractRates] =
-    await Promise.all([
+  const [
+    invoices,
+    splits,
+    { users: roster },
+    contractRates,
+    vouchers,
+    timeEntries,
+    timesheets,
+  ] = await Promise.all([
       safely(() => invoiceReader.where(eq(invoicesTable.contractId, id)), []),
       safely(() => splitReader.all(), []).then((rows) =>
         rows.filter((r) => r.contractId === id),
@@ -447,6 +466,16 @@ export default async function ContractLedgerPage({
       // The client-facing rate per Builder, from the approved quote or
       // the engagement terms. Drives the invoice line form.
       safely(() => contractRatesForProject(id), []),
+      // The $BUILD half of the settlement, which this page never
+      // showed. Settlement issues it best-effort and swallows
+      // failures into a console.error, so "did the cascade run" was
+      // unanswerable from the UI. See voucher-backfill-actions.ts.
+      safely(() => getVouchersForSource(id), []),
+      // Hours and issued sheets. The timesheet model shipped with no
+      // admin surface, so there was no way to see logged time or turn
+      // it into the client's document.
+      safely(() => getTimeEntriesForProject(id), []),
+      safely(() => getTimesheetsForProject(id), []),
     ]);
   const userById = new Map(roster.map((u) => [u.id, u]));
 
@@ -461,8 +490,25 @@ export default async function ContractLedgerPage({
   const outstandingAR = totalIssued - totalReceived;
 
   // AP roll-ups (what the cooperative still owes out).
+  //
+  // awaiting_manual added 2026-11-18. Without it this read $0 owed on
+  // the AWS settlement while $520 sat unsent on the same page, three
+  // sections below, each row plainly labelled "Awaiting manual send".
+  //
+  // Record-mode rails are the normal case, not the exception: Found
+  // has no API, so every payout it handles passes through this status
+  // on its way to sent. A roll-up that skips it is not reporting on a
+  // corner case, it is under-reporting most of what we owe.
+  //
+  // Same omission as getPendingSplits, fixed there in #113 and missed
+  // here because the two lists were written months apart.
   const apQueued = splits
-    .filter((s) => s.payoutStatus === "queued" || s.payoutStatus === "pending")
+    .filter(
+      (s) =>
+        s.payoutStatus === "queued" ||
+        s.payoutStatus === "pending" ||
+        s.payoutStatus === "awaiting_manual",
+    )
     .reduce((acc, s) => acc + Number(s.amount), 0);
   const apSent = splits
     .filter((s) => s.payoutStatus === "sent")
@@ -603,6 +649,125 @@ export default async function ContractLedgerPage({
         </Card>
       </section>
 
+      {/* ──────────────────────  Timesheet section  ─────────────────── */}
+      {/*
+        The evidence behind an hourly invoice. Before this the model,
+        the arithmetic and the client-facing form all existed and
+        nothing called them, so hours could not be seen and a sheet
+        could not be issued.
+
+        Only on hourly engagements: a fixed-price deal bills a figure
+        agreed up front, and a timesheet against it would contradict
+        the contract.
+      */}
+      {project.engagementBasis === "hourly" && (
+        <section className="mt-12">
+          <h2 className="font-display text-2xl font-semibold">Timesheet</h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            Hours logged by the crew. Issuing freezes them into the
+            black form the client receives with the invoice.
+          </p>
+
+          <Card className="mt-4">
+            {timeEntries.length === 0 ? (
+              <p className="text-sm text-ink-muted">
+                Nothing logged yet. Builders enter their own hours on
+                the engagement page; the rate comes off the contract,
+                not from them.
+              </p>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-ink-muted">
+                      Billable
+                    </div>
+                    <div className="font-display text-2xl font-semibold">
+                      {formatHours(
+                        timeEntries
+                          .filter((e) => e.billable)
+                          .reduce((a, e) => a + tnum(e.hours), 0),
+                      )}
+                    </div>
+                  </div>
+                  {timeEntries.some((e) => !e.billable) && (
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-ink-muted">
+                        Not charged
+                      </div>
+                      <div className="font-display text-2xl font-semibold text-ink-muted">
+                        {formatHours(
+                          timeEntries
+                            .filter((e) => !e.billable)
+                            .reduce((a, e) => a + tnum(e.hours), 0),
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <ul className="mt-4 divide-y divide-[var(--surface-border)] text-sm">
+                  {timeEntries.map((e) => (
+                    <li key={e.id} className="flex flex-wrap gap-x-4 gap-y-1 py-2">
+                      <span className="w-16 shrink-0 text-ink-muted">
+                        {shortDate(e.workDate)}
+                      </span>
+                      <span className="w-24 shrink-0 truncate text-ink-muted">
+                        {adminName(userById.get(e.userId))}
+                      </span>
+                      <span className="w-14 shrink-0 tabular-nums">
+                        {formatHours(tnum(e.hours))}
+                      </span>
+                      <span className="min-w-0 flex-1">{e.description}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <IssueTimesheet
+                  projectId={id}
+                  isRevision={timesheets.some((t) => t.issuedAt)}
+                />
+              </>
+            )}
+
+            {timesheets.filter((t) => t.issuedAt).length > 0 && (
+              <div className="mt-5 border-t border-[var(--surface-border)] pt-4">
+                <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+                  Issued
+                </p>
+                <ul className="mt-2 space-y-1.5 text-sm">
+                  {timesheets
+                    .filter((t) => t.issuedAt)
+                    .map((t) => (
+                      <li key={t.id} className="flex flex-wrap gap-x-3">
+                        <span className="text-ink-muted">
+                          {shortDate(t.periodStart)} – {shortDate(t.periodEnd)}
+                        </span>
+                        <span className="tabular-nums">
+                          {formatHours(tnum(t.totalHours))}h
+                        </span>
+                        <span className="tabular-nums">
+                          ${tnum(t.totalAmount).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
+                        {t.clientToken && (
+                          <Link
+                            href={`/timesheets/${t.clientToken}`}
+                            className="text-brand-magentaText hover:underline"
+                          >
+                            Client copy →
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
+          </Card>
+        </section>
+      )}
+
       {/* ────────────────────────  AP section  ──────────────────────── */}
       <section className="mt-12">
         <h2 className="font-display text-2xl font-semibold">Outbound payouts</h2>
@@ -616,6 +781,91 @@ export default async function ContractLedgerPage({
           </Link>
           .
         </p>
+
+        {/*
+          Where the money actually gets marked sent.
+
+          This page showed "Awaiting manual send" against every row and
+          offered no way to act on it, so the only route to the control
+          was knowing /admin/payments existed. Jamar: "It should be
+          accessible through multiple entries."
+
+          Only rendered when something is actually waiting, so it is a
+          prompt rather than permanent furniture.
+        */}
+        {apQueued > 0 && (
+          <div
+            className="mt-4 flex flex-col gap-3 rounded-2xl border p-4 text-sm md:flex-row md:items-center md:justify-between"
+            style={{
+              borderColor: "rgba(216, 40, 160, 0.35)",
+              backgroundColor: "rgba(216, 40, 160, 0.06)",
+            }}
+          >
+            <div>
+              <p className="text-[11px] uppercase tracking-wider text-brand-magentaText">
+                Waiting on you
+              </p>
+              <p className="mt-1">
+                $
+                {apQueued.toLocaleString(undefined, {
+                  maximumFractionDigits: 2,
+                })}{" "}
+                still to send on this contract. Record the date and
+                reference once the money has actually moved.
+              </p>
+            </div>
+            <Link
+              href="/admin/payments"
+              className="shrink-0 self-start rounded-full px-4 py-2 text-xs font-medium text-white md:self-auto"
+              style={{ backgroundColor: "#D828A0" }}
+            >
+              Mark payouts sent →
+            </Link>
+          </div>
+        )}
+
+        {/*
+          The $BUILD half. Settlement fires the cascade alongside the
+          cash split, but inside a try whose catch is a console.error,
+          so a failure leaves the contract looking settled while the
+          contributors are owed vouchers that were never written.
+          Nothing on any surface said so. Jamar: "the token vouchers
+          should flow at completion as well."
+        */}
+        {splits.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-[var(--surface-border)] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+                  $BUILD from this settlement
+                </p>
+                <p className="mt-1 text-sm">
+                  {vouchers.length > 0 ? (
+                    <>
+                      {vouchers
+                        .reduce((acc, v) => acc + Number(v.amount), 0)
+                        .toLocaleString(undefined, {
+                          maximumFractionDigits: 2,
+                        })}{" "}
+                      $BUILD across {vouchers.length} voucher
+                      {vouchers.length === 1 ? "" : "s"}.
+                    </>
+                  ) : (
+                    <span className="text-ink-muted">
+                      No $BUILD was issued. The cascade is supposed to
+                      run at settlement and did not, so the
+                      contributors on this contract are owed vouchers
+                      that do not exist yet.
+                    </span>
+                  )}
+                </p>
+              </div>
+              {vouchers.length === 0 && (
+                <IssueSettlementVouchers contractId={id} />
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <Stat

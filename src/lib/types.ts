@@ -4676,6 +4676,7 @@ export type AuditLogAction =
   | "quote.sent"
   | "quote.removed"
   | "quote.returned_to_draft"
+  | "quote.builder_replaced"
   | "quote.approved"
   | "quote.declined"
   // Circumvention review
@@ -4879,6 +4880,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "quote.sent": "Cooperative Quote sent to client",
   "quote.removed": "Cooperative Quote removed",
   "quote.returned_to_draft": "Cooperative Quote pulled back to draft",
+  "quote.builder_replaced": "Builder swapped on a draft quote",
   "quote.approved": "Cooperative Quote approved by client",
   "quote.declined": "Cooperative Quote declined by client",
   "profile.disclosure_reviewed": "Profile disclosure reviewed, no action",

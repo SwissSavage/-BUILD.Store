@@ -127,7 +127,11 @@ export function ProfileMenu({
         </span>
       </summary>
 
-      <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2 text-sm shadow-lg">
+      {/* Same viewport cap as HoverDropdown. This menu is shorter, so
+          it rarely overflows on a desktop, but it carries a blurb
+          under every item and a short laptop window is enough to push
+          Sign out off the bottom. */}
+      <div className="absolute right-0 z-50 mt-2 max-h-[calc(100vh-5rem)] w-72 overflow-y-auto overscroll-contain rounded-xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] p-2 text-sm shadow-lg">
         {/* Small header so the user knows who they're signed in as —
             useful especially during admin view-as. */}
         <div className="mb-2 flex items-center gap-2.5 rounded-lg bg-[var(--surface-inset)] px-3 py-2">

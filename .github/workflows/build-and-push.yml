@@ -64,6 +64,27 @@ jobs:
           node-version: 22
           cache: npm
 
+      # Match the image build's npm exactly.
+      #
+      # The Dockerfile pins `npm install -g npm@11.12.1` before its
+      # own `npm ci`, and the first run of this job failed where that
+      # one succeeds:
+      #
+      #   npm error Missing: nodemailer@8.0.11 from lock file
+      #
+      # package.json pins nodemailer ^6.9.16 while something in the
+      # tree peer-depends on ^7 || ^8, and npm versions disagree about
+      # how to resolve that against the existing lockfile. Whichever
+      # npm the runner happens to ship with is not the question: CI
+      # has to install the same tree the image installs, or it is
+      # checking something other than what ships.
+      #
+      # The underlying lockfile drift is real and worth fixing on its
+      # own, deliberately, rather than by regenerating the lockfile in
+      # the same change that unblocks a deploy.
+      - name: Match the image build's npm
+        run: npm install -g npm@11.12.1
+
       - name: Install
         run: npm ci
 

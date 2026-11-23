@@ -23,6 +23,7 @@ import { and, desc, eq, gt, inArray, isNull, lt, not, sql } from "drizzle-orm";
 import {
   agreements,
   artistEpks,
+  adminReviews,
   buildVouchers,
   calendarAvailability,
   calendarBlocks,
@@ -77,6 +78,7 @@ import {
 import { db } from "@/db/client";
 import { makeReader } from "./factory";
 import type {
+  AdminReview,
   Agreement,
   ArtistEpk,
   AttributionEntry,
@@ -958,3 +960,40 @@ export const triangulatedCompositeReader =
 export const whitelistTierReader = makeReader<WhitelistTier>(whitelistTiers, {
   idColumn: whitelistTiers.id,
 });
+
+/**
+ * Admin / PM reviews. drizzle/0052.
+ *
+ * Two readers on purpose, because the two audiences must not share a
+ * query. See src/lib/admin-review-score.ts on why.
+ */
+export const adminReviewReader = makeReader<AdminReview>(adminReviews, {
+  orderBy: adminReviews.createdAt,
+  idColumn: adminReviews.id,
+});
+
+/** Every review about one admin. Feeds synthesizeAdminScore. */
+export function getAdminReviewsFor(
+  subjectUserId: string,
+): Promise<AdminReview[]> {
+  return adminReviewReader.where(
+    eq(adminReviews.subjectUserId, subjectUserId),
+  );
+}
+
+/**
+ * The attributed list for an admin surface, with the viewer's own
+ * subject rows removed in the QUERY rather than after it.
+ *
+ * Enforced here rather than in a page because the moment it is a
+ * template concern somebody writes a second template. An admin can
+ * read everyone's reviews except the ones about themselves; their own
+ * standing reaches them as a score like everybody else's.
+ */
+export function getAttributedAdminReviews(
+  viewerUserId: string,
+): Promise<AdminReview[]> {
+  return adminReviewReader.where(
+    not(eq(adminReviews.subjectUserId, viewerUserId)),
+  );
+}

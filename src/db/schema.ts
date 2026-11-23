@@ -731,6 +731,16 @@ export const portfolioItems = pgTable("portfolio_items", {
     .$type<string[]>()
     .notNull()
     .default([]),
+  /**
+   * Who else is credited on this piece of work, and for what.
+   *
+   * One item per engagement with roles, rather than a separate entry
+   * for the admin who ran it. See drizzle/0052.
+   */
+  credits: jsonb("credits")
+    .$type<{ userId: string; role: string }[]>()
+    .notNull()
+    .default([]),
   featured: boolean("featured").notNull().default(false),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
   publishedAt: timestamp("published_at", { mode: "string", withTimezone: true }),
@@ -2562,6 +2572,48 @@ export const timesheets = pgTable("timesheets", {
     .notNull()
     .defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+
+// ──────────────────────────────────────────────────────────────
+//  Admin / PM reviews — drizzle/0052. Reasoning lives in that file.
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * What a Builder or a client says about the person who RAN the
+ * engagement, as opposed to the people who delivered it.
+ *
+ * Dimensions are PM-specific on purpose: Craft and Collaboration from
+ * the peer set do not describe project management, and "paid on time"
+ * is the thing a Builder most needs a way to say.
+ */
+export const adminReviews = pgTable("admin_reviews", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  /** The admin being rated, drawn from projects.adminUserIds. */
+  subjectUserId: text("subject_user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** Null for a client: they have no account, only a token. */
+  reviewerUserId: text("reviewer_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  source: text("source", { enum: ["builder", "client"] }).notNull(),
+
+  // 1..5. Null means "did not answer", which is not the middle of the
+  // scale and is skipped by the aggregate rather than counted.
+  scopeClarity: integer("scope_clarity"),
+  responsiveness: integer("responsiveness"),
+  shieldedFromChurn: integer("shielded_from_churn"),
+  /** Builder-only. A client cannot know when talent was paid. */
+  paidOnTime: integer("paid_on_time"),
+
+  prose: text("prose"),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
     .notNull()
     .defaultNow(),
 });

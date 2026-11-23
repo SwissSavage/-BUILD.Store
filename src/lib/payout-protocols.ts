@@ -80,6 +80,21 @@ export interface PayoutMethodDefinition {
   reaches: string[] | "any";
   /** Shown under the picker so the operator knows what happens next. */
   note?: string;
+  /**
+   * Whether sending on this rail can cost anything.
+   *
+   * Jamar: "that shouldn't show up at all until they select a payout
+   * method that incurs fees." The confirm form asked for a fee and a
+   * payer on every payout, including domestic Found, which is free.
+   * A field that cannot have a non-empty answer is a field that
+   * teaches people to ignore the form.
+   *
+   * False is the honest default for the rails we run: domestic ACH
+   * and a posted check cost nothing to send. Wires, cross-border and
+   * card-funded transfers do, which is why this is per-method rather
+   * than a global setting.
+   */
+  incursFee: boolean;
 }
 
 /**
@@ -102,6 +117,8 @@ export const PAYOUT_METHODS: PayoutMethodDefinition[] = [
     label: "Found (ACH)",
     mode: "record",
     reaches: ["US"],
+    // Domestic Found ACH is free to send.
+    incursFee: false,
     note: "Found texts and emails the recipient, who claims it. Record the date, reference and payout record once it is sent.",
   },
   {
@@ -109,6 +126,8 @@ export const PAYOUT_METHODS: PayoutMethodDefinition[] = [
     label: "Check",
     mode: "record",
     reaches: ["US"],
+    // A stamp is not a transfer fee and is not worth a column.
+    incursFee: false,
     note: "Record the check number and the date it was written.",
   },
   {
@@ -116,6 +135,9 @@ export const PAYOUT_METHODS: PayoutMethodDefinition[] = [
     label: "Stripe Connect",
     mode: "routing",
     reaches: "any",
+    // Per-transfer fee, which is the whole reason Connect is opt-in
+    // rather than the default rail.
+    incursFee: true,
     note: "Dispatched automatically. Only works for recipients who completed Connect onboarding.",
   },
 ];
@@ -134,6 +156,20 @@ export function payoutMethodById(
  * id should never cause a transfer: the safe failure is "a human looks
  * at it", not "dispatch and hope".
  */
+/**
+ * Whether to ask about a fee at all.
+ *
+ * Defaults to FALSE for an unknown method, unlike isRecordMode, which
+ * defaults to the cautious answer. The asymmetry is deliberate: the
+ * risk there is dispatching money we should not have, and the risk
+ * here is only that an operator has to tell us about a fee some other
+ * way. Showing a field nobody can answer is the failure being fixed.
+ */
+export function incursFee(id: string | null | undefined): boolean {
+  const method = payoutMethodById(id);
+  return method ? method.incursFee : false;
+}
+
 export function isRecordMode(id: string | null | undefined): boolean {
   const method = payoutMethodById(id);
   return method ? method.mode === "record" : true;

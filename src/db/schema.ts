@@ -2617,3 +2617,38 @@ export const adminReviews = pgTable("admin_reviews", {
     .notNull()
     .defaultNow(),
 });
+
+// ──────────────────────────────────────────────────────────────
+//  Engagement roles — drizzle/0053. Reasoning in that file and in
+//  src/lib/engagement-roles.ts.
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * What somebody did on one engagement, so a review asks only about
+ * that.
+ *
+ * Per project rather than per user: the same two people swap jobs
+ * between engagements, and a role on the user row would be a job
+ * title rather than what a reviewer is being asked about.
+ *
+ * Optional. Where no roles are assigned the review form asks every
+ * axis and the reviewer skips what they cannot speak to.
+ */
+export const engagementRoles = pgTable("engagement_roles", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** One of the six in ENGAGEMENT_ROLES. Enforced by a CHECK. */
+  role: text("role").notNull(),
+  /** Assigning a role changes what somebody can be judged on. */
+  assignedByUserId: text("assigned_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

@@ -24,6 +24,7 @@ import {
   agreements,
   artistEpks,
   adminReviews,
+  engagementRoles,
   buildVouchers,
   calendarAvailability,
   calendarBlocks,
@@ -996,4 +997,29 @@ export function getAttributedAdminReviews(
   return adminReviewReader.where(
     not(eq(adminReviews.subjectUserId, viewerUserId)),
   );
+}
+
+/**
+ * Who did what on an engagement. drizzle/0053.
+ *
+ * Returns a map of userId to their roles, because every caller wants
+ * it that way: the review form asks "what did THIS person do", not
+ * "list the roles".
+ */
+export async function getEngagementRoles(
+  projectId: string,
+): Promise<Map<string, string[]>> {
+  const rows = await db
+    .select({
+      userId: engagementRoles.userId,
+      role: engagementRoles.role,
+    })
+    .from(engagementRoles)
+    .where(eq(engagementRoles.projectId, projectId));
+
+  const out = new Map<string, string[]>();
+  for (const r of rows) {
+    out.set(r.userId, [...(out.get(r.userId) ?? []), r.role]);
+  }
+  return out;
 }

@@ -51,6 +51,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { adminReviews, projects } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
+import { getEngagementRoles } from "@/lib/readers";
+import { axesFor, type ReviewAxis } from "@/lib/engagement-roles";
 
 export interface AdminReviewResult {
   ok: boolean;
@@ -144,16 +146,36 @@ export async function submitAdminReview(
     return { ok: false, message: "You have already reviewed them on this one." };
   }
 
+  // ── Scope, enforced rather than merely hidden ───────────────
+  //
+  // The form only renders the axes this person's roles cover, but a
+  // server action is a public endpoint and hiding a field is not the
+  // same as refusing the value. Jamar: "Rob doesn't handle payments,
+  // that should be made clear at role assignment not left to be
+  // inferred by questions." An out-of-scope answer is dropped here so
+  // it cannot reach somebody's record by any route.
+  const roles = await getEngagementRoles(projectId);
+  const allowed = axesFor(roles.get(subjectUserId) ?? []);
+  if (allowed.length === 0) {
+    return {
+      ok: false,
+      message:
+        "Nobody has said what they did on this engagement yet, so there is nothing fair to ask. Assign roles first.",
+    };
+  }
+  const inScope = (axis: ReviewAxis) =>
+    allowed.includes(axis) ? star(formData.get(axis)) : null;
+
   await db.insert(adminReviews).values({
     id: `arv_${randomUUID()}`,
     projectId,
     subjectUserId,
     reviewerUserId: user.id,
     source: "builder",
-    scopeClarity: star(formData.get("scopeClarity")),
-    responsiveness: star(formData.get("responsiveness")),
-    shieldedFromChurn: star(formData.get("shieldedFromChurn")),
-    paidOnTime: star(formData.get("paidOnTime")),
+    scopeClarity: inScope("scopeClarity"),
+    responsiveness: inScope("responsiveness"),
+    shieldedFromChurn: inScope("shieldedFromChurn"),
+    paidOnTime: inScope("paidOnTime"),
     prose: prose.length > 0 ? prose : null,
   });
 

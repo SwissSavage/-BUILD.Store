@@ -33,7 +33,13 @@
  */
 import { AdminReviewForm } from "@/components/AdminReviewForm";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
-import { adminReviewReader, safely } from "@/lib/readers";
+import {
+  adminReviewReader,
+  getEngagementRoles,
+  safely,
+} from "@/lib/readers";
+import { EngagementRolePicker } from "@/components/EngagementRolePicker";
+import { axesFor, describeRoles } from "@/lib/engagement-roles";
 import { getAllUsers } from "@/lib/readers/users";
 import { publicName, type Project, type User } from "@/lib/types";
 
@@ -58,11 +64,16 @@ export async function AdminReviewSection({
   const subjects = (project.adminUserIds ?? []).filter((id) => id !== user.id);
   if (subjects.length === 0) return null;
 
-  const [{ users: roster }, mine] = await Promise.all([
+  const [{ users: roster }, mine, roles] = await Promise.all([
     safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
     // Only this reviewer's own rows, so the component never holds
     // anyone else's attribution in the first place.
     safely(() => adminReviewReader.all(), []),
+    // What each person did, which decides what anyone may be asked.
+    safely(
+      () => getEngagementRoles(project.id),
+      new Map<string, string[]>(),
+    ),
   ]);
   const byId = new Map(roster.map((u) => [u.id, u]));
   const alreadyReviewed = new Set(
@@ -100,17 +111,73 @@ export async function AdminReviewSection({
             className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-inset)] p-4"
           >
             <div className="mb-3 font-medium">{publicName(person)}</div>
-            {alreadyReviewed.has(person.id) ? (
-              <p className="text-sm text-ink-muted">
-                Submitted. Thanks — it is in the aggregate now.
-              </p>
-            ) : (
-              <AdminReviewForm
-                projectId={project.id}
-                subjectUserId={person.id}
-                subjectName={publicName(person)}
-              />
-            )}
+            {(() => {
+              const theirRoles = roles.get(person.id) ?? [];
+              const axes = axesFor(theirRoles);
+
+              if (alreadyReviewed.has(person.id)) {
+                return (
+                  <p className="text-sm text-ink-muted">
+                    Submitted. Thanks — it is in the aggregate now.
+                  </p>
+                );
+              }
+
+              // Nothing to ask until somebody says what they did.
+              // Jamar: "I / a member admin should be assigning roles
+              // at review." So an admin gets the picker here, and a
+              // contributor is told it is being waited on rather than
+              // handed a control that is not theirs.
+              if (axes.length === 0) {
+                return user.isAdmin ? (
+                  <>
+                    <p className="text-sm text-ink-muted">
+                      No roles set, so there is nothing fair to ask about
+                      them yet.
+                    </p>
+                    <EngagementRolePicker
+                      projectId={project.id}
+                      userId={person.id}
+                      personName={publicName(person)}
+                      current={theirRoles}
+                    />
+                  </>
+                ) : (
+                  <p className="text-sm text-ink-muted">
+                    Waiting on an admin to record what{" "}
+                    {publicName(person)} did on this engagement. You will
+                    be asked only about that.
+                  </p>
+                );
+              }
+
+              return (
+                <>
+                  <p className="mb-2 text-[11px] text-ink-faint">
+                    {describeRoles(theirRoles)}
+                  </p>
+                  <AdminReviewForm
+                    projectId={project.id}
+                    subjectUserId={person.id}
+                    subjectName={publicName(person)}
+                    axes={axes}
+                  />
+                  {user.isAdmin && (
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-[11px] text-ink-faint hover:text-ink-muted">
+                        Change what they did
+                      </summary>
+                      <EngagementRolePicker
+                        projectId={project.id}
+                        userId={person.id}
+                        personName={publicName(person)}
+                        current={theirRoles}
+                      />
+                    </details>
+                  )}
+                </>
+              );
+            })()}
           </div>
         ))}
       </div>

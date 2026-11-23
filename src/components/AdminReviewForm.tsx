@@ -76,10 +76,18 @@ export function AdminReviewForm({
   projectId,
   subjectUserId,
   subjectName,
+  axes,
 }: {
   projectId: string;
   subjectUserId: string;
   subjectName: string;
+  /**
+   * Which axes this person's roles make them answerable for, from
+   * axesFor(). Never the full list by default: scope is declared at
+   * role assignment, not inferred here. An empty array means the
+   * caller should be showing the role picker instead of this form.
+   */
+  axes: string[];
 }) {
   const [state, formAction, isPending] = useActionState(action, null);
 
@@ -96,7 +104,7 @@ export function AdminReviewForm({
       <input type="hidden" name="projectId" value={projectId} />
       <input type="hidden" name="subjectUserId" value={subjectUserId} />
 
-      {AXES.map((axis) => (
+      {AXES.filter((a) => axes.includes(a.name)).map((axis) => (
         <div key={axis.name}>
           <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-[11px] uppercase tracking-wider text-ink-muted">

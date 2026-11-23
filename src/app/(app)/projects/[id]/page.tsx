@@ -30,6 +30,7 @@ import { ShieldCheck, Tags, Users } from "lucide-react";
 import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { EngagementTermsPanel } from "@/components/EngagementTermsPanel";
 import { ProjectTimeSection } from "@/components/ProjectTimeSection";
+import { AdminReviewSection } from "@/components/AdminReviewSection";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
@@ -239,6 +240,15 @@ export default async function ProjectDetailPage({
 
           {/* ── Peer review (Phase 2.7) — only for signed-in members ───── */}
           {user && <PeerReviewSection project={project} user={user} />}
+
+          {/* ── How it was run ──────────────────────────────
+              The counterpart to peer review: delivery is rated
+              above, management here. Without it a badly-run
+              engagement still produced only a review of the people
+              who delivered it. Renders itself away unless the
+              viewer was on the engagement and somebody else ran
+              it. */}
+          {user && <AdminReviewSection project={project} user={user} />}
 
           {/* ── Apply form / current-status banner (signed-in members) ─── */}
           {isInternal && user && (

@@ -42,9 +42,26 @@ export async function PeerReviewSection({
   project: Project;
   user: User;
 }) {
+  // ── Everyone the split pays (2026-11-23) ────────────────────
+  //
+  // These gates read assignedMemberIds alone, which holds
+  // contributors only, so on an engagement with one contributor and
+  // two admins the section rendered nothing at all and the work went
+  // unreviewed. Jamar: "there are no solo engagements. Ozy isn't
+  // operating in a vacuum, Rob and I are on the deal."
+  //
+  // Being paid out of a contract is the definition of having been on
+  // it, and it is the one that needs no special case.
+  const onEngagement = Array.from(
+    new Set([
+      ...(project.assignedMemberIds ?? []),
+      ...(project.adminUserIds ?? []),
+    ]),
+  );
+
   if (project.status !== "completed") return null;
-  if (!project.assignedMemberIds.includes(user.id)) return null;
-  if (project.assignedMemberIds.length < 2) return null;
+  if (!onEngagement.includes(user.id)) return null;
+  if (onEngagement.length < 2) return null;
 
   const [{ users: roster }, myReviewsAll] = await Promise.all([
     safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
@@ -52,10 +69,17 @@ export async function PeerReviewSection({
   ]);
   const byId = new Map(roster.map((u) => [u.id, u]));
 
-  const teammates = project.assignedMemberIds
+  // Delivery is what this form rates, so the people listed are the
+  // contributors. An admin reviewing another admin rates how they ran
+  // it instead, which is a different set of questions and a different
+  // form. See submitAdminReview.
+  const teammates = (project.assignedMemberIds ?? [])
     .filter((id) => id !== user.id)
     .map((id) => byId.get(id))
     .filter((u): u is User => Boolean(u));
+
+  // An admin with no contributors left to rate has nothing to do here.
+  if (teammates.length === 0) return null;
 
   const myReviews = myReviewsAll.filter((r) => r.contextId === project.id);
   const reviewed = new Set(myReviews.map((r) => r.revieweeId));
@@ -68,9 +92,10 @@ export async function PeerReviewSection({
         {teammates.length === 1 ? "collaborator" : "collaborators"}
       </CardTitle>
       <p className="mt-2 text-sm text-ink-muted">
-        Leave a short rating per teammate now that {project.title} is wrapped.
-        Reviews stay anonymous to the reviewee. Only admin sees attribution
-        for calibration.
+        Leave a short rating per contributor now that {project.title} is
+        wrapped. Reviews stay anonymous to the person rated: they see a
+        score, never who said what. Admins see attribution for
+        calibration, except on reviews of themselves.
       </p>
 
       <div className="mt-5 space-y-4">

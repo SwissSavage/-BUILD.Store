@@ -185,6 +185,63 @@ export default async function ContractFeedbackPage({
               placeholder="Name a contributor or two whose work made the difference."
             />
 
+            {/*
+              How it was RUN, kept separate from how it went.
+              
+              Jamar: "Clients should typically provide admin feedback
+              as well... sometimes management is the problem."
+              
+              Every question above reads as a judgment of the
+              cooperative, and those scores reach the contributor
+              through reputation and published testimonials. So when
+              the scope was vague or nobody came back to the client,
+              the Builder absorbed it. These three let a client say
+              the work was good and the running of it was not.
+              
+              Visually separated on purpose. A client who has just
+              rated the delivery five stars needs to understand they
+              are now being asked about something else, or they will
+              simply repeat themselves.
+              
+              "Paid on time" is absent. A client has no way to know
+              when talent was paid, and the schema refuses a value
+              from this source.
+            */}
+            <div className="mt-8 border-t border-[var(--surface-border)] pt-6">
+              <h2 className="font-display text-lg font-semibold">
+                And how was it run?
+              </h2>
+              <p className="mt-1 text-sm text-ink-muted">
+                Separate from the work itself. Scoping, answering you,
+                handling changes — this is about the people who managed
+                the engagement rather than the people who delivered it.
+                Say so if that was the weaker part.
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-6">
+                <StarPicker
+                  name="mgmtScopeClarity"
+                  label="Was the scope clear?"
+                />
+                <StarPicker
+                  name="mgmtResponsiveness"
+                  label="Did we come back to you?"
+                />
+                <StarPicker
+                  name="mgmtHandlingChange"
+                  label="Were changes handled well?"
+                />
+              </div>
+
+              <div className="mt-4">
+                <ProseField
+                  name="mgmtProse"
+                  label="Anything about how it was managed? (optional)"
+                  placeholder="Scoping, communication, anything that made it easier or harder to work with us."
+                />
+              </div>
+            </div>
+
             <RadioChoice
               name="attributionConsent"
               label="If we use your feedback externally, how should we attribute it?"

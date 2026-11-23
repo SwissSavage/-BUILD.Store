@@ -54,22 +54,49 @@ export async function submitPeerReview(formData: FormData) {
   const project = await getProjectById(projectId);
   if (!project) throw new Error("Project not found");
 
-  // Gate: only completed projects, only team members on the project,
-  // only multi-person teams, never reviewing yourself.
+  // ── Who counts as being on this engagement (2026-11-23) ──────
+  //
+  // Everyone the split pays: contributors AND the admins who ran it.
+  //
+  // These gates used assignedMemberIds alone, which holds
+  // contributors only. On the AWS engagement that made the code
+  // believe one person was involved and refuse with "Solo engagements
+  // skip peer review", while three people were party to the deal and
+  // paid from it. Jamar: "there are no solo engagements. Ozy isn't
+  // operating in a vacuum, Rob and I are on the deal."
+  //
+  // He is right, and the split is the proof: the executive share
+  // exists because running the engagement is work done on it. If
+  // somebody is paid out of a contract they were on it, and that is
+  // the only definition that does not need a special case.
+  const onEngagement = Array.from(
+    new Set([
+      ...(project.assignedMemberIds ?? []),
+      ...(project.adminUserIds ?? []),
+    ]),
+  );
+
   if (project.status !== "completed") {
     throw new Error("Peer review opens once the project is marked completed");
   }
-  if (!project.assignedMemberIds.includes(reviewer.id)) {
-    throw new Error("Only contributors on this project can leave reviews");
+  if (!onEngagement.includes(reviewer.id)) {
+    throw new Error("Only people who were on this engagement can leave reviews");
   }
-  if (project.assignedMemberIds.length < 2) {
-    throw new Error("Solo engagements skip peer review");
+  // A genuinely solo engagement, one person in every role, still has
+  // nobody to review. That is now rare rather than the default.
+  if (onEngagement.length < 2) {
+    throw new Error("Only one person was on this engagement");
   }
   if (revieweeId === reviewer.id) {
     throw new Error("You can't review yourself");
   }
-  if (!project.assignedMemberIds.includes(revieweeId)) {
-    throw new Error("That person wasn't on the team for this project");
+  // Reviewed on delivery, so the subject has to be a contributor.
+  // Rating an admin happens through submitAdminReview, which asks
+  // about scope and responsiveness rather than craft.
+  if (!(project.assignedMemberIds ?? []).includes(revieweeId)) {
+    throw new Error(
+      "That person did not deliver on this engagement. Rate how they ran it instead.",
+    );
   }
   // One review per reviewer/reviewee/project. Checked here for a
   // clean error message; the unique index in migration 0014 is what

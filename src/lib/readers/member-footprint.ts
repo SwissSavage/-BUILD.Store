@@ -72,6 +72,7 @@ import {
   sessions,
   walkthroughProgress,
   timeEntries,
+  adminReviews,
   profileDisclosureReviews,
 } from "@/db/schema";
 
@@ -134,6 +135,7 @@ export async function getMemberFootprint(
     walkthroughCount,
     disclosureReviewCount,
     timeEntryCount,
+    adminReviewCount,
   ] = await Promise.all([
     countRows(agreements, agreements.userId, uid),
     countRows(payoutMethods, payoutMethods.userId, uid),
@@ -155,6 +157,7 @@ export async function getMemberFootprint(
     countRows(walkthroughProgress, walkthroughProgress.userId, uid),
     countRows(profileDisclosureReviews, profileDisclosureReviews.userId, uid),
     countRows(timeEntries, timeEntries.userId, uid),
+    countRows(adminReviews, adminReviews.subjectUserId, uid),
   ]);
 
   const balance = Number(buildTokenBalance ?? 0);
@@ -190,6 +193,18 @@ export async function getMemberFootprint(
       table: "time_entries",
       label: "Logged hours on engagements",
       count: timeEntryCount,
+    },
+    // Reviews ABOUT this person. Same call as mvp_scores: standing
+    // earned on engagements that happened is part of the record, and
+    // deleting it rewrites what colleagues and clients said.
+    //
+    // Reviews they WROTE are unaffected — reviewer_user_id is SET
+    // NULL rather than cascade, so other people's standing survives
+    // this account going away. That asymmetry is deliberate.
+    {
+      table: "admin_reviews",
+      label: "Reviews of their project management",
+      count: adminReviewCount,
     },
   ].filter((e) => e.count > 0);
 

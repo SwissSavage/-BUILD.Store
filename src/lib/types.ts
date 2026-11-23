@@ -1027,6 +1027,8 @@ export interface PortfolioItem {
   technologies: string[];
   /** Additional pillars. Mirrors users.secondaryIndustries. */
   secondaryIndustries: string[];
+  /** Who else is credited on this work, and for what. drizzle/0052. */
+  credits: { userId: string; role: string }[];
   featured: boolean;
   createdAt: string;
 
@@ -5103,3 +5105,58 @@ export interface Timesheet {
   createdAt: string;
   updatedAt: string;
 }
+
+
+/**
+ * What a Builder or a client says about the admin who RAN an
+ * engagement, rather than the people who delivered it. drizzle/0052.
+ *
+ * Dimensions are PM-specific: Craft and Collaboration from the peer
+ * set do not describe project management. Null on any axis means the
+ * reviewer did not answer it, which is not the middle of the scale.
+ */
+export interface AdminReview {
+  id: string;
+  projectId: string;
+  subjectUserId: string;
+  /** Null for a client, who has a token rather than an account. */
+  reviewerUserId: string | null;
+  source: "builder" | "client";
+  scopeClarity: number | null;
+  responsiveness: number | null;
+  shieldedFromChurn: number | null;
+  /** Builder-only. A client cannot know when talent was paid. */
+  paidOnTime: number | null;
+  prose: string | null;
+  createdAt: string;
+}
+
+/** The four axes, with the copy each audience actually sees. */
+export const ADMIN_REVIEW_DIMENSIONS = [
+  {
+    key: "scopeClarity" as const,
+    label: "Scope clarity",
+    builderHint: "Was it clear what you were being asked to do?",
+    clientHint: "Was the proposal clear about what you were buying?",
+  },
+  {
+    key: "responsiveness" as const,
+    label: "Responsiveness",
+    builderHint: "Did they come back to you when you needed them?",
+    clientHint: "Did they come back to you when you needed them?",
+  },
+  {
+    key: "shieldedFromChurn" as const,
+    label: "Handling change",
+    builderHint: "Did they absorb changes rather than passing them straight through?",
+    clientHint: "Were changes handled without drama?",
+  },
+  {
+    key: "paidOnTime" as const,
+    label: "Paid on time",
+    builderHint: "Did the money arrive when it was supposed to?",
+    // Deliberately absent for clients: they cannot know, and asking
+    // would invite a guess recorded as a fact.
+    clientHint: null,
+  },
+] as const;

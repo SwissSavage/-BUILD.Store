@@ -33,7 +33,7 @@ import {
   type RailHealth,
 } from "@/lib/payments";
 import { ConfirmManualPayout } from "@/components/ConfirmManualPayout";
-import { payoutMethodById } from "@/lib/payout-protocols";
+import { incursFee, payoutMethodById } from "@/lib/payout-protocols";
 import { PAYOUT_STATUS_LABELS } from "@/lib/types";
 import { getPendingSplits, safely } from "@/lib/readers";
 import { getAllUsers } from "@/lib/readers/users";
@@ -201,7 +201,10 @@ export default async function AdminPaymentsPage() {
                     </p>
                   </div>
 
-                  <ConfirmManualPayout splitId={split.id} />
+                  <ConfirmManualPayout
+                    splitId={split.id}
+                    showFee={incursFee(split.payoutMethodId)}
+                  />
                 </li>
               );
             })}

@@ -53,7 +53,23 @@ async function action(
   return confirmManualPayout(formData);
 }
 
-export function ConfirmManualPayout({ splitId }: { splitId: string }) {
+export function ConfirmManualPayout({
+  splitId,
+  showFee,
+}: {
+  splitId: string;
+  /**
+   * Whether this payout's rail can cost anything to send. From
+   * incursFee() on the method definition.
+   *
+   * Jamar: "that shouldn't show up at all until they select a payout
+   * method that incurs fees." Domestic Found ACH is free, so the fee
+   * and fee-payer fields had no answer available on the rail we
+   * actually use, and a field that cannot be answered teaches people
+   * to skim the form.
+   */
+  showFee: boolean;
+}) {
   const [state, formAction, isPending] = useActionState(action, null);
 
   if (state?.ok) {
@@ -114,6 +130,7 @@ export function ConfirmManualPayout({ splitId }: { splitId: string }) {
           />
         </div>
 
+        {showFee && (
         <div>
           <label
             htmlFor={`fee-${splitId}`}
@@ -131,7 +148,9 @@ export function ConfirmManualPayout({ splitId }: { splitId: string }) {
             className="mt-1 w-24 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
           />
         </div>
+        )}
 
+        {showFee && (
         <div>
           <label
             htmlFor={`feeBorne-${splitId}`}
@@ -139,16 +158,32 @@ export function ConfirmManualPayout({ splitId }: { splitId: string }) {
           >
             Fee paid by
           </label>
+          {/*
+            Defaults to "No fee", not to a payer.
+            
+            It used to default to Recipient on the reasoning that the
+            recipient bearing it is the rule. But the fee field above
+            is blank by default and blank means there was no fee, so
+            the pair read as "no fee, paid by the recipient" — naming
+            a payer for something that does not exist. Jamar: "the
+            'Fee paid by' section should default to no fee."
+            
+            On the rail we use most this is the ordinary case:
+            domestic Found costs nothing to send. The form should say
+            so plainly rather than assert a payer by habit.
+          */}
           <select
             id={`feeBorne-${splitId}`}
             name="payoutFeeBorneBy"
-            defaultValue="recipient"
+            defaultValue=""
             className="mt-1 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
           >
+            <option value="">No fee</option>
             <option value="recipient">Recipient</option>
             <option value="treasury">Treasury</option>
           </select>
         </div>
+        )}
 
         <div>
           <label

@@ -380,12 +380,26 @@ export async function confirmManualPayout(
   }
 
   // The deduction follows the payer, so a fee with no payer is a
-  // number rather than a record. Defaults to the recipient, which is
-  // the rule; treasury is the exception and has to be chosen.
+  // number rather than a record.
+  //
+  // This used to default to "recipient" when a fee was present and no
+  // payer had been chosen. That is the same unstated assumption the
+  // form had, written into the database: it records a payer nobody
+  // named. A fee is a deductible expense and the deduction follows
+  // whoever bore it, so guessing wrong puts the deduction on the
+  // wrong party's books.
+  //
+  // Asked for explicitly now. Blank with no fee is the ordinary case
+  // and means exactly what it says.
+  if (fee && feeBorneRaw !== "recipient" && feeBorneRaw !== "treasury") {
+    return {
+      ok: false,
+      message:
+        "Say who paid that fee. The deduction follows the payer, so it cannot be assumed.",
+    };
+  }
   const feeBorneBy: "recipient" | "treasury" | null = fee
-    ? feeBorneRaw === "treasury"
-      ? "treasury"
-      : "recipient"
+    ? (feeBorneRaw as "recipient" | "treasury")
     : null;
 
   const [split] = await db

@@ -42,6 +42,7 @@ import {
 } from "@/lib/readers";
 import { IssueSettlementVouchers } from "@/components/IssueSettlementVouchers";
 import { IssueTimesheet } from "@/components/IssueTimesheet";
+import { EngagementReviewsPanel } from "@/components/EngagementReviewsPanel";
 import {
   getTimeEntriesForProject,
   getTimesheetsForProject,
@@ -647,6 +648,28 @@ export default async function ContractLedgerPage({
             </p>
           </form>
         </Card>
+      </section>
+
+      {/* ──────────────────────  Reviews  ───────────────────────────── */}
+      {/*
+        Brought here from /admin/reserve, where the chase controls sit
+        under a menu entry called "Contract reserves" in the Money
+        group and are gated on a pending talent bonus. On an
+        engagement without one they rendered nowhere at all, so there
+        was no way to chase a review for it.
+
+        Same move as the payouts prompt above: the action belongs
+        where the contract is. */}
+      <section className="mt-12">
+        <h2 className="font-display text-2xl font-semibold">Reviews</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Who still owes an answer on how this went, and a nudge for
+          each. What they said lives on the review surfaces.
+        </p>
+        <EngagementReviewsPanel
+          project={project}
+          clientEmail={clientBillingEmail}
+        />
       </section>
 
       {/* ──────────────────────  Timesheet section  ─────────────────── */}

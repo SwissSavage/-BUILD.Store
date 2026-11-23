@@ -114,7 +114,14 @@ export async function submitAdminReview(
       message: "This opens when the engagement is marked complete.",
     };
   }
-  if (!(project.assigned ?? []).includes(user.id)) {
+  // Contributors AND the other admins on it. Rob rating Jamar is a
+  // real and useful review, and requiring the reviewer to be a
+  // contributor would have blocked it.
+  const onEngagement = new Set([
+    ...(project.assigned ?? []),
+    ...(project.admins ?? []),
+  ]);
+  if (!onEngagement.has(user.id)) {
     return { ok: false, message: "You were not on this engagement." };
   }
   // Checked against the record, not trusted from the form.

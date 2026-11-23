@@ -37,7 +37,13 @@ import {
   setEngagementRoles,
   type RoleAssignResult,
 } from "@/lib/engagement-role-actions";
-import { ENGAGEMENT_ROLES, axesFor } from "@/lib/engagement-roles";
+import {
+  AXIS_SUB_RATING,
+  ENGAGEMENT_ROLES,
+  axesFor,
+  axisDefinition,
+} from "@/lib/engagement-roles";
+import { subRatingLabel } from "@/lib/mvp-score";
 
 type FormState = RoleAssignResult | null;
 
@@ -48,12 +54,6 @@ async function action(
   return setEngagementRoles(formData);
 }
 
-const AXIS_LABEL: Record<string, string> = {
-  scopeClarity: "Scope clarity",
-  responsiveness: "Responsiveness",
-  shieldedFromChurn: "Handling change",
-  paidOnTime: "Paid on time",
-};
 
 export function EngagementRolePicker({
   projectId,
@@ -115,24 +115,43 @@ export function EngagementRolePicker({
         paying on time, and an admin should not have to know the axis
         map to see that.
       */}
-      <p className="mt-2 text-[11px] text-ink-faint">
+      <div className="mt-2 text-[11px] text-ink-faint">
         {axes.length === 0 ? (
-          <>
+          <p>
             No roles yet, so {personName} cannot be reviewed. Pick what
             they actually did.
-          </>
+          </p>
         ) : (
           <>
-            {personName} will be rated on{" "}
-            <span className="text-ink-muted">
-              {axes.map((a) => AXIS_LABEL[a]).join(", ")}
-            </span>
+            <p>
+              {personName} will be rated on {axes.length} thing
+              {axes.length === 1 ? "" : "s"}, each feeding the sub-rating
+              beside it:
+            </p>
+            {/*
+              The sub-rating is named because that is the actual
+              consequence. Ticking Payments does not produce a private
+              PM score, it puts somebody's Reliability — 16% of their
+              OVR, the heaviest single dimension — on whether the money
+              went out when they said it would. An admin assigning roles
+              should see that before saving, not discover it later.
+            */}
+            <ul className="mt-1 space-y-0.5">
+              {axes.map((a) => (
+                <li key={a}>
+                  <span className="text-ink-muted">
+                    {axisDefinition(a)?.label ?? a}
+                  </span>{" "}
+                  → {subRatingLabel(AXIS_SUB_RATING[a])}
+                </li>
+              ))}
+            </ul>
             {!axes.includes("paidOnTime") && (
-              <span> — and never on paying on time.</span>
+              <p className="mt-1">And never on paying on time.</p>
             )}
           </>
         )}
-      </p>
+      </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <Button

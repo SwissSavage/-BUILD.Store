@@ -27,6 +27,37 @@
  * inbound response time, meeting minutes, referral conversions. Those
  * carry forward from the existing snapshot rather than being invented,
  * and default to the neutral 70 for a member who has no snapshot yet.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * ADMIN REVIEWS JOIN THE SAME SUB-RATINGS (2026-11-23)
+ *
+ * Jamar: "No admin subratings, the original scores cover all of this."
+ *
+ * I had built admin reviews a synthesized score of their own, which
+ * was a parallel instrument reading nothing. An admin could run an
+ * engagement badly, be rated for it by everybody on it, and their
+ * standing would not move — while a Builder's OVR responds to every
+ * peer review they receive.
+ *
+ * So the four PM axes fold in here, through AXIS_SUB_RATING:
+ *
+ *   scopeClarity      → communication
+ *   responsiveness    → hustle
+ *   shieldedFromChurn → collaboration
+ *   paidOnTime        → reliability
+ *
+ * WHY THEY MERGE RATHER THAN OVERRIDE
+ *
+ * A member admin both delivers work and runs engagements, so their
+ * Reliability has two kinds of evidence behind it: peers saying they
+ * hit dates on work they did, and Builders saying the money arrived
+ * when promised on engagements they ran. Both are reliability. They
+ * go into one expert-weighted mean rather than one winning, because
+ * a person has one standing and taking the later-written source would
+ * make the number depend on the order reviews happened to land.
+ *
+ * Note this also gives `hustle` its first real feed. It was carrying
+ * 70 for everybody.
  * ─────────────────────────────────────────────────────────────
  *
  * Expert weighting is preserved: admins and reviewers at OVR 85+ carry
@@ -36,7 +67,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { mvpScores, mvpCompliancePenalties } from "@/db/schema";
-import { getReviewsOf, mvpScoreReader } from "@/lib/readers";
+import {
+  getAdminReviewsFor,
+  getReviewsOf,
+  mvpScoreReader,
+} from "@/lib/readers";
+import { AXIS_SUB_RATING, type ReviewAxis } from "@/lib/engagement-roles";
 import { getAllUsers } from "@/lib/readers/users";
 import {
   aggregatePeerReviewsIntoSubRating,
@@ -108,45 +144,107 @@ async function buildReviewerLookup(): Promise<
 export async function recomputeMvpScore(
   userId: string,
 ): Promise<MvpScore | null> {
-  const [reviews, existing, reviewerLookup] = await Promise.all([
+  const [reviews, adminReviews, existing, reviewerLookup] = await Promise.all([
     getReviewsOf(userId),
+    // Reviews of how this person RAN an engagement, which only exist
+    // for someone who ran one. Empty for most members.
+    getAdminReviewsFor(userId),
     mvpScoreReader.one(eq(mvpScores.userId, userId)),
     buildReviewerLookup(),
   ]);
 
-  if (reviews.length === 0 && !existing) return null;
+  if (reviews.length === 0 && adminReviews.length === 0 && !existing) {
+    return null;
+  }
 
   const carried = existing?.subRatings ?? DEFAULT_SUB_RATINGS;
+
+  /**
+   * One star, flattened out of whichever kind of review it came from,
+   * so a sub-rating with two sources is still a single weighted mean.
+   *
+   * reviewerId is the field name aggregatePeerReviewsIntoSubRating
+   * expects; admin reviews store the same thing as reviewerUserId.
+   */
+  interface Star {
+    reviewerId: string;
+    value: number | null;
+  }
+
+  /**
+   * Every star bearing on one sub-rating: the peer dimension that maps
+   * to it, plus any PM axis that maps to it via AXIS_SUB_RATING.
+   *
+   * An out-of-scope axis is already stored as null by
+   * submitAdminReview, and the aggregator skips nulls, so a person
+   * who never held the payments role contributes nothing to
+   * reliability from this direction rather than contributing a zero.
+   */
+  const starsFor = (
+    sub: MvpSubRating,
+    peerValue: (r: (typeof reviews)[number]) => number | null,
+  ): Star[] => {
+    const axes = (Object.keys(AXIS_SUB_RATING) as ReviewAxis[]).filter(
+      (a) => AXIS_SUB_RATING[a] === sub,
+    );
+    const stars: Star[] = [];
+    // The reviewer is nullable on both kinds of review: the FK is ON
+    // DELETE SET NULL, so a review outlives the account that wrote it.
+    // Such a row cannot be weighted — reviewWeightFor needs the
+    // reviewer's own standing — and the aggregator was already
+    // dropping it on the reviewerLookup miss. Dropped here instead, so
+    // the type says what the code has always done.
+    //
+    // Worth noting the consequence: deleting an account quietly
+    // reduces the evidence behind everyone that account reviewed. That
+    // is the right trade against keeping a dead user's id on a live
+    // row, but it does mean an OVR can move on a deletion.
+    for (const r of reviews) {
+      if (!r.reviewerId) continue;
+      stars.push({ reviewerId: r.reviewerId, value: peerValue(r) });
+    }
+    for (const r of adminReviews) {
+      if (!r.reviewerUserId) continue;
+      for (const a of axes) {
+        stars.push({ reviewerId: r.reviewerUserId, value: r[a] ?? null });
+      }
+    }
+    return stars;
+  };
+
+  const aggregate = (sub: MvpSubRating, stars: Star[]): number =>
+    aggregatePeerReviewsIntoSubRating(
+      stars,
+      (s) => s.value,
+      reviewerLookup,
+      carried[sub] ?? NEUTRAL,
+    );
 
   const subRatings: Record<MvpSubRating, number> = {
     ...DEFAULT_SUB_RATINGS,
     ...carried,
-    // Peer-derived dimensions. Fall back to whatever was carried
-    // forward when nobody has reviewed that dimension yet.
-    quality: aggregatePeerReviewsIntoSubRating(
-      reviews,
-      (r) => r.craft ?? null,
-      reviewerLookup,
-      carried.quality ?? NEUTRAL,
+    // Review-derived dimensions. Each falls back to whatever was
+    // carried forward when nobody has spoken to it yet.
+    //
+    // quality stays peer-only: it is about the work itself, and an
+    // admin's contribution to it reaches the score through whether
+    // the scope was clear.
+    quality: aggregate("quality", starsFor("quality", (r) => r.craft ?? null)),
+    reliability: aggregate(
+      "reliability",
+      starsFor("reliability", (r) => r.reliability ?? null),
     ),
-    reliability: aggregatePeerReviewsIntoSubRating(
-      reviews,
-      (r) => r.reliability ?? null,
-      reviewerLookup,
-      carried.reliability ?? NEUTRAL,
+    collaboration: aggregate(
+      "collaboration",
+      starsFor("collaboration", (r) => r.collaboration ?? null),
     ),
-    collaboration: aggregatePeerReviewsIntoSubRating(
-      reviews,
-      (r) => r.collaboration ?? null,
-      reviewerLookup,
-      carried.collaboration ?? NEUTRAL,
+    communication: aggregate(
+      "communication",
+      starsFor("communication", (r) => r.communication ?? null),
     ),
-    communication: aggregatePeerReviewsIntoSubRating(
-      reviews,
-      (r) => r.communication ?? null,
-      reviewerLookup,
-      carried.communication ?? NEUTRAL,
-    ),
+    // No peer dimension feeds hustle. Before admin reviews existed it
+    // carried 70 for everybody, so responsiveness is its first signal.
+    hustle: aggregate("hustle", starsFor("hustle", () => null)),
   };
 
   const penaltyRows = (await db
@@ -165,7 +263,13 @@ export async function recomputeMvpScore(
     // publish, but an admin promote/demote is an explicit decision
     // and must survive the next recompute. Three reviews is the
     // threshold the recognition rails assume.
-    isProvisional: existing ? existing.isProvisional : reviews.length < 3,
+    // Three reviews is the threshold the recognition rails assume,
+    // and an admin review is a review: somebody who has run three
+    // engagements and been rated on each has a track record, even if
+    // no peer has reviewed their delivery work.
+    isProvisional: existing
+      ? existing.isProvisional
+      : reviews.length + adminReviews.length < 3,
   });
 
   await db

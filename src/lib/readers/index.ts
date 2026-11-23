@@ -973,7 +973,11 @@ export const adminReviewReader = makeReader<AdminReview>(adminReviews, {
   idColumn: adminReviews.id,
 });
 
-/** Every review about one admin. Feeds synthesizeAdminScore. */
+/**
+ * Every review about one admin. Feeds recomputeMvpScore, which folds
+ * them into the same sub-ratings peer reviews feed — see
+ * AXIS_SUB_RATING in lib/engagement-roles.ts.
+ */
 export function getAdminReviewsFor(
   subjectUserId: string,
 ): Promise<AdminReview[]> {

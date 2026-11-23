@@ -47,8 +47,13 @@
  * at the engagement.
  *
  * NO DATABASE IMPORTS. Pure, so it can cross to a client component.
+ * The MvpSubRating import is type-only AND lib/types.ts reaches
+ * nothing under src/db, which is what check-client-boundary needs —
+ * it rejects a type-only import too when the module behind it can
+ * reach the database client.
  * ─────────────────────────────────────────────────────────────
  */
+import type { MvpSubRating } from "@/lib/types";
 
 export type EngagementRole =
   | "client_owner"
@@ -63,6 +68,93 @@ export type ReviewAxis =
   | "responsiveness"
   | "shieldedFromChurn"
   | "paidOnTime";
+
+/**
+ * ─────────────────────────────────────────────────────────────
+ * WHERE AN ANSWER GOES (2026-11-23)
+ *
+ * Jamar: "No admin subratings, the original scores cover all of
+ * this, we can use examples in the questions."
+ *
+ * My first pass gave admin reviews their own synthesized score. That
+ * was the mistake: a review exists to move OVR, so an instrument that
+ * produces a number nothing reads measures nothing. An admin could
+ * run an engagement badly, be rated for it, and their standing would
+ * not move.
+ *
+ * None of these four axes needs a new dimension. Each lands on a
+ * sub-rating whose definition in lib/types.ts already describes it:
+ *
+ *   scopeClarity      → communication  "clarity, cadence, keeping the
+ *                                       room informed"
+ *   responsiveness    → hustle         "inbound response time"
+ *   shieldedFromChurn → collaboration  how someone works WITH people
+ *   paidOnTime        → reliability    "milestone-hit + deadline"
+ *
+ * WHAT THEY DELIBERATELY DO NOT FEED
+ *
+ * outcomes, attendance and referrals_bd. Those three are meant to be
+ * counted — bonus-gate clear rate, the minutes rail, referrer
+ * attributions converted to revenue — and asking somebody to rate
+ * them replaces a fact with an impression. quality is left to peer
+ * review because it is about the work, and an admin's contribution to
+ * it is already captured by whether the scope was clear.
+ * ─────────────────────────────────────────────────────────────
+ */
+export const AXIS_SUB_RATING: Record<ReviewAxis, MvpSubRating> = {
+  scopeClarity: "communication",
+  responsiveness: "hustle",
+  shieldedFromChurn: "collaboration",
+  paidOnTime: "reliability",
+};
+
+export interface ReviewAxisDefinition {
+  axis: ReviewAxis;
+  label: string;
+  /** The question, in the reviewer's words. */
+  question: string;
+  /**
+   * A concrete instance, because a five-star scale with no anchor
+   * collects politeness. Jamar: "we can use examples in the
+   * questions."
+   */
+  example: string;
+}
+
+export const REVIEW_AXES: ReviewAxisDefinition[] = [
+  {
+    axis: "scopeClarity",
+    label: "Scope clarity",
+    question: "Was it clear what you were being asked to do?",
+    example:
+      "A 5 is you knew what done looked like before you started. A 2 is you found out what was wanted by getting it wrong first.",
+  },
+  {
+    axis: "responsiveness",
+    label: "Responsiveness",
+    question: "Did they come back to you when you needed them?",
+    example:
+      "A 5 is a blocker answered the same day. A 2 is work stopped while you waited.",
+  },
+  {
+    axis: "shieldedFromChurn",
+    label: "Handling change",
+    question: "Did they absorb client changes rather than passing them straight through?",
+    example:
+      "A 5 is the client changed their mind and you heard one considered decision. A 2 is you rebuilt it twice because every wobble reached you raw.",
+  },
+  {
+    axis: "paidOnTime",
+    label: "Paid on time",
+    question: "Did the money arrive when it was supposed to?",
+    example:
+      "A 5 is it landed on the date you were given. A 2 is you had to ask more than once.",
+  },
+];
+
+export function axisDefinition(axis: string): ReviewAxisDefinition | null {
+  return REVIEW_AXES.find((a) => a.axis === axis) ?? null;
+}
 
 export interface EngagementRoleDefinition {
   role: EngagementRole;

@@ -53,6 +53,7 @@ import { adminReviews, projects } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getEngagementRoles } from "@/lib/readers";
 import { axesFor, type ReviewAxis } from "@/lib/engagement-roles";
+import { recomputeMvpScore } from "@/lib/writers/mvp-score";
 
 export interface AdminReviewResult {
   ok: boolean;
@@ -178,6 +179,22 @@ export async function submitAdminReview(
     paidOnTime: inScope("paidOnTime"),
     prose: prose.length > 0 ? prose : null,
   });
+
+  // The whole point: this moves the subject's OVR, through the same
+  // sub-ratings a peer review feeds. Jamar: "No admin subratings, the
+  // original scores cover all of this." See AXIS_SUB_RATING for the
+  // mapping and writers/mvp-score.ts for why the two sources merge
+  // rather than one overriding the other.
+  //
+  // Wrapped for the same reason peer-review-actions wraps it: a
+  // scoring failure must not roll back a review somebody already
+  // submitted. The daily job picks it up on the next pass.
+  try {
+    await recomputeMvpScore(subjectUserId);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[mvp] recompute after admin review failed", err);
+  }
 
   // Deliberately NOT notifying the subject. A ping saying a review
   // landed, on an engagement with one Builder, identifies the

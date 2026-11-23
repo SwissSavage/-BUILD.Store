@@ -38,6 +38,7 @@ import {
   submitAdminReview,
   type AdminReviewResult,
 } from "@/lib/admin-review-actions";
+import { REVIEW_AXES } from "@/lib/engagement-roles";
 
 type FormState = AdminReviewResult | null;
 
@@ -48,29 +49,11 @@ async function action(
   return submitAdminReview(formData);
 }
 
-/** The four axes, Builder-facing wording. */
-const AXES: { name: string; label: string; hint: string }[] = [
-  {
-    name: "scopeClarity",
-    label: "Scope clarity",
-    hint: "Was it clear what you were being asked to do?",
-  },
-  {
-    name: "responsiveness",
-    label: "Responsiveness",
-    hint: "Did they come back to you when you needed them?",
-  },
-  {
-    name: "shieldedFromChurn",
-    label: "Handling change",
-    hint: "Did they absorb client changes rather than passing them straight through?",
-  },
-  {
-    name: "paidOnTime",
-    label: "Paid on time",
-    hint: "Did the money arrive when it was supposed to?",
-  },
-];
+/*
+ * Wording lives in lib/engagement-roles.ts rather than here, because
+ * the role picker shows the same labels while an admin is choosing
+ * what somebody did, and two copies of a question drift.
+ */
 
 export function AdminReviewForm({
   projectId,
@@ -104,14 +87,23 @@ export function AdminReviewForm({
       <input type="hidden" name="projectId" value={projectId} />
       <input type="hidden" name="subjectUserId" value={subjectUserId} />
 
-      {AXES.filter((a) => axes.includes(a.name)).map((axis) => (
-        <div key={axis.name}>
+      {REVIEW_AXES.filter((a) => axes.includes(a.axis)).map((axis) => (
+        <div key={axis.axis}>
           <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-[11px] uppercase tracking-wider text-ink-muted">
               {axis.label}
             </span>
-            <span className="text-[11px] text-ink-faint">{axis.hint}</span>
+            <span className="text-[11px] text-ink-faint">{axis.question}</span>
           </div>
+          {/*
+            The anchor. A 1–5 scale with no worked example collects
+            politeness: everyone who had a fine time clicks 4. Saying
+            what a 5 and a 2 actually look like is the cheapest thing
+            that makes the spread mean something.
+          */}
+          <p className="mt-0.5 text-[11px] leading-snug text-ink-faint">
+            {axis.example}
+          </p>
           <div className="mt-1 flex items-center gap-1">
             {[1, 2, 3, 4, 5].map((n) => (
               <label
@@ -120,7 +112,7 @@ export function AdminReviewForm({
               >
                 <input
                   type="radio"
-                  name={axis.name}
+                  name={axis.axis}
                   value={n}
                   className="sr-only"
                 />
@@ -135,7 +127,7 @@ export function AdminReviewForm({
             <label className="ml-1 cursor-pointer text-[11px] text-ink-faint hover:text-ink-muted">
               <input
                 type="radio"
-                name={axis.name}
+                name={axis.axis}
                 value=""
                 defaultChecked
                 className="sr-only"
@@ -171,8 +163,14 @@ export function AdminReviewForm({
         >
           {isPending ? "Sending…" : `Review ${subjectName}`}
         </Button>
+        {/*
+          Said plainly because it is true and because it is what makes
+          answering worth the two minutes: this moves their standing,
+          and it is the same OVR everyone else is held to.
+        */}
         <span className="text-[11px] text-ink-faint">
-          {subjectName} sees a score, never who said what.
+          Feeds {subjectName}&rsquo;s OVR. They see the score move, never
+          who said what.
         </span>
       </div>
 

@@ -92,12 +92,24 @@ export function ConfirmManualPayout({ splitId }: { splitId: string }) {
           >
             Reference
           </label>
+          {/*
+            Optional as of 2026-11-20. It was required, with a
+            "Confirmation #" placeholder, which is what Stripe and
+            Mercury hand you. Found does not: its receipts carry no
+            confirmation number, so on the rail we actually use the
+            one required field had nothing true to put in it, and a
+            required field with no correct answer gets filled with
+            junk.
+            
+            Left blank, the action composes a deterministic one from
+            the rail, the date, the recipient and the amount. Paste a
+            real identifier over it when the rail provides one.
+          */}
           <input
             id={`reference-${splitId}`}
             name="reference"
             type="text"
-            required
-            placeholder="Confirmation #"
+            placeholder="Generated if blank"
             className="mt-1 w-40 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1.5 text-sm"
           />
         </div>

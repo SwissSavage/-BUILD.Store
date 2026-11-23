@@ -28,7 +28,7 @@ import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { randomUUID } from "crypto";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { customerFeedback as customerFeedbackTable } from "@/db/schema";
+import { adminReviews, customerFeedback as customerFeedbackTable } from "@/db/schema";
 import { getProjectById } from "@/lib/readers/projects";
 import { getUserById } from "@/lib/readers/users";
 import { customerFeedbackReader, orderReader } from "@/lib/readers";
@@ -228,6 +228,14 @@ function parseSubmissionFields(formData: FormData) {
  * resolveFeedbackToken the page uses, and spent before the row is
  * written.
  */
+/** 1..5 from the management block, or null when skipped. */
+function clientStar(v: FormDataEntryValue | null): number | null {
+  const raw = String(v ?? "").trim();
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 1 && n <= 5 ? n : null;
+}
+
 export async function submitCustomerFeedbackByLink(formData: FormData) {
   const contextId = String(formData.get("contextId") ?? "");
   // The token is the only credential on this route, so it is checked
@@ -284,6 +292,63 @@ export async function submitCustomerFeedbackByLink(formData: FormData) {
     );
   }
   await insertFeedback(row);
+
+  // ── How it was RUN, as distinct from how it went (2026-11-23) ──
+  //
+  // Jamar: "Clients should typically provide admin feedback as well."
+  // Then the reason: "sometimes management is the problem."
+  //
+  // Every other question on this form reads as a judgment of the
+  // cooperative, and those scores reach the contributor through
+  // reputation and published testimonials. So when the scope was
+  // vague or the client could not get an answer, the Builder absorbed
+  // it. This is the channel that lets a client say the work was good
+  // and the running of it was not, and have each land where it
+  // belongs.
+  //
+  // Recorded against EVERY admin on the engagement rather than one.
+  // The executive share splits between them because they ran it
+  // jointly, and a client has no way to tell which of them owned
+  // which failure. Shared credit, shared rating.
+  //
+  // Best-effort: the client's questionnaire has already been accepted
+  // and their link spent, so a failure here must not surface to them
+  // as a lost submission.
+  try {
+    const admins = project.adminUserIds ?? [];
+    const mgmt = {
+      scopeClarity: clientStar(formData.get("mgmtScopeClarity")),
+      responsiveness: clientStar(formData.get("mgmtResponsiveness")),
+      shieldedFromChurn: clientStar(formData.get("mgmtHandlingChange")),
+    };
+    const answered =
+      mgmt.scopeClarity !== null ||
+      mgmt.responsiveness !== null ||
+      mgmt.shieldedFromChurn !== null;
+    const mgmtProse = String(formData.get("mgmtProse") ?? "").trim();
+
+    if (admins.length > 0 && (answered || mgmtProse.length > 0)) {
+      await db.insert(adminReviews).values(
+        admins.map((subjectUserId) => ({
+          id: `arv_${randomUUID()}`,
+          projectId: contextId,
+          subjectUserId,
+          // No account, only a token. The schema requires this to be
+          // null for a client and enforces it with a CHECK.
+          reviewerUserId: null,
+          source: "client" as const,
+          ...mgmt,
+          // Never asked of a client: they cannot know when talent was
+          // paid, and the schema refuses a value here from this source.
+          paidOnTime: null,
+          prose: mgmtProse.length > 0 ? mgmtProse : null,
+        })),
+      );
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[customer-feedback] management block failed", err);
+  }
 
   await fanOutToAdmins(
     `Customer feedback on ${project.title}`,

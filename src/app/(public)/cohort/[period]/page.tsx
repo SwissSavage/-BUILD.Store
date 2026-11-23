@@ -52,7 +52,7 @@ export async function generateMetadata({
     eq(cohortSpotlights.periodKey, period),
   );
   if (!spotlight) {
-    return { title: "Cohort spotlight" };
+    return { title: "Spotlight" };
   }
   return {
     title: `${spotlight.headline} · ${spotlight.periodLabel}`,
@@ -92,7 +92,7 @@ export default async function CohortSpotlightPage({ params }: PageProps) {
         href="/cohort"
         className="text-xs uppercase tracking-wider text-ink-muted hover:text-brand-magentaText"
       >
-        ← All cohort spotlights
+        ← All spotlights
       </Link>
 
       <div className="mt-6">

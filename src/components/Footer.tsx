@@ -19,7 +19,7 @@ const FOOTER_GROUPS: FooterGroup[] = [
     links: [
       { href: "/about", label: "About" },
       { href: "/portfolio", label: "Portfolio" },
-      { href: "/cohort", label: "Cohort" },
+      { href: "/cohort", label: "Spotlights" },
       { href: "/articles", label: "Articles" },
       { href: "/partners", label: "Partners" },
     ],

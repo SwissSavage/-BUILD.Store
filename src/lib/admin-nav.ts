@@ -116,7 +116,7 @@ export const ADMIN_NAV: AdminNavEntry[] = [
 
   // ── Content & moderation ─────────────────────────────────────
   { href: "/admin/chat", label: "Live chat", group: "content" },
-  { href: "/admin/cohort", label: "Cohort spotlights", group: "content" },
+  { href: "/admin/cohort", label: "Spotlights", group: "content" },
   { href: "/admin/categories", label: "Store categories", group: "content" },
   { href: "/admin/locker", label: "Locker moderation", group: "content" },
 

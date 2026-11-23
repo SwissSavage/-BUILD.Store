@@ -37,7 +37,7 @@ export const dynamic = "force-dynamic";
 /** Static-rendered. Reads a build-time array. */
 
 export const metadata: Metadata = {
-  title: "Cohort",
+  title: "Spotlights",
   description:
     "Monthly onboarding spotlights on new builders joining Future Modern in real time. Who they are, what they're bringing, why the cooperative is glad to have them.",
 };
@@ -93,7 +93,7 @@ export default async function CohortIndexPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
-      <CardEyebrow>Cohort</CardEyebrow>
+      <CardEyebrow>Spotlights</CardEyebrow>
       <h1 className="mt-2 font-display text-5xl font-semibold leading-tight">
         Who&apos;s joining the cooperative
       </h1>

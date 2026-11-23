@@ -87,7 +87,7 @@ export default async function AdminCohortPage() {
     <div className="mx-auto max-w-3xl px-6 py-12">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <CardEyebrow>Admin · Cohort spotlights</CardEyebrow>
+          <CardEyebrow>Admin · Spotlights</CardEyebrow>
           <h1 className="mt-2 font-display text-4xl font-semibold">
             Onboarding rail
           </h1>
@@ -266,7 +266,7 @@ export default async function AdminCohortPage() {
         {spotlights.length === 0 ? (
           <Card className="mt-6">
             <p className="text-sm text-ink-muted">
-              No cohort spotlights on record yet. Author the first one
+              No spotlights on record yet. Author the first one
               above.
             </p>
           </Card>

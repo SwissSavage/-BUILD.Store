@@ -107,7 +107,18 @@ function BuilderCard({
     <li>
       <TradingCard
         user={builder.user}
-        href={repeated ? undefined : builder.href}
+        // Both copies link. The clone is `decorative`, so it is out of
+        // the tab order and inside an aria-hidden ancestor, but it
+        // still responds to a click.
+        //
+        // It used to get no href at all, which meant half the rail was
+        // dead on arrival — every card in the duplicate set looked and
+        // hovered exactly like a real one and did nothing. Whoever was
+        // first in the list sat in the dead region most often, so it
+        // read as "that person's card is broken" rather than "the rail
+        // is half broken".
+        href={builder.href}
+        decorative={repeated}
         tier={builder.tier}
         aspectRatio="3/4"
         className="w-36 transition-transform duration-200 hover:-translate-y-1 sm:w-40 md:w-48 lg:w-52"

@@ -73,6 +73,18 @@ interface TradingCardProps {
    * card IS the destination (the profile page's own hero).
    */
   href?: string;
+  /**
+   * Take the link out of the tab order and the accessibility tree,
+   * without taking it out of the mouse's reach.
+   *
+   * For a marquee's duplicated copy: the clone exists so the rail can
+   * loop seamlessly, and it must not be announced or tabbed to twice.
+   * The previous fix dropped the href on the clone entirely, which
+   * made every card in the duplicate set silently dead to a click —
+   * identical to look at, identical on hover, and doing nothing. Which
+   * card was dead depended on where the animation happened to be.
+   */
+  decorative?: boolean;
   /** Optional content composed on top of the card (name, badges, etc.). */
   children?: React.ReactNode;
   /** Width override. Default fluid. */
@@ -174,6 +186,7 @@ const TIER_BORDER: Record<TradingCardTier, string> = {
 };
 
 export function TradingCard({
+  decorative = false,
   user,
   tier = "standard",
   children,
@@ -323,6 +336,11 @@ export function TradingCard({
   return (
     <Link
       href={href}
+      // A decorative copy stays clickable. tabIndex -1 keeps it out of
+      // the tab order and the aria-hidden ancestor keeps it out of the
+      // accessibility tree, which is what the duplicate rail needs —
+      // not a card that quietly refuses the mouse.
+      tabIndex={decorative ? -1 : undefined}
       className="block rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-magenta"
     >
       {card}

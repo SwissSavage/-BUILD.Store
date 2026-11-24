@@ -27,6 +27,7 @@ import { db } from "@/db/client";
 import { jobs } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { jobReader } from "@/lib/readers";
+import { featuredImageFromForm } from "@/lib/featured-image";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { adminName, type Industry } from "@/lib/types";
 
@@ -100,6 +101,11 @@ export async function upsertJob(formData: FormData) {
   }
   if (!location) throw new Error("Location is required — 'Remote' counts.");
 
+  const featuredImageUrl = await featuredImageFromForm(
+    formData,
+    `listings/${id || "new-job"}`,
+  );
+
   const values = {
     title,
     description,
@@ -110,6 +116,7 @@ export async function upsertJob(formData: FormData) {
     employmentType: employmentRaw as EmploymentType,
     postedByLabel,
     status: statusRaw as JobStatus,
+    featuredImageUrl,
   };
 
   let jobId = id;

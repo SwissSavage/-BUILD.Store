@@ -29,6 +29,7 @@ import { requireAdmin } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
 import { getUserById } from "@/lib/readers/users";
 import { notify as pushNotification } from "@/lib/writers/notifications";
+import { featuredImageFromForm } from "@/lib/featured-image";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { parseRichText, richTextPlainText } from "@/lib/rich-text";
 import type { Industry } from "@/lib/types";
@@ -67,7 +68,6 @@ export async function editProject(formData: FormData) {
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
-  const featuredImageUrl = String(formData.get("featuredImageUrl") ?? "").trim();
   const richDescription = parseRichText(description);
   const descriptionText = richDescription
     ? richTextPlainText(richDescription)
@@ -103,23 +103,14 @@ export async function editProject(formData: FormData) {
   if (!STATUSES.includes(statusRaw as ProjectStatus)) {
     throw new Error("Unknown status.");
   }
-  if (featuredImageUrl) {
-    try {
-      const url = new URL(featuredImageUrl);
-      if (url.protocol !== "https:" && url.protocol !== "http:") {
-        throw new Error();
-      }
-    } catch {
-      throw new Error("Featured image must be a valid http(s) URL.");
-    }
-  }
+  const featuredImageUrl = await featuredImageFromForm(formData, `listings/${id}`);
 
   await db
     .update(projects)
     .set({
       title,
       description,
-      featuredImageUrl: featuredImageUrl || null,
+      featuredImageUrl,
       industry: industryRaw as Industry,
       status: statusRaw as ProjectStatus,
       skillsRequired,
@@ -147,7 +138,7 @@ export async function editProject(formData: FormData) {
       status: statusRaw,
       industry: industryRaw,
       skillsRequired,
-      featuredImageUrl: featuredImageUrl || null,
+      featuredImageUrl,
       adminUserIds,
     },
     reason: "Listing edited by admin.",

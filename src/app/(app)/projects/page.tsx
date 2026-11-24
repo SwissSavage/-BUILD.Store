@@ -21,6 +21,7 @@ import { briefSummary } from "@/components/Brief";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { ListingCard, ListingTags } from "@/components/ListingCard";
 import { NotificationStrip } from "@/components/NotificationStrip";
+import { BoardBackdrop } from "@/components/BoardBackdrop";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export default async function ProjectsPage() {
     : [];
 
   return (
-    <div className="mx-auto max-w-app px-6 py-12">
+    <BoardBackdrop className="mx-auto max-w-app px-6 py-12">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <CardEyebrow>Venture Labor</CardEyebrow>
@@ -154,7 +155,7 @@ export default async function ProjectsPage() {
       >
         {active.length === 0 ? <Empty /> : <Grid items={active} />}
       </Section>
-    </div>
+    </BoardBackdrop>
   );
 }
 

@@ -24,6 +24,7 @@ import { INDUSTRY_LABELS } from "@/lib/types";
 import { briefSummary } from "@/components/Brief";
 import { CardEyebrow, CardTitle } from "@/components/Card";
 import { ListingCard, ListingTags } from "@/components/ListingCard";
+import { BoardBackdrop } from "@/components/BoardBackdrop";
 
 export const metadata = {
   title: "Open contracts — Future Modern",
@@ -97,7 +98,7 @@ export default async function ContractsPage() {
   );
 
   return (
-    <div className="mx-auto max-w-app px-6 py-12">
+    <BoardBackdrop className="mx-auto max-w-app px-6 py-12">
       <div>
         <h1 className="font-display text-4xl font-semibold">
           Open contracts
@@ -217,6 +218,6 @@ export default async function ContractsPage() {
           </div>
         </section>
       )}
-    </div>
+    </BoardBackdrop>
   );
 }

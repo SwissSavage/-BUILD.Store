@@ -53,6 +53,7 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { blendRating, type RatingSignals } from "@/lib/bonus-reconciliation";
 import { formatStars, isHalfStep } from "@/lib/ratings";
 import { describeRoles } from "@/lib/engagement-roles";
+import { undeliveredRequests } from "@/lib/writers/feedback-dispatch";
 import { publicName, type User } from "@/lib/types";
 
 export default async function ContractReviewsPage({
@@ -91,6 +92,11 @@ export default async function ContractReviewsPage({
   }, null);
 
   const feedback = feedbackAll.filter((f) => f.contextId === project.id);
+  // Pending counts as undelivered: a token whose send never reported
+  // either way is exactly as un-arrived as one that bounced.
+  const undelivered = (
+    await safely(() => undeliveredRequests(project.id), [])
+  ).filter((u) => u.status !== "sent");
   const byId = new Map(roster.map((u) => [u.id, u]));
 
   // Everyone the split pays — the same union the review sections use,
@@ -175,6 +181,51 @@ export default async function ContractReviewsPage({
             : "There is no Bonus Margin on this engagement, so nothing here affects pay — it feeds standing only."}
         </p>
       </Card>
+
+      {/* ── Requests that did not arrive ────────────────────────── */}
+      {undelivered.length > 0 && (
+        <Card className="mt-6 border-[#B4740F]/40">
+          <CardEyebrow>Delivery</CardEyebrow>
+          <CardTitle className="mt-1 text-xl">
+            {undelivered.length} request
+            {undelivered.length === 1 ? "" : "s"} did not arrive
+          </CardTitle>
+          {/*
+            Surfaced loudly because of what silence costs. A request
+            that never lands leaves the client slot empty, an empty
+            slot renormalizes away, and an engagement with no readings
+            at all earns the FULL Bonus Margin. A broken mail path
+            therefore pays every margin in full, quietly. This is the
+            only place that failure becomes visible.
+          */}
+          <p className="mt-2 text-sm text-ink-muted">
+            Nobody decides whether the client is asked — requests go out
+            on milestone completion. These attempts failed, so the
+            client slot is empty for reasons on our side, not theirs.
+          </p>
+          <ul className="mt-3 space-y-2 text-xs">
+            {undelivered.map((u) => (
+              <li
+                key={u.token}
+                className="rounded-lg border border-[var(--surface-border)] p-2"
+              >
+                <span className="font-medium">
+                  {u.recipientEmail ?? "no address on file"}
+                </span>{" "}
+                <span className="text-ink-faint">
+                  · {u.status} · {u.attempts} attempt
+                  {u.attempts === 1 ? "" : "s"}
+                </span>
+                {u.error && (
+                  <p className="mt-1 break-words text-[11px] text-ink-faint">
+                    {u.error}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {/* ── Who still owes an answer ────────────────────────────── */}
       <section className="mt-8">

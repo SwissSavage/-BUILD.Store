@@ -1372,6 +1372,8 @@ export const peerReviews = pgTable("peer_reviews", {
    * the peer-review form.
    */
   communication: integer("communication"),
+  /** axis -> what would have been better. See drizzle/0054. */
+  axisReasons: jsonb("axis_reasons").$type<Record<string, string>>(),
   prose: text("prose").notNull(),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
   /**
@@ -1423,8 +1425,32 @@ export const customerFeedbackTokens = pgTable("customer_feedback_tokens", {
   expiresAt: timestamp("expires_at", { mode: "string", withTimezone: true }).notNull(),
   usedAt: timestamp("used_at", { mode: "string", withTimezone: true }),
   revokedAt: timestamp("revoked_at", { mode: "string", withTimezone: true }),
-  /** axis -> what would have been better. See drizzle/0054. */
-  axisReasons: jsonb("axis_reasons").$type<Record<string, string>>(),
+  // ── drizzle/0056 ───────────────────────────────────────────
+  /** Which milestone this is about. Null for a closing questionnaire. */
+  milestoneId: text("milestone_id").references(() => projectMilestones.id, {
+    onDelete: "set null",
+  }),
+  /**
+   * Who it went to. Recorded on the token rather than resolved at
+   * submit time, so a reply stays attributable even if the contact
+   * list in HubSpot changes afterwards.
+   */
+  recipientEmail: text("recipient_email"),
+  /**
+   * Delivery as OBSERVED. An "always goes out" rule with no record of
+   * whether it went is a guarantee on paper — and since no-signal pays
+   * the full Bonus Margin, a silently failing dispatch pays every
+   * margin in full.
+   */
+  deliveryStatus: text("delivery_status", {
+    enum: ["pending", "sent", "failed", "bounced"],
+  })
+    .notNull()
+    .default("pending"),
+  deliveryAttempts: integer("delivery_attempts").notNull().default(0),
+  lastAttemptAt: timestamp("last_attempt_at", { mode: "string", withTimezone: true }),
+  /** The provider's own words. A paraphrased bounce is useless. */
+  deliveryError: text("delivery_error"),
 });
 
 /**
@@ -1615,8 +1641,20 @@ export const customerFeedback = pgTable("customer_feedback", {
     enum: ["contract", "marketplace_order"],
   }).notNull(),
   contextId: text("context_id").notNull(),
+  /**
+   * Snapshot of who answered, as it was at the time. Evidence, not
+   * identity — clientRefId below is the record. drizzle/0056.
+   */
   customerName: text("customer_name").notNull(),
   customerEmail: text("customer_email").notNull(),
+  /** The client as a record, joined from the contract. */
+  clientRefId: text("client_ref_id").references(() => clients.id, {
+    onDelete: "set null",
+  }),
+  /** Which milestone this reading is about. Null for a closing one. */
+  milestoneId: text("milestone_id").references(() => projectMilestones.id, {
+    onDelete: "set null",
+  }),
   overallStars: integer("overall_stars").notNull(),
   metExpectations: integer("met_expectations").notNull(),
   communication: integer("communication").notNull(),

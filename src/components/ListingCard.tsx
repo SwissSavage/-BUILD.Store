@@ -11,23 +11,25 @@ import { cn } from "@/lib/cn";
 export function ListingCard({
   href,
   imageUrl,
+  fallbackLabel,
   children,
   footer,
 }: {
   href: string;
   imageUrl?: string | null;
+  /** Shown in the empty slot when the listing has no image of its own. */
+  fallbackLabel?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
-  const src =
-    imageUrl?.trim() ||
-    process.env.NEXT_PUBLIC_FALLBACK_FEATURED_IMAGE_URL?.trim() ||
-    null;
+  // No deployment-wide fallback image here, unlike OpportunityHeader: on a
+  // board it repeats the same picture on every card.
+  const src = imageUrl?.trim() || null;
 
   return (
     <Link href={href} className="group block h-full">
       <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-elevated)] transition-colors group-hover:border-brand-magenta/40">
-        <div className="relative aspect-[16/9] overflow-hidden bg-[var(--surface)]">
+        <div className="relative aspect-[2/1] overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface)]">
           {src ? (
             // alt="" because the title right below already names the card;
             // a described image would read the title twice to screen readers.
@@ -40,12 +42,10 @@ export function ListingCard({
           ) : (
             <div
               aria-hidden
-              className="h-full w-full opacity-30"
-              style={{
-                backgroundImage:
-                  "linear-gradient(135deg, var(--fm-grad-from) 0%, var(--fm-grad-to) 100%)",
-              }}
-            />
+              className="flex h-full w-full items-end p-6 font-display text-2xl font-semibold text-ink-faint/60"
+            >
+              {fallbackLabel}
+            </div>
           )}
         </div>
         <div className="flex flex-1 flex-col p-6">

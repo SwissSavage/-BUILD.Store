@@ -184,6 +184,7 @@ function Grid({ items }: { items: Project[] }) {
           key={p.id}
           href={`/projects/${p.id}`}
           imageUrl={p.featuredImageUrl}
+          fallbackLabel={INDUSTRY_LABELS[p.industry]}
           footer={
             <>
               <div className="flex items-center justify-between">

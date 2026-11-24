@@ -132,6 +132,7 @@ export default async function ContractsPage() {
               key={p.id}
               href={`/contracts/${p.id}`}
               imageUrl={p.featuredImageUrl}
+              fallbackLabel={INDUSTRY_LABELS[p.industry]}
             >
               <div className="flex items-center justify-between">
                 <CardEyebrow>{INDUSTRY_LABELS[p.industry]}</CardEyebrow>
@@ -171,6 +172,7 @@ export default async function ContractsPage() {
                 key={p.id}
                 href={`/projects/${p.id}`}
                 imageUrl={p.featuredImageUrl}
+                fallbackLabel={INDUSTRY_LABELS[p.industry]}
               >
                 <div className="flex items-center justify-between">
                   <CardEyebrow>{INDUSTRY_LABELS[p.industry]}</CardEyebrow>

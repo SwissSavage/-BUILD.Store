@@ -79,6 +79,7 @@ export default async function JobsPage() {
               key={j.id}
               href={`/jobs/${j.id}`}
               imageUrl={j.featuredImageUrl}
+              fallbackLabel={INDUSTRY_LABELS[j.industry]}
               footer={
                 <div className="space-y-1.5 text-sm">
                   <div>

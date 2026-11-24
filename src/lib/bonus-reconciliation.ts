@@ -371,7 +371,25 @@ export function deriveSplit(input: {
    * unearned upside into the guaranteed column and break that. If this
    * looks unfair in a review, re-read which number is the ask.
    *
-   * The one real obligation it creates is disclosure. A contributor
+   * ── THE TOP OF THEIR RANGE IS NOT USED, AND THAT IS THE POINT ──
+   *
+   * Contributors price a range off perceived inputs: hours they
+   * imagine, effort they expect. There is often no rhyme or reason to
+   * the ceiling. So the ceiling is ignored here entirely — on a fixed
+   * basis the payout is 85% of what FM negotiated, and their top never
+   * enters the arithmetic.
+   *
+   * Only the low end is used, as their floor. The margin system is the
+   * source of truth on what the work was worth, because what matters
+   * is results, not somebody's estimate of their own inputs.
+   *
+   * I proposed flooring the base at a percentage of payout to protect
+   * people who ask low arbitrarily. Wrong on reflection: that
+   * overrides a minimum they actually stated, in the name of
+   * protecting them from it. Their number says what they will not go
+   * below. The margin says what was earned. Those do not compete.
+   *
+   * The one real obligation this creates is disclosure. A contributor
    * shown $442 who receives $250 will read a cut, even though $250 is
    * their own price. 6b requires the split be disclosed in the SOW at
    * acceptance for exactly this reason, so the acceptance surface has

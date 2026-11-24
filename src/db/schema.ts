@@ -301,9 +301,32 @@ export const projects = pgTable("projects", {
   bonusGate: jsonb("bonus_gate"),
   pmEngagementRating: integer("pm_engagement_rating"),
   bonusDecision: text("bonus_decision", {
-    enum: ["pending", "released", "reclaimed"],
+    // "released" / "reclaimed" are the threshold-era outcomes, kept for
+    // rows settled before the scale. "reconciled" is anything resolved
+    // on it, where the answer is an amount rather than a verdict.
+    enum: ["pending", "released", "reclaimed", "reconciled"],
   }),
   bonusDecidedAt: timestamp("bonus_decided_at", { mode: "string", withTimezone: true }),
+  // ── The reconciliation record. drizzle/0055. ────────────────
+  // Stored rather than recomputed: this is the input to a payout, and
+  // recomputing later would read a different set of reviews than the
+  // money was based on.
+  bonusEarnedAmount: numeric("bonus_earned_amount", { precision: 12, scale: 2 }),
+  bonusUncommittedAmount: numeric("bonus_uncommitted_amount", { precision: 12, scale: 2 }),
+  /** Blended rating in half-steps 2..10. Null when no signal arrived. */
+  bonusBlendHalfSteps: numeric("bonus_blend_half_steps", { precision: 4, scale: 2 }),
+  bonusBlendInputs: jsonb("bonus_blend_inputs").$type<{
+    client: number[];
+    peer: number[];
+    pm: number[];
+  }>(),
+  /** Who waived the gate and why. See reviewGate. */
+  bonusGateWaiver: jsonb("bonus_gate_waiver").$type<{
+    kind: "fixed_rate" | "grandfather";
+    byUserId: string;
+    reason: string;
+    at: string;
+  }>(),
   // Task #29 — RFP attachments (client briefs, mood boards, etc.)
   // Base64-encoded inline until R2 storage backend lands (#57/#58).
   // Shape: Array<{ name, mimeType, sizeBytes, base64 }>.
@@ -1399,6 +1422,8 @@ export const customerFeedbackTokens = pgTable("customer_feedback_tokens", {
   expiresAt: timestamp("expires_at", { mode: "string", withTimezone: true }).notNull(),
   usedAt: timestamp("used_at", { mode: "string", withTimezone: true }),
   revokedAt: timestamp("revoked_at", { mode: "string", withTimezone: true }),
+  /** axis -> what would have been better. See drizzle/0054. */
+  axisReasons: jsonb("axis_reasons").$type<Record<string, string>>(),
 });
 
 /**
@@ -1625,6 +1650,8 @@ export const customerFeedback = pgTable("customer_feedback", {
   clientConfirmationToken: text("client_confirmation_token").unique(),
   clientConfirmedAt: timestamp("client_confirmed_at", { mode: "string", withTimezone: true }),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  /** axis -> what would have been better. See drizzle/0054. */
+  axisReasons: jsonb("axis_reasons").$type<Record<string, string>>(),
 });
 
 // ──────────────────────────────────────────────────────────────────────
@@ -2616,6 +2643,8 @@ export const adminReviews = pgTable("admin_reviews", {
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
     .notNull()
     .defaultNow(),
+  /** axis -> what would have been better. See drizzle/0054. */
+  axisReasons: jsonb("axis_reasons").$type<Record<string, string>>(),
 });
 
 // ──────────────────────────────────────────────────────────────

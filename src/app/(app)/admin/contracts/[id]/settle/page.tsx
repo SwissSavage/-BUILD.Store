@@ -70,13 +70,13 @@ import {
 import { dispatchTransfer } from "@/lib/payouts-stub";
 import { customerFeedback as customerFeedbackTable } from "@/db/schema";
 import { customerFeedbackReader } from "@/lib/readers";
-import {
-  feedbackLinkUrl,
-  getLiveFeedbackToken,
-} from "@/lib/feedback-link-tokens";
-import { issueFeedbackLink } from "@/lib/feedback-link-actions";
 import { poolForProject } from "@/lib/readers/reserve-pool";
-import { evaluateBonusGate } from "@/lib/bonus-gate";
+import {
+  reconcileBonusMargin,
+  reviewGate,
+  type RatingSignals,
+} from "@/lib/bonus-reconciliation";
+import { HALF_STEPS, formatStars, isHalfStep } from "@/lib/ratings";
 import {
   executeBonusDecision,
   setPmEngagementRating,
@@ -811,30 +811,46 @@ async function BonusReleasePanel({
   if (!project.talentBonusAmount) return null;
   const baseAmount = Number(project.talentBaseAmount ?? 0);
   const bonusAmount = Number(project.talentBonusAmount);
-  const feedback =
-    (
-      await customerFeedbackReader.where(
-        eq(customerFeedbackTable.contextId, project.id),
-      )
-    )[0] ?? null;
-  const liveLink = await safely(() => getLiveFeedbackToken(project.id), null);
-  const origin = (
-    process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? ""
-  ).replace(/\/$/, "");
+  // Every reading, not the first. Feedback is collected at each
+  // milestone and can come from more than one contact at the client,
+  // so taking [0] would let the earliest milestone decide the margin.
+  const feedbackRows = await customerFeedbackReader.where(
+    eq(customerFeedbackTable.contextId, project.id),
+  );
   const peerReviews = allPeerReviews.filter(
     (r) => r.contextId === project.id,
   );
-  const decision = evaluateBonusGate({
-    feedback,
-    peerReviews,
-    pmRating: project.pmEngagementRating,
-    gate: project.bonusGate,
+  // The three slots, each averaging within itself before carrying
+  // 0.4 / 0.4 / 0.2. Absent slots renormalize away rather than
+  // scoring as the floor — see bonus-reconciliation.
+  const signals: RatingSignals = {
+    client: feedbackRows.map((f) => f.overallStars).filter(isHalfStep),
+    peer: peerReviews.map((r) => r.stars).filter(isHalfStep),
+    pm: [project.pmEngagementRating].filter(isHalfStep),
+  };
+  const contractCents = Math.round(
+    Number(project.collectedRevenue ?? project.budget ?? 0) * 100,
+  );
+  const recon = reconcileBonusMargin({
+    contractValueCents: contractCents,
+    baseRateCents: Math.round(baseAmount * 100),
+    bonusMarginCents: Math.round(bonusAmount * 100),
+    signals,
+  });
+  const gate = reviewGate({
+    bonusMarginCents: Math.round(bonusAmount * 100),
+    grandfatherOverride: project.bonusGateWaiver?.kind === "grandfather"
+      ? {
+          byUserId: project.bonusGateWaiver.byUserId,
+          reason: project.bonusGateWaiver.reason,
+        }
+      : null,
   });
   const pool = await poolForProject(project.id);
 
-  const wouldRelease =
-    decision.outcome === "release" ||
-    decision.outcome === "release_no_signal_default";
+  // Full margin earned. Not a verdict any more — most outcomes are
+  // partial, and this only drives the colour of the panel.
+  const fullyEarned = recon.earnedFraction >= 1;
 
   return (
     <Card className="mt-6 border-[#5070F0]/40">
@@ -871,88 +887,72 @@ async function BonusReleasePanel({
       </div>
 
       {/*
-        The questionnaire link. This sits next to the client rating on
-        purpose: this card is where an admin discovers the gate has no
-        client signal, and until now there was nothing to do about it.
-        The page gated on three seed tokens written into the file, so no
-        real client could be sent a working link. See
-        drizzle/0026_customer_feedback_tokens.sql.
+        ─────────────────────────────────────────────────────────
+        THE LINK IS NOT A DECISION (2026-11-24)
+
+        This used to be an "Issue link" button, pressed by the admin
+        doing the settling — the same admin whose PM rating is captured
+        further down this page. So the only route to the no-client-
+        rating path was that person not pressing it, which moved the
+        decision from the client to themselves.
+
+        Dispatch is now unconditional on milestone completion and there
+        is no control here to skip, defer or re-issue as a choice. What
+        remains is a read-out: how many readings came back, and whether
+        delivery broke on our side. A failed send is OUR problem to
+        see, because a silent one puts us right back to missing client
+        feedback that we caused.
+        ─────────────────────────────────────────────────────────
       */}
-      {!feedback && (
-        <div className="mt-4 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] p-3">
-          <p className="text-[11px] uppercase tracking-wider text-ink-muted">
-            Client questionnaire
+      <div className="mt-4 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-inset)] p-3">
+        <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+          Client questionnaire
+        </p>
+        {feedbackRows.length > 0 ? (
+          <p className="mt-1 text-xs text-ink-muted">
+            {feedbackRows.length} reading
+            {feedbackRows.length === 1 ? "" : "s"} collected. Requests go
+            out automatically as milestones complete; nobody decides
+            whether to ask.
           </p>
-          {liveLink ? (
-            <>
-              <p className="mt-1 text-xs text-ink-muted">
-                A link is out, good until{" "}
-                {new Date(liveLink.expiresAt).toLocaleDateString(undefined, {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })}
-                . Send this to the client:
-              </p>
-              <code className="mt-2 block overflow-x-auto rounded-md bg-[var(--surface-inset)] px-2 py-1 text-[11px] text-ink">
-                {feedbackLinkUrl(origin, project.id, liveLink.token)}
-              </code>
-            </>
-          ) : (
-            <p className="mt-1 text-xs text-ink-muted">
-              No live link for this contract. Issue one to let the client
-              answer the questionnaire themselves. If the report came in
-              by email or on a call instead, capture it on{" "}
-              <Link
-                href="/admin/reserve"
-                className="text-brand-magentaText hover:underline"
-              >
-                /admin/reserve
-              </Link>
-              , which requires a linked meeting minute.
-            </p>
-          )}
-          <form action={issueFeedbackLink} className="mt-2">
-            <input type="hidden" name="projectId" value={project.id} />
-            <Button
-              type="submit"
-              className="rounded-full border border-[var(--surface-border)] px-3 py-1 text-xs text-ink hover:border-brand-magenta"
-            >
-              {liveLink ? "Issue a fresh link" : "Issue questionnaire link"}
-            </Button>
-          </form>
-          {liveLink && (
-            <p className="mt-2 text-[11px] text-ink-faint">
-              Issuing a fresh link revokes the one above, so only one is
-              ever live per contract.
-            </p>
-          )}
-        </div>
-      )}
+        ) : (
+          <p className="mt-1 text-xs text-ink-muted">
+            Nothing back yet. Requests go out automatically as milestones
+            complete. If none has been sent, that is a delivery failure
+            on our side and the full margin is earned rather than held —
+            the contributor does not pay for us not asking.
+          </p>
+        )}
+      </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-3 text-xs">
+        {/*
+          Each slot shows its own average and how many readings are
+          behind it, because "4.5★ from 1" and "4.5★ from 6" are very
+          different confidences in the same number.
+        */}
         <GateInputStat
-          label="Client rating"
+          label={`Client · 0.4 (${signals.client.length})`}
           value={
-            decision.inputs.clientRating !== null
-              ? `${decision.inputs.clientRating}★`
+            signals.client.length > 0
+              ? `${formatStars(signals.client.reduce((a, b) => a + b, 0) / signals.client.length)}★`
+              : "Not collected"
+          }
+        />
+        <GateInputStat
+          label={`Peer · 0.4 (${signals.peer.length})`}
+          value={
+            signals.peer.length > 0
+              ? `${formatStars(signals.peer.reduce((a, b) => a + b, 0) / signals.peer.length)}★`
               : "—"
           }
         />
         <GateInputStat
-          label="PM rating"
+          label={`PM · 0.2 (${signals.pm.length})`}
           value={
-            decision.inputs.pmRating !== null
-              ? `${decision.inputs.pmRating}★`
+            signals.pm.length > 0
+              ? `${formatStars(signals.pm[0])}★`
               : "Not captured"
-          }
-        />
-        <GateInputStat
-          label="Peer avg"
-          value={
-            decision.inputs.peerAverage !== null
-              ? `${decision.inputs.peerAverage.toFixed(2)}★`
-              : "—"
           }
         />
       </div>
@@ -960,29 +960,58 @@ async function BonusReleasePanel({
       <div
         className="mt-4 rounded-lg p-3 text-sm"
         style={{
-          backgroundColor: wouldRelease
+          backgroundColor: fullyEarned
             ? "rgba(0, 112, 72, 0.06)"
             : "rgba(216, 40, 160, 0.06)",
         }}
       >
         <span
           className="text-[11px] uppercase tracking-wider"
-          style={{ color: wouldRelease ? "#007048" : "#D828A0" }}
+          style={{ color: fullyEarned ? "#007048" : "#D828A0" }}
         >
-          Gate evaluation · driver: {decision.driver.replace(/_/g, " ")}
+          Bonus Margin ·{" "}
+          {recon.blend.value === null
+            ? "no rating collected"
+            : `blended ${formatStars(recon.blend.value)} of 5`}
         </span>
-        <p className="mt-1 text-ink">{decision.explanation}</p>
+        <p className="mt-1 text-ink">{recon.explanation}</p>
+        {recon.uncommittedCents > 0 && (
+          <>
+            <p className="mt-2 text-ink">
+              ${(recon.earnedMarginCents / 100).toLocaleString()} of the
+              ${bonusAmount.toLocaleString()} margin is earned.
+              ${(recon.uncommittedCents / 100).toLocaleString()} is
+              uncommitted, which buys{" "}
+              ${(recon.buysLabourCents / 100).toLocaleString()} of
+              replacement work once its own commission is carried.
+            </p>
+            <ol className="mt-2 list-decimal space-y-0.5 pl-5 text-[11px] text-ink-muted">
+              {recon.recommendations.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ol>
+          </>
+        )}
+        {!gate.blocks && (
+          <p className="mt-2 text-[11px] text-ink-faint">
+            {gate.explanation}
+          </p>
+        )}
       </div>
 
       {project.bonusDecision === "pending" && (
         <>
-          {/* PM rating capture — feeds composite when client rating absent
-              or as a calibration record alongside it. */}
+          {/*
+            PM rating capture. Weighted 0.2 in the blend, down from the
+            0.6 the old composite gave it, because it is the one slot
+            filled by a party to the outcome. Half-steps like every
+            other rating since drizzle/0054.
+          */}
           <form action={setPmEngagementRating} className="mt-5 flex flex-wrap items-end gap-2 text-xs">
             <input type="hidden" name="projectId" value={project.id} />
             <label className="flex flex-col">
               <span className="text-[11px] uppercase tracking-wider text-ink-muted">
-                PM engagement rating (1-5)
+                PM engagement rating · 0.2 of the blend
               </span>
               <select
                 name="rating"
@@ -993,9 +1022,9 @@ async function BonusReleasePanel({
                 <option value="" disabled>
                   Select…
                 </option>
-                {[1, 2, 3, 4, 5].map((n) => (
+                {HALF_STEPS.map((n) => (
                   <option key={n} value={n}>
-                    {n}★
+                    {formatStars(n)}★
                   </option>
                 ))}
               </select>
@@ -1013,11 +1042,17 @@ async function BonusReleasePanel({
             <Button
               type="submit"
               className="rounded-full px-5 py-2 text-sm font-medium text-white"
-              style={{ backgroundColor: wouldRelease ? "#007048" : "#D828A0" }}
+              style={{ backgroundColor: fullyEarned ? "#007048" : "#D828A0" }}
             >
-              {wouldRelease
-                ? `Execute decision: release $${bonusAmount.toLocaleString()} to talent`
-                : `Execute decision: reclaim $${bonusAmount.toLocaleString()} to recovery pool`}
+              {/*
+                Says the amounts, not a verdict. "Release" and "reclaim"
+                were the only two things the old gate could do; this
+                pays what was earned and parks the rest, and an admin
+                should see both numbers before pressing it.
+              */}
+              {recon.uncommittedCents > 0
+                ? `Reconcile: pay $${(recon.earnedMarginCents / 100).toLocaleString()} earned, hold $${(recon.uncommittedCents / 100).toLocaleString()}`
+                : `Reconcile: pay the full $${bonusAmount.toLocaleString()} margin`}
             </Button>
             <p className="mt-2 text-[11px] text-ink-faint">
               Decision is recorded against this contract. Client never sees

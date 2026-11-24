@@ -52,7 +52,12 @@ import { db } from "@/db/client";
 import { adminReviews, projects } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getEngagementRoles } from "@/lib/readers";
-import { axesFor, type ReviewAxis } from "@/lib/engagement-roles";
+import {
+  REVIEW_AXES,
+  axesFor,
+  type ReviewAxis,
+} from "@/lib/engagement-roles";
+import { checkReasons, parseHalfStep, pruneReasons } from "@/lib/ratings";
 import { recomputeMvpScore } from "@/lib/writers/mvp-score";
 
 export interface AdminReviewResult {
@@ -60,14 +65,12 @@ export interface AdminReviewResult {
   message: string;
 }
 
-/** 1..5, or null when the reviewer skipped the axis. */
-function star(v: FormDataEntryValue | null): number | null {
-  const raw = String(v ?? "").trim();
-  if (!raw) return null;
-  const n = Number(raw);
-  if (!Number.isInteger(n) || n < 1 || n > 5) return null;
-  return n;
-}
+/*
+ * Scale parsing lives in lib/ratings. Half-steps 2..10, null for a
+ * deliberate skip, and the reason rule enforced here rather than
+ * trusted to the form — a required field is a suggestion once the
+ * request leaves the browser.
+ */
 
 /**
  * A Builder rating the admin who ran their engagement.
@@ -165,7 +168,27 @@ export async function submitAdminReview(
     };
   }
   const inScope = (axis: ReviewAxis) =>
-    allowed.includes(axis) ? star(formData.get(axis)) : null;
+    allowed.includes(axis) ? parseHalfStep(formData.get(axis)) : null;
+
+  // ── The reason rule, enforced not requested ─────────────────
+  //
+  // Any axis answered below the top owes a sentence naming what would
+  // have been better. Checked here because the form's required field
+  // stops mattering the moment somebody posts directly, and because a
+  // score with no articulable reason behind it is exactly what this
+  // instrument is meant to filter out.
+  //
+  // Skips are untouched: null is "did not answer" and owes nothing.
+  const scored = REVIEW_AXES.filter((a) => allowed.includes(a.axis)).map(
+    (a) => ({
+      axis: a.axis as string,
+      label: a.label,
+      halfSteps: inScope(a.axis),
+      reason: String(formData.get(`${a.axis}__reason`) ?? ""),
+    }),
+  );
+  const reasons = checkReasons(scored);
+  if (!reasons.ok) return { ok: false, message: reasons.message };
 
   await db.insert(adminReviews).values({
     id: `arv_${randomUUID()}`,
@@ -177,6 +200,7 @@ export async function submitAdminReview(
     responsiveness: inScope("responsiveness"),
     shieldedFromChurn: inScope("shieldedFromChurn"),
     paidOnTime: inScope("paidOnTime"),
+    axisReasons: pruneReasons(scored),
     prose: prose.length > 0 ? prose : null,
   });
 

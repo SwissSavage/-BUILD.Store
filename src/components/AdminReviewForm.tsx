@@ -39,6 +39,7 @@ import {
   type AdminReviewResult,
 } from "@/lib/admin-review-actions";
 import { REVIEW_AXES } from "@/lib/engagement-roles";
+import { HalfStarField } from "@/components/HalfStarField";
 
 type FormState = AdminReviewResult | null;
 
@@ -87,55 +88,20 @@ export function AdminReviewForm({
       <input type="hidden" name="projectId" value={projectId} />
       <input type="hidden" name="subjectUserId" value={subjectUserId} />
 
+      {/*
+        One shared field per axis. The scale, the skip affordance and
+        the required reason are HalfStarField's business, not this
+        form's — three forms owning three copies of a rating scale is
+        how they drift apart.
+      */}
       {REVIEW_AXES.filter((a) => axes.includes(a.axis)).map((axis) => (
-        <div key={axis.axis}>
-          <div className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-[11px] uppercase tracking-wider text-ink-muted">
-              {axis.label}
-            </span>
-            <span className="text-[11px] text-ink-faint">{axis.question}</span>
-          </div>
-          {/*
-            The anchor. A 1–5 scale with no worked example collects
-            politeness: everyone who had a fine time clicks 4. Saying
-            what a 5 and a 2 actually look like is the cheapest thing
-            that makes the spread mean something.
-          */}
-          <p className="mt-0.5 text-[11px] leading-snug text-ink-faint">
-            {axis.example}
-          </p>
-          <div className="mt-1 flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <label
-                key={n}
-                className="cursor-pointer rounded-md border border-[var(--surface-border)] px-2.5 py-1 text-sm hover:border-brand-magenta has-[:checked]:border-brand-magenta has-[:checked]:text-brand-magentaText"
-              >
-                <input
-                  type="radio"
-                  name={axis.axis}
-                  value={n}
-                  className="sr-only"
-                />
-                {n}
-              </label>
-            ))}
-            {/*
-              An explicit way out, rather than leaving the row blank
-              and hoping. Somebody who had no scoping conversation
-              should be able to say so in one click.
-            */}
-            <label className="ml-1 cursor-pointer text-[11px] text-ink-faint hover:text-ink-muted">
-              <input
-                type="radio"
-                name={axis.axis}
-                value=""
-                defaultChecked
-                className="sr-only"
-              />
-              skip
-            </label>
-          </div>
-        </div>
+        <HalfStarField
+          key={axis.axis}
+          name={axis.axis}
+          label={axis.label}
+          question={axis.question}
+          example={axis.example}
+        />
       ))}
 
       <div>

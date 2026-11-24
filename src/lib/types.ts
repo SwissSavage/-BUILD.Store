@@ -395,6 +395,8 @@ export interface Project {
   budget: string; // numeric(12,2)
   status: "open" | "in_progress" | "completed" | "cancelled";
   clientId: string;
+  /** The client as a record. Null while the backfill settles. */
+  clientRefId: string | null;
   assignedMemberIds: string[];
   /**
    * Which surface owns this record:
@@ -497,7 +499,8 @@ export interface Project {
    */
   talentBaseAmount: string | null;
   talentBonusAmount: string | null;
-  bonusGate: BonusReleaseGate | null;
+  /** Dead since drizzle/0055. Nothing reads it. See the note below. */
+  bonusGate: unknown | null;
   /**
    * PM engagement rating captured by the account-owning admin at
    * settlement time. 1-5 scale, admin-only visibility. Feeds the
@@ -512,45 +515,46 @@ export interface Project {
    * moved to engagement recovery pool.
    */
   bonusDecision: BonusDecisionStatus | null;
+  /** The reconciliation record. drizzle/0055. */
+  bonusEarnedAmount: string | null;
+  bonusUncommittedAmount: string | null;
+  /** Blended rating in half-steps. Null when no signal arrived. */
+  bonusBlendHalfSteps: string | null;
+  bonusBlendInputs: { client: number[]; peer: number[]; pm: number[] } | null;
+  /** Who waived settlement gating and why. See reviewGate. */
+  bonusGateWaiver: {
+    kind: "fixed_rate" | "grandfather";
+    byUserId: string;
+    reason: string;
+    at: string;
+  } | null;
   /** ISO timestamp the bonus decision was recorded. */
   bonusDecidedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export type BonusDecisionStatus = "pending" | "released" | "reclaimed";
+export type BonusDecisionStatus =
+  | "pending"
+  /** Threshold-era outcomes. Rows settled before the scale. */
+  | "released"
+  | "reclaimed"
+  /** Resolved on the scale, where the answer is an amount. drizzle/0055. */
+  | "reconciled";
 
 /**
- * Bonus-release gate config for a Project. Per locked memory in
- * `future-modern.md`, the canonical gate is:
- *   1. Client rating ≥ `clientRatingThreshold` (default 4 on 5-star scale)
- *      → release bonus.
- *   2. If no client rating within `silenceWindowDays` (default 30) →
- *      fallback to internal composite (PM rating × `pmWeight` + peer-review
- *      average × `peerWeight`). Composite ≥ `compositeThreshold` → release.
- *   3. If no client rating AND no internal signal → release by default
- *      (talent doesn't pay for FM's internal procedural failure).
+ * The bonus-release gate config is gone. drizzle/0055, 2026-11-24.
  *
- * Per-contract overrides allowed but expected to be rare.
+ * BonusReleaseGate held clientRatingThreshold 4, silenceWindowDays 30,
+ * pmWeight 0.6, peerWeight 0.4, compositeThreshold 4, all attributed to
+ * a `future-modern.md` that is not in this repository and therefore
+ * never checkable against anything.
+ *
+ * The threshold is replaced by a scale, and the weights by assigned
+ * slots at 0.4 client / 0.4 peer / 0.2 PM. See lib/bonus-reconciliation.
+ * projects.bonusGate stays as a column for rows settled under the old
+ * rule; nothing reads it.
  */
-export interface BonusReleaseGate {
-  clientRatingThreshold: number; // default 4
-  silenceWindowDays: number; // default 30
-  pmWeight: number; // default 0.6
-  peerWeight: number; // default 0.4
-  compositeThreshold: number; // default 4 (same as client)
-}
-
-/**
- * Default bonus-release gate per the canonical memory lock.
- */
-export const CANONICAL_BONUS_GATE: BonusReleaseGate = {
-  clientRatingThreshold: 4,
-  silenceWindowDays: 30,
-  pmWeight: 0.6,
-  peerWeight: 0.4,
-  compositeThreshold: 4,
-};
 
 /**
  * Engagement Recovery Pool — destination ledger for reclaimed bonus when
@@ -4738,6 +4742,7 @@ export type AuditLogAction =
   | "portfolio.unpublished"
   | "contract.bonus_released"
   | "contract.bonus_reclaimed"
+  | "contract.bonus_reconciled"
   | "contract.revenue_split_recorded"
   // Bookings + calendar (cross-tier)
   | "booking.request_created"
@@ -4909,6 +4914,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "portfolio.published": "Published as a case study",
   "portfolio.unpublished": "Case study taken down",
   "contract.bonus_released": "Bonus released",
+  "contract.bonus_reconciled": "Bonus Margin reconciled",
   "contract.bonus_reclaimed": "Bonus reclaimed",
   "contract.revenue_split_recorded": "Revenue split recorded",
   "booking.request_created": "Booking requested",

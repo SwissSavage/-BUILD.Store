@@ -144,10 +144,14 @@ export const ADMIN_NAV: AdminNavEntry[] = [
  */
 export const ADMIN_DETAIL_ROUTES: string[] = [
   // The engagement hub. Reached by clicking a contract rather than
-  // from a menu, and it is the entry point to the four below it.
+  // from a menu, and it is the entry point to the five below it.
   "/admin/contracts/[id]",
   "/admin/contracts/[id]/attribution",
   "/admin/contracts/[id]/ledger",
+  // Reviews got their own surface rather than sitting inside the
+  // ledger: a page about money was the wrong place to chase feedback
+  // from, and it was the only door to it.
+  "/admin/contracts/[id]/reviews",
   "/admin/contracts/[id]/settle",
   "/admin/contracts/[id]/tracker",
   "/admin/engagements/[id]/edit",

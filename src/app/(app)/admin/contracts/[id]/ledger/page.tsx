@@ -42,7 +42,6 @@ import {
 } from "@/lib/readers";
 import { IssueSettlementVouchers } from "@/components/IssueSettlementVouchers";
 import { IssueTimesheet } from "@/components/IssueTimesheet";
-import { EngagementReviewsPanel } from "@/components/EngagementReviewsPanel";
 import {
   getTimeEntriesForProject,
   getTimesheetsForProject,
@@ -666,10 +665,18 @@ export default async function ContractLedgerPage({
           Who still owes an answer on how this went, and a nudge for
           each. What they said lives on the review surfaces.
         </p>
-        <EngagementReviewsPanel
-          project={project}
-          clientEmail={clientBillingEmail}
-        />
+        {/*
+          A pointer, not the panel. Reviews are handled on their own
+          surface now — "the reviews themselves should not be handled
+          on contract" — and a page about money is the wrong place to
+          chase feedback from.
+        */}
+        <Link
+          href={`/admin/contracts/${project.id}/reviews`}
+          className="mt-3 inline-block rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
+        >
+          Open reviews for this engagement →
+        </Link>
       </section>
 
       {/* ──────────────────────  Timesheet section  ─────────────────── */}

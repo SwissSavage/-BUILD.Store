@@ -1,0 +1,246 @@
+/**
+ * Reviews for one engagement. Its own surface.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY THIS ROUTE EXISTS (2026-11-24)
+ *
+ * Jamar: "The section should be accessible directly from the contract,
+ * the reviews themselves should not be handled on contract."
+ *
+ * EngagementReviewsPanel was rendered inside the ledger, so chasing a
+ * review meant opening a page about money, and the only door to it was
+ * that one page. Settlement already has several entries; reviews had
+ * one, and it was the wrong one.
+ *
+ * So the chasing, the role assignment and the collected state live
+ * here, linked from the contract rather than embedded in it. The
+ * ledger keeps a pointer and nothing else.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY IT SHOWS THE BLEND
+ *
+ * Because reviews are no longer only about standing. Since
+ * drizzle/0055 the client, peer and PM slots decide what share of the
+ * Bonus Margin was earned, and an admin looking at review coverage is
+ * looking at the inputs to a payout. Showing which slots are empty is
+ * the difference between "we are waiting on feedback" and "this will
+ * settle on two readings out of three."
+ *
+ * Attribution stays off this page. Who said what is admin-only and
+ * lives behind /admin/peer-reviews, for the reason written on
+ * admin-review-score: on an engagement with one Builder, an
+ * attributed view names the author however carefully it is phrased.
+ * ─────────────────────────────────────────────────────────────
+ */
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth-stub";
+import { getProjectById } from "@/lib/readers/projects";
+import { clients as clientsTable } from "@/db/schema";
+import { db } from "@/db/client";
+import { eq } from "drizzle-orm";
+import {
+  adminReviewReader,
+  customerFeedbackReader,
+  getEngagementRoles,
+  getReviewsForProject,
+  safely,
+} from "@/lib/readers";
+import { getAllUsers } from "@/lib/readers/users";
+import { EngagementReviewsPanel } from "@/components/EngagementReviewsPanel";
+import { EngagementRolePicker } from "@/components/EngagementRolePicker";
+import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { blendRating, type RatingSignals } from "@/lib/bonus-reconciliation";
+import { formatStars, isHalfStep } from "@/lib/ratings";
+import { describeRoles } from "@/lib/engagement-roles";
+import { publicName, type User } from "@/lib/types";
+
+export default async function ContractReviewsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const admin = await getCurrentUser();
+  if (!admin) redirect("/signin");
+  if (!admin.isAdmin) redirect("/dashboard");
+
+  const project = await getProjectById(id);
+  if (!project || project.kind !== "contract") notFound();
+
+  const [{ users: roster }, peerReviews, adminRevs, feedbackAll, roles] =
+    await Promise.all([
+      safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+      safely(() => getReviewsForProject(project.id), []),
+      safely(() => adminReviewReader.all(), []),
+      safely(() => customerFeedbackReader.all(), []),
+      safely(
+        () => getEngagementRoles(project.id),
+        new Map<string, string[]>(),
+      ),
+    ]);
+
+  const clientEmail = await safely(async () => {
+    if (!project.clientRefId) return null;
+    const [row] = await db
+      .select({ email: clientsTable.primaryContactEmail })
+      .from(clientsTable)
+      .where(eq(clientsTable.id, project.clientRefId))
+      .limit(1);
+    return row?.email ?? null;
+  }, null);
+
+  const feedback = feedbackAll.filter((f) => f.contextId === project.id);
+  const byId = new Map(roster.map((u) => [u.id, u]));
+
+  // Everyone the split pays — the same union the review sections use,
+  // because an engagement's membership is whoever the money reaches.
+  const onEngagement = [
+    ...new Set([
+      ...(project.assignedMemberIds ?? []),
+      ...(project.adminUserIds ?? []),
+    ]),
+  ]
+    .map((uid) => byId.get(uid))
+    .filter((u): u is User => Boolean(u));
+
+  const signals: RatingSignals = {
+    client: feedback.map((f) => f.overallStars).filter(isHalfStep),
+    peer: peerReviews.map((r) => r.stars).filter(isHalfStep),
+    pm: [project.pmEngagementRating].filter(isHalfStep),
+  };
+  const blend = blendRating(signals);
+  const hasMargin = Number(project.talentBonusAmount ?? 0) > 0;
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-10">
+      <Link
+        href={`/admin/contracts/${project.id}`}
+        className="text-xs text-ink-muted hover:text-brand-magentaText"
+      >
+        ← {project.title}
+      </Link>
+
+      <h1 className="mt-3 font-display text-3xl font-semibold">Reviews</h1>
+      <p className="mt-1 text-sm text-ink-muted">
+        How this engagement went, from the client, from peers, and on how
+        it was run. Scores are visible; who gave them is not.
+      </p>
+
+      {/* ── What the slots currently hold ───────────────────────── */}
+      <Card className="mt-6">
+        <CardEyebrow>Collected so far</CardEyebrow>
+        <CardTitle className="mt-1 text-2xl">
+          {blend.value === null
+            ? "Nothing back yet"
+            : `Blended ${formatStars(blend.value)} of 5`}
+        </CardTitle>
+        <div className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
+          {(
+            [
+              ["Client", 0.4, signals.client],
+              ["Peer", 0.4, signals.peer],
+              ["PM", 0.2, signals.pm],
+            ] as const
+          ).map(([label, weight, values]) => (
+            <div
+              key={label}
+              className="rounded-lg border border-[var(--surface-border)] p-3"
+            >
+              <div className="text-[11px] uppercase tracking-wider text-ink-muted">
+                {label} · {weight}
+              </div>
+              <div className="mt-1 text-lg tabular-nums">
+                {values.length > 0
+                  ? `${formatStars(values.reduce((a, b) => a + b, 0) / values.length)}★`
+                  : "—"}
+              </div>
+              <div className="text-[11px] text-ink-faint">
+                {values.length} reading{values.length === 1 ? "" : "s"}
+              </div>
+            </div>
+          ))}
+        </div>
+        {/*
+          An empty slot is not a zero. Said here because an admin
+          reading "—" needs to know it renormalizes away rather than
+          dragging the blend down, which is the opposite of what a
+          missing number usually means on a dashboard.
+        */}
+        <p className="mt-3 text-[11px] text-ink-faint">
+          An empty slot renormalizes away rather than counting as a low
+          score.{" "}
+          {hasMargin
+            ? "This blend decides what share of the Bonus Margin is earned."
+            : "There is no Bonus Margin on this engagement, so nothing here affects pay — it feeds standing only."}
+        </p>
+      </Card>
+
+      {/* ── Who still owes an answer ────────────────────────────── */}
+      <section className="mt-8">
+        <h2 className="font-display text-2xl font-semibold">Outstanding</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Who has not answered yet, and a nudge for each.
+        </p>
+        <EngagementReviewsPanel project={project} clientEmail={clientEmail} />
+      </section>
+
+      {/* ── Scope: what each person did ─────────────────────────── */}
+      <section className="mt-10">
+        <h2 className="font-display text-2xl font-semibold">
+          What each person did
+        </h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Roles decide which questions anyone is asked about them.
+          Nobody is rated on work they did not do, and that is declared
+          here rather than inferred.
+        </p>
+        <div className="mt-4 space-y-3">
+          {onEngagement.map((person) => (
+            <div
+              key={person.id}
+              className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-inset)] p-4"
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="font-medium">{publicName(person)}</span>
+                <span className="text-[11px] text-ink-faint">
+                  {describeRoles(roles.get(person.id) ?? [])}
+                </span>
+              </div>
+              <EngagementRolePicker
+                projectId={project.id}
+                userId={person.id}
+                personName={publicName(person)}
+                current={roles.get(person.id) ?? []}
+              />
+            </div>
+          ))}
+          {onEngagement.length === 0 && (
+            <p className="text-sm text-ink-muted">
+              Nobody is attached to this engagement yet.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <p className="mt-10 text-[11px] text-ink-faint">
+        Attributed reviews — who said what — are at{" "}
+        <Link
+          href="/admin/peer-reviews"
+          className="underline hover:text-brand-magentaText"
+        >
+          /admin/peer-reviews
+        </Link>
+        , and never show you rows about yourself. Adding them here would
+        name the author on any engagement with one Builder.
+      </p>
+      <p className="mt-2 text-[11px] text-ink-faint">
+        {adminRevs.filter((r) => r.projectId === project.id).length} review
+        {adminRevs.filter((r) => r.projectId === project.id).length === 1
+          ? ""
+          : "s"}{" "}
+        of how it was run.
+      </p>
+    </div>
+  );
+}

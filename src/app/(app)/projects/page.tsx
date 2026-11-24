@@ -19,7 +19,9 @@ import { safely } from "@/lib/readers";
 import { INDUSTRY_LABELS, type Project } from "@/lib/types";
 import { briefSummary } from "@/components/Brief";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { ListingCard, ListingTags } from "@/components/ListingCard";
 import { NotificationStrip } from "@/components/NotificationStrip";
+import { BoardBackdrop } from "@/components/BoardBackdrop";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +44,7 @@ export default async function ProjectsPage() {
     : [];
 
   return (
-    <div className="mx-auto max-w-app px-6 py-12">
+    <BoardBackdrop className="mx-auto max-w-app px-6 py-12">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <CardEyebrow>Venture Labor</CardEyebrow>
@@ -153,7 +155,7 @@ export default async function ProjectsPage() {
       >
         {active.length === 0 ? <Empty /> : <Grid items={active} />}
       </Section>
-    </div>
+    </BoardBackdrop>
   );
 }
 
@@ -179,47 +181,39 @@ function Grid({ items }: { items: Project[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {items.map((p) => (
-        <Link
+        <ListingCard
           key={p.id}
           href={`/projects/${p.id}`}
-          className="block transition-transform hover:-translate-y-0.5"
-        >
-          <Card className="h-full transition-colors hover:border-brand-magenta/40">
-            <CardEyebrow>{INDUSTRY_LABELS[p.industry]}</CardEyebrow>
-            <CardTitle className="mt-2">{p.title}</CardTitle>
-            <p className="mt-3 text-sm text-ink-muted">
-              {briefSummary(p.description, { skipTitle: p.title })}
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {p.skillsRequired.slice(0, 5).map((s) => (
+          imageUrl={p.featuredImageUrl}
+          fallbackLabel={INDUSTRY_LABELS[p.industry]}
+          footer={
+            <>
+              <div className="flex items-center justify-between">
                 <span
-                  key={s}
-                  className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted"
+                  className="rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
+                  style={{ backgroundColor: "rgba(80,112,240,0.15)", color: "var(--fm-blue-text)" }}
                 >
-                  {s}
+                  {p.status.replace("_", " ")}
                 </span>
-              ))}
-            </div>
-
-            <div className="mt-5 flex items-center justify-between">
-              <span
-                className="rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-                style={{ backgroundColor: "rgba(80,112,240,0.15)", color: "var(--fm-blue-text)" }}
-              >
-                {p.status.replace("_", " ")}
-              </span>
-              <span className="text-xs text-ink-muted">
-                {p.assignedMemberIds.length > 0
-                  ? `${p.assignedMemberIds.length} contributor${p.assignedMemberIds.length === 1 ? "" : "s"}`
-                  : "Help wanted"}
-              </span>
-            </div>
-            <div className="mt-3 text-xs text-brand-magentaText">
-              View project →
-            </div>
-          </Card>
-        </Link>
+                <span className="text-xs text-ink-muted">
+                  {p.assignedMemberIds.length > 0
+                    ? `${p.assignedMemberIds.length} contributor${p.assignedMemberIds.length === 1 ? "" : "s"}`
+                    : "Help wanted"}
+                </span>
+              </div>
+              <div className="mt-3 text-xs text-brand-magentaText">
+                View project →
+              </div>
+            </>
+          }
+        >
+          <CardEyebrow>{INDUSTRY_LABELS[p.industry]}</CardEyebrow>
+          <CardTitle className="mt-2 line-clamp-2">{p.title}</CardTitle>
+          <p className="mt-3 line-clamp-3 text-sm text-ink-muted">
+            {briefSummary(p.description, { skipTitle: p.title })}
+          </p>
+          <ListingTags tags={p.skillsRequired} />
+        </ListingCard>
       ))}
     </div>
   );

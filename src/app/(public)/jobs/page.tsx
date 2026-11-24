@@ -17,12 +17,13 @@
  * that's what Google indexes and what long-tail searches surface.
  * Full brief + application form live at /jobs/[id] and require sign-in.
  */
-import Link from "next/link";
 import { PostListingButton } from "@/components/PostListingButton";
 import { getOpenJobs, safely } from "@/lib/readers";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { briefSummary } from "@/components/Brief";
-import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { CardEyebrow, CardTitle } from "@/components/Card";
+import { ListingCard, ListingTags } from "@/components/ListingCard";
+import { BoardBackdrop } from "@/components/BoardBackdrop";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export default async function JobsPage() {
   );
 
   return (
-    <div className="mx-auto max-w-app px-6 py-12">
+    <BoardBackdrop className="mx-auto max-w-app px-6 py-12">
       <div>
         <h1 className="font-display text-4xl font-semibold">Open roles</h1>
         <p className="mt-2 max-w-2xl text-ink-muted">
@@ -75,41 +76,13 @@ export default async function JobsPage() {
       ) : (
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {open.map((j) => (
-            <Link
+            <ListingCard
               key={j.id}
               href={`/jobs/${j.id}`}
-              className="block transition-opacity hover:opacity-95"
-            >
-              <Card>
-                <div className="flex items-center justify-between">
-                  <CardEyebrow>{INDUSTRY_LABELS[j.industry]}</CardEyebrow>
-                  <span
-                    className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                    style={{
-                      backgroundColor: "rgba(0,112,72,0.15)",
-                      color: "var(--fm-green-text)",
-                    }}
-                  >
-                    {TYPE_LABEL[j.employmentType] ?? j.employmentType}
-                  </span>
-                </div>
-                <CardTitle className="mt-2">{j.title}</CardTitle>
-                <p className="mt-3 text-sm text-ink-muted">
-                  {briefSummary(j.description, { skipTitle: j.title })}
-                </p>
-
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  {j.skillsRequired.slice(0, 5).map((s) => (
-                    <span
-                      key={s}
-                      className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="mt-5 space-y-1.5 text-sm">
+              imageUrl={j.featuredImageUrl}
+              fallbackLabel={INDUSTRY_LABELS[j.industry]}
+              footer={
+                <div className="space-y-1.5 text-sm">
                   <div>
                     <span className="text-xs uppercase tracking-wider text-ink-faint">
                       Comp
@@ -118,11 +91,29 @@ export default async function JobsPage() {
                   </div>
                   <div className="text-xs text-ink-muted">{j.location}</div>
                 </div>
-              </Card>
-            </Link>
+              }
+            >
+              <div className="flex items-center justify-between">
+                <CardEyebrow>{INDUSTRY_LABELS[j.industry]}</CardEyebrow>
+                <span
+                  className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  style={{
+                    backgroundColor: "rgba(0,112,72,0.15)",
+                    color: "var(--fm-green-text)",
+                  }}
+                >
+                  {TYPE_LABEL[j.employmentType] ?? j.employmentType}
+                </span>
+              </div>
+              <CardTitle className="mt-2 line-clamp-2">{j.title}</CardTitle>
+              <p className="mt-3 line-clamp-3 text-sm text-ink-muted">
+                {briefSummary(j.description, { skipTitle: j.title })}
+              </p>
+              <ListingTags tags={j.skillsRequired} />
+            </ListingCard>
           ))}
         </div>
       )}
-    </div>
+    </BoardBackdrop>
   );
 }

@@ -16,14 +16,15 @@
  * for everyone. Full brief + bid form live
  * at /contracts/[id] and require sign-in.
  */
-import Link from "next/link";
 import { PostListingButton } from "@/components/PostListingButton";
 import { getAllProjects } from "@/lib/readers/projects";
 import { milestoneCountsByProject, safely } from "@/lib/readers";
 import { MilestoneProgress } from "@/components/MilestoneProgress";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { briefSummary } from "@/components/Brief";
-import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { CardEyebrow, CardTitle } from "@/components/Card";
+import { ListingCard, ListingTags } from "@/components/ListingCard";
+import { BoardBackdrop } from "@/components/BoardBackdrop";
 
 export const metadata = {
   title: "Open contracts — Future Modern",
@@ -97,7 +98,7 @@ export default async function ContractsPage() {
   );
 
   return (
-    <div className="mx-auto max-w-app px-6 py-12">
+    <BoardBackdrop className="mx-auto max-w-app px-6 py-12">
       <div>
         <h1 className="font-display text-4xl font-semibold">
           Open contracts
@@ -128,41 +129,30 @@ export default async function ContractsPage() {
       ) : (
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {open.map((p) => (
-            <Link
+            <ListingCard
               key={p.id}
               href={`/contracts/${p.id}`}
-              className="block transition-opacity hover:opacity-95"
+              imageUrl={p.featuredImageUrl}
+              fallbackLabel={INDUSTRY_LABELS[p.industry]}
             >
-              <Card>
-                <div className="flex items-center justify-between">
-                  <CardEyebrow>{INDUSTRY_LABELS[p.industry]}</CardEyebrow>
-                  <span
-                    className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                    style={{
-                      backgroundColor: "rgba(80,112,240,0.15)",
-                      color: "var(--fm-blue-text)",
-                    }}
-                  >
-                    Contract
-                  </span>
-                </div>
-                <CardTitle className="mt-2">{p.title}</CardTitle>
-                <p className="mt-3 text-sm text-ink-muted">
-                  {briefSummary(p.description, { skipTitle: p.title })}
-                </p>
-
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  {p.skillsRequired.slice(0, 5).map((s) => (
-                    <span
-                      key={s}
-                      className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-xs text-ink-muted"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              </Card>
-            </Link>
+              <div className="flex items-center justify-between">
+                <CardEyebrow>{INDUSTRY_LABELS[p.industry]}</CardEyebrow>
+                <span
+                  className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  style={{
+                    backgroundColor: "rgba(80,112,240,0.15)",
+                    color: "var(--fm-blue-text)",
+                  }}
+                >
+                  Contract
+                </span>
+              </div>
+              <CardTitle className="mt-2 line-clamp-2">{p.title}</CardTitle>
+              <p className="mt-3 line-clamp-3 text-sm text-ink-muted">
+                {briefSummary(p.description, { skipTitle: p.title })}
+              </p>
+              <ListingTags tags={p.skillsRequired} />
+            </ListingCard>
           ))}
         </div>
       )}
@@ -179,12 +169,12 @@ export default async function ContractsPage() {
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {placed.map((p) => (
-              <Link
+              <ListingCard
                 key={p.id}
                 href={`/projects/${p.id}`}
-                className="block transition-opacity hover:opacity-95"
+                imageUrl={p.featuredImageUrl}
+                fallbackLabel={INDUSTRY_LABELS[p.industry]}
               >
-                <Card>
                 <div className="flex items-center justify-between">
                   <CardEyebrow>{INDUSTRY_LABELS[p.industry]}</CardEyebrow>
                   <span
@@ -197,7 +187,7 @@ export default async function ContractsPage() {
                     Placed
                   </span>
                 </div>
-                <CardTitle className="mt-2">{p.title}</CardTitle>
+                <CardTitle className="mt-2 line-clamp-2">{p.title}</CardTitle>
                 <p className="mt-3 text-sm text-ink-muted">
                   {p.engagementState === "awaiting_talent"
                     ? "Assigned, pending the member's confirmation."
@@ -223,12 +213,11 @@ export default async function ContractsPage() {
                     />
                   ) : null;
                 })()}
-                </Card>
-              </Link>
+              </ListingCard>
             ))}
           </div>
         </section>
       )}
-    </div>
+    </BoardBackdrop>
   );
 }

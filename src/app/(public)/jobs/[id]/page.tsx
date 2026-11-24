@@ -100,6 +100,7 @@ export default async function JobDetailPage({
         <OpportunityHeader
           backHref="/jobs"
           backLabel="All open roles"
+          imageUrl={job.featuredImageUrl}
           kind={TYPE_LABEL[job.employmentType] ?? job.employmentType}
           industry={INDUSTRY_LABELS[job.industry]}
           title={job.title}

@@ -9,6 +9,7 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth-stub";
 import { postContract } from "@/lib/contract-post-actions";
+import { FeaturedImageField } from "@/components/FeaturedImageField";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { RichTextEditor } from "@/components/RichTextEditor";
 
@@ -110,6 +111,8 @@ export default async function AdminNewContractPage() {
             Skills — one per line, or comma separated
             <textarea name="skillsRequired" rows={3} className={inputClass} />
           </label>
+
+          <FeaturedImageField labelClass={labelClass} inputClass={inputClass} />
 
           <SubmitButton pendingLabel="Posting…"
             className="fm-btn-primary rounded-full px-5 py-2.5 text-sm font-medium"

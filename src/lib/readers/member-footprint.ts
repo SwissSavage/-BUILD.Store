@@ -73,6 +73,7 @@ import {
   walkthroughProgress,
   timeEntries,
   adminReviews,
+  engagementRoles,
   profileDisclosureReviews,
 } from "@/db/schema";
 
@@ -136,6 +137,7 @@ export async function getMemberFootprint(
     disclosureReviewCount,
     timeEntryCount,
     adminReviewCount,
+    engagementRoleCount,
   ] = await Promise.all([
     countRows(agreements, agreements.userId, uid),
     countRows(payoutMethods, payoutMethods.userId, uid),
@@ -158,6 +160,7 @@ export async function getMemberFootprint(
     countRows(profileDisclosureReviews, profileDisclosureReviews.userId, uid),
     countRows(timeEntries, timeEntries.userId, uid),
     countRows(adminReviews, adminReviews.subjectUserId, uid),
+    countRows(engagementRoles, engagementRoles.userId, uid),
   ]);
 
   const balance = Number(buildTokenBalance ?? 0);
@@ -205,6 +208,15 @@ export async function getMemberFootprint(
       table: "admin_reviews",
       label: "Reviews of their project management",
       count: adminReviewCount,
+    },
+    // A blocker because it is what makes their reviews readable. The
+    // scores stay meaningful only alongside the record of what they
+    // were responsible for: "rated 3 on handling change" means
+    // nothing once you cannot tell whether they owned change.
+    {
+      table: "engagement_roles",
+      label: "Recorded roles on engagements",
+      count: engagementRoleCount,
     },
   ].filter((e) => e.count > 0);
 

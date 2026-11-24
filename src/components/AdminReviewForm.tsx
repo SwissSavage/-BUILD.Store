@@ -38,6 +38,8 @@ import {
   submitAdminReview,
   type AdminReviewResult,
 } from "@/lib/admin-review-actions";
+import { REVIEW_AXES } from "@/lib/engagement-roles";
+import { HalfStarField } from "@/components/HalfStarField";
 
 type FormState = AdminReviewResult | null;
 
@@ -48,38 +50,28 @@ async function action(
   return submitAdminReview(formData);
 }
 
-/** The four axes, Builder-facing wording. */
-const AXES: { name: string; label: string; hint: string }[] = [
-  {
-    name: "scopeClarity",
-    label: "Scope clarity",
-    hint: "Was it clear what you were being asked to do?",
-  },
-  {
-    name: "responsiveness",
-    label: "Responsiveness",
-    hint: "Did they come back to you when you needed them?",
-  },
-  {
-    name: "shieldedFromChurn",
-    label: "Handling change",
-    hint: "Did they absorb client changes rather than passing them straight through?",
-  },
-  {
-    name: "paidOnTime",
-    label: "Paid on time",
-    hint: "Did the money arrive when it was supposed to?",
-  },
-];
+/*
+ * Wording lives in lib/engagement-roles.ts rather than here, because
+ * the role picker shows the same labels while an admin is choosing
+ * what somebody did, and two copies of a question drift.
+ */
 
 export function AdminReviewForm({
   projectId,
   subjectUserId,
   subjectName,
+  axes,
 }: {
   projectId: string;
   subjectUserId: string;
   subjectName: string;
+  /**
+   * Which axes this person's roles make them answerable for, from
+   * axesFor(). Never the full list by default: scope is declared at
+   * role assignment, not inferred here. An empty array means the
+   * caller should be showing the role picker instead of this form.
+   */
+  axes: string[];
 }) {
   const [state, formAction, isPending] = useActionState(action, null);
 
@@ -96,46 +88,20 @@ export function AdminReviewForm({
       <input type="hidden" name="projectId" value={projectId} />
       <input type="hidden" name="subjectUserId" value={subjectUserId} />
 
-      {AXES.map((axis) => (
-        <div key={axis.name}>
-          <div className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-[11px] uppercase tracking-wider text-ink-muted">
-              {axis.label}
-            </span>
-            <span className="text-[11px] text-ink-faint">{axis.hint}</span>
-          </div>
-          <div className="mt-1 flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <label
-                key={n}
-                className="cursor-pointer rounded-md border border-[var(--surface-border)] px-2.5 py-1 text-sm hover:border-brand-magenta has-[:checked]:border-brand-magenta has-[:checked]:text-brand-magentaText"
-              >
-                <input
-                  type="radio"
-                  name={axis.name}
-                  value={n}
-                  className="sr-only"
-                />
-                {n}
-              </label>
-            ))}
-            {/*
-              An explicit way out, rather than leaving the row blank
-              and hoping. Somebody who had no scoping conversation
-              should be able to say so in one click.
-            */}
-            <label className="ml-1 cursor-pointer text-[11px] text-ink-faint hover:text-ink-muted">
-              <input
-                type="radio"
-                name={axis.name}
-                value=""
-                defaultChecked
-                className="sr-only"
-              />
-              skip
-            </label>
-          </div>
-        </div>
+      {/*
+        One shared field per axis. The scale, the skip affordance and
+        the required reason are HalfStarField's business, not this
+        form's — three forms owning three copies of a rating scale is
+        how they drift apart.
+      */}
+      {REVIEW_AXES.filter((a) => axes.includes(a.axis)).map((axis) => (
+        <HalfStarField
+          key={axis.axis}
+          name={axis.axis}
+          label={axis.label}
+          question={axis.question}
+          example={axis.example}
+        />
       ))}
 
       <div>
@@ -163,8 +129,14 @@ export function AdminReviewForm({
         >
           {isPending ? "Sending…" : `Review ${subjectName}`}
         </Button>
+        {/*
+          Said plainly because it is true and because it is what makes
+          answering worth the two minutes: this moves their standing,
+          and it is the same OVR everyone else is held to.
+        */}
         <span className="text-[11px] text-ink-faint">
-          {subjectName} sees a score, never who said what.
+          Feeds {subjectName}&rsquo;s OVR. They see the score move, never
+          who said what.
         </span>
       </div>
 

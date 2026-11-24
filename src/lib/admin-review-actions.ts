@@ -51,20 +51,26 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { adminReviews, projects } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
+import { getEngagementRoles } from "@/lib/readers";
+import {
+  REVIEW_AXES,
+  axesFor,
+  type ReviewAxis,
+} from "@/lib/engagement-roles";
+import { checkReasons, parseHalfStep, pruneReasons } from "@/lib/ratings";
+import { recomputeMvpScore } from "@/lib/writers/mvp-score";
 
 export interface AdminReviewResult {
   ok: boolean;
   message: string;
 }
 
-/** 1..5, or null when the reviewer skipped the axis. */
-function star(v: FormDataEntryValue | null): number | null {
-  const raw = String(v ?? "").trim();
-  if (!raw) return null;
-  const n = Number(raw);
-  if (!Number.isInteger(n) || n < 1 || n > 5) return null;
-  return n;
-}
+/*
+ * Scale parsing lives in lib/ratings. Half-steps 2..10, null for a
+ * deliberate skip, and the reason rule enforced here rather than
+ * trusted to the form — a required field is a suggestion once the
+ * request leaves the browser.
+ */
 
 /**
  * A Builder rating the admin who ran their engagement.
@@ -144,18 +150,75 @@ export async function submitAdminReview(
     return { ok: false, message: "You have already reviewed them on this one." };
   }
 
+  // ── Scope, enforced rather than merely hidden ───────────────
+  //
+  // The form only renders the axes this person's roles cover, but a
+  // server action is a public endpoint and hiding a field is not the
+  // same as refusing the value. Jamar: "Rob doesn't handle payments,
+  // that should be made clear at role assignment not left to be
+  // inferred by questions." An out-of-scope answer is dropped here so
+  // it cannot reach somebody's record by any route.
+  const roles = await getEngagementRoles(projectId);
+  const allowed = axesFor(roles.get(subjectUserId) ?? []);
+  if (allowed.length === 0) {
+    return {
+      ok: false,
+      message:
+        "Nobody has said what they did on this engagement yet, so there is nothing fair to ask. Assign roles first.",
+    };
+  }
+  const inScope = (axis: ReviewAxis) =>
+    allowed.includes(axis) ? parseHalfStep(formData.get(axis)) : null;
+
+  // ── The reason rule, enforced not requested ─────────────────
+  //
+  // Any axis answered below the top owes a sentence naming what would
+  // have been better. Checked here because the form's required field
+  // stops mattering the moment somebody posts directly, and because a
+  // score with no articulable reason behind it is exactly what this
+  // instrument is meant to filter out.
+  //
+  // Skips are untouched: null is "did not answer" and owes nothing.
+  const scored = REVIEW_AXES.filter((a) => allowed.includes(a.axis)).map(
+    (a) => ({
+      axis: a.axis as string,
+      label: a.label,
+      halfSteps: inScope(a.axis),
+      reason: String(formData.get(`${a.axis}__reason`) ?? ""),
+    }),
+  );
+  const reasons = checkReasons(scored);
+  if (!reasons.ok) return { ok: false, message: reasons.message };
+
   await db.insert(adminReviews).values({
     id: `arv_${randomUUID()}`,
     projectId,
     subjectUserId,
     reviewerUserId: user.id,
     source: "builder",
-    scopeClarity: star(formData.get("scopeClarity")),
-    responsiveness: star(formData.get("responsiveness")),
-    shieldedFromChurn: star(formData.get("shieldedFromChurn")),
-    paidOnTime: star(formData.get("paidOnTime")),
+    scopeClarity: inScope("scopeClarity"),
+    responsiveness: inScope("responsiveness"),
+    shieldedFromChurn: inScope("shieldedFromChurn"),
+    paidOnTime: inScope("paidOnTime"),
+    axisReasons: pruneReasons(scored),
     prose: prose.length > 0 ? prose : null,
   });
+
+  // The whole point: this moves the subject's OVR, through the same
+  // sub-ratings a peer review feeds. Jamar: "No admin subratings, the
+  // original scores cover all of this." See AXIS_SUB_RATING for the
+  // mapping and writers/mvp-score.ts for why the two sources merge
+  // rather than one overriding the other.
+  //
+  // Wrapped for the same reason peer-review-actions wraps it: a
+  // scoring failure must not roll back a review somebody already
+  // submitted. The daily job picks it up on the next pass.
+  try {
+    await recomputeMvpScore(subjectUserId);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[mvp] recompute after admin review failed", err);
+  }
 
   // Deliberately NOT notifying the subject. A ping saying a review
   // landed, on an engagement with one Builder, identifies the

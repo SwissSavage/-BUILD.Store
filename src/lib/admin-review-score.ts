@@ -46,6 +46,28 @@
  * usually does. Prose is therefore admin-only and never surfaces to
  * the subject, even unattributed.
  *
+ * ─────────────────────────────────────────────────────────────
+ * THIS IS A BREAKDOWN, NOT A STANDING (corrected 2026-11-23)
+ *
+ * As first written this was the only thing admin reviews fed, which
+ * made it a parallel scoring system: a number nothing read, while OVR
+ * — the score that actually gates promotion, Champion's Court and the
+ * bonus composite — ignored admin reviews entirely. An admin could
+ * run an engagement badly, be rated for it by everyone on it, and
+ * their standing would not move.
+ *
+ * Jamar: "No admin subratings, the original scores cover all of this."
+ *
+ * Standing now comes from OVR for admins exactly as for Builders:
+ * writers/mvp-score.ts folds these four axes into communication,
+ * hustle, collaboration and reliability through AXIS_SUB_RATING in
+ * lib/engagement-roles.ts.
+ *
+ * What survives here is the per-axis read: useful for a subject who
+ * wants to know WHICH part of running an engagement people marked
+ * down, which a single OVR cannot tell them. Treat the mean as
+ * diagnostic. Nothing should gate on it.
+ *
  * NO DATABASE IMPORTS. Pure, so the arithmetic can be checked without
  * a connection and the shapes can cross to a client component.
  * ─────────────────────────────────────────────────────────────

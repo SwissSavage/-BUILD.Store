@@ -414,15 +414,28 @@ export default async function ContractHubPage({
 
         <Stage
           n={8}
-          title="Client feedback"
+          title="Reviews"
           done={feedback.length > 0}
           detail={
-            feedback.length > 0
-              ? `Captured. ${feedback[0]?.overallStars ?? "?"} stars overall.`
-              : "Issue the questionnaire link from the settle page, or capture a written report on /admin/reserve against a linked meeting minute."
+            /*
+              Was "Client feedback", pointing at the settle page with
+              an "Issue link" label. Both parts are now wrong: reviews
+              are more than the client's reading, and the link is not
+              something anyone issues — it goes out on every milestone
+              with no control to skip it. A stage that tells an admin
+              to press a button that no longer exists is worse than no
+              stage.
+            */
+            Number(project.talentBonusAmount ?? 0) > 0
+              ? feedback.length > 0
+                ? `${feedback.length} client reading${feedback.length === 1 ? "" : "s"} in. Blended with peer and PM, this decides what share of the Bonus Margin is earned.`
+                : "Nothing back from the client yet. Requests go out automatically as milestones complete. Settlement waits on this while there is a Bonus Margin to resolve."
+              : feedback.length > 0
+                ? `${feedback.length} client reading${feedback.length === 1 ? "" : "s"} in. No Bonus Margin here, so this feeds standing only.`
+                : "No Bonus Margin on this engagement, so reviews feed standing only and nothing waits on them. They still go out."
           }
-          href={`/admin/contracts/${project.id}/settle`}
-          hrefLabel="Issue link"
+          href={`/admin/contracts/${project.id}/reviews`}
+          hrefLabel="Reviews"
         />
 
         <Stage

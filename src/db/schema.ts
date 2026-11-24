@@ -301,9 +301,32 @@ export const projects = pgTable("projects", {
   bonusGate: jsonb("bonus_gate"),
   pmEngagementRating: integer("pm_engagement_rating"),
   bonusDecision: text("bonus_decision", {
-    enum: ["pending", "released", "reclaimed"],
+    // "released" / "reclaimed" are the threshold-era outcomes, kept for
+    // rows settled before the scale. "reconciled" is anything resolved
+    // on it, where the answer is an amount rather than a verdict.
+    enum: ["pending", "released", "reclaimed", "reconciled"],
   }),
   bonusDecidedAt: timestamp("bonus_decided_at", { mode: "string", withTimezone: true }),
+  // ── The reconciliation record. drizzle/0055. ────────────────
+  // Stored rather than recomputed: this is the input to a payout, and
+  // recomputing later would read a different set of reviews than the
+  // money was based on.
+  bonusEarnedAmount: numeric("bonus_earned_amount", { precision: 12, scale: 2 }),
+  bonusUncommittedAmount: numeric("bonus_uncommitted_amount", { precision: 12, scale: 2 }),
+  /** Blended rating in half-steps 2..10. Null when no signal arrived. */
+  bonusBlendHalfSteps: numeric("bonus_blend_half_steps", { precision: 4, scale: 2 }),
+  bonusBlendInputs: jsonb("bonus_blend_inputs").$type<{
+    client: number[];
+    peer: number[];
+    pm: number[];
+  }>(),
+  /** Who waived the gate and why. See reviewGate. */
+  bonusGateWaiver: jsonb("bonus_gate_waiver").$type<{
+    kind: "fixed_rate" | "grandfather";
+    byUserId: string;
+    reason: string;
+    at: string;
+  }>(),
   // Task #29 — RFP attachments (client briefs, mood boards, etc.)
   // Base64-encoded inline until R2 storage backend lands (#57/#58).
   // Shape: Array<{ name, mimeType, sizeBytes, base64 }>.
@@ -1400,6 +1423,8 @@ export const customerFeedbackTokens = pgTable("customer_feedback_tokens", {
   expiresAt: timestamp("expires_at", { mode: "string", withTimezone: true }).notNull(),
   usedAt: timestamp("used_at", { mode: "string", withTimezone: true }),
   revokedAt: timestamp("revoked_at", { mode: "string", withTimezone: true }),
+  /** axis -> what would have been better. See drizzle/0054. */
+  axisReasons: jsonb("axis_reasons").$type<Record<string, string>>(),
 });
 
 /**
@@ -1626,6 +1651,8 @@ export const customerFeedback = pgTable("customer_feedback", {
   clientConfirmationToken: text("client_confirmation_token").unique(),
   clientConfirmedAt: timestamp("client_confirmed_at", { mode: "string", withTimezone: true }),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  /** axis -> what would have been better. See drizzle/0054. */
+  axisReasons: jsonb("axis_reasons").$type<Record<string, string>>(),
 });
 
 // ──────────────────────────────────────────────────────────────────────
@@ -2614,6 +2641,43 @@ export const adminReviews = pgTable("admin_reviews", {
   paidOnTime: integer("paid_on_time"),
 
   prose: text("prose"),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  /** axis -> what would have been better. See drizzle/0054. */
+  axisReasons: jsonb("axis_reasons").$type<Record<string, string>>(),
+});
+
+// ──────────────────────────────────────────────────────────────
+//  Engagement roles — drizzle/0053. Reasoning in that file and in
+//  src/lib/engagement-roles.ts.
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * What somebody did on one engagement, so a review asks only about
+ * that.
+ *
+ * Per project rather than per user: the same two people swap jobs
+ * between engagements, and a role on the user row would be a job
+ * title rather than what a reviewer is being asked about.
+ *
+ * Optional. Where no roles are assigned the review form asks every
+ * axis and the reviewer skips what they cannot speak to.
+ */
+export const engagementRoles = pgTable("engagement_roles", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** One of the six in ENGAGEMENT_ROLES. Enforced by a CHECK. */
+  role: text("role").notNull(),
+  /** Assigning a role changes what somebody can be judged on. */
+  assignedByUserId: text("assigned_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
     .notNull()
     .defaultNow(),

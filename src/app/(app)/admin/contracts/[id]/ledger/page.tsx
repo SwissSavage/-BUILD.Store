@@ -649,6 +649,36 @@ export default async function ContractLedgerPage({
         </Card>
       </section>
 
+      {/* ──────────────────────  Reviews  ───────────────────────────── */}
+      {/*
+        Brought here from /admin/reserve, where the chase controls sit
+        under a menu entry called "Contract reserves" in the Money
+        group and are gated on a pending talent bonus. On an
+        engagement without one they rendered nowhere at all, so there
+        was no way to chase a review for it.
+
+        Same move as the payouts prompt above: the action belongs
+        where the contract is. */}
+      <section className="mt-12">
+        <h2 className="font-display text-2xl font-semibold">Reviews</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Who still owes an answer on how this went, and a nudge for
+          each. What they said lives on the review surfaces.
+        </p>
+        {/*
+          A pointer, not the panel. Reviews are handled on their own
+          surface now — "the reviews themselves should not be handled
+          on contract" — and a page about money is the wrong place to
+          chase feedback from.
+        */}
+        <Link
+          href={`/admin/contracts/${project.id}/reviews`}
+          className="mt-3 inline-block rounded-full border border-[var(--surface-border)] px-4 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
+        >
+          Open reviews for this engagement →
+        </Link>
+      </section>
+
       {/* ──────────────────────  Timesheet section  ─────────────────── */}
       {/*
         The evidence behind an hourly invoice. Before this the model,

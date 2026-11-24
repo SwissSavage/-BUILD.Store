@@ -6,7 +6,7 @@
  *      Feeds the composite fallback when client rating is absent /
  *      below threshold. Optional but recommended.
  *   2. Admin executes the bonus decision. Reads the gate via
- *      `evaluateBonusGate`, then either marks the bonus as released
+ *      `reconcileBonusMargin`, pays what was earned, holds the rest
  *      (paid to talent under standard split engine pacing) or reclaims
  *      it to the Engagement Recovery Pool.
  *
@@ -32,7 +32,11 @@ import { customerFeedback as customerFeedbackTable } from "@/db/schema";
 import { customerFeedbackReader } from "@/lib/readers";
 import { creditRecoveryPool } from "@/lib/writers/reserve-pool";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
-import { evaluateBonusGate } from "@/lib/bonus-gate";
+import {
+  reconcileBonusMargin,
+  type RatingSignals,
+} from "@/lib/bonus-reconciliation";
+import { isHalfStep, parseHalfStep } from "@/lib/ratings";
 import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
 import { hasValidPayoutDocument } from "@/lib/payout-gate";
 import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
@@ -49,12 +53,36 @@ import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
  */
 async function recordBonusDecision(
   projectId: string,
-  decision: "released" | "reclaimed",
+  decision: "released" | "reclaimed" | "reconciled",
+  /**
+   * The reconciliation, stored alongside the verdict. A payout has to
+   * be reproducible from its own record rather than from the current
+   * state of every review it read, since those can be voided and
+   * reviewers can be deleted.
+   */
+  record?: {
+    earnedAmount: string;
+    uncommittedAmount: string;
+    blendHalfSteps: string | null;
+    blendInputs: { client: number[]; peer: number[]; pm: number[] };
+  },
 ): Promise<void> {
   const now = new Date().toISOString();
   const res = await db
     .update(projectsTable)
-    .set({ bonusDecision: decision, bonusDecidedAt: now, updatedAt: now })
+    .set({
+      bonusDecision: decision,
+      bonusDecidedAt: now,
+      updatedAt: now,
+      ...(record
+        ? {
+            bonusEarnedAmount: record.earnedAmount,
+            bonusUncommittedAmount: record.uncommittedAmount,
+            bonusBlendHalfSteps: record.blendHalfSteps,
+            bonusBlendInputs: record.blendInputs,
+          }
+        : {}),
+    })
     .where(
       and(
         eq(projectsTable.id, projectId),
@@ -85,9 +113,15 @@ async function findProject(id: string) {
 export async function setPmEngagementRating(formData: FormData) {
   await requireAdmin();
   const projectId = String(formData.get("projectId") ?? "").trim();
-  const raw = Number(formData.get("rating") ?? "0");
-  if (!Number.isFinite(raw) || raw < 1 || raw > 5) {
-    throw new Error("Rating must be an integer from 1 to 5.");
+  // Half-steps 2..10 since drizzle/0054, which also added a CHECK, so
+  // a stale 1..5 writer would now fail at the database rather than
+  // recording half the rating somebody meant. Validated here too so
+  // the error is readable.
+  const raw = parseHalfStep(formData.get("rating"));
+  if (raw === null) {
+    throw new Error(
+      "Rating must be a half-step from 2 to 10 (1.0 to 5.0 stars).",
+    );
   }
   await findProject(projectId);
 
@@ -139,21 +173,52 @@ export async function executeBonusDecision(formData: FormData) {
     );
   }
 
-  const feedback =
-    (
-      await customerFeedbackReader.where(
-        eq(customerFeedbackTable.contextId, projectId),
-      )
-    )[0] ?? null;
-  // Scoped to this project in the query. A bonus-gate evaluation must
-  // not read every review in the cooperative to find the handful
-  // attached to this contract.
+  // EVERY reading, not the first one. The old gate took `[0]`, which
+  // was fine when one token produced one rating and wrong now that
+  // feedback is collected at each milestone and from more than one
+  // contact at the client. Taking the first row would have let the
+  // earliest milestone decide the whole margin.
+  const feedbackRows = await customerFeedbackReader.where(
+    eq(customerFeedbackTable.contextId, projectId),
+  );
+  // Scoped to this project in the query. A reconciliation must not
+  // read every review in the cooperative to find the handful attached
+  // to this contract.
   const peerReviews = await getReviewsForProject(projectId);
-  const decision = evaluateBonusGate({
-    feedback,
-    peerReviews,
-    pmRating: project.pmEngagementRating,
-    gate: project.bonusGate,
+
+  // ── On the scale, not against a threshold ───────────────────
+  //
+  // evaluateBonusGate used to decide this: one client star against a
+  // threshold of 4, release or reclaim, nothing between. Its fallback
+  // weighted the engagement admin's own rating at 0.6, reachable only
+  // by that admin not sending the client a feedback link.
+  //
+  // Now the three slots blend at 0.4 / 0.4 / 0.2, each averaging
+  // within itself, and the earned share of the margin runs from none
+  // at 2.0 to all of it at 4.0. Most real outcomes are partial, which
+  // is why this pays an amount rather than returning a verdict.
+  const signals: RatingSignals = {
+    client: [
+      // Every reading collected, across contacts and milestones.
+      ...feedbackRows.map((f) => f.overallStars).filter(isHalfStep),
+    ],
+    peer: peerReviews.map((r) => r.stars).filter(isHalfStep),
+    pm: [project.pmEngagementRating].filter(isHalfStep),
+  };
+
+  const bonusMarginCents = Math.round(
+    Number(project.talentBonusAmount ?? 0) * 100,
+  );
+  const baseCents = Math.round(Number(project.talentBaseAmount ?? 0) * 100);
+  const contractCents = Math.round(
+    Number(project.collectedRevenue ?? project.budget ?? 0) * 100,
+  );
+
+  const recon = reconcileBonusMargin({
+    contractValueCents: contractCents,
+    baseRateCents: baseCents,
+    bonusMarginCents,
+    signals,
   });
 
   // ────────────────────────────────────────────────────────────
@@ -181,13 +246,28 @@ export async function executeBonusDecision(formData: FormData) {
   // having spent nothing. Recording a decision and then failing to
   // pay is visible and recoverable; paying twice is neither.
   // ────────────────────────────────────────────────────────────
-  const outcome = decision.outcome === "reclaim" ? "reclaimed" : "released";
-  await recordBonusDecision(projectId, outcome);
-  project.bonusDecision = outcome;
+  const earnedAmount = (recon.earnedMarginCents / 100).toFixed(2);
+  const uncommittedAmount = (recon.uncommittedCents / 100).toFixed(2);
+  await recordBonusDecision(projectId, "reconciled", {
+    earnedAmount,
+    uncommittedAmount,
+    blendHalfSteps:
+      recon.blend.value === null ? null : recon.blend.value.toFixed(2),
+    blendInputs: signals,
+  });
+  project.bonusDecision = "reconciled";
 
-  if (decision.outcome === "reclaim") {
-    await creditRecoveryPool(projectId, project.talentBonusAmount);
-  } else {
+  // The uncommitted balance is held, not rebated. A cash concession to
+  // the client is the last option and needs a separate signed action —
+  // this path only ever parks the money where a disposition can act on
+  // it. See bonus-reconciliation's header.
+  if (recon.uncommittedCents > 0) {
+    await creditRecoveryPool(projectId, uncommittedAmount);
+  }
+
+  // Pay what was earned. Zero is a real answer at or below 2.0, and
+  // the split engine must not be handed it.
+  if (recon.earnedMarginCents > 0) {
     // Release or release-by-default both pay talent. In sandbox
     // we also cascade a $BUILD distribution across the project's
     // assigned members — equal shares of the bonus amount, sourced
@@ -206,7 +286,10 @@ export async function executeBonusDecision(formData: FormData) {
     // still call this same cascade so voucher accounting stays
     // consistent.
     const members = project.assignedMemberIds;
-    const bonusAmount = Number(project.talentBonusAmount);
+    // What was EARNED, not the whole margin. The old code paid
+    // talentBonusAmount in full because the gate it read could only
+    // say yes or no; a 3.5 now pays 75% of it and the rest is held.
+    const bonusAmount = recon.earnedMarginCents / 100;
     if (members.length > 0 && bonusAmount > 0) {
       // Write the full 85/12/1.5/1.5 split against the bonus
       // amount so admin/treasury/LP get their proportional cut
@@ -274,19 +357,23 @@ export async function executeBonusDecision(formData: FormData) {
   await logAuditEvent({
     actorUserId: admin.id,
     actorRoleSnapshot: snapshotActorRole(admin),
-    action:
-      project.bonusDecision === "released"
-        ? "contract.bonus_released"
-        : "contract.bonus_reclaimed",
+    // One action now. "Released" and "reclaimed" were the only two
+    // things the threshold could do; the scale produces an amount, and
+    // the amounts are in `after` below.
+    action: "contract.bonus_reconciled",
     resourceKind: "project",
     resourceId: project.id,
     before: { bonusDecision: "pending" },
     after: {
       bonusDecision: project.bonusDecision,
       talentBonusAmount: project.talentBonusAmount,
+      bonusEarnedAmount: earnedAmount,
+      bonusUncommittedAmount: uncommittedAmount,
+      bonusBlendHalfSteps:
+        recon.blend.value === null ? null : recon.blend.value.toFixed(2),
       bonusDecidedAt: project.bonusDecidedAt,
     },
-    reason: decision.explanation,
+    reason: recon.explanation,
   });
 
   revalidatePath(`/admin/contracts/${projectId}/settle`);

@@ -14,6 +14,7 @@
  * Visibility helpers also live here (`peerView`, `selfView`) so all
  * surfaces that show MVP data go through one well-named filter.
  */
+import { HALF_STEP_TO_SUB_RATING } from "@/lib/ratings";
 import {
   MVP_STANDING_LABELS,
   MVP_SUB_RATING_LABELS,
@@ -285,8 +286,15 @@ export function reviewWeightFor(reviewer: ReviewerContext): number {
  * sub-rating value (0-99, matching MVP_WEIGHTS input scale).
  *
  * Selector picks the dimension off each review (e.g. r => r.communication,
- * r => r.professionalism). Values on the review are 1–5 stars; we
- * rescale to the 0-99 sub-rating scale here (× 19.8, capped).
+ * r => r.professionalism). Values on the review are integer HALF-STEPS
+ * 2..10 since drizzle/0054, so a perfect score is 10, not 5. The
+ * rescale to 0-99 is × 9.9 rather than × 19.8 — both land a perfect
+ * score on 99, which is the OVR clamp.
+ *
+ * Half-steps rather than a decimal column because node-postgres
+ * returns numeric as a string, and these values feed a payout now.
+ * lib/ratings owns the scale; the factor is imported from there rather
+ * than written here twice.
  *
  * Reviews with a null value on the selected dimension are skipped
  * (legacy rows pre-communication / pre-professionalism).
@@ -314,8 +322,8 @@ export function aggregatePeerReviewsIntoSubRating<T>(
     totalWeight += w;
   }
   if (totalWeight === 0) return fallback;
-  const meanStars = weightedSum / totalWeight;
-  // 1–5 → 0-99 rescale. Cap at 99 to match the OVR clamp.
-  const scaled = Math.round(meanStars * 19.8);
+  const meanHalfSteps = weightedSum / totalWeight;
+  // Half-steps 2..10 → 0-99. Cap at 99 to match the OVR clamp.
+  const scaled = Math.round(meanHalfSteps * HALF_STEP_TO_SUB_RATING);
   return Math.max(0, Math.min(99, scaled));
 }

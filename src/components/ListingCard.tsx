@@ -22,9 +22,12 @@ export function ListingCard({
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
-  // No deployment-wide fallback image here, unlike OpportunityHeader: on a
-  // board it repeats the same picture on every card.
-  const src = imageUrl?.trim() || null;
+  // Same fallback order as OpportunityHeader: the listing's own image, then
+  // the deployment-wide default, then the flat pillar panel.
+  const src =
+    imageUrl?.trim() ||
+    process.env.NEXT_PUBLIC_FALLBACK_FEATURED_IMAGE_URL?.trim() ||
+    null;
 
   return (
     <Link href={href} className="group block h-full">

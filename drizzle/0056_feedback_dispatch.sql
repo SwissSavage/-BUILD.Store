@@ -1,3 +1,8 @@
+-- Idempotent throughout: scripts/migrate.mjs rolls a whole file back
+-- on a duplicate-object error and then records it as applied, so a
+-- file that is partly new and partly already-present would silently
+-- no-op while being marked done. Every statement here checks first.
+
 -- Feedback requests go out on their own, to the right people, and we
 -- can tell when they didn't.
 --
@@ -37,29 +42,32 @@
 ALTER TABLE "customer_feedback_tokens"
   -- Which milestone this request is about. Null for a whole-engagement
   -- request, which is what a closing questionnaire still is.
-  ADD COLUMN "milestone_id" text REFERENCES "project_milestones"("id") ON DELETE SET NULL,
-  ADD COLUMN "recipient_email" text,
+  ADD COLUMN IF NOT EXISTS "milestone_id" text REFERENCES "project_milestones"("id") ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS "recipient_email" text,
   -- Delivery, as observed rather than assumed.
-  ADD COLUMN "delivery_status" text NOT NULL DEFAULT 'pending',
-  ADD COLUMN "delivery_attempts" integer NOT NULL DEFAULT 0,
-  ADD COLUMN "last_attempt_at" timestamptz,
+  ADD COLUMN IF NOT EXISTS "delivery_status" text NOT NULL DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS "delivery_attempts" integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS "last_attempt_at" timestamptz,
   -- The provider's own words. Kept verbatim: a paraphrased bounce is
   -- useless for working out whether an address is wrong or a server is
   -- down.
-  ADD COLUMN "delivery_error" text;
+  ADD COLUMN IF NOT EXISTS "delivery_error" text;
 
-ALTER TABLE "customer_feedback_tokens"
-  ADD CONSTRAINT "customer_feedback_tokens_delivery_status" CHECK (
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'customer_feedback_tokens_delivery_status') THEN
+    ALTER TABLE "customer_feedback_tokens" ADD CONSTRAINT "customer_feedback_tokens_delivery_status" CHECK (
     "delivery_status" IN ('pending', 'sent', 'failed', 'bounced')
   );
+  END IF;
+END $$;
 
 -- Finding what did not arrive has to be cheap, because it runs on
 -- every settle screen and in the sweep.
-CREATE INDEX "customer_feedback_tokens_undelivered_idx"
+CREATE INDEX IF NOT EXISTS "customer_feedback_tokens_undelivered_idx"
   ON "customer_feedback_tokens" ("delivery_status")
   WHERE "delivery_status" IN ('failed', 'bounced');
 
-CREATE INDEX "customer_feedback_tokens_context_milestone_idx"
+CREATE INDEX IF NOT EXISTS "customer_feedback_tokens_context_milestone_idx"
   ON "customer_feedback_tokens" ("context_id", "milestone_id");
 
 -- ─────────────────────────────────────────────────────────────
@@ -80,8 +88,8 @@ CREATE INDEX "customer_feedback_tokens_context_milestone_idx"
 -- when they answered. They are evidence, not identity.
 -- ─────────────────────────────────────────────────────────────
 ALTER TABLE "customer_feedback"
-  ADD COLUMN "client_ref_id" text REFERENCES "clients"("id") ON DELETE SET NULL,
-  ADD COLUMN "milestone_id" text REFERENCES "project_milestones"("id") ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS "client_ref_id" text REFERENCES "clients"("id") ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS "milestone_id" text REFERENCES "project_milestones"("id") ON DELETE SET NULL;
 
-CREATE INDEX "customer_feedback_client_ref_idx"
+CREATE INDEX IF NOT EXISTS "customer_feedback_client_ref_idx"
   ON "customer_feedback" ("client_ref_id");

@@ -298,11 +298,19 @@ export default async function DashboardPage() {
                   {p.title}
                 </p>
                 <p className="mt-1 text-sm text-ink-muted">
-                  {p.engagementBasis === "hourly" && p.talentBaseAmount
-                    ? `$${p.talentBaseAmount}/hr to you`
-                    : p.talentBaseAmount
-                      ? `$${p.talentBaseAmount} to you`
-                      : "Terms inside"}
+                  {/*
+                    Two numbers, not one. This said "$X/hr to you" off
+                    talentBaseAmount while composition was writing the
+                    entire payout into that column — so it promised the
+                    whole negotiated rate as if it were already theirs.
+                    Base is what they asked for and is guaranteed; the
+                    lift above it is earned.
+                  */}
+                  {p.talentBaseAmount
+                    ? Number(p.talentBonusAmount ?? 0) > 0
+                      ? `$${p.talentBaseAmount}${p.engagementBasis === "hourly" ? "/hr" : ""} guaranteed, up to $${Number(p.talentBaseAmount) + Number(p.talentBonusAmount)}${p.engagementBasis === "hourly" ? "/hr" : ""} earned`
+                      : `$${p.talentBaseAmount}${p.engagementBasis === "hourly" ? "/hr" : ""} to you`
+                    : "Terms inside"}
                   {p.engagementCeilingHours
                     ? `, not to exceed ${p.engagementCeilingHours} hours`
                     : ""}

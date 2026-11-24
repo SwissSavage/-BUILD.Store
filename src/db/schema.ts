@@ -1013,6 +1013,7 @@ export const jobs = pgTable("jobs", {
   postedBy: text("posted_by").notNull(),
   postedByLabel: text("posted_by_label").notNull(),
   status: text("status", { enum: ["open", "filled", "closed"] }).notNull(),
+  featuredImageUrl: text("featured_image_url"),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
 });
 

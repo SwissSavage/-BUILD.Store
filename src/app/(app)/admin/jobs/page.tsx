@@ -15,6 +15,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth-stub";
 import { jobReader, jobApplicationReader, safely } from "@/lib/readers";
 import { setJobStatus, upsertJob } from "@/lib/job-actions";
+import { FeaturedImageField } from "@/components/FeaturedImageField";
 import { INDUSTRY_LABELS } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 
@@ -167,6 +168,8 @@ export default async function AdminJobsPage() {
             Skills — one per line, or comma separated
             <textarea name="skillsRequired" rows={3} className={inputClass} />
           </label>
+
+          <FeaturedImageField labelClass={labelClass} inputClass={inputClass} />
 
           <SubmitButton pendingLabel="Saving…" className={primaryButton}>
             Post job
@@ -356,6 +359,11 @@ function JobRow({
               className={inputClass}
             />
           </label>
+          <FeaturedImageField
+            currentUrl={job.featuredImageUrl ?? null}
+            labelClass={labelClass}
+            inputClass={inputClass}
+          />
           <div className="flex flex-wrap items-center gap-2">
             <SubmitButton pendingLabel="Saving…" className={primaryButton}>
               Save

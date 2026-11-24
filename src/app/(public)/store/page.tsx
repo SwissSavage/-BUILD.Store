@@ -25,6 +25,8 @@ import {
   INDUSTRY_LABELS,
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
+import { ListingCard, ListingTags } from "@/components/ListingCard";
+import { BoardBackdrop } from "@/components/BoardBackdrop";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +61,7 @@ export default async function StorePage({
   );
 
   return (
-    <div className="mx-auto max-w-app px-6 py-12">
+    <BoardBackdrop className="mx-auto max-w-app px-6 py-12">
       <header>
         <div className="text-xs uppercase tracking-wider text-brand-magentaText">
           $BUILD.Store marketplace
@@ -115,42 +117,12 @@ export default async function StorePage({
             const seller = roster.find((u) => u.id === p.sellerId);
             const pillars = seller ? userPillars(seller) : [];
             return (
-              <Link key={p.id} href={`/store/${p.id}`} className="block">
-                <Card className="transition-colors hover:border-brand-magenta">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <CardEyebrow>
-                        {p.categorySlugs
-                          .map(
-                            (slug) =>
-                              categories.find((c) => c.slug === slug)?.name,
-                          )
-                          .filter(Boolean)
-                          .join(" · ") || "Uncategorized"}
-                      </CardEyebrow>
-                      <CardTitle className="mt-1">{p.title}</CardTitle>
-                    </div>
-                    <div
-                      className="shrink-0 font-display text-xl font-semibold"
-                      style={{ color: "var(--fm-magenta-text)" }}
-                    >
-                      ${Number(p.price).toLocaleString()}
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm text-ink-muted">{p.description}</p>
-
-                  <div className="mt-4 flex flex-wrap gap-1">
-                    {p.tags.map((t) => (
-                      <span
-                        key={t}
-                        className="rounded-full border border-[var(--surface-border)] px-2 py-0.5 text-[10px] text-ink-muted"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between border-t border-[var(--surface-border)] pt-4 text-xs text-ink-faint">
+              <ListingCard
+                key={p.id}
+                href={`/store/${p.id}`}
+                imageUrl={p.imageUrls[0]}
+                footer={
+                  <div className="flex items-center justify-between border-t border-[var(--surface-border)] pt-4 text-xs text-ink-faint">
                     <span>
                       From {seller ? publicName(seller) : "a cooperative member"}
                       {pillars.length > 0 && (
@@ -172,8 +144,32 @@ export default async function StorePage({
                       </span>
                     )}
                   </div>
-                </Card>
-              </Link>
+                }
+              >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardEyebrow>
+                        {p.categorySlugs
+                          .map(
+                            (slug) =>
+                              categories.find((c) => c.slug === slug)?.name,
+                          )
+                          .filter(Boolean)
+                          .join(" · ") || "Uncategorized"}
+                      </CardEyebrow>
+                      <CardTitle className="mt-1 line-clamp-2">{p.title}</CardTitle>
+                    </div>
+                    <div
+                      className="shrink-0 font-display text-xl font-semibold"
+                      style={{ color: "var(--fm-magenta-text)" }}
+                    >
+                      ${Number(p.price).toLocaleString()}
+                    </div>
+                  </div>
+                  <p className="mt-3 line-clamp-3 text-sm text-ink-muted">{p.description}</p>
+
+                  <ListingTags tags={p.tags} />
+              </ListingCard>
             );
           })}
         </div>
@@ -194,6 +190,6 @@ export default async function StorePage({
           Apply for marketplace access →
         </Link>
       </Card>
-    </div>
+    </BoardBackdrop>
   );
 }

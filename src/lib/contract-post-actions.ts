@@ -28,6 +28,7 @@ import { db } from "@/db/client";
 import { projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { featuredImageFromForm } from "@/lib/featured-image";
 import type { Industry } from "@/lib/types";
 
 const INDUSTRIES: Industry[] = [
@@ -74,11 +75,13 @@ export async function postContract(formData: FormData) {
   const now = new Date().toISOString();
   const id = `p_${randomUUID()}`;
   const isContract = kindRaw === "contract";
+  const featuredImageUrl = await featuredImageFromForm(formData, `listings/${id}`);
 
   await db.insert(projects).values({
     id,
     title,
     description,
+    featuredImageUrl,
     industry: industryRaw as Industry,
     skillsRequired,
     // Budget stays optional. FM's rule is that talent prices the work,

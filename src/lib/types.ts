@@ -998,6 +998,8 @@ export interface Job {
   /** Friendly label for `postedBy` (what members see on the card). */
   postedByLabel: string;
   status: "open" | "filled" | "closed";
+  /** Optional editorial image for the board card and detail header. */
+  featuredImageUrl?: string | null;
   createdAt: string;
 }
 

@@ -162,7 +162,13 @@ export default async function MemberCanonPage() {
         </p>
         {!hasCurrentYearCard && (
           <div className="mt-5 max-w-[280px]">
-            <TradingCard user={user} tier={currentTier} aspectRatio="3/4">
+            <TradingCard
+              user={user}
+              tier={currentTier}
+              aspectRatio="3/4"
+              // Your own canon card on your own page.
+              isDestination
+            >
               <div className="flex h-full flex-col justify-between">
                 <div className="flex items-start justify-between text-white">
                   <span className="rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
@@ -206,6 +212,8 @@ export default async function MemberCanonPage() {
                   tier={c.tier as TradingCardTier}
                   className="w-full"
                   aspectRatio="3/4"
+                  // Your own past cards, on your own page.
+                  isDestination
                 >
                   <div className="flex h-full flex-col justify-between">
                     <div className="flex items-start justify-between text-white">

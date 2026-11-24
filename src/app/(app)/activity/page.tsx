@@ -355,12 +355,21 @@ export default async function ActivityPage() {
                       {/* Join events lead with the person's card — the
                           card is the profile, so this is the way in.
                           Only rendered for people the discovery gate
-                          already cleared. */}
-                      {e.member && e.memberTier && (
+                          already cleared.
+
+                          e.href is now part of the render condition
+                          rather than falling back to undefined. The
+                          fallback produced a card that looked and
+                          hovered like every other one and did nothing
+                          when clicked — the same defect that killed
+                          half the cohort rail. If there is no
+                          destination there is no card, and the row
+                          renders without it. */}
+                      {e.member && e.memberTier && e.href && (
                         <TradingCard
                           user={e.member}
                           tier={e.memberTier}
-                          href={e.href ?? undefined}
+                          href={e.href}
                           className="hidden w-[110px] shrink-0 sm:block"
                           aspectRatio="3/4"
                         >

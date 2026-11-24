@@ -576,6 +576,8 @@ export default async function PublicProfilePage({
                     tier={c.tier}
                     className="w-full"
                     aspectRatio="3/4"
+                    // Already on this person's page.
+                    isDestination
                   >
                     <div className="flex h-full flex-col justify-between">
                       <div className="flex items-start justify-between text-white">

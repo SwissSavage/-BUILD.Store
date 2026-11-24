@@ -199,6 +199,9 @@ export default async function TeamPage({
                 tier={tier}
                 aspectRatio="3/4"
                 className="transition-transform group-hover:-translate-y-1"
+                // The enclosing <Link> above owns the click. A nested
+                // anchor would be invalid HTML.
+                linkedByAncestor
               >
                 <div className="flex h-full flex-col justify-between">
                   <div className="flex items-start justify-between text-white">

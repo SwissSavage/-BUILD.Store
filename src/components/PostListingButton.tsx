@@ -39,7 +39,7 @@ export async function PostListingButton({
   if (!user?.isAdmin) return null;
 
   return (
-    <div className={standalone ? "mt-6 text-center" : ""}>
+    <div className={standalone ? "mt-6 text-center" : "mt-6"}>
       <Link
         href={href}
         className="fm-btn-primary inline-block rounded-full px-5 py-2.5 text-sm font-medium transition-opacity"

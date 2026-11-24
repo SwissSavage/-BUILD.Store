@@ -23,6 +23,7 @@ import { INDUSTRY_LABELS } from "@/lib/types";
 import { briefSummary } from "@/components/Brief";
 import { CardEyebrow, CardTitle } from "@/components/Card";
 import { ListingCard, ListingTags } from "@/components/ListingCard";
+import { BoardBackdrop } from "@/components/BoardBackdrop";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export default async function JobsPage() {
   );
 
   return (
-    <div className="mx-auto max-w-app px-6 py-12">
+    <BoardBackdrop className="mx-auto max-w-app px-6 py-12">
       <div>
         <h1 className="font-display text-4xl font-semibold">Open roles</h1>
         <p className="mt-2 max-w-2xl text-ink-muted">
@@ -113,6 +114,6 @@ export default async function JobsPage() {
           ))}
         </div>
       )}
-    </div>
+    </BoardBackdrop>
   );
 }

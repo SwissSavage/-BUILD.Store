@@ -26,6 +26,7 @@ import {
 } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { ListingCard, ListingTags } from "@/components/ListingCard";
+import { BoardBackdrop } from "@/components/BoardBackdrop";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,7 @@ export default async function StorePage({
   );
 
   return (
-    <div className="mx-auto max-w-app px-6 py-12">
+    <BoardBackdrop className="mx-auto max-w-app px-6 py-12">
       <header>
         <div className="text-xs uppercase tracking-wider text-brand-magentaText">
           $BUILD.Store marketplace
@@ -189,6 +190,6 @@ export default async function StorePage({
           Apply for marketplace access →
         </Link>
       </Card>
-    </div>
+    </BoardBackdrop>
   );
 }

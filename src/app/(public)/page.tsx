@@ -223,7 +223,6 @@ function Hero() {
               href={PUBLIC_BOOKING_URL}
               target="_blank"
               rel="noreferrer"
-              variant="secondary"
               size="large"
               className="fm-btn-blue px-8 py-3"
             >

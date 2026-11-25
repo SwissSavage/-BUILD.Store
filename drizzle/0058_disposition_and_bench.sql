@@ -29,7 +29,10 @@
 --              coming off is benched (below), and the person coming
 --              on is engaged at a rate still to be agreed — in
 --              substance a new contract, composed through the normal
---              flow rather than derived from the old one.
+--              flow rather than derived from the old one. Whether the
+--              uncommitted balance funds any of that is open: it may
+--              cover all of it, part of it, or none. Nothing here
+--              decides it.
 --
 -- There is deliberately no "redistribute in proportion to coverage"
 -- direction. That was my reading of the clause and it would have

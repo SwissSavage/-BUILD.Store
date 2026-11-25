@@ -43,12 +43,21 @@
  * override stops being a necessity and starts being a lever on whose
  * opinion moves somebody's pay. So the control is not offered there.
  *
- * I also built a second branch for an engagement with several admins
- * and a single contributor, where the count passes but the subject is
- * still peerless. Jamar: "we will almost never have a situation where
- * there are four admins and one worker." Removed — a branch for a
- * case that does not occur is a branch nobody will ever check, and it
- * made the rule two things instead of one.
+ * PEERLESS IS THE COMMON CASE, NOT THE EDGE ONE. Often it is just one
+ * worker and one admin, and that is exactly why the threshold sits at
+ * four: a two- or three-person engagement cannot fill its own peer
+ * slot and the control is there for it.
+ *
+ * What does not happen is four admins around a single contributor, so
+ * there is no second branch for a count that passes while the subject
+ * is still peerless. I wrote one, then described the whole situation
+ * as a case that does not occur, which was wrong — the rule covers
+ * peerlessness through the count, it just does not need a second
+ * route to the same place.
+ *
+ * The genuinely unlikely shape is a worker and a client with no admin
+ * at all, which would mean somebody sourced and ran a deal
+ * single-handed.
  *
  * NO DATABASE IMPORTS. Pure, so it crosses to a client component.
  * ─────────────────────────────────────────────────────────────

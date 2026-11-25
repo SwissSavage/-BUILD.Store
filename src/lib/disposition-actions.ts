@@ -29,16 +29,24 @@
  * replace, and the record says so rather than leaving both open.
  *
  * ─────────────────────────────────────────────────────────────
- * A REPLACEMENT IS A NEW CONTRACT
+ * A REPLACEMENT'S TERMS ARE OPEN, INCLUDING WHERE THE MONEY COMES FROM
  *
  * "The rate for the replacement is TBD and in essence treated like a
- * new contract."
+ * new contract." And: "we might be paying the replacement wholly, or
+ * partially from the remaining pool, we're not going to go in
+ * assuming anything."
  *
- * So nothing here sets the incoming person's terms, derives their rate
- * from the outgoing one, or touches the split. It swaps who is on the
- * engagement and records the bench; composing the replacement's terms
- * runs through composeEngagement like any other engagement, where the
- * rate is agreed rather than inherited.
+ * So this sets nothing about the incoming person: not their rate, not
+ * their split, and NOT whether the uncommitted balance funds them.
+ * That balance may cover all of it, some of it, or none of it, and
+ * which one is a decision taken when their terms are composed with a
+ * real number in front of somebody.
+ *
+ * Two assumptions avoided here, and I had made the second one. The
+ * first is deriving their rate from the outgoing person's. The second
+ * is my own earlier conclusion that a replacement is funded entirely
+ * outside the pool — stated as though it were settled, when nobody
+ * had decided it.
  * ─────────────────────────────────────────────────────────────
  */
 import { randomUUID } from "crypto";
@@ -191,7 +199,7 @@ export async function setDisposition(
     ok: true,
     message:
       kind === "replace"
-        ? "Recorded. Compose the replacement's terms like any other engagement — the rate is agreed, not inherited."
+        ? "Recorded. Compose the replacement's terms separately — the rate is agreed, and whether the uncommitted balance covers any of it is part of that conversation."
         : kind === "rebate"
           ? "Recorded. Nothing further is distributed; the concession moves through the usual payment rail."
           : "Recorded. The payouts stand as they landed.",

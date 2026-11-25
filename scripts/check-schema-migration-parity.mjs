@@ -1,6 +1,6 @@
 /**
  * Every column in schema.ts must be declared for the SAME table in
- * the migrations, and vice versa.
+ * the migrations, AND every migrated column must appear in schema.ts.
  *
  * ─────────────────────────────────────────────────────────────
  * WHY (2026-11-24)
@@ -29,6 +29,21 @@
  *
  * So: names only, and it fails CLOSED. If it cannot parse something
  * it says so and exits non-zero rather than reporting clean.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * BOTH DIRECTIONS (2026-11-25)
+ *
+ * The first version only walked schema.ts and asked whether each
+ * column was migrated. That half caught the bug it was written for —
+ * a column on the wrong table — and missed the mirror image
+ * immediately afterwards: drizzle/0058 added four disposition columns
+ * to `projects` and a failed edit left schema.ts without them. The
+ * guard reported clean. tsc caught it, but only because something
+ * happened to reference them; a column nothing reads yet would have
+ * sat there unnoticed until it mattered.
+ *
+ * A guard that checks one direction tells you half the truth and
+ * reads like the whole of it.
  * ─────────────────────────────────────────────────────────────
  */
 import { readFileSync, readdirSync } from "node:fs";
@@ -128,7 +143,15 @@ function migrationColumns() {
       for (const rawLine of body.split("\n")) {
         const line = rawLine.trim();
         if (!line) continue;
-        if (/^(CONSTRAINT|PRIMARY|FOREIGN|UNIQUE|CHECK|EXCLUDE)\b/i.test(line)) {
+        // Table-level clauses, and the continuation lines of a
+        // multi-line column definition — `REFERENCES users(id)` on
+        // its own line read as a column called "REFERENCES" until
+        // this list existed.
+        if (
+          /^(CONSTRAINT|PRIMARY|FOREIGN|UNIQUE|CHECK|EXCLUDE|REFERENCES|ON|DEFAULT|NOT|NULL|DEFERRABLE|GENERATED|COLLATE|LIKE|INHERITS)\b/i.test(
+            line,
+          )
+        ) {
           continue;
         }
         const c = line.match(/^"?([a-z0-9_]+)"?\s+[a-z]/i);
@@ -192,6 +215,26 @@ for (const [table, cols] of schema) {
           : `${table}."${c}" is in schema.ts and in no migration`,
       );
     }
+  }
+}
+
+// The mirror: a migrated column that schema.ts never declares. The
+// code cannot read it, so it is invisible until somebody needs it.
+for (const [table, sqlCols] of migrated) {
+  if (IGNORED_TABLES.has(table)) continue;
+  const cols = schema.get(table);
+  if (!cols) {
+    // A table the migrations create and schema.ts does not model. Not
+    // necessarily wrong — the runner's own _platform_migrations is one
+    // — so it is reported, not failed, unless something models part of
+    // it.
+    continue;
+  }
+  const missing = [...sqlCols].filter((c) => !cols.has(c));
+  for (const c of missing) {
+    problems.push(
+      `${table}."${c}" is in the migrations and missing from schema.ts, so nothing can read it`,
+    );
   }
 }
 

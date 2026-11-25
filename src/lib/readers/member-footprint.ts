@@ -74,6 +74,8 @@ import {
   timeEntries,
   adminReviews,
   engagementRoles,
+  engagementReviewSlots,
+  engagementBenchings,
   profileDisclosureReviews,
 } from "@/db/schema";
 
@@ -138,6 +140,8 @@ export async function getMemberFootprint(
     timeEntryCount,
     adminReviewCount,
     engagementRoleCount,
+    reviewSlotCount,
+    benchingCount,
   ] = await Promise.all([
     countRows(agreements, agreements.userId, uid),
     countRows(payoutMethods, payoutMethods.userId, uid),
@@ -161,6 +165,8 @@ export async function getMemberFootprint(
     countRows(timeEntries, timeEntries.userId, uid),
     countRows(adminReviews, adminReviews.subjectUserId, uid),
     countRows(engagementRoles, engagementRoles.userId, uid),
+    countRows(engagementReviewSlots, engagementReviewSlots.userId, uid),
+    countRows(engagementBenchings, engagementBenchings.userId, uid),
   ]);
 
   const balance = Number(buildTokenBalance ?? 0);
@@ -218,6 +224,17 @@ export async function getMemberFootprint(
       label: "Recorded roles on engagements",
       count: engagementRoleCount,
     },
+    // A blocker, emphatically. Jamar: "getting benched needs to remain
+    // a contract result at conclusion so people are graded
+    // appropriately." A bench is the record that somebody was taken
+    // off a live engagement and why. Deleting the account would erase
+    // exactly the outcome that is supposed to follow them, and the
+    // delete panel would report the account as empty while doing it.
+    {
+      table: "engagement_benchings",
+      label: "Benched off an engagement",
+      count: benchingCount,
+    },
   ].filter((e) => e.count > 0);
 
   if (Number.isFinite(balance) && balance !== 0) {
@@ -229,6 +246,15 @@ export async function getMemberFootprint(
   }
 
   const clears: FootprintEntry[] = [
+    // Clears rather than blocks: a slot says how THIS person's rating
+    // counted on one engagement, and their ratings go with the
+    // account anyway. Nothing about somebody else's record depends on
+    // it surviving.
+    {
+      table: "engagement_review_slots",
+      label: "Review slot assignments",
+      count: reviewSlotCount,
+    },
     { table: "accounts", label: "Sign-in provider links", count: accountCount },
     { table: "sessions", label: "Live sessions", count: sessionCount },
     { table: "notifications", label: "Notifications", count: notificationCount },

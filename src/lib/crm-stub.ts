@@ -645,3 +645,69 @@ export async function getHubspotDeal(
     return null;
   }
 }
+
+/**
+ * Email addresses of the contacts associated with one company.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY THIS LIVES HERE AND NOT IN A TABLE (2026-11-24)
+ *
+ * Jamar: "We don't need things that convoluted in the App. This is not
+ * a CRM, we have a CRM."
+ *
+ * Feedback has to reach the people who can judge the work, and a
+ * client usually has several points of contact — the sponsor who
+ * rates it is rarely the AP address that pays the invoice. The first
+ * design for this was a client_contacts table with roles and a
+ * many-to-many to engagements, which is HubSpot rebuilt in Postgres.
+ *
+ * So the app asks at send time and stores nothing. What it keeps is
+ * which address a given token went to, on the token, so a reply stays
+ * attributable even after the contact list changes.
+ *
+ * Read-only and best-effort by design. Returns [] rather than throwing
+ * when the token is unset or HubSpot is unreachable, because a
+ * milestone completing must not fail on a CRM outage — the caller
+ * falls back to the local contact and records that it did.
+ * ─────────────────────────────────────────────────────────────
+ */
+export async function contactEmailsForCompany(
+  companyId: string,
+): Promise<string[]> {
+  if (!HUBSPOT_ACCESS_TOKEN || !companyId.trim()) return [];
+  try {
+    const url =
+      `${BASE}/crm/v3/objects/companies/${encodeURIComponent(companyId)}` +
+      `/associations/contacts?limit=100`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${HUBSPOT_ACCESS_TOKEN}` },
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { results?: Array<{ id?: string }> };
+    const ids = (json.results ?? [])
+      .map((r) => r.id)
+      .filter((id): id is string => Boolean(id));
+    if (ids.length === 0) return [];
+
+    const batch = await fetch(`${HUBSPOT_CONTACT_ENDPOINT}/batch/read`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${HUBSPOT_ACCESS_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        properties: ["email"],
+        inputs: ids.map((id) => ({ id })),
+      }),
+    });
+    if (!batch.ok) return [];
+    const data = (await batch.json()) as {
+      results?: Array<{ properties?: { email?: string | null } }>;
+    };
+    return (data.results ?? [])
+      .map((r) => r.properties?.email?.trim().toLowerCase())
+      .filter((e): e is string => Boolean(e));
+  } catch {
+    return [];
+  }
+}

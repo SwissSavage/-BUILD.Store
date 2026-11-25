@@ -521,6 +521,11 @@ export interface Project {
   /** Blended rating in half-steps. Null when no signal arrived. */
   bonusBlendHalfSteps: string | null;
   bonusBlendInputs: { client: number[]; peer: number[]; pm: number[] } | null;
+  /** Which way a shortfall went. drizzle/0058. A direction, not an action. */
+  dispositionKind: "stop" | "rebate" | "replace" | null;
+  dispositionReason: string | null;
+  dispositionByUserId: string | null;
+  dispositionAt: string | null;
   /** Who waived settlement gating and why. See reviewGate. */
   bonusGateWaiver: {
     kind: "fixed_rate" | "grandfather";
@@ -4745,6 +4750,8 @@ export type AuditLogAction =
   | "contract.bonus_released"
   | "contract.bonus_reclaimed"
   | "contract.bonus_reconciled"
+  | "contract.review_slot_set"
+  | "contract.disposition_set"
   | "contract.revenue_split_recorded"
   // Bookings + calendar (cross-tier)
   | "booking.request_created"
@@ -4917,6 +4924,8 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "portfolio.unpublished": "Case study taken down",
   "contract.bonus_released": "Bonus released",
   "contract.bonus_reconciled": "Bonus Margin reconciled",
+  "contract.review_slot_set": "Review slot assigned",
+  "contract.disposition_set": "Disposition set",
   "contract.bonus_reclaimed": "Bonus reclaimed",
   "contract.revenue_split_recorded": "Revenue split recorded",
   "booking.request_created": "Booking requested",

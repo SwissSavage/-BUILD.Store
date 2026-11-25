@@ -39,8 +39,21 @@ export interface EngagementReviewProps {
   clientDisplayName: string;
   scope: string;
   basis: "hourly" | "fixed";
-  /** What the Builder is paid. Never the client rate. */
+  /**
+   * Guaranteed on acceptable delivery. Their own asking rate. Never
+   * the client rate.
+   */
   payout: string;
+  /**
+   * Earnable on top, when there is a negotiated lift above their ask.
+   * Null on a fixed price, which has no derived margin.
+   *
+   * Shown because the alternative is showing one number and letting
+   * them infer the rest. Before this the whole payout was presented as
+   * guaranteed, which made a later reconciliation read as a cut rather
+   * than as the part they earned.
+   */
+  bonus?: string | null;
   ceilingHours: string | null;
   links: { label: string; url: string }[];
   files: { name: string; sizeBytes: number }[];
@@ -93,9 +106,32 @@ export function EngagementReviewCard(props: EngagementReviewProps) {
               )}
             </p>
             <p className="mt-0.5 text-[11px] text-ink-faint">
-              {props.basis === "hourly" ? "Paid to you, hourly" : "Paid to you, fixed"}
+              {Number(props.bonus ?? 0) > 0
+                ? "Guaranteed on acceptable delivery"
+                : props.basis === "hourly"
+                  ? "Paid to you, hourly"
+                  : "Paid to you, fixed"}
             </p>
           </div>
+          {Number(props.bonus ?? 0) > 0 && (
+            <div>
+              <p className="text-2xl font-semibold">
+                +${props.bonus}
+                {props.basis === "hourly" && (
+                  <span className="text-sm font-normal text-ink-muted">
+                    /hr
+                  </span>
+                )}
+              </p>
+              <p className="mt-0.5 text-[11px] text-ink-faint">
+                Earned on the work, up to $
+                {(
+                  Number(props.payout) + Number(props.bonus ?? 0)
+                ).toLocaleString()}
+                {props.basis === "hourly" ? "/hr" : ""} in total
+              </p>
+            </div>
+          )}
           {props.basis === "hourly" && (
             <div>
               <p className="text-2xl font-semibold">

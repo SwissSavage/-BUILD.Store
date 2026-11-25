@@ -320,6 +320,20 @@ export const projects = pgTable("projects", {
     peer: number[];
     pm: number[];
   }>(),
+  // ── Disposition. drizzle/0058. ─────────────────────────────
+  // A direction, not an action: the payouts already landed and
+  // nothing about setting this moves money. "stop" absorbs the
+  // shortfall, "rebate" logs a concession, "replace" swaps the talent
+  // and benches the person coming off.
+  dispositionKind: text("disposition_kind", {
+    enum: ["stop", "rebate", "replace"],
+  }),
+  dispositionReason: text("disposition_reason"),
+  dispositionByUserId: text("disposition_by_user_id").references(
+    () => users.id,
+    { onDelete: "set null" },
+  ),
+  dispositionAt: timestamp("disposition_at", { mode: "string", withTimezone: true }),
   /** Who waived the gate and why. See reviewGate. */
   bonusGateWaiver: jsonb("bonus_gate_waiver").$type<{
     kind: "fixed_rate" | "grandfather";
@@ -1372,6 +1386,8 @@ export const peerReviews = pgTable("peer_reviews", {
    * the peer-review form.
    */
   communication: integer("communication"),
+  /** axis -> what would have been better. See drizzle/0054. */
+  axisReasons: jsonb("axis_reasons").$type<Record<string, string>>(),
   prose: text("prose").notNull(),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
   /**
@@ -1423,8 +1439,32 @@ export const customerFeedbackTokens = pgTable("customer_feedback_tokens", {
   expiresAt: timestamp("expires_at", { mode: "string", withTimezone: true }).notNull(),
   usedAt: timestamp("used_at", { mode: "string", withTimezone: true }),
   revokedAt: timestamp("revoked_at", { mode: "string", withTimezone: true }),
-  /** axis -> what would have been better. See drizzle/0054. */
-  axisReasons: jsonb("axis_reasons").$type<Record<string, string>>(),
+  // ── drizzle/0056 ───────────────────────────────────────────
+  /** Which milestone this is about. Null for a closing questionnaire. */
+  milestoneId: text("milestone_id").references(() => projectMilestones.id, {
+    onDelete: "set null",
+  }),
+  /**
+   * Who it went to. Recorded on the token rather than resolved at
+   * submit time, so a reply stays attributable even if the contact
+   * list in HubSpot changes afterwards.
+   */
+  recipientEmail: text("recipient_email"),
+  /**
+   * Delivery as OBSERVED. An "always goes out" rule with no record of
+   * whether it went is a guarantee on paper — and since no-signal pays
+   * the full Bonus Margin, a silently failing dispatch pays every
+   * margin in full.
+   */
+  deliveryStatus: text("delivery_status", {
+    enum: ["pending", "sent", "failed", "bounced"],
+  })
+    .notNull()
+    .default("pending"),
+  deliveryAttempts: integer("delivery_attempts").notNull().default(0),
+  lastAttemptAt: timestamp("last_attempt_at", { mode: "string", withTimezone: true }),
+  /** The provider's own words. A paraphrased bounce is useless. */
+  deliveryError: text("delivery_error"),
 });
 
 /**
@@ -1615,8 +1655,20 @@ export const customerFeedback = pgTable("customer_feedback", {
     enum: ["contract", "marketplace_order"],
   }).notNull(),
   contextId: text("context_id").notNull(),
+  /**
+   * Snapshot of who answered, as it was at the time. Evidence, not
+   * identity — clientRefId below is the record. drizzle/0056.
+   */
   customerName: text("customer_name").notNull(),
   customerEmail: text("customer_email").notNull(),
+  /** The client as a record, joined from the contract. */
+  clientRefId: text("client_ref_id").references(() => clients.id, {
+    onDelete: "set null",
+  }),
+  /** Which milestone this reading is about. Null for a closing one. */
+  milestoneId: text("milestone_id").references(() => projectMilestones.id, {
+    onDelete: "set null",
+  }),
   overallStars: integer("overall_stars").notNull(),
   metExpectations: integer("met_expectations").notNull(),
   communication: integer("communication").notNull(),
@@ -2676,6 +2728,75 @@ export const engagementRoles = pgTable("engagement_roles", {
   role: text("role").notNull(),
   /** Assigning a role changes what somebody can be judged on. */
   assignedByUserId: text("assigned_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * What somebody's OWN rating counts as. drizzle/0057.
+ *
+ * Deliberately not a column on engagement_roles: that table says what
+ * a person is ASKED ABOUT, this one says which slot their answer lands
+ * in. Rob is asked about scope clarity because he held
+ * delivery_oversight, and separately his rating counts as a PEER
+ * reading because he studied design. Neither fact implies the other.
+ *
+ * Unique on (project, user): the blend weights slots 0.4 / 0.4 / 0.2,
+ * so somebody in two slots would carry weight twice.
+ *
+ * Only assignable where the peer slot cannot fill itself — see
+ * lib/review-slots.
+ */
+export const engagementReviewSlots = pgTable("engagement_review_slots", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** "peer" or "pm". No "client": a client has no account to assign. */
+  slot: text("slot", { enum: ["peer", "pm"] }).notNull(),
+  /** This changes how much somebody's opinion moves money. */
+  assignedByUserId: text("assigned_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Somebody taken off a live engagement. drizzle/0058.
+ *
+ * A row rather than an edit to assignedMemberIds, because being
+ * swapped off is an OUTCOME. Removing them from the array would make
+ * the contract read as though they were never there — reviews would
+ * detach, the engagement would leave their history, and grading would
+ * see a clean record.
+ *
+ * Stays readable at conclusion beside the ratings, which is the point:
+ * "getting benched needs to remain a contract result at conclusion so
+ * people are graded appropriately."
+ */
+export const engagementBenchings = pgTable("engagement_benchings", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** Null until the seat is refilled. */
+  replacedByUserId: text("replaced_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  /** Required. A bench with no stated reason follows somebody around. */
+  reason: text("reason").notNull(),
+  benchedByUserId: text("benched_by_user_id").references(() => users.id, {
     onDelete: "set null",
   }),
   createdAt: timestamp("created_at", { mode: "string", withTimezone: true })

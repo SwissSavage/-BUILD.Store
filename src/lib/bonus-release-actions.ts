@@ -26,6 +26,8 @@ import {
 } from "@/db/schema";
 import {
   getReviewsForProject,
+  getReviewSlots,
+  safely,
 } from "@/lib/readers";
 import { getProjectById } from "@/lib/readers/projects";
 import { customerFeedback as customerFeedbackTable } from "@/db/schema";
@@ -37,6 +39,7 @@ import {
   type RatingSignals,
 } from "@/lib/bonus-reconciliation";
 import { isHalfStep, parseHalfStep } from "@/lib/ratings";
+import { resolveSlot } from "@/lib/review-slots";
 import { writeStandardSettlementSplits } from "@/lib/settlement-splits";
 import { hasValidPayoutDocument } from "@/lib/payout-gate";
 import { issueBuildFromSettlement } from "@/lib/voucher-issuance";
@@ -197,13 +200,53 @@ export async function executeBonusDecision(formData: FormData) {
   // within itself, and the earned share of the margin runs from none
   // at 2.0 to all of it at 4.0. Most real outcomes are partial, which
   // is why this pays an amount rather than returning a verdict.
+  // ── Slots are assigned, not assumed ─────────────────────────
+  //
+  // This used to put EVERY peer review into the peer slot and the
+  // single pmEngagementRating into the PM slot. That is the right
+  // reading on an engagement with several contributors and wrong on a
+  // small one: AWS had one Builder, so the peer slot sat empty and
+  // renormalized away, and nothing read the craft at all.
+  //
+  // Jamar: "question types should get one assignment, role types get
+  // another." A role says what somebody is asked about; a slot says
+  // what their own answer counts as. Rob rates Ozy's design work as a
+  // PEER because he studied design — nothing about his admin role
+  // says that, so somebody has to.
+  //
+  // resolveSlot applies the assignment where one exists and the
+  // natural reading otherwise: contributors are peers, admins are not
+  // peers unless named. An unassigned admin's rating is dropped rather
+  // than counted, because the people who ran the job grading its craft
+  // is the conflict the 0.2 PM weight exists to contain.
+  const slots = await safely(() => getReviewSlots(projectId), new Map());
+  const contributorIds = new Set(project.assignedMemberIds ?? []);
+  const peer: number[] = [];
+  const pm: number[] = [];
+  for (const r of peerReviews) {
+    if (!isHalfStep(r.stars) || !r.reviewerId) continue;
+    const slot = resolveSlot({
+      userId: r.reviewerId,
+      assigned: slots.get(r.reviewerId) ?? null,
+      isContributor: contributorIds.has(r.reviewerId),
+    });
+    if (slot === "peer") peer.push(r.stars);
+    else if (slot === "pm") pm.push(r.stars);
+  }
+  // The settle-screen PM rating belongs to the PM slot whoever gave
+  // it: it is captured as the engagement's own reading, not as a
+  // particular person's.
+  if (isHalfStep(project.pmEngagementRating)) {
+    pm.push(project.pmEngagementRating);
+  }
+
   const signals: RatingSignals = {
     client: [
       // Every reading collected, across contacts and milestones.
       ...feedbackRows.map((f) => f.overallStars).filter(isHalfStep),
     ],
-    peer: peerReviews.map((r) => r.stars).filter(isHalfStep),
-    pm: [project.pmEngagementRating].filter(isHalfStep),
+    peer,
+    pm,
   };
 
   const bonusMarginCents = Math.round(

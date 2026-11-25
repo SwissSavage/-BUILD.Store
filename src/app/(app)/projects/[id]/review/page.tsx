@@ -127,6 +127,7 @@ export default async function EngagementReviewPage({
           scope={project.engagementScope ?? project.description}
           basis={(project.engagementBasis ?? "hourly") as "hourly" | "fixed"}
           payout={project.talentBaseAmount ?? "0"}
+          bonus={project.talentBonusAmount}
           ceilingHours={project.engagementCeilingHours}
           links={links}
           files={files}
@@ -142,8 +143,11 @@ export default async function EngagementReviewPage({
             {project.engagementScope ?? project.description}
           </p>
           <p className="mt-4 text-sm">
-            Builder is paid ${project.talentBaseAmount ?? "0"}
+            Builder is guaranteed ${project.talentBaseAmount ?? "0"}
             {project.engagementBasis === "hourly" ? "/hr" : ""}
+            {Number(project.talentBonusAmount ?? 0) > 0
+              ? `, plus up to $${project.talentBonusAmount}${project.engagementBasis === "hourly" ? "/hr" : ""} earned on the work`
+              : ""}
             {project.engagementCeilingHours
               ? `, not to exceed ${project.engagementCeilingHours} hours`
               : ", no hours cap set"}

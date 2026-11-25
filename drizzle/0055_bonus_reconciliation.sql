@@ -1,3 +1,8 @@
+-- Idempotent throughout: scripts/migrate.mjs rolls a whole file back
+-- on a duplicate-object error and then records it as applied, so a
+-- file that is partly new and partly already-present would silently
+-- no-op while being marked done. Every statement here checks first.
+
 -- The Bonus Margin resolves on a scale, so the record of it needs
 -- amounts, not just an outcome word.
 --
@@ -32,25 +37,26 @@
 -- ─────────────────────────────────────────────────────────────
 
 ALTER TABLE "projects"
-  ADD COLUMN "bonus_earned_amount" numeric(12, 2),
-  ADD COLUMN "bonus_uncommitted_amount" numeric(12, 2),
+  ADD COLUMN IF NOT EXISTS "bonus_earned_amount" numeric(12, 2),
+  ADD COLUMN IF NOT EXISTS "bonus_uncommitted_amount" numeric(12, 2),
   -- Half-steps 2..10, matching every other rating since 0054. Null
   -- when no signal was collected at all, which pays the full margin.
-  ADD COLUMN "bonus_blend_half_steps" numeric(4, 2),
+  ADD COLUMN IF NOT EXISTS "bonus_blend_half_steps" numeric(4, 2),
   -- Which slots were filled, so the explanation can be rebuilt without
   -- re-reading reviews. jsonb rather than three columns because the
   -- slot set is a product decision and will change.
-  ADD COLUMN "bonus_blend_inputs" jsonb,
+  ADD COLUMN IF NOT EXISTS "bonus_blend_inputs" jsonb,
   -- A fixed-rate election or a grandfather override, with who and why.
   -- Shape: { kind, byUserId, reason, at }. A bypass nobody signed is
   -- indistinguishable from a bug, so this is where the signature goes.
-  ADD COLUMN "bonus_gate_waiver" jsonb;
+  ADD COLUMN IF NOT EXISTS "bonus_gate_waiver" jsonb;
 
 -- The uncommitted balance is what a disposition acts on, and it must
 -- never be negative. Catching that here rather than discovering it as
 -- a payout that overdrew a contract.
-ALTER TABLE "projects"
-  ADD CONSTRAINT "projects_bonus_amounts_nonneg" CHECK (
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'projects_bonus_amounts_nonneg') THEN
+    ALTER TABLE "projects" ADD CONSTRAINT "projects_bonus_amounts_nonneg" CHECK (
     ("bonus_earned_amount" IS NULL OR "bonus_earned_amount" >= 0)
     AND ("bonus_uncommitted_amount" IS NULL OR "bonus_uncommitted_amount" >= 0)
     AND (
@@ -58,3 +64,5 @@ ALTER TABLE "projects"
       OR "bonus_blend_half_steps" BETWEEN 2 AND 10
     )
   );
+  END IF;
+END $$;

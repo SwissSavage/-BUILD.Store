@@ -41,6 +41,7 @@ import { getAllProjects, getProjectById } from "@/lib/readers/projects";
 import { getMilestonesForProject, milestoneReader } from "@/lib/readers";
 import { getUserById } from "@/lib/readers/users";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
+import { dispatchFeedbackRequest } from "@/lib/writers/feedback-dispatch";
 import {
   MILESTONE_DUE_SOON_DAYS,
   type MilestoneStatus,
@@ -504,6 +505,43 @@ export async function updateMilestoneStatus(formData: FormData) {
     .update(projectMilestones)
     .set({ status: next, completedAt, blockerNote, updatedAt })
     .where(eq(projectMilestones.id, id));
+
+  // ── Ask the client. Not a decision anybody makes ───────────
+  //
+  // Fires on the transition into "completed" and nowhere else, so
+  // editing a completed milestone does not re-ask. There is no flag
+  // here to suppress it: the whole reason the settle page's "Issue
+  // link" button was deleted is that whether the client got asked was
+  // a choice held by the person the answer reflects on.
+  //
+  // Wrapped because a mail outage must not roll back a milestone
+  // somebody legitimately finished. dispatchFeedbackRequest records
+  // every attempt and its outcome, so a failure is a row an admin can
+  // see and retry rather than silence — which matters because
+  // no-signal pays the full Bonus Margin.
+  if (next === "completed" && prev !== "completed") {
+    try {
+      const project = await getProjectById(row.projectId);
+      if (project?.kind === "contract") {
+        const origin = (
+          process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? ""
+        ).replace(/\/$/, "");
+        await dispatchFeedbackRequest({
+          projectId: row.projectId,
+          milestoneId: row.id,
+          projectTitle: project.title,
+          milestoneTitle: row.title,
+          origin,
+        });
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(
+        `[feedback-dispatch] milestone ${row.id} completed but the request failed to go out:`,
+        err,
+      );
+    }
+  }
 
   // Keep the local object consistent for the notification copy below.
   row.status = next;

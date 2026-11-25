@@ -28,7 +28,11 @@ import { getCurrentUser, requireAdmin } from "@/lib/auth-stub";
 import { randomUUID } from "crypto";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { adminReviews, customerFeedback as customerFeedbackTable } from "@/db/schema";
+import {
+  adminReviews,
+  customerFeedback as customerFeedbackTable,
+  projects as projectsTable,
+} from "@/db/schema";
 import { getProjectById } from "@/lib/readers/projects";
 import { getUserById } from "@/lib/readers/users";
 import { customerFeedbackReader, orderReader } from "@/lib/readers";
@@ -69,12 +73,54 @@ async function hasFeedbackForContext(contextId: string): Promise<boolean> {
   return rows.length > 0;
 }
 
-/** Persist one feedback row. */
-async function insertFeedback(row: CustomerFeedback): Promise<void> {
+/**
+ * Persist one feedback row, joined to the client it came from.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * WHY clientRefId IS RESOLVED HERE (2026-11-24)
+ *
+ * The row used to carry customerName and customerEmail as free text
+ * and nothing else — no foreign key, filled in by whoever opened a
+ * link. The contract has known who the client is the whole time, via
+ * projects.clientRefId, and the rating that moves money was the one
+ * thing not joined to it.
+ *
+ * It matters more now. B averages every reading collected, so the
+ * arithmetic has to know that four replies from one sponsor are one
+ * person's view rather than four. Email is the person-key, the client
+ * record is the company, and the name stays as a snapshot of what was
+ * true when they answered — evidence, not identity.
+ *
+ * Resolved from the contract rather than trusted from the form, for
+ * the same reason the admin review action checks its subject against
+ * projects.adminUserIds: anything the submitter supplies about who
+ * they are is a claim, not a fact.
+ * ─────────────────────────────────────────────────────────────
+ */
+async function insertFeedback(
+  row: CustomerFeedback,
+  milestoneId: string | null = null,
+): Promise<void> {
+  let clientRefId: string | null = null;
+  if (row.contextKind === "contract") {
+    try {
+      const [p] = await db
+        .select({ clientRefId: projectsTable.clientRefId })
+        .from(projectsTable)
+        .where(eq(projectsTable.id, row.contextId))
+        .limit(1);
+      clientRefId = p?.clientRefId ?? null;
+    } catch {
+      // A missing join must not lose the rating itself. The row is
+      // still usable for B; it just is not grouped by company.
+    }
+  }
   await db.insert(customerFeedbackTable).values({
     id: row.id,
     contextKind: row.contextKind,
     contextId: row.contextId,
+    clientRefId,
+    milestoneId,
     customerName: row.customerName,
     customerEmail: row.customerEmail,
     overallStars: row.overallStars,

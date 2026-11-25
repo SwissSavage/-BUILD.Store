@@ -54,7 +54,7 @@ export type TradingCardTier =
   | "future_modernist"
   | "champion";
 
-interface TradingCardProps {
+interface TradingCardBase {
   user: Pick<
     User,
     | "id"
@@ -65,14 +65,6 @@ interface TradingCardProps {
     | "avatarPortraitUrl"
   >;
   tier?: TradingCardTier;
-  /**
-   * Where the card goes when clicked.
-   *
-   * The card is the member's profile, not a decoration beside it — so
-   * wherever one appears it should be the way in. Omit only when the
-   * card IS the destination (the profile page's own hero).
-   */
-  href?: string;
   /** Optional content composed on top of the card (name, badges, etc.). */
   children?: React.ReactNode;
   /** Width override. Default fluid. */
@@ -80,6 +72,69 @@ interface TradingCardProps {
   /** Aspect ratio of the card. Default 3/4 (taller than wide, sports-card shape). */
   aspectRatio?: "3/4" | "4/5" | "square";
 }
+
+/**
+ * ─────────────────────────────────────────────────────────────
+ * A CARD THAT LOOKS CLICKABLE MUST BE CLICKABLE (2026-11-24)
+ *
+ * `href` used to be optional. That is how CohortDeck's duplicated
+ * marquee rail ended up passing `href={repeated ? undefined : ...}`
+ * and killing every card in the clone set: same appearance, same hover
+ * lift, nothing on click. Which card was dead depended on where the
+ * scroll animation happened to be, so it read as one person's card
+ * being broken rather than half the rail.
+ *
+ * An optional href means "forgetting it" and "deliberately not linking
+ * it" are the same expression, and the compiler cannot tell them
+ * apart. There are exactly three honest reasons a card does not link,
+ * so each is now something you have to say out loud:
+ *
+ *   href                a link. The default and the common case.
+ *   isDestination       you are already on this person's page.
+ *   linkedByAncestor    an enclosing <Link> owns the click, and a
+ *                       nested anchor would be invalid HTML.
+ *
+ * There is no fourth option, and no way to render a silent card by
+ * omission. A new surface added for the next cohort cannot reintroduce
+ * this by forgetting a prop — it will not compile.
+ *
+ * `?: never` on the unused members is what makes the union
+ * discriminate: it stops `{ href, isDestination }` type-checking as
+ * both, which would quietly reopen the hole.
+ * ─────────────────────────────────────────────────────────────
+ */
+type TradingCardLink =
+  | {
+      href: string;
+      /**
+       * Out of the tab order and the accessibility tree, still in
+       * reach of the mouse.
+       *
+       * For a marquee's duplicated copy: the clone must not be
+       * announced or tabbed to twice, but it is on screen and people
+       * click what they can see. Set this instead of dropping the
+       * href, which is the mistake above.
+       */
+      decorative?: boolean;
+      isDestination?: never;
+      linkedByAncestor?: never;
+    }
+  | {
+      /** The viewer is already on this person's page. */
+      isDestination: true;
+      href?: never;
+      decorative?: never;
+      linkedByAncestor?: never;
+    }
+  | {
+      /** An enclosing <Link> owns the click. Nested anchors are invalid. */
+      linkedByAncestor: true;
+      href?: never;
+      decorative?: never;
+      isDestination?: never;
+    };
+
+type TradingCardProps = TradingCardBase & TradingCardLink;
 
 const TIER_BG_CLASS: Record<TradingCardTier, string> = {
   standard: "fm-card-bg-standard",
@@ -180,6 +235,7 @@ export function TradingCard({
   href,
   className,
   aspectRatio = "3/4",
+  ...link
 }: TradingCardProps) {
   // Jersey-style initials for the no-portrait state.
   const initials =
@@ -319,10 +375,18 @@ export function TradingCard({
 
   // The card is the profile. When a destination is given it becomes
   // the link to it rather than something you click past.
+  // No href means the caller said isDestination or linkedByAncestor.
+  // It cannot mean they forgot: the union has no fourth branch.
   if (!href) return card;
+  const decorative = "decorative" in link ? link.decorative : false;
   return (
     <Link
       href={href}
+      // A decorative copy stays clickable. tabIndex -1 keeps it out of
+      // the tab order and the aria-hidden ancestor keeps it out of the
+      // accessibility tree, which is what the duplicate rail needs —
+      // not a card that quietly refuses the mouse.
+      tabIndex={decorative ? -1 : undefined}
       className="block rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-magenta"
     >
       {card}

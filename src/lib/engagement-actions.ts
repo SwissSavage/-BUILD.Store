@@ -63,6 +63,7 @@ import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
 import { notify } from "@/lib/writers/notifications";
 import { sendTransactionalEmail } from "@/lib/email";
 import { suggestedClientHourlyRate } from "@/lib/quote-pricing";
+import { deriveSplit } from "@/lib/bonus-reconciliation";
 import {
   parseHubspotCompanyId,
   parseHubspotDealId,
@@ -335,6 +336,45 @@ export async function composeEngagement(
         ? payout
         : Math.round(typedClientRate * 0.85);
 
+  // ── Guaranteed vs earned ───────────────────────────────────
+  //
+  // This used to write the WHOLE payout into talentBaseAmount and
+  // leave talentBonusAmount null, which told every downstream surface
+  // that all of it was already theirs. The Builder's own asking rate —
+  // collected right above as `payout`, the field labelled "what the
+  // Builder is asking per hour" — was used to work out the client
+  // price and then thrown away.
+  //
+  // So Bayu asks $30, we bill $59, and the record said $50 guaranteed.
+  // Nothing was contingent, the reconciliation read a null margin and
+  // concluded the full margin was earned, and the dashboard told him
+  // "$50/hr to you".
+  //
+  // The split is what we actually agreed: their ask is guaranteed on
+  // acceptable delivery, and the lift we negotiated above it is earned
+  // on the work. Neither number is new money and neither is a cut —
+  // see the header on bonus-reconciliation.
+  //
+  // Hourly only. A fixed price is quoted against a scope, so there is
+  // no ask to lift from and no derived margin; quote-pricing says the
+  // same about the floor and the hedge.
+  const split =
+    basis === "hourly"
+      ? deriveSplit({
+          askCents: Math.round(payout * 100),
+          basis: "hourly",
+        })
+      : null;
+  // Guard: deriveSplit re-derives the payout from the ask through
+  // quote-pricing, and the client rate here may be an admin override
+  // that went under the standard. The agreed payout wins; the split
+  // only decides how it divides.
+  const baseAmount =
+    split && split.payoutCents > 0
+      ? Math.min(builderPayout, Math.round(split.baseCents / 100))
+      : builderPayout;
+  const bonusAmount = Math.max(0, builderPayout - baseAmount);
+
   await db.insert(projects).values({
     id: projectId,
     title,
@@ -356,7 +396,8 @@ export async function composeEngagement(
     engagementRate: basis === "hourly" ? String(clientRate) : String(typedClientRate),
     engagementCeilingHours: hasCeiling ? String(ceiling) : null,
     engagementScope: scope,
-    talentBaseAmount: String(builderPayout),
+    talentBaseAmount: String(baseAmount),
+    talentBonusAmount: bonusAmount > 0 ? String(bonusAmount) : null,
     engagementState: "awaiting_talent",
     engagementSentAt: now,
     engagementLinks: links,
@@ -927,6 +968,21 @@ export async function updateEngagement(
   // split the composer applies, so the two cannot drift apart.
   const builderPayout = Math.round(clientRate * 0.85);
 
+  // The guaranteed part does NOT move on an edit. It is their own
+  // asking rate, agreed when the engagement was composed, and an admin
+  // raising the client rate or changing the ceiling is not a reason to
+  // renegotiate what somebody is promised. Only the earnable margin
+  // absorbs the change.
+  //
+  // Clamped so a downward edit cannot leave the base above the whole
+  // payout, which would make the margin negative.
+  const existingBase = Number(project.talentBaseAmount ?? 0);
+  const editedBase =
+    Number.isFinite(existingBase) && existingBase > 0
+      ? Math.min(existingBase, builderPayout)
+      : builderPayout;
+  const editedBonus = Math.max(0, builderPayout - editedBase);
+
   const { links, error: linkError } = readEngagementLinks(formData);
   if (linkError) return { ok: false, error: linkError };
   const { files, error: fileError } = await readEngagementFiles(formData);
@@ -965,7 +1021,8 @@ export async function updateEngagement(
       engagementBasis: basis,
       engagementRate: String(clientRate),
       engagementCeilingHours: hasCeiling ? String(ceiling) : null,
-      talentBaseAmount: String(builderPayout),
+      talentBaseAmount: String(editedBase),
+      talentBonusAmount: editedBonus > 0 ? String(editedBonus) : null,
       engagementLinks: links,
       ...(keepExistingFiles ? {} : { engagementAttachments: files }),
       ...(needsReAcceptance

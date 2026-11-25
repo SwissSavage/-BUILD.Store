@@ -110,6 +110,10 @@ export async function issueFeedbackToken(input: {
   contextKind?: "contract" | "order";
   issuedByUserId: string | null;
   ttlDays?: number;
+  /** Which milestone this asks about. Null for a closing questionnaire. */
+  milestoneId?: string | null;
+  /** Who it is for. Recorded so a reply stays attributable. */
+  recipientEmail?: string | null;
 }): Promise<{ token: string; expiresAt: string }> {
   const contextId = input.contextId.trim();
   if (!contextId) throw new Error("A contract id is required to issue a link.");
@@ -121,12 +125,31 @@ export async function issueFeedbackToken(input: {
   ).toISOString();
   const token = secureToken("cfq");
 
+  // ── Revoke narrowly ────────────────────────────────────────
+  //
+  // This used to revoke EVERY outstanding token for the contract. That
+  // was right when one contract produced one rating. It is wrong now:
+  // feedback is collected at every milestone and a client usually has
+  // more than one contact, so the same contract legitimately has
+  // several live credentials at once, and a blanket revoke would kill
+  // the link somebody else is still holding.
+  //
+  // Scoped to this milestone and this recipient. Re-sending to one
+  // person about one milestone replaces only their own link.
+  const milestoneId = input.milestoneId ?? null;
+  const recipientEmail = input.recipientEmail?.trim().toLowerCase() ?? null;
   await db
     .update(customerFeedbackTokens)
     .set({ revokedAt: now.toISOString() })
     .where(
       and(
         eq(customerFeedbackTokens.contextId, contextId),
+        milestoneId === null
+          ? isNull(customerFeedbackTokens.milestoneId)
+          : eq(customerFeedbackTokens.milestoneId, milestoneId),
+        recipientEmail === null
+          ? isNull(customerFeedbackTokens.recipientEmail)
+          : eq(customerFeedbackTokens.recipientEmail, recipientEmail),
         isNull(customerFeedbackTokens.usedAt),
         isNull(customerFeedbackTokens.revokedAt),
       )!,
@@ -138,6 +161,8 @@ export async function issueFeedbackToken(input: {
     contextKind: input.contextKind ?? "contract",
     contextId,
     issuedByUserId: input.issuedByUserId,
+    milestoneId,
+    recipientEmail,
     issuedAt: now.toISOString(),
     expiresAt,
     usedAt: null,

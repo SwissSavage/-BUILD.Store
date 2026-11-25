@@ -25,6 +25,7 @@ import {
   artistEpks,
   adminReviews,
   engagementRoles,
+  engagementReviewSlots,
   buildVouchers,
   calendarAvailability,
   calendarBlocks,
@@ -1010,6 +1011,29 @@ export function getAttributedAdminReviews(
  * it that way: the review form asks "what did THIS person do", not
  * "list the roles".
  */
+/**
+ * Which slot each person's own rating counts in, where somebody said.
+ *
+ * Separate from getEngagementRoles on purpose: roles say what a person
+ * is asked about, slots say what their answer counts as. See
+ * lib/review-slots.
+ *
+ * Absent from the map means nobody assigned one, which is the normal
+ * case — resolveSlot applies the natural reading instead.
+ */
+export async function getReviewSlots(
+  projectId: string,
+): Promise<Map<string, "peer" | "pm">> {
+  const rows = await db
+    .select({
+      userId: engagementReviewSlots.userId,
+      slot: engagementReviewSlots.slot,
+    })
+    .from(engagementReviewSlots)
+    .where(eq(engagementReviewSlots.projectId, projectId));
+  return new Map(rows.map((r) => [r.userId, r.slot]));
+}
+
 export async function getEngagementRoles(
   projectId: string,
 ): Promise<Map<string, string[]>> {

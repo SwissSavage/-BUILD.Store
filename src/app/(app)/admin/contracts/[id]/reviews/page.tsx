@@ -53,6 +53,12 @@ import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { blendRating, type RatingSignals } from "@/lib/bonus-reconciliation";
 import { formatStars, isHalfStep } from "@/lib/ratings";
 import { describeRoles } from "@/lib/engagement-roles";
+import { undeliveredRequests } from "@/lib/writers/feedback-dispatch";
+import { ReviewSlotPicker } from "@/components/ReviewSlotPicker";
+import { DispositionPanel } from "@/components/DispositionPanel";
+import { getReviewSlots } from "@/lib/readers";
+import { slotAssignment } from "@/lib/review-slots";
+import { engagementBenchings } from "@/db/schema";
 import { publicName, type User } from "@/lib/types";
 
 export default async function ContractReviewsPage({
@@ -91,6 +97,23 @@ export default async function ContractReviewsPage({
   }, null);
 
   const feedback = feedbackAll.filter((f) => f.contextId === project.id);
+  const slots = await safely(
+    () => getReviewSlots(project.id),
+    new Map<string, "peer" | "pm">(),
+  );
+  const benchings = await safely(
+    () =>
+      db
+        .select()
+        .from(engagementBenchings)
+        .where(eq(engagementBenchings.projectId, project.id)),
+    [] as (typeof engagementBenchings.$inferSelect)[],
+  );
+  // Pending counts as undelivered: a token whose send never reported
+  // either way is exactly as un-arrived as one that bounced.
+  const undelivered = (
+    await safely(() => undeliveredRequests(project.id), [])
+  ).filter((u) => u.status !== "sent");
   const byId = new Map(roster.map((u) => [u.id, u]));
 
   // Everyone the split pays — the same union the review sections use,
@@ -111,6 +134,14 @@ export default async function ContractReviewsPage({
   };
   const blend = blendRating(signals);
   const hasMargin = Number(project.talentBonusAmount ?? 0) > 0;
+  const contributorIds = new Set(project.assignedMemberIds ?? []);
+  // Slots are only assignable where the peer slot cannot fill itself.
+  // The action re-checks this; the page just decides whether to offer
+  // the control.
+  const slotsAssignable = slotAssignment({
+    partyUserIds: onEngagement.map((p) => p.id),
+  });
+  const uncommitted = Number(project.bonusUncommittedAmount ?? 0);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
@@ -176,6 +207,51 @@ export default async function ContractReviewsPage({
         </p>
       </Card>
 
+      {/* ── Requests that did not arrive ────────────────────────── */}
+      {undelivered.length > 0 && (
+        <Card className="mt-6 border-[#B4740F]/40">
+          <CardEyebrow>Delivery</CardEyebrow>
+          <CardTitle className="mt-1 text-xl">
+            {undelivered.length} request
+            {undelivered.length === 1 ? "" : "s"} did not arrive
+          </CardTitle>
+          {/*
+            Surfaced loudly because of what silence costs. A request
+            that never lands leaves the client slot empty, an empty
+            slot renormalizes away, and an engagement with no readings
+            at all earns the FULL Bonus Margin. A broken mail path
+            therefore pays every margin in full, quietly. This is the
+            only place that failure becomes visible.
+          */}
+          <p className="mt-2 text-sm text-ink-muted">
+            Nobody decides whether the client is asked — requests go out
+            on milestone completion. These attempts failed, so the
+            client slot is empty for reasons on our side, not theirs.
+          </p>
+          <ul className="mt-3 space-y-2 text-xs">
+            {undelivered.map((u) => (
+              <li
+                key={u.token}
+                className="rounded-lg border border-[var(--surface-border)] p-2"
+              >
+                <span className="font-medium">
+                  {u.recipientEmail ?? "no address on file"}
+                </span>{" "}
+                <span className="text-ink-faint">
+                  · {u.status} · {u.attempts} attempt
+                  {u.attempts === 1 ? "" : "s"}
+                </span>
+                {u.error && (
+                  <p className="mt-1 break-words text-[11px] text-ink-faint">
+                    {u.error}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       {/* ── Who still owes an answer ────────────────────────────── */}
       <section className="mt-8">
         <h2 className="font-display text-2xl font-semibold">Outstanding</h2>
@@ -184,6 +260,77 @@ export default async function ContractReviewsPage({
         </p>
         <EngagementReviewsPanel project={project} clientEmail={clientEmail} />
       </section>
+
+      {/* ── Which way it went ───────────────────────────────────── */}
+      {(uncommitted > 0 || project.dispositionKind) && (
+        <section className="mt-10">
+          <h2 className="font-display text-2xl font-semibold">Direction</h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            The margin came up short. The payouts already landed — this
+            records what follows, and moves nothing.
+          </p>
+          <div className="mt-4">
+            <DispositionPanel
+              projectId={project.id}
+              uncommittedLabel={`$${uncommitted.toLocaleString()}`}
+              people={onEngagement.map((p) => ({
+                id: p.id,
+                name: publicName(p),
+                isContributor: contributorIds.has(p.id),
+              }))}
+              existing={
+                project.dispositionKind
+                  ? {
+                      kind: project.dispositionKind,
+                      reason: project.dispositionReason ?? "",
+                      at: project.dispositionAt,
+                    }
+                  : null
+              }
+            />
+          </div>
+        </section>
+      )}
+
+      {/* ── Who came off ────────────────────────────────────────── */}
+      {benchings.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-display text-2xl font-semibold">Benched</h2>
+          {/*
+            Shown on the engagement, not buried in an audit log,
+            because it is a contract result: it reads at conclusion
+            beside the ratings and follows the person into their
+            grading.
+          */}
+          <p className="mt-1 text-sm text-ink-muted">
+            Taken off this engagement before it ended. Still on the
+            record for it.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {benchings.map((b) => (
+              <li
+                key={b.id}
+                className="rounded-lg border border-[#B4740F]/40 p-3 text-sm"
+              >
+                <span className="font-medium">
+                  {publicName(byId.get(b.userId) ?? ({} as User)) ||
+                    "Unknown member"}
+                </span>
+                {b.replacedByUserId && (
+                  <span className="text-ink-muted">
+                    {" "}
+                    → replaced by{" "}
+                    {publicName(
+                      byId.get(b.replacedByUserId) ?? ({} as User),
+                    ) || "someone off this engagement"}
+                  </span>
+                )}
+                <p className="mt-1 text-[11px] text-ink-faint">{b.reason}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* ── Scope: what each person did ─────────────────────────── */}
       <section className="mt-10">
@@ -213,6 +360,21 @@ export default async function ContractReviewsPage({
                 personName={publicName(person)}
                 current={roles.get(person.id) ?? []}
               />
+              {/*
+                A second, separate assignment. Roles say what this
+                person is asked about; the slot says what their own
+                rating counts as. Only offered where the peer slot
+                cannot fill itself.
+              */}
+              {slotsAssignable.available && (
+                <ReviewSlotPicker
+                  projectId={project.id}
+                  userId={person.id}
+                  personName={publicName(person)}
+                  current={slots.get(person.id) ?? null}
+                  isContributor={contributorIds.has(person.id)}
+                />
+              )}
             </div>
           ))}
           {onEngagement.length === 0 && (

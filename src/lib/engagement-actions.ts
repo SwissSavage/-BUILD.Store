@@ -386,8 +386,20 @@ export async function composeEngagement(
     clientId: client.displayName,
     clientRefId: client.id,
     assignedMemberIds: [talent.id],
-    // Whoever composed it hears back about it. Without this the accept
-    // or decline lands in nobody's notifications.
+    // ── The composer, and only the composer ────────────────────
+    //
+    // Deliberate, not a gap. Jamar: "A multi admin deal should only
+    // start with the composer until another admin is added."
+    //
+    // I flagged this as a possible bug because a multi-admin deal
+    // starts with one name on it. That is the right starting state:
+    // this list splits the 12% executive pool evenly at settlement,
+    // so seeding it with anyone who has not yet agreed to be on the
+    // deal would be assigning them money by default. Somebody is
+    // added when somebody adds them, on the contract page.
+    //
+    // It also means the composer hears back about the accept or
+    // decline, which would otherwise land in nobody's notifications.
     adminUserIds: [admin.id],
     kind: "contract",
     isRfp: false,

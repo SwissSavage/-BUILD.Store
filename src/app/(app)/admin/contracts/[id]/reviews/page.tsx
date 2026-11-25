@@ -50,7 +50,8 @@ import { getAllUsers } from "@/lib/readers/users";
 import { EngagementReviewsPanel } from "@/components/EngagementReviewsPanel";
 import { EngagementRolePicker } from "@/components/EngagementRolePicker";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
-import { blendRating, type RatingSignals } from "@/lib/bonus-reconciliation";
+import { blendRating } from "@/lib/bonus-reconciliation";
+import { buildRatingSignals } from "@/lib/readers/rating-signals";
 import { formatStars, isHalfStep } from "@/lib/ratings";
 import { describeRoles } from "@/lib/engagement-roles";
 import { undeliveredRequests } from "@/lib/writers/feedback-dispatch";
@@ -127,11 +128,12 @@ export default async function ContractReviewsPage({
     .map((uid) => byId.get(uid))
     .filter((u): u is User => Boolean(u));
 
-  const signals: RatingSignals = {
-    client: feedback.map((f) => f.overallStars).filter(isHalfStep),
-    peer: peerReviews.map((r) => r.stars).filter(isHalfStep),
-    pm: [project.pmEngagementRating].filter(isHalfStep),
-  };
+  // ONE builder, shared with executeBonusDecision. This page used to
+  // have its own line putting every peer review into the peer slot,
+  // so the blend an admin read here was computed by different rules
+  // than the blend that decides the Bonus Margin — and the display
+  // was the stale one, which is the worse way round.
+  const signals = await buildRatingSignals(project);
   const blend = blendRating(signals);
   const hasMargin = Number(project.talentBonusAmount ?? 0) > 0;
   const contributorIds = new Set(project.assignedMemberIds ?? []);
@@ -354,12 +356,39 @@ export default async function ContractReviewsPage({
                   {describeRoles(roles.get(person.id) ?? [])}
                 </span>
               </div>
-              <EngagementRolePicker
+              {/*
+                The six roles describe RUNNING an engagement —
+                holding the client, directing the work, paying
+                people. They were drawn up as examples for admins,
+                and showing them to the person who did the work asks
+                a service provider to tick "Payments" or "Client
+                owner" about themselves, which is nonsense.
+
+                Jamar: "I was giving the 6 roles as examples for
+                admin specifically. There's nothing here for service
+                providers."
+
+                So the picker is for the people who ran it. What a
+                contributor carries instead is still open, and
+                guessing at a second taxonomy is how this got wrong
+                the first time.
+              */}
+              {!contributorIds.has(person.id) && (
+                <EngagementRolePicker
                 projectId={project.id}
                 userId={person.id}
                 personName={publicName(person)}
-                current={roles.get(person.id) ?? []}
-              />
+                  current={roles.get(person.id) ?? []}
+                />
+              )}
+              {contributorIds.has(person.id) && (
+                <p className="mt-2 text-[11px] text-ink-faint">
+                  Did the work on this engagement. The peer questions
+                  — craft, reliability, collaboration, communication —
+                  apply to anyone who delivered, so there is nothing
+                  to narrow here yet.
+                </p>
+              )}
               {/*
                 A second, separate assignment. Roles say what this
                 person is asked about; the slot says what their own

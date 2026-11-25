@@ -164,6 +164,17 @@ function ClientPatternCard({ p }: { p: ClientPatternSummary }) {
             {projects.map((pr) => (
               <li key={pr.id}>
                 <Link
+
+                  href={`/admin/contracts/${pr.id}/reviews`}
+
+                  className="text-xs text-ink-muted hover:text-brand-magentaText"
+
+                >
+
+                  Reviews
+
+                </Link>
+                <Link
                   href={`/admin/contracts/${pr.id}/settle`}
                   className="text-brand-magentaText hover:underline"
                 >

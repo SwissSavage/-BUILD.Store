@@ -4752,6 +4752,7 @@ export type AuditLogAction =
   | "contract.bonus_reconciled"
   | "contract.review_slot_set"
   | "contract.disposition_set"
+  | "contract.review_round_opened"
   | "contract.revenue_split_recorded"
   // Bookings + calendar (cross-tier)
   | "booking.request_created"
@@ -4926,6 +4927,7 @@ export const AUDIT_LOG_ACTION_LABELS: Record<AuditLogAction, string> = {
   "contract.bonus_reconciled": "Bonus Margin reconciled",
   "contract.review_slot_set": "Review slot assigned",
   "contract.disposition_set": "Disposition set",
+  "contract.review_round_opened": "Review round opened",
   "contract.bonus_reclaimed": "Bonus reclaimed",
   "contract.revenue_split_recorded": "Revenue split recorded",
   "booking.request_created": "Booking requested",

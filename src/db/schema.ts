@@ -2803,3 +2803,86 @@ export const engagementBenchings = pgTable("engagement_benchings", {
     .notNull()
     .defaultNow(),
 });
+
+/**
+ * A review round. drizzle/0059.
+ *
+ * Jamar: "If I'm not configuring a review to reach the customer and
+ * related parties there shouldn't be any reviewing happening at all."
+ *
+ * So no review of any kind is accepted unless a round is open, and
+ * opening it signals everybody at the same moment. draft is where an
+ * admin assigns roles and slots and sees exactly what each person
+ * will be asked; open is the one deliberate act that sends it; closed
+ * ends submissions and finalises the blend.
+ *
+ * `configuration` freezes roles and slots as they stood at open, so a
+ * later edit cannot retroactively change what somebody was asked or
+ * how much their answer counted. Without that, "configure before we
+ * send" is a suggestion: an admin could open a round, watch an
+ * unflattering rating arrive, and move the rater out of the peer slot.
+ */
+export const engagementReviewRounds = pgTable("engagement_review_rounds", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  status: text("status", { enum: ["draft", "open", "closed"] })
+    .notNull()
+    .default("draft"),
+  configuration: jsonb("configuration").$type<{
+    roles: Record<string, string[]>;
+    slots: Record<string, "peer" | "pm">;
+  }>(),
+  openedByUserId: text("opened_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  openedAt: timestamp("opened_at", { mode: "string", withTimezone: true }),
+  closedByUserId: text("closed_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  closedAt: timestamp("closed_at", { mode: "string", withTimezone: true }),
+  createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Who must hold the link before a round counts as open. drizzle/0059.
+ *
+ * "Everyone at the same time" is only true if everyone actually has
+ * it, so reviewing stays shut until every row here is delivered or
+ * recorded as reached another way. A bounced client address would
+ * otherwise freeze a round forever, and a rule people have to lie to
+ * is worse than no rule.
+ */
+export const engagementReviewRecipients = pgTable(
+  "engagement_review_recipients",
+  {
+    id: text("id").primaryKey(),
+    roundId: text("round_id")
+      .notNull()
+      .references(() => engagementReviewRounds.id, { onDelete: "cascade" }),
+    /** Null for a client contact, who has no account. */
+    userId: text("user_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    email: text("email").notNull(),
+    kind: text("kind", { enum: ["member", "client"] }).notNull(),
+    deliveryStatus: text("delivery_status", {
+      enum: ["pending", "delivered", "failed"],
+    })
+      .notNull()
+      .default("pending"),
+    deliveryError: text("delivery_error"),
+    deliveredAt: timestamp("delivered_at", { mode: "string", withTimezone: true }),
+    reachedManuallyByUserId: text("reached_manually_by_user_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    reachedManuallyReason: text("reached_manually_reason"),
+    createdAt: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+);

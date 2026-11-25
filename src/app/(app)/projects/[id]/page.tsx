@@ -30,7 +30,7 @@ import { ShieldCheck, Tags, Users } from "lucide-react";
 import { AdminObjectControls } from "@/components/AdminObjectControls";
 import { EngagementTermsPanel } from "@/components/EngagementTermsPanel";
 import { ProjectTimeSection } from "@/components/ProjectTimeSection";
-import { AdminReviewSection } from "@/components/AdminReviewSection";
+import { ReviewsDoor } from "@/components/ReviewsDoor";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getProjectById } from "@/lib/readers/projects";
@@ -65,7 +65,6 @@ import { ExpandableSkillTags } from "@/components/ExpandableSkillTags";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { StructuredText } from "@/components/StructuredText";
 import { formatProposalHours } from "@/lib/proposal-terms";
-import { PeerReviewSection } from "@/components/PeerReviewSection";
 import { MilestoneTracker } from "@/components/MilestoneTracker";
 import { MilestoneProgress } from "@/components/MilestoneProgress";
 import { TalentHand, type TalentHandEntry } from "@/components/TalentHand";
@@ -238,17 +237,22 @@ export default async function ProjectDetailPage({
             />
           )}
 
-          {/* ── Peer review (Phase 2.7) — only for signed-in members ───── */}
-          {user && <PeerReviewSection project={project} user={user} />}
+          {/* ── Reviews live in their own section ───────────────────
+              Jamar: "We don't want reviews literally happening on
+              the deal", and "Reviews need their own section, just
+              like settlement."
 
-          {/* ── How it was run ──────────────────────────────
-              The counterpart to peer review: delivery is rated
-              above, management here. Without it a badly-run
-              engagement still produced only a review of the people
-              who delivered it. Renders itself away unless the
-              viewer was on the engagement and somebody else ran
-              it. */}
-          {user && <AdminReviewSection project={project} user={user} />}
+              Both forms used to render here, live the moment a
+              contract hit completed. That put the rating of a
+              person on the page about the work, visible while the
+              deal was still being read, with no configuration step
+              in front of it. Settlement does not work that way and
+              neither should this.
+
+              What stays is a door. The forms are at
+              /projects/[id]/reviews, which checks for itself that
+              the viewer was on the engagement. */}
+          {user && <ReviewsDoor project={project} user={user} />}
 
           {/* ── Apply form / current-status banner (signed-in members) ─── */}
           {isInternal && user && (

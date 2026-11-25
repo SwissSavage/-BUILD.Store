@@ -351,6 +351,18 @@ function ContractRow({
           >
             AR / AP ledger
           </Link>
+          {/*
+            Reviews sit beside the ledger and settlement, which is the
+            point: "Reviews need their own section, just like
+            settlement." A section reachable from one page is not a
+            section, it is a subpage.
+          */}
+          <Link
+            href={`/admin/contracts/${project.id}/reviews`}
+            className="rounded-full border border-[var(--surface-border)] px-3 py-1.5 text-xs hover:border-brand-magenta hover:text-brand-magentaText"
+          >
+            Reviews
+          </Link>
           <Link
             href={`/admin/contracts/${project.id}/settle`}
             className={`rounded-full px-3 py-1.5 text-xs font-medium text-white ${

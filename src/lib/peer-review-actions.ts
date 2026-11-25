@@ -23,6 +23,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { peerReviews } from "@/db/schema";
 import { getProjectById } from "@/lib/readers/projects";
+import { reviewGateState } from "@/lib/readers/review-rounds";
 
 import type { Notification, PeerReview, ReviewContextKind } from "@/lib/types";
 import { notify } from "@/lib/writers/notifications";
@@ -53,6 +54,25 @@ export async function submitPeerReview(formData: FormData) {
   const revieweeId = String(formData.get("revieweeId") ?? "");
   const project = await getProjectById(projectId);
   if (!project) throw new Error("Project not found");
+
+  // ── No round, no reviewing ──────────────────────────────────
+  //
+  // Jamar: "If I'm not configuring a review to reach the customer and
+  // related parties there shouldn't be any reviewing happening at
+  // all", and nothing until "everyone has the review link/page."
+  //
+  // Checked here and not only on the surface: a server action is a
+  // public endpoint and a hidden form is not a rule.
+  const gate = await reviewGateState(projectId);
+  if (!gate.open) {
+    throw new Error(
+      gate.reason === "awaiting_delivery"
+        ? `Waiting on ${gate.waitingOn.length} more ${gate.waitingOn.length === 1 ? "person" : "people"} to receive the link. Everyone is asked at the same time.`
+        : gate.reason === "closed"
+          ? "This review round is closed."
+          : "No review round is open for this engagement yet.",
+    );
+  }
 
   // ── Who counts as being on this engagement (2026-11-23) ──────
   //

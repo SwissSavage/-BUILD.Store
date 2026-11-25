@@ -15,6 +15,21 @@
  * server action is a public endpoint, and the whole point of only
  * offering this on engagements that cannot fill their own slots is
  * lost if a posted form can do it anywhere.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * EDITABLE WHILE THE ROUND IS OPEN
+ *
+ * Deliberately not gated on the round being in draft. Jamar: "we
+ * should be able to take people out of slots if they're performing
+ * badly."
+ *
+ * That is a live call about somebody's work, and it does not stop
+ * being legitimate because reviews are already out. The obvious
+ * objection — an admin watching a bad rating arrive and reassigning
+ * the rater — does not survive contact with how the scores work:
+ * they are averaged into three slots and unattributed, so there is no
+ * way to tell whose rating to suppress. "Who's to say if a negative
+ * review is coming from clients or peers?"
  * ─────────────────────────────────────────────────────────────
  */
 import { randomUUID } from "crypto";

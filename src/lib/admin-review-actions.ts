@@ -52,6 +52,7 @@ import { db } from "@/db/client";
 import { adminReviews, projects } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth-stub";
 import { getEngagementRoles } from "@/lib/readers";
+import { reviewGateState } from "@/lib/readers/review-rounds";
 import {
   REVIEW_AXES,
   axesFor,
@@ -158,6 +159,28 @@ export async function submitAdminReview(
   // that should be made clear at role assignment not left to be
   // inferred by questions." An out-of-scope answer is dropped here so
   // it cannot reach somebody's record by any route.
+
+  // ── No round, no reviewing ──────────────────────────────────
+  //
+  // Jamar: "If I'm not configuring a review to reach the customer and
+  // related parties there shouldn't be any reviewing happening at
+  // all", and nothing until "everyone has the review link/page."
+  //
+  // Checked here and not only on the surface, because a server action
+  // is a public endpoint and a hidden form is not a rule. The reason
+  // is passed through so a refusal says which of the three it is: not
+  // started, waiting on delivery, or already closed.
+  const gate = await reviewGateState(projectId);
+  if (!gate.open) {
+    const why =
+      gate.reason === "awaiting_delivery"
+        ? `Waiting on ${gate.waitingOn.length} ${gate.waitingOn.length === 1 ? "person" : "people"} to receive the link. Everyone is asked at the same time.`
+        : gate.reason === "closed"
+          ? "This review round is closed."
+          : "No review round is open for this engagement yet.";
+    return { ok: false, message: why };
+  }
+
   const roles = await getEngagementRoles(projectId);
   const allowed = axesFor(roles.get(subjectUserId) ?? []);
   if (allowed.length === 0) {

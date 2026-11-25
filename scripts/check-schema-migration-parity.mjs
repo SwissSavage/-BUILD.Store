@@ -238,6 +238,55 @@ for (const [table, sqlCols] of migrated) {
   }
 }
 
+
+// ── Prose that escaped its comment ───────────────────────────
+//
+// 0057 shipped a line that had lost its leading "--" during an edit,
+// so Postgres tried to parse English and the container crash-looped:
+//
+//   [migrate] FAIL 0057_review_slots.sql: syntax error at or near "At"
+//
+// Nothing caught it. tsc does not read SQL, the parity check only
+// compares column names, and the file looked right at a glance
+// because every line around it was a comment.
+const SQL_KEYWORDS = new Set(
+  `ALTER CREATE DROP INSERT UPDATE DELETE SELECT WITH BEGIN COMMIT DO END IF ELSE
+   ELSIF FOR LOOP DECLARE RAISE EXECUTE SET ADD COMMENT GRANT REVOKE TRUNCATE
+   VALUES FROM WHERE AND OR ON USING RETURNING UNION CONSTRAINT PRIMARY FOREIGN
+   UNIQUE CHECK REFERENCES NOT NULL DEFAULT INDEX TABLE COLUMN CASE WHEN THEN AS
+   JOIN LEFT INNER ORDER GROUP LIMIT RETURN PERFORM`.split(/\s+/),
+);
+
+function proseOutsideComments() {
+  const found = [];
+  for (const f of readdirSync(MIGRATIONS_DIR).filter((x) => x.endsWith(".sql"))) {
+    const lines = readFileSync(`${MIGRATIONS_DIR}/${f}`, "utf8").split("\n");
+    lines.forEach((raw, i) => {
+      const line = raw.trim();
+      if (!line || line.startsWith("--")) return;
+      // Keep the original casing: the keyword lookup needs it upper,
+      // the prose test needs it as written. Folding both into one
+      // uppercased variable made the prose test unreachable, which is
+      // how the first version of this check passed the very bug it
+      // was written for.
+      const word = line.split(/[\s(;,]/)[0].replace(/"/g, "");
+      if (!word || SQL_KEYWORDS.has(word.toUpperCase())) return;
+      // Column definitions, quoted identifiers, $$ bodies, closing parens.
+      if (/^["$)(']/.test(line) || /^[a-z_0-9]+\s/.test(line)) return;
+      // A capitalised English word starting a non-comment line is prose.
+      if (/^[A-Z][a-z]+$/.test(word)) {
+        found.push(`${f}:${i + 1}: ${line.slice(0, 60)}`);
+      }
+    });
+  }
+  return found;
+}
+
+const prose = proseOutsideComments();
+for (const p of prose) {
+  problems.push(`${p}  <- looks like a comment that lost its "--"`);
+}
+
 if (problems.length > 0) {
   console.error("\n✗ schema.ts and the migrations disagree:\n");
   for (const p of problems) console.error(`  ${p}`);

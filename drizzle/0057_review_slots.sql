@@ -56,7 +56,7 @@
 -- client and the PM. Putting Rob in it is how a three-person job gets
 -- a craft reading at all.
 --
-At four or more parties the slots usually fill themselves —
+-- At four or more parties the slots usually fill themselves —
 -- contributors are peers, the account-owning admin is PM — and a
 -- manual override stops being a necessity and starts being a lever on
 -- who gets to influence somebody's pay.

@@ -12,6 +12,10 @@
  * returns nothing without roles, so this control is what makes a
  * review askable at all.
  *
+ * This is never shown to the person it describes. An admin records
+ * what somebody DID, and that decides which questions OTHER people
+ * are asked ABOUT them. Nobody is ever asked about their own role.
+ *
  * It lives beside the person it describes rather than on a settings
  * screen somewhere earlier, because that is what "optional" meant —
  * not a mandatory step in advance, but a five-second thing done by

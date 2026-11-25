@@ -49,6 +49,7 @@ import {
 import { getAllUsers } from "@/lib/readers/users";
 import { EngagementReviewsPanel } from "@/components/EngagementReviewsPanel";
 import { EngagementRolePicker } from "@/components/EngagementRolePicker";
+import { ContributorRolePicker } from "@/components/ContributorRolePicker";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { blendRating } from "@/lib/bonus-reconciliation";
 import { buildRatingSignals } from "@/lib/readers/rating-signals";
@@ -382,12 +383,12 @@ export default async function ContractReviewsPage({
                 />
               )}
               {contributorIds.has(person.id) && (
-                <p className="mt-2 text-[11px] text-ink-faint">
-                  Did the work on this engagement. The peer questions
-                  — craft, reliability, collaboration, communication —
-                  apply to anyone who delivered, so there is nothing
-                  to narrow here yet.
-                </p>
+                <ContributorRolePicker
+                  projectId={project.id}
+                  userId={person.id}
+                  personName={publicName(person)}
+                  current={roles.get(person.id) ?? []}
+                />
               )}
               {/*
                 A second, separate assignment. Roles say what this

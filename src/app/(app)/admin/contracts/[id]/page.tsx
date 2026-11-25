@@ -61,6 +61,8 @@ import { setContractOwners } from "@/lib/contract-owner-actions";
 import { publicName } from "@/lib/types";
 import { Card, CardEyebrow, CardTitle } from "@/components/Card";
 import { AdminOwnerField } from "@/components/AdminOwnerField";
+import { EngagementRolePicker } from "@/components/EngagementRolePicker";
+import { getEngagementRoles } from "@/lib/readers";
 import { MilestoneProgress } from "@/components/MilestoneProgress";
 
 export const dynamic = "force-dynamic";
@@ -153,6 +155,7 @@ export default async function ContractHubPage({
 
   const [
     { users: roster },
+    engagementRoles,
     attributions,
     splits,
     invoices,
@@ -163,6 +166,7 @@ export default async function ContractHubPage({
     statements,
   ] = await Promise.all([
     safely(() => getAllUsers(), { users: [], source: "postgres" as const }),
+    safely(() => getEngagementRoles(id), new Map<string, string[]>()),
     safely(
       () =>
         db
@@ -318,6 +322,52 @@ export default async function ContractHubPage({
                 Save owners
               </button>
             </form>
+          )}
+
+          {/*
+            Roles are set here, where the owners are, rather than left
+            to review time. Jamar: "we should be setting roles at
+            contract signing, that's usually predetermined, but that
+            should be editable after."
+
+            Predetermined is the point. Who holds the client, who
+            directs the work, who pays, is known when the deal is
+            struck. Leaving it until reviews go out meant the first
+            time anybody wrote it down was the moment it decided what
+            questions got asked about them.
+
+            Still editable afterwards, here and on the reviews
+            surface. What somebody did can turn out differently from
+            what was agreed.
+          */}
+          {owners.length > 0 && (
+            <div className="mt-6 border-t border-[var(--surface-border)] pt-4">
+              <p className="text-[11px] uppercase tracking-wider text-ink-muted">
+                What each of them does on this engagement
+              </p>
+              <p className="mt-1 text-[11px] text-ink-faint">
+                Decides which questions get asked about them when
+                reviews go out. Nobody is rated on work they did not do.
+              </p>
+              <div className="mt-3 space-y-3">
+                {owners.map((ownerId) => (
+                  <div
+                    key={ownerId}
+                    className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-inset)] p-3"
+                  >
+                    <div className="text-sm font-medium">
+                      {nameById.get(ownerId) ?? ownerId}
+                    </div>
+                    <EngagementRolePicker
+                      projectId={project.id}
+                      userId={ownerId}
+                      personName={nameById.get(ownerId) ?? "They"}
+                      current={engagementRoles.get(ownerId) ?? []}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </Stage>
 

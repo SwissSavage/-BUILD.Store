@@ -73,14 +73,34 @@ export async function ensureReviewRound(
 }
 
 /**
- * Open the round: freeze the configuration, write a recipient row per
+ * Open the round: record the configuration, write a recipient row per
  * person who must be reached, and send to all of them in one pass.
  *
- * Opening is irreversible by design. The configuration is frozen here
- * so a later edit cannot retroactively change what somebody was asked
- * or how much their answer counted — otherwise an admin could open a
- * round, watch an unflattering rating land, and move the rater out of
- * the peer slot.
+ * ─────────────────────────────────────────────────────────────
+ * THE CONFIGURATION IS RECORDED, NOT FROZEN
+ *
+ * I built this to freeze roles and slots at open, reasoning that
+ * otherwise an admin could watch an unflattering rating land and move
+ * the rater out of the peer slot.
+ *
+ * Jamar: "we should be able to take people out of slots if they're
+ * performing badly", and "scores are dynamic and depersonalized.
+ * Who's to say if a negative review is coming from clients or peers?"
+ *
+ * Which dismantles the reasoning. The blend is three averaged slots
+ * and the ratings are unattributed, so nobody can see which rating to
+ * suppress — moving a person between slots is not a precision
+ * instrument, it is a blunt one aimed at a number you cannot
+ * decompose. Depersonalisation is what protects the integrity here,
+ * not immutability.
+ *
+ * Meanwhile the freeze blocked something real: taking somebody out of
+ * a slot when they are performing badly is a legitimate call that
+ * does not stop being legitimate because a round is open.
+ *
+ * So `configuration` is a record of how the round went out, kept for
+ * the audit trail. The blend reads the LIVE roles and slots.
+ * ─────────────────────────────────────────────────────────────
  */
 export async function openReviewRound(
   formData: FormData,

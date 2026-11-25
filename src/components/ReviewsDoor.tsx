@@ -14,8 +14,24 @@
  * and reviews are at least as consequential, because the blend they
  * produce decides what share of the Bonus Margin is earned.
  *
- * So this is a pointer and a count of what is outstanding. The forms
- * are at /projects/[id]/reviews.
+ * So this is a pointer. The forms are at /projects/[id]/reviews.
+ *
+ * ─────────────────────────────────────────────────────────────
+ * THE PATHWAY IS ALWAYS HERE
+ *
+ * First version only rendered once a round was open, which meant the
+ * deal page showed nothing about reviews most of the time. Jamar: "I
+ * asked for a pathway to reviews, not to have them right on the page.
+ * You over corrected."
+ *
+ * Exactly right. Taking the forms off was the ask; taking the way in
+ * off with them was not. A door that appears only when somebody else
+ * has already opened the room is not a door.
+ *
+ * So the pathway stands on every completed engagement whatever the
+ * round is doing, and what changes is what it says and where it
+ * points. An admin gets the management surface as well, because an
+ * admin standing on the deal had no route to it at all.
  *
  * ─────────────────────────────────────────────────────────────
  * CURSORY FOR EVERYONE, CONCRETE FOR PARTICIPANTS
@@ -63,16 +79,14 @@ export async function ReviewsDoor({
 
   const round = await safely(() => getReviewRound(project.id), null);
 
-  // Nothing to say until an admin has opened the round. Before that
-  // there is no review to leave, and announcing a draft would invite
-  // a contributor to ask why it has not gone out.
-  if (!round || round.status === "draft") return null;
-
-  const closed = round.status === "closed";
+  const status = round?.status ?? null;
+  const closed = status === "closed";
+  const open = status === "open";
 
   // The cursory view: the stage, and nothing a score or a person
   // could be read out of.
   if (!participant) {
+    if (!status) return null;
     return (
       <Card className="mt-6">
         <CardEyebrow>Reviews</CardEyebrow>
@@ -91,22 +105,44 @@ export async function ReviewsDoor({
     <Card className="mt-6 border-[#5070F0]/40">
       <CardEyebrow>Reviews</CardEyebrow>
       <CardTitle className="mt-2">
-        {closed ? "Reviews are closed" : "Reviews are open for this engagement"}
+        {closed
+          ? "Reviews are closed"
+          : open
+            ? "Reviews are open"
+            : "Reviews have not gone out yet"}
       </CardTitle>
       <p className="mt-2 text-sm text-ink-muted">
         {closed
-          ? "This round has been closed. What was said is in the aggregate; scores are visible, who said what is not."
-          : "Everyone on this engagement was asked at the same time. Scores are visible to the person rated; who said what is not."}
+          ? "This round is finished. Scores are visible to the person rated; who said what is not."
+          : open
+            ? "Everyone on this engagement was asked at the same time. Scores reach the person rated; who said what does not."
+            : "An admin opens the round once this is wrapped, and everyone is asked at once."}
       </p>
-      {!closed && (
-        <Link
-          href={`/projects/${project.id}/reviews`}
-          className="mt-4 inline-block rounded-full px-5 py-2 text-sm font-medium text-white"
-          style={{ backgroundColor: "#5070F0" }}
-        >
-          Leave your reviews →
-        </Link>
-      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {open && (
+          <Link
+            href={`/projects/${project.id}/reviews`}
+            className="rounded-full px-5 py-2 text-sm font-medium text-white"
+            style={{ backgroundColor: "#5070F0" }}
+          >
+            Leave your reviews →
+          </Link>
+        )}
+        {/*
+          The admin route. Without this an admin standing on the deal
+          had nowhere to go: every entry point to the review dashboard
+          was on the admin side of the app.
+        */}
+        {user.isAdmin && (
+          <Link
+            href={`/admin/contracts/${project.id}/reviews`}
+            className="rounded-full border border-[var(--surface-border)] px-4 py-2 text-sm hover:border-brand-magenta hover:text-brand-magentaText"
+          >
+            {status ? "Manage reviews" : "Set up reviews"} →
+          </Link>
+        )}
+      </div>
     </Card>
   );
 }

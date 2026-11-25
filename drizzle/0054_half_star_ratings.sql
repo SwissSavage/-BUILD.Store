@@ -46,6 +46,59 @@
 -- recording half the rating somebody meant.
 -- ─────────────────────────────────────────────────────────────
 
+-- ─────────────────────────────────────────────────────────────
+-- DROP THE OLD 1-5 CONSTRAINTS FIRST (2026-11-25)
+--
+-- This migration failed on its first real run, took the container
+-- down, and the site returned Bad Gateway:
+--
+--   [migrate] FAIL 0054_half_star_ratings.sql: new row for relation
+--   "peer_reviews" violates check constraint
+--   "peer_reviews_professionalism_range_check"
+--
+-- Obvious in hindsight. Ratings already carried CHECK constraints
+-- pinning them to 1-5 — peer_reviews.professionalism from 0006, four
+-- more on admin_reviews from 0052 — and doubling the values to 2-10
+-- violates every one of them. I wrote the new constraints and never
+-- asked what was already there.
+--
+-- The transaction rolled back, so no data was touched. The cost was
+-- downtime, not corruption.
+--
+-- Dropped dynamically rather than by name. The migration files are
+-- not the whole truth about a database that has been live for months:
+-- a constraint added by hand on prod would not appear in any file
+-- here, and naming them one by one would fail the same way a second
+-- time. This finds every CHECK on these tables that pins a rating
+-- column to the old scale, whatever it is called.
+--
+-- The `5` in the pattern is doing real work: it keeps
+-- admin_reviews_paid_on_time_is_builder_only, which mentions
+-- paid_on_time but encodes a source rule rather than a range, and
+-- which must survive.
+-- ─────────────────────────────────────────────────────────────
+
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT rel.relname AS tbl, con.conname AS name
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    WHERE con.contype = 'c'
+      AND rel.relname IN (
+        'peer_reviews', 'customer_feedback', 'admin_reviews', 'projects'
+      )
+      AND pg_get_constraintdef(con.oid) ~* '(stars|collaboration|craft|reliability|professionalism|communication|met_expectations|scope_clarity|responsiveness|shielded_from_churn|paid_on_time|pm_engagement_rating)'
+      AND pg_get_constraintdef(con.oid) ~ '(BETWEEN 1 AND 5|<= *5|< *6)'
+      AND con.conname NOT LIKE '%half_steps%'
+  LOOP
+    EXECUTE format('ALTER TABLE %I DROP CONSTRAINT %I', r.tbl, r.name);
+    RAISE NOTICE 'dropped old 1-5 constraint %.%', r.tbl, r.name;
+  END LOOP;
+END $$;
+
 -- ── peer_reviews ─────────────────────────────────────────────
 UPDATE "peer_reviews" SET
   "stars"           = CASE WHEN "stars"           <= 5 THEN "stars"           * 2 ELSE "stars"           END,

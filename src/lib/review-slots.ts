@@ -111,17 +111,32 @@ export function slotAssignment(input: {
 }
 
 /**
- * Resolve every rating into its slot.
+ * Resolve a rating into its slot.
  *
- * Assignment wins where it exists. Otherwise the natural reading
- * applies: somebody who did delivery work is a peer, and the
- * engagement's admins are not peers — an admin's view of craft counts
- * only when somebody said it should.
+ * Assignment wins where it exists. Otherwise the natural reading:
+ * somebody who did delivery work is a peer, and somebody who ran the
+ * engagement is PM.
  *
- * That default is deliberate rather than convenient. Counting every
- * admin as a peer would mean the people who ran the job also grade the
- * craft of the job, which is the conflict the 0.2 PM weight exists to
- * contain.
+ * ── ADMINS DEFAULT TO PM, THEY ARE NOT DROPPED ──
+ *
+ * This used to return null for anyone who was not a contributor, so
+ * an admin's review counted for nothing unless somebody assigned them
+ * a slot. Jamar: "the review I left is showing as peer when I'm a
+ * project manager."
+ *
+ * Two bugs in one sentence. His review was landing in the peer slot
+ * because the reviews page built the blend with its own mapping
+ * instead of calling this; and once it did call this, the answer
+ * would have been to discard his rating entirely.
+ *
+ * Neither is right. The PM slot exists precisely to carry the view of
+ * the person who ran it, weighted 0.2 because they are a party to the
+ * outcome. Dropping that view is not caution, it is throwing away the
+ * signal the slot was built for.
+ *
+ * What stays true is that an admin is not a PEER. Their read on craft
+ * counts only when somebody says it should, which is what an explicit
+ * assignment is for — Rob on a design deliverable.
  */
 export function resolveSlot(input: {
   userId: string;
@@ -129,5 +144,5 @@ export function resolveSlot(input: {
   isContributor: boolean;
 }): ReviewSlot | null {
   if (input.assigned) return input.assigned;
-  return input.isContributor ? "peer" : null;
+  return input.isContributor ? "peer" : "pm";
 }

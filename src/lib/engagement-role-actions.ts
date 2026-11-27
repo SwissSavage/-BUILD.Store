@@ -43,14 +43,25 @@ import { db } from "@/db/client";
 import { engagementRoles, projects } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-stub";
 import { logAuditEvent, snapshotActorRole } from "@/lib/writers/audit-log";
-import { ENGAGEMENT_ROLES, describeRoles } from "@/lib/engagement-roles";
+import {
+  CONTRIBUTOR_ROLES,
+  ENGAGEMENT_ROLES,
+  describeRoles,
+} from "@/lib/engagement-roles";
 
 export interface RoleAssignResult {
   ok: boolean;
   message: string;
 }
 
-const KNOWN = new Set(ENGAGEMENT_ROLES.map((r) => r.role));
+// Both taxonomies. The six describe running an engagement, the two
+// describe delivering it, and a person holds one kind or the other —
+// enforced by which picker an admin is shown rather than here, since
+// a contributor who later runs something is a real case.
+const KNOWN = new Set([
+  ...ENGAGEMENT_ROLES.map((r) => r.role),
+  ...CONTRIBUTOR_ROLES.map((r) => r.role),
+]);
 
 export async function setEngagementRoles(
   formData: FormData,

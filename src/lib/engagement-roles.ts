@@ -8,11 +8,20 @@
  * Jamar: "Reviews must reflect roles so people are not evaluated
  * outside of their scope."
  *
- * Before this, every admin on an engagement was asked all four PM
- * axes, so Ozy would have been asked whether Rob paid on time. He
- * never touched payments; Jamar did. A rating gathered on work
- * somebody did not do is not a weak signal, it is a false one
- * attached to a real person, and it feeds their standing.
+ * Before this, every admin on an engagement carried all four PM axes,
+ * so reviewers were asked whether Rob paid on time. He never touched
+ * payments; Jamar did. A rating gathered on work somebody did not do
+ * is not a weak signal, it is a false one attached to a real person,
+ * and it feeds their standing.
+ *
+ * ── NOBODY IS EVER ASKED ABOUT THEIR OWN ROLE ──
+ *
+ * Worth stating because I kept writing it the other way round. A role
+ * is an admin's record of what a person DID, and it decides which
+ * questions OTHER people are asked ABOUT them. Nobody fills in a form
+ * about themselves anywhere in this system. "You keep framing the
+ * question like people will be questioned about their own roles. That
+ * is never the case."
  *
  * ─────────────────────────────────────────────────────────────
  * WHY THE MAPPING LIVES HERE AND NOT IN THE DATABASE
@@ -214,6 +223,92 @@ export const ENGAGEMENT_ROLES: EngagementRoleDefinition[] = [
     axes: ["responsiveness", "paidOnTime"],
   },
 ];
+
+/**
+ * ─────────────────────────────────────────────────────────────
+ * CONTRIBUTOR ROLES
+ *
+ * The six above describe RUNNING an engagement. Pointing them at the
+ * people who did the work asked reviewers whether a designer handled
+ * payments, which is how Ozy's role came out misattributed.
+ *
+ * Delivery has its own shape, and it is not a mirror of management.
+ * Craft, reliability, collaboration and communication apply to anyone
+ * who delivered, so those need no gating. What does vary is
+ * accountability for the outcome:
+ *
+ * Jamar: "a delivery lead is ultimately in part responsible for what
+ * gets delivered if their failure to communicate is what caused a
+ * poor outcome that needs documentation."
+ *
+ * So a delivery lead carries one axis a contributor does not — whether
+ * they held the delivery together — and it is a question put to the
+ * people around them, never to the lead.
+ * ─────────────────────────────────────────────────────────────
+ */
+export type ContributorRole = "delivery_lead" | "contributor";
+
+export interface ContributorRoleDefinition {
+  role: ContributorRole;
+  label: string;
+  describes: string;
+  /** Extra axes this role makes answerable, beyond the peer four. */
+  axes: ContributorAxis[];
+}
+
+/** Asked of the people around a delivery lead, never of the lead. */
+export type ContributorAxis = "heldDeliveryTogether";
+
+export const CONTRIBUTOR_ROLES: ContributorRoleDefinition[] = [
+  {
+    role: "delivery_lead",
+    label: "Delivery lead",
+    describes:
+      "Accountable for what shipped. Directed or coordinated the delivery work.",
+    axes: ["heldDeliveryTogether"],
+  },
+  {
+    role: "contributor",
+    label: "Contributor",
+    describes: "Delivered a defined piece of the work.",
+    // Nothing extra. Craft, reliability, collaboration and
+    // communication already cover doing the work, and inventing more
+    // questions for a plain contributor would be asking reviewers to
+    // split hairs they cannot see.
+    axes: [],
+  },
+];
+
+export const CONTRIBUTOR_AXES: {
+  axis: ContributorAxis;
+  label: string;
+  question: string;
+  example: string;
+}[] = [
+  {
+    axis: "heldDeliveryTogether",
+    label: "Held delivery together",
+    question:
+      "Did they keep the work joined up, or did you find out too late?",
+    example:
+      "A 5 is you always knew where the work stood and what was changing. A 2 is you learned about a problem when it had already cost you time.",
+  },
+];
+
+export function contributorRoleDefinition(
+  role: string,
+): ContributorRoleDefinition | null {
+  return CONTRIBUTOR_ROLES.find((r) => r.role === role) ?? null;
+}
+
+/** Extra axes somebody carries by virtue of how they delivered. */
+export function contributorAxesFor(roles: string[]): ContributorAxis[] {
+  const seen = new Set<ContributorAxis>();
+  for (const r of roles) {
+    for (const a of contributorRoleDefinition(r)?.axes ?? []) seen.add(a);
+  }
+  return [...seen];
+}
 
 export function roleDefinition(
   role: string,
